@@ -67,6 +67,9 @@ dependencies {
     // Security
     implementation(libs.security.crypto)
 
+    // DataStore
+    implementation(libs.datastore.preferences)
+
     // WorkManager
     implementation(libs.work.runtime.ktx)
 
