@@ -3,6 +3,7 @@ package com.ember.reader.core.readium
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Try
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
@@ -19,30 +20,30 @@ class BookOpener @Inject constructor(
 
     private val httpClient = DefaultHttpClient()
 
-    private val assetRetriever = AssetRetriever(
-        contentResolver = context.contentResolver,
-        httpClient = httpClient,
-    )
+    private val assetRetriever by lazy {
+        AssetRetriever(context.contentResolver, httpClient)
+    }
 
-    private val publicationParser = DefaultPublicationParser(
-        context = context,
-        httpClient = httpClient,
-        assetRetriever = assetRetriever,
-    )
-
-    private val publicationOpener = PublicationOpener(publicationParser)
+    private val publicationOpener by lazy {
+        val parser = DefaultPublicationParser(context, httpClient, assetRetriever, null)
+        PublicationOpener(parser)
+    }
 
     suspend fun open(file: File): Result<Publication> {
-        val asset = assetRetriever.retrieve(file)
-            .getOrElse { return Result.failure(it) }
+        val asset = when (val result = assetRetriever.retrieve(file)) {
+            is Try.Success -> result.value
+            is Try.Failure -> {
+                Timber.e("Failed to retrieve asset: ${file.name}")
+                return Result.failure(Exception("Failed to retrieve asset: ${result.value}"))
+            }
+        }
 
-        return publicationOpener.open(asset, allowUserInteraction = false)
-            .fold(
-                onSuccess = { Result.success(it) },
-                onFailure = {
-                    Timber.e(it, "Failed to open publication: ${file.name}")
-                    Result.failure(it)
-                },
-            )
+        return when (val result = publicationOpener.open(asset, allowUserInteraction = false)) {
+            is Try.Success -> Result.success(result.value)
+            is Try.Failure -> {
+                Timber.e("Failed to open publication: ${file.name}")
+                Result.failure(Exception("Failed to open publication: ${result.value}"))
+            }
+        }
     }
 }

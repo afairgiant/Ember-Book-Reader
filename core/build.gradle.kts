@@ -72,6 +72,7 @@ dependencies {
 
     // Readium
     implementation(libs.readium.shared)
+    implementation(libs.readium.streamer)
     implementation(libs.readium.opds)
 
     // Logging
