@@ -10,10 +10,8 @@ import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.sync.PartialMd5
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 import java.time.Instant
@@ -91,16 +89,13 @@ class BookRepository @Inject constructor(
         val fileName = "${book.id}.$extension"
         val file = File(booksDir, fileName)
 
-        val bytes = opdsClient.downloadBook(
+        opdsClient.downloadBookToFile(
             baseUrl = server.url,
             username = server.opdsUsername,
             password = server.opdsPassword,
             downloadPath = downloadUrl,
+            destination = file,
         ).getOrThrow()
-
-        withContext(Dispatchers.IO) {
-            file.writeBytes(bytes)
-        }
 
         val fileHash = PartialMd5.compute(file)
         bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())

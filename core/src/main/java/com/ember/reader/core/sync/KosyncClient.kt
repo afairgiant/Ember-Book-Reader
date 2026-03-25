@@ -9,6 +9,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
 import java.security.MessageDigest
@@ -89,6 +90,7 @@ data class KosyncProgressRequest(
     val progress: String,
     val percentage: Float,
     val device: String,
+    @SerialName("device_id")
     val deviceId: String,
 )
 
@@ -98,6 +100,7 @@ data class KosyncProgressResponse(
     val progress: String? = null,
     val percentage: Float? = null,
     val device: String? = null,
+    @SerialName("device_id")
     val deviceId: String? = null,
     val timestamp: Long? = null,
 )

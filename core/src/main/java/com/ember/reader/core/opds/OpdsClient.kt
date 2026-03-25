@@ -5,9 +5,15 @@ import com.ember.reader.core.model.BookFormat
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -83,24 +89,37 @@ class OpdsClient @Inject constructor(
         OpdsParser.parseBookFeed(response.bodyAsText(), baseUrl, serverId)
     }
 
-    suspend fun downloadBook(
+    suspend fun downloadBookToFile(
         baseUrl: String,
         username: String,
         password: String,
         downloadPath: String,
-    ): Result<ByteArray> = runCatching {
+        destination: File,
+    ): Result<Unit> = runCatching {
         val url = if (downloadPath.startsWith("http")) {
             downloadPath
         } else {
             "${baseUrl.trimEnd('/')}$downloadPath"
         }
-        val response = httpClient.get(url) {
+        httpClient.prepareGet(url) {
             header("Authorization", basicAuth(username, password))
+        }.execute { response ->
+            if (!response.status.isSuccess()) {
+                error("Download failed: ${response.status}")
+            }
+            val channel = response.bodyAsChannel()
+            withContext(Dispatchers.IO) {
+                destination.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val bytesRead = channel.readAvailable(buffer)
+                        if (bytesRead > 0) {
+                            output.write(buffer, 0, bytesRead)
+                        }
+                    }
+                }
+            }
         }
-        if (!response.status.isSuccess()) {
-            error("Download failed: ${response.status}")
-        }
-        io.ktor.client.call.body<ByteArray>(response)
     }
 
     private fun basicAuth(username: String, password: String): String {

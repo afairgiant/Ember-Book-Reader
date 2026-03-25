@@ -12,13 +12,11 @@ pluginManagement {
     }
 }
 
-dependencyResolution {
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        maven("https://maven.pkg.github.com/nicholasgasior/readium-kotlin-toolkit") {
-            // Readium artifacts
-        }
     }
 }
 
