@@ -2,6 +2,7 @@ package com.ember.reader.core.opds
 
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.network.resolveUrl
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import timber.log.Timber
@@ -187,9 +188,6 @@ object OpdsParser {
 
         return OpdsBookPage(books = books, nextPagePath = nextPagePath)
     }
-
-    private fun resolveUrl(baseUrl: String, href: String): String =
-        if (href.startsWith("http")) href else "${baseUrl.trimEnd('/')}$href"
 
     private fun mimeToFormat(mime: String): BookFormat = when {
         mime.contains("epub") -> BookFormat.EPUB

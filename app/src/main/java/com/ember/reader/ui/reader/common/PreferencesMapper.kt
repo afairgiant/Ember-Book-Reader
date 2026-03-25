@@ -19,13 +19,7 @@ object PreferencesMapper {
         )
 
     private fun mapFontFamily(fontFamily: FontFamily): org.readium.r2.navigator.preferences.FontFamily? =
-        when (fontFamily) {
-            FontFamily.SYSTEM -> null
-            FontFamily.SERIF -> org.readium.r2.navigator.preferences.FontFamily("serif")
-            FontFamily.SANS_SERIF -> org.readium.r2.navigator.preferences.FontFamily("sans-serif")
-            FontFamily.MONOSPACE -> org.readium.r2.navigator.preferences.FontFamily("monospace")
-            FontFamily.OPEN_DYSLEXIC -> org.readium.r2.navigator.preferences.FontFamily("OpenDyslexic")
-        }
+        fontFamily.cssValue?.let { org.readium.r2.navigator.preferences.FontFamily(it) }
 
     private fun mapTheme(theme: ReaderTheme): org.readium.r2.navigator.epub.EpubTheme? =
         when (theme) {

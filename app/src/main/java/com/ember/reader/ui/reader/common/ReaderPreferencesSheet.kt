@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.ui.common.SectionLabel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -162,14 +163,4 @@ fun ReaderPreferencesSheet(
             )
         }
     }
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
 }

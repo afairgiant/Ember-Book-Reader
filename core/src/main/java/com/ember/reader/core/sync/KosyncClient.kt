@@ -1,5 +1,7 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.network.buildServerUrl
+import com.ember.reader.core.network.md5Hash
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -12,7 +14,6 @@ import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
-import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +27,7 @@ class KosyncClient @Inject constructor(
         username: String,
         password: String,
     ): Result<Unit> = runCatching {
-        val response = httpClient.get("${baseUrl.trimEnd('/')}/api/koreader/users/auth") {
+        val response = httpClient.get(buildServerUrl(baseUrl, "/api/koreader/users/auth")) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
             header("Accept", ACCEPT_HEADER)
@@ -42,7 +43,7 @@ class KosyncClient @Inject constructor(
         password: String,
         request: KosyncProgressRequest,
     ): Result<Unit> = runCatching {
-        val response = httpClient.put("${baseUrl.trimEnd('/')}/api/koreader/syncs/progress") {
+        val response = httpClient.put(buildServerUrl(baseUrl, "/api/koreader/syncs/progress")) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
             header("Accept", ACCEPT_HEADER)
@@ -61,7 +62,7 @@ class KosyncClient @Inject constructor(
         documentHash: String,
     ): Result<KosyncProgressResponse?> = runCatching {
         val response = httpClient.get(
-            "${baseUrl.trimEnd('/')}/api/koreader/syncs/progress/$documentHash",
+            buildServerUrl(baseUrl, "/api/koreader/syncs/progress/$documentHash"),
         ) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
@@ -77,12 +78,6 @@ class KosyncClient @Inject constructor(
 
     companion object {
         private const val ACCEPT_HEADER = "application/vnd.koreader.v1+json"
-
-        fun md5Hash(input: String): String {
-            val digest = MessageDigest.getInstance("MD5")
-            val bytes = digest.digest(input.toByteArray())
-            return bytes.joinToString("") { "%02x".format(it) }
-        }
     }
 }
 

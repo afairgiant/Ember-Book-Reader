@@ -2,6 +2,8 @@ package com.ember.reader.core.opds
 
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.network.buildServerUrl
+import com.ember.reader.core.network.resolveUrl
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -29,7 +31,7 @@ class OpdsClient @Inject constructor(
         username: String,
         password: String,
     ): Result<String> = runCatching {
-        val response = httpClient.get("${baseUrl.trimEnd('/')}/api/v1/opds") {
+        val response = httpClient.get(buildServerUrl(baseUrl, "/api/v1/opds")) {
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
@@ -45,7 +47,7 @@ class OpdsClient @Inject constructor(
         password: String,
         path: String = "/api/v1/opds",
     ): Result<OpdsFeed> = runCatching {
-        val url = "${baseUrl.trimEnd('/')}$path"
+        val url = buildServerUrl(baseUrl, path)
         val response = httpClient.get(url) {
             header("Authorization", basicAuth(username, password))
         }
@@ -63,7 +65,7 @@ class OpdsClient @Inject constructor(
         path: String = "/api/v1/opds/catalog",
         page: Int = 1,
     ): Result<OpdsBookPage> = runCatching {
-        val url = "${baseUrl.trimEnd('/')}$path?page=$page"
+        val url = buildServerUrl(baseUrl, "$path?page=$page")
         val response = httpClient.get(url) {
             header("Authorization", basicAuth(username, password))
         }
@@ -81,7 +83,7 @@ class OpdsClient @Inject constructor(
         query: String,
         page: Int = 1,
     ): Result<OpdsBookPage> = runCatching {
-        val url = "${baseUrl.trimEnd('/')}/api/v1/opds/catalog?q=$query&page=$page"
+        val url = buildServerUrl(baseUrl, "/api/v1/opds/catalog?q=$query&page=$page")
         val response = httpClient.get(url) {
             header("Authorization", basicAuth(username, password))
         }
@@ -98,11 +100,7 @@ class OpdsClient @Inject constructor(
         downloadPath: String,
         destination: File,
     ): Result<Unit> = runCatching {
-        val url = if (downloadPath.startsWith("http")) {
-            downloadPath
-        } else {
-            "${baseUrl.trimEnd('/')}$downloadPath"
-        }
+        val url = resolveUrl(baseUrl, downloadPath)
         httpClient.prepareGet(url) {
             header("Authorization", basicAuth(username, password))
         }.execute { response ->

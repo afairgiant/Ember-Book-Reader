@@ -1,5 +1,6 @@
 package com.ember.reader.ui.server
 
+import com.ember.reader.ui.common.SectionLabel
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,7 +66,7 @@ fun ServerFormScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionHeader("Server")
+            SectionLabel("Server")
 
             OutlinedTextField(
                 value = uiState.name,
@@ -86,7 +87,7 @@ fun ServerFormScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-            SectionHeader("OPDS Credentials")
+            SectionLabel("OPDS Credentials")
             Text(
                 text = "For browsing and downloading books",
                 style = MaterialTheme.typography.bodySmall,
@@ -119,7 +120,7 @@ fun ServerFormScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-            SectionHeader("Kosync Credentials")
+            SectionLabel("Kosync Credentials")
             Text(
                 text = "For reading progress synchronization",
                 style = MaterialTheme.typography.bodySmall,
@@ -178,16 +179,6 @@ fun ServerFormScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
 }
 
 @Composable

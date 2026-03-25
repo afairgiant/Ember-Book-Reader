@@ -1,5 +1,6 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.network.toHexString
 import java.io.File
 import java.io.RandomAccessFile
 import java.security.MessageDigest
@@ -34,6 +35,6 @@ object PartialMd5 {
             }
         }
 
-        return digest.digest().joinToString("") { "%02x".format(it) }
+        return digest.digest().toHexString()
     }
 }
