@@ -43,6 +43,7 @@ fun ServerListScreen(
     onAddServer: () -> Unit,
     onEditServer: (Long) -> Unit,
     onOpenLibrary: (Long) -> Unit,
+    onOpenLocalLibrary: () -> Unit,
     onOpenSettings: () -> Unit,
     viewModel: ServerListViewModel = hiltViewModel(),
 ) {
@@ -75,18 +76,22 @@ fun ServerListScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is ServerListUiState.Success -> {
-                    if (state.servers.isEmpty()) {
-                        EmptyServerState(
-                            onAddServer = onAddServer,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    } else {
-                        ServerList(
-                            servers = state.servers,
-                            onOpenLibrary = onOpenLibrary,
-                            onEditServer = onEditServer,
-                            onDeleteServer = viewModel::deleteServer,
-                        )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                    ) {
+                        item {
+                            LocalBooksCard(onClick = onOpenLocalLibrary)
+                        }
+                        items(state.servers, key = { it.id }) { server ->
+                            ServerCard(
+                                server = server,
+                                onOpenLibrary = { onOpenLibrary(server.id) },
+                                onEdit = { onEditServer(server.id) },
+                                onDelete = { onDeleteServer(server.id) },
+                            )
+                        }
                     }
                 }
             }
@@ -124,24 +129,34 @@ private fun EmptyServerState(
 }
 
 @Composable
-private fun ServerList(
-    servers: List<Server>,
-    onOpenLibrary: (Long) -> Unit,
-    onEditServer: (Long) -> Unit,
-    onDeleteServer: (Long) -> Unit,
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+private fun LocalBooksCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
     ) {
-        items(servers, key = { it.id }) { server ->
-            ServerCard(
-                server = server,
-                onOpenLibrary = { onOpenLibrary(server.id) },
-                onEdit = { onEditServer(server.id) },
-                onDelete = { onDeleteServer(server.id) },
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.LibraryBooks,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
             )
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(
+                    text = "Local Books",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "Imported EPUB and PDF files",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

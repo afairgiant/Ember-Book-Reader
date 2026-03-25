@@ -47,12 +47,17 @@ class BookRepository @Inject constructor(
     fun search(serverId: Long?, query: String): Flow<List<Book>> =
         bookDao.search(serverId, query).map { entities -> entities.map { it.toDomain() } }
 
-    suspend fun refreshFromServer(server: Server, page: Int = 1): Result<OpdsBookPage> {
+    suspend fun refreshFromServer(
+        server: Server,
+        page: Int = 1,
+        path: String = "/api/v1/opds/catalog",
+    ): Result<OpdsBookPage> {
         val result = opdsClient.fetchBooks(
             baseUrl = server.url,
             username = server.opdsUsername,
             password = server.opdsPassword,
             serverId = server.id,
+            path = path,
             page = page,
         )
         result.onSuccess { bookPage ->

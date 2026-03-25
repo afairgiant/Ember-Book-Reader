@@ -27,6 +27,7 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
+    private val catalogPath: String = savedStateHandle.get<String>("path") ?: "/api/v1/opds/catalog"
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -83,7 +84,7 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         _isRefreshing.value = true
         viewModelScope.launch {
-            bookRepository.refreshFromServer(currentServer)
+            bookRepository.refreshFromServer(currentServer, path = catalogPath)
             _isRefreshing.value = false
         }
     }
