@@ -17,7 +17,9 @@ import java.io.File
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class OpdsClient @Inject constructor(
     private val httpClient: HttpClient,
 ) {

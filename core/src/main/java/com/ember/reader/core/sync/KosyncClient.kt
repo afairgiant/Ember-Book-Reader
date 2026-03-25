@@ -14,7 +14,9 @@ import kotlinx.serialization.Serializable
 import timber.log.Timber
 import java.security.MessageDigest
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class KosyncClient @Inject constructor(
     private val httpClient: HttpClient,
 ) {

@@ -22,13 +22,40 @@ class ServerRepository @Inject constructor(
 ) {
 
     fun observeAll(): Flow<List<Server>> =
-        serverDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+        serverDao.observeAll().map { entities ->
+            entities.map { entity ->
+                entity.toDomain(
+                    opdsPassword = credentialEncryption.getPassword(
+                        CredentialEncryption.opdsPasswordKey(entity.id),
+                    ) ?: "",
+                    kosyncPassword = credentialEncryption.getPassword(
+                        CredentialEncryption.kosyncPasswordKey(entity.id),
+                    ) ?: "",
+                )
+            }
+        }
 
     fun observeById(id: Long): Flow<Server?> =
-        serverDao.observeById(id).map { it?.toDomain() }
+        serverDao.observeById(id).map { entity ->
+            entity?.toDomain(
+                opdsPassword = credentialEncryption.getPassword(
+                    CredentialEncryption.opdsPasswordKey(id),
+                ) ?: "",
+                kosyncPassword = credentialEncryption.getPassword(
+                    CredentialEncryption.kosyncPasswordKey(id),
+                ) ?: "",
+            )
+        }
 
     suspend fun getById(id: Long): Server? =
-        serverDao.getById(id)?.toDomain()
+        serverDao.getById(id)?.toDomain(
+            opdsPassword = credentialEncryption.getPassword(
+                CredentialEncryption.opdsPasswordKey(id),
+            ) ?: "",
+            kosyncPassword = credentialEncryption.getPassword(
+                CredentialEncryption.kosyncPasswordKey(id),
+            ) ?: "",
+        )
 
     suspend fun save(server: Server): Long {
         val entity = server.toEntity()

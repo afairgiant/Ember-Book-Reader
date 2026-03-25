@@ -21,9 +21,4 @@ data class Book(
 ) {
     val isDownloaded: Boolean get() = localPath != null
     val isLocal: Boolean get() = serverId == null
-    val downloadState: DownloadState
-        get() = when {
-            localPath != null -> DownloadState.DOWNLOADED
-            else -> DownloadState.NOT_DOWNLOADED
-        }
 }

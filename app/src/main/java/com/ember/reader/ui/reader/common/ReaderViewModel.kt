@@ -86,13 +86,7 @@ class ReaderViewModel @Inject constructor(
             return
         }
 
-        val file = File(localPath)
-        if (!file.exists()) {
-            _uiState.value = ReaderUiState.Error("Book file missing")
-            return
-        }
-
-        val pub = bookOpener.open(file).getOrElse { error ->
+        val pub = bookOpener.open(File(localPath)).getOrElse { error ->
             _uiState.value = ReaderUiState.Error("Failed to open: ${error.message}")
             return
         }
@@ -160,7 +154,7 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         _currentLocator.value?.let { locator ->
-            viewModelScope.launch {
+            kotlinx.coroutines.runBlocking {
                 saveProgress(locator)
             }
         }

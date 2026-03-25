@@ -16,15 +16,18 @@ import com.ember.reader.ui.server.ServerListScreen
 import com.ember.reader.ui.settings.SettingsScreen
 
 object Routes {
+    const val ARG_SERVER_ID = "serverId"
+    const val ARG_BOOK_ID = "bookId"
+
     const val SERVER_LIST = "servers"
-    const val SERVER_FORM = "server_form?serverId={serverId}"
-    const val LIBRARY = "library/{serverId}"
-    const val EPUB_READER = "reader/epub/{bookId}"
-    const val PDF_READER = "reader/pdf/{bookId}"
+    const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
+    const val LIBRARY = "library/{$ARG_SERVER_ID}"
+    const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
+    const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
     const val SETTINGS = "settings"
 
     fun serverForm(serverId: Long? = null): String =
-        if (serverId != null) "server_form?serverId=$serverId" else "server_form"
+        if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
 
     fun library(serverId: Long): String = "library/$serverId"
     fun epubReader(bookId: String): String = "reader/epub/$bookId"
@@ -53,7 +56,7 @@ fun EmberNavHost(
         composable(
             route = Routes.SERVER_FORM,
             arguments = listOf(
-                navArgument("serverId") {
+                navArgument(Routes.ARG_SERVER_ID) {
                     type = NavType.LongType
                     defaultValue = -1L
                 },
@@ -69,7 +72,7 @@ fun EmberNavHost(
         composable(
             route = Routes.LIBRARY,
             arguments = listOf(
-                navArgument("serverId") { type = NavType.LongType },
+                navArgument(Routes.ARG_SERVER_ID) { type = NavType.LongType },
             ),
         ) { backStackEntry ->
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
@@ -91,7 +94,7 @@ fun EmberNavHost(
         composable(
             route = Routes.EPUB_READER,
             arguments = listOf(
-                navArgument("bookId") { type = NavType.StringType },
+                navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType },
             ),
         ) {
             EpubReaderScreen(
@@ -102,7 +105,7 @@ fun EmberNavHost(
         composable(
             route = Routes.PDF_READER,
             arguments = listOf(
-                navArgument("bookId") { type = NavType.StringType },
+                navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType },
             ),
         ) {
             PdfReaderScreen(

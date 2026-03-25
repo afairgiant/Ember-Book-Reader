@@ -11,8 +11,6 @@ data class ServerEntity(
     val name: String,
     val url: String,
     val opdsUsername: String,
-    val opdsPassword: String,
     val kosyncUsername: String,
-    val kosyncPassword: String,
     val lastConnected: Instant? = null,
 )

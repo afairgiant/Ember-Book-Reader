@@ -25,6 +25,9 @@ import com.ember.reader.core.model.Bookmark
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+private val bookmarkDateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookmarksSheet(
@@ -89,7 +92,7 @@ private fun BookmarkItem(
             Text(
                 text = bookmark.createdAt
                     .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm")),
+                    .format(bookmarkDateFormatter),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -25,8 +25,9 @@ class BookRepository @Inject constructor(
     private val opdsClient: OpdsClient,
 ) {
 
-    private val booksDir: File
-        get() = File(context.filesDir, "books").also { it.mkdirs() }
+    private val booksDir: File by lazy {
+        File(context.filesDir, "books").also { it.mkdirs() }
+    }
 
     fun observeByServer(serverId: Long): Flow<List<Book>> =
         bookDao.observeByServer(serverId).map { entities -> entities.map { it.toDomain() } }

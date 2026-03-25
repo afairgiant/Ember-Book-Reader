@@ -1,6 +1,7 @@
 package com.ember.reader.core.readium
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
@@ -13,7 +14,7 @@ import javax.inject.Singleton
 
 @Singleton
 class BookOpener @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
 ) {
 
     private val httpClient = DefaultHttpClient()

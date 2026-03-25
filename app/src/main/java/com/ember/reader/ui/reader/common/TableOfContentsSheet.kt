@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -28,6 +29,7 @@ fun TableOfContentsSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tocEntries = remember(publication) { flattenToc(publication.tableOfContents) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -40,7 +42,7 @@ fun TableOfContentsSheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             LazyColumn {
-                items(flattenToc(publication.tableOfContents)) { entry ->
+                items(tocEntries) { entry ->
                     TocItem(
                         entry = entry,
                         isCurrent = currentLocator?.href?.toString() == entry.link.href?.toString(),

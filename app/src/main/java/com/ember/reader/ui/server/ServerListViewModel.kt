@@ -18,13 +18,7 @@ class ServerListViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<ServerListUiState> = serverRepository.observeAll()
-        .map { servers ->
-            if (servers.isEmpty()) {
-                ServerListUiState.Empty
-            } else {
-                ServerListUiState.Success(servers)
-            }
-        }
+        .map { servers -> ServerListUiState.Success(servers) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ServerListUiState.Loading)
 
     fun deleteServer(serverId: Long) {
@@ -36,6 +30,5 @@ class ServerListViewModel @Inject constructor(
 
 sealed interface ServerListUiState {
     data object Loading : ServerListUiState
-    data object Empty : ServerListUiState
     data class Success(val servers: List<Server>) : ServerListUiState
 }

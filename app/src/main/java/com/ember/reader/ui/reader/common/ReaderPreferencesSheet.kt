@@ -57,7 +57,6 @@ fun ReaderPreferencesSheet(
                 modifier = Modifier.padding(bottom = 16.dp),
             )
 
-            // Font Family
             SectionLabel("Font")
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -73,7 +72,6 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Font Size
             SectionLabel("Font Size")
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -104,7 +102,6 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Line Height
             SectionLabel("Line Height")
             Slider(
                 value = preferences.lineHeight,
@@ -123,7 +120,6 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Theme
             SectionLabel("Theme")
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -139,7 +135,6 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pagination Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -156,7 +151,6 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Brightness
             SectionLabel("Brightness")
             Slider(
                 value = if (preferences.brightness < 0) 0.5f else preferences.brightness,

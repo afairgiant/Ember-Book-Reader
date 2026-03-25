@@ -198,11 +198,10 @@ object OpdsParser {
         else -> BookFormat.EPUB
     }
 
-    private fun createParser(xml: String): XmlPullParser {
-        val factory = XmlPullParserFactory.newInstance()
-        factory.isNamespaceAware = true
-        val parser = factory.newPullParser()
-        parser.setInput(StringReader(xml))
-        return parser
+    private val parserFactory: XmlPullParserFactory by lazy {
+        XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }
     }
+
+    private fun createParser(xml: String): XmlPullParser =
+        parserFactory.newPullParser().apply { setInput(StringReader(xml)) }
 }

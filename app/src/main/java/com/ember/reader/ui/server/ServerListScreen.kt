@@ -74,19 +74,20 @@ fun ServerListScreen(
                 ServerListUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                ServerListUiState.Empty -> {
-                    EmptyServerState(
-                        onAddServer = onAddServer,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-                }
                 is ServerListUiState.Success -> {
-                    ServerList(
-                        servers = state.servers,
-                        onOpenLibrary = onOpenLibrary,
-                        onEditServer = onEditServer,
-                        onDeleteServer = viewModel::deleteServer,
-                    )
+                    if (state.servers.isEmpty()) {
+                        EmptyServerState(
+                            onAddServer = onAddServer,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    } else {
+                        ServerList(
+                            servers = state.servers,
+                            onOpenLibrary = onOpenLibrary,
+                            onEditServer = onEditServer,
+                            onDeleteServer = viewModel::deleteServer,
+                        )
+                    }
                 }
             }
         }
