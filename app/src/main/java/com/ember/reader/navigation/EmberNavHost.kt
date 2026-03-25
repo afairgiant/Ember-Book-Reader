@@ -21,14 +21,14 @@ import com.ember.reader.ui.settings.StorageScreen
 object Routes {
     const val ARG_SERVER_ID = "serverId"
     const val ARG_BOOK_ID = "bookId"
+    const val ARG_PATH = "path"
 
     const val SERVER_LIST = "servers"
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
+    const val CATALOG = "catalog/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
-    const val ARG_PATH = "path"
-    const val CATALOG = "catalog/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val SETTINGS = "settings"
     const val STORAGE = "storage"
     const val LOCAL_LIBRARY = "local_library"
