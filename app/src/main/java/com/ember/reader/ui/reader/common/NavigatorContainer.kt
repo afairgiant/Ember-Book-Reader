@@ -10,7 +10,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
-import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.commit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,13 +19,12 @@ import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
 
 @Composable
-fun <F : Fragment> NavigatorContainer(
+fun NavigatorContainer(
     key: Any,
     containerId: Int,
     fragmentTag: String,
-    fragmentClass: Class<F>,
-    fragmentFactory: FragmentFactory,
-    locatorFlow: (F) -> StateFlow<Locator>?,
+    createFragment: () -> Fragment,
+    locatorFlow: (Fragment) -> StateFlow<Locator>?,
     onLocatorChanged: (Locator) -> Unit,
 ) {
     val context = LocalContext.current
@@ -49,16 +47,15 @@ fun <F : Fragment> NavigatorContainer(
     DisposableEffect(key) {
         val existingFragment = fragmentManager.findFragmentByTag(fragmentTag)
         if (existingFragment == null) {
-            activity.supportFragmentManager.fragmentFactory = fragmentFactory
+            val fragment = createFragment()
             fragmentManager.commit {
-                add(containerId, fragmentClass, null, fragmentTag)
+                add(containerId, fragment, fragmentTag)
             }
         }
 
         val scope = CoroutineScope(Dispatchers.Main + Job())
         val locatorJob = scope.launch {
-            @Suppress("UNCHECKED_CAST")
-            val fragment = fragmentManager.findFragmentByTag(fragmentTag) as? F
+            val fragment = fragmentManager.findFragmentByTag(fragmentTag)
             fragment?.let { locatorFlow(it) }?.collect { locator ->
                 onLocatorChanged(locator)
             }

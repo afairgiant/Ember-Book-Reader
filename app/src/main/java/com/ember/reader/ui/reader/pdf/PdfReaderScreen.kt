@@ -16,12 +16,10 @@ import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
-import org.readium.r2.shared.ExperimentalReadiumApi
 
 private const val FRAGMENT_TAG = "pdf_navigator"
 private const val CONTAINER_ID = 0x7F_FF_00_02
 
-@OptIn(ExperimentalReadiumApi::class)
 @Composable
 fun PdfReaderScreen(
     onNavigateBack: () -> Unit,
@@ -56,21 +54,15 @@ fun PdfReaderScreen(
                     key = state.publication,
                     containerId = CONTAINER_ID,
                     fragmentTag = FRAGMENT_TAG,
-                    fragmentClass = PdfNavigatorFragment::class.java,
-                    fragmentFactory = PdfNavigatorFragment.createFactory(
-                        publication = state.publication,
-                        initialLocator = state.initialLocator,
-                        listener = object : PdfNavigatorFragment.Listener {
-                            override fun onTap(
-                                navigator: org.readium.r2.navigator.VisualNavigator,
-                                event: org.readium.r2.navigator.input.TapEvent,
-                            ): Boolean {
-                                viewModel.toggleChrome()
-                                return true
-                            }
-                        },
-                    ),
-                    locatorFlow = { it.currentLocator },
+                    createFragment = {
+                        PdfNavigatorFragment(
+                            publication = state.publication,
+                            initialLocator = state.initialLocator,
+                        )
+                    },
+                    locatorFlow = { fragment ->
+                        (fragment as? PdfNavigatorFragment)?.currentLocator
+                    },
                     onLocatorChanged = viewModel::onLocatorChanged,
                 )
             }
