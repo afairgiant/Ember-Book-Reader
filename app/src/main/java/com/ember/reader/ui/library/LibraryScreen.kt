@@ -51,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.DownloadState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +59,7 @@ import com.ember.reader.core.model.DownloadState
 fun LibraryScreen(
     serverId: Long,
     onNavigateBack: () -> Unit,
+    onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -138,14 +140,18 @@ fun LibraryScreen(
                             BookGrid(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
-                                onBookClick = { /* TODO: open reader */ },
+                                onBookClick = { book ->
+                                if (book.isDownloaded) onOpenReader(book.id, book.format)
+                            },
                                 onDownloadClick = viewModel::downloadBook,
                             )
                         } else {
                             BookList(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
-                                onBookClick = { /* TODO: open reader */ },
+                                onBookClick = { book ->
+                                if (book.isDownloaded) onOpenReader(book.id, book.format)
+                            },
                                 onDownloadClick = viewModel::downloadBook,
                             )
                         }

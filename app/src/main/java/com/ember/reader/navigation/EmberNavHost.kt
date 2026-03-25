@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ember.reader.ui.library.LibraryScreen
+import com.ember.reader.ui.reader.epub.EpubReaderScreen
+import com.ember.reader.ui.reader.pdf.PdfReaderScreen
 import com.ember.reader.ui.server.ServerFormScreen
 import com.ember.reader.ui.server.ServerListScreen
 import com.ember.reader.ui.settings.SettingsScreen
@@ -17,12 +19,16 @@ object Routes {
     const val SERVER_LIST = "servers"
     const val SERVER_FORM = "server_form?serverId={serverId}"
     const val LIBRARY = "library/{serverId}"
+    const val EPUB_READER = "reader/epub/{bookId}"
+    const val PDF_READER = "reader/pdf/{bookId}"
     const val SETTINGS = "settings"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?serverId=$serverId" else "server_form"
 
     fun library(serverId: Long): String = "library/$serverId"
+    fun epubReader(bookId: String): String = "reader/epub/$bookId"
+    fun pdfReader(bookId: String): String = "reader/pdf/$bookId"
 }
 
 @Composable
@@ -69,6 +75,37 @@ fun EmberNavHost(
             val serverId = backStackEntry.arguments?.getLong("serverId") ?: return@composable
             LibraryScreen(
                 serverId = serverId,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenReader = { bookId, format ->
+                    when (format) {
+                        com.ember.reader.core.model.BookFormat.EPUB ->
+                            navController.navigate(Routes.epubReader(bookId))
+                        com.ember.reader.core.model.BookFormat.PDF ->
+                            navController.navigate(Routes.pdfReader(bookId))
+                        com.ember.reader.core.model.BookFormat.AUDIOBOOK -> { /* Future */ }
+                    }
+                },
+            )
+        }
+
+        composable(
+            route = Routes.EPUB_READER,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.StringType },
+            ),
+        ) {
+            EpubReaderScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Routes.PDF_READER,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.StringType },
+            ),
+        ) {
+            PdfReaderScreen(
                 onNavigateBack = { navController.popBackStack() },
             )
         }

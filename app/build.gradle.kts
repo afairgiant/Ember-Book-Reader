@@ -46,6 +46,7 @@ android {
 
     buildFeatures {
         compose = true
+        viewBinding = true
     }
 }
 
@@ -81,10 +82,17 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    // Fragment
+    implementation(libs.fragment.ktx)
+
     // Readium
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
     implementation(libs.readium.navigator)
+    implementation(libs.readium.adapter.pdfium)
+
+    // Compose ViewBinding
+    implementation(libs.compose.ui.viewbinding)
 
     // DataStore
     implementation(libs.datastore.preferences)

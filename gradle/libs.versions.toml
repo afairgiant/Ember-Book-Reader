@@ -17,6 +17,7 @@ security-crypto = "1.1.0-alpha06"
 work = "2.10.0"
 hilt-navigation-compose = "1.2.0"
 hilt-work = "1.2.0"
+fragment-ktx = "1.8.5"
 core-ktx = "1.15.0"
 activity-compose = "1.9.3"
 serialization = "1.7.3"
@@ -80,7 +81,15 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
+readium-navigator-media = { module = "org.readium.kotlin-toolkit:readium-navigator-media", version.ref = "readium" }
 readium-opds = { module = "org.readium.kotlin-toolkit:readium-opds", version.ref = "readium" }
+readium-adapter-pdfium = { module = "org.readium.kotlin-toolkit:readium-adapter-pdfium", version.ref = "readium" }
+
+# Fragment
+fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment-ktx" }
+
+# Compose ViewBinding
+compose-ui-viewbinding = { module = "androidx.compose.ui:ui-viewbinding" }
 
 # DataStore
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
