@@ -25,12 +25,7 @@ class SettingsViewModel @Inject constructor(
     fun updateSyncFrequency(frequency: SyncFrequency) {
         viewModelScope.launch {
             syncPreferencesRepository.updateSyncFrequency(frequency)
-            val interval = frequency.intervalMinutes
-            if (interval != null) {
-                syncScheduler.schedulePeriodicSync(interval)
-            } else {
-                syncScheduler.cancelPeriodicSync()
-            }
+            syncScheduler.applyFrequency(frequency)
         }
     }
 

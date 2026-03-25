@@ -26,12 +26,13 @@ class EmberApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var syncPreferencesRepository: SyncPreferencesRepository
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
+    override val workManagerConfiguration: Configuration by lazy {
+        Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -44,10 +45,7 @@ class EmberApplication : Application(), Configuration.Provider {
     private fun initializeSync() {
         applicationScope.launch {
             val frequency = syncPreferencesRepository.syncFrequencyFlow.first()
-            val interval = frequency.intervalMinutes
-            if (interval != null) {
-                syncScheduler.schedulePeriodicSync(interval)
-            }
+            syncScheduler.applyFrequency(frequency)
         }
     }
 }

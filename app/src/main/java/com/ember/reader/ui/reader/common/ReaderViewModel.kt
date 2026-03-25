@@ -111,17 +111,27 @@ class ReaderViewModel @Inject constructor(
         pullRemoteProgressOnOpen(loadedBook, localProgress)
     }
 
+    private data class SyncContext(
+        val server: com.ember.reader.core.model.Server,
+        val fileHash: String,
+    )
+
+    private suspend fun getSyncContext(): SyncContext? {
+        val loadedBook = book ?: return null
+        val serverId = loadedBook.serverId ?: return null
+        val fileHash = loadedBook.fileHash ?: return null
+        val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
+        if (syncFrequency == SyncFrequency.MANUAL) return null
+        val server = serverRepository.getById(serverId) ?: return null
+        if (server.kosyncUsername.isBlank()) return null
+        return SyncContext(server, fileHash)
+    }
+
     private suspend fun pullRemoteProgressOnOpen(
         loadedBook: Book,
         localProgress: ReadingProgress?,
     ) {
-        val serverId = loadedBook.serverId ?: return
-        val fileHash = loadedBook.fileHash ?: return
-        val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
-        if (syncFrequency == SyncFrequency.MANUAL) return
-
-        val server = serverRepository.getById(serverId) ?: return
-        if (server.kosyncUsername.isBlank()) return
+        val (server, fileHash) = getSyncContext() ?: return
 
         val remoteResult = readingProgressRepository.pullProgress(server, bookId, fileHash)
         val remote = remoteResult.getOrNull() ?: return
@@ -133,6 +143,7 @@ class ReaderViewModel @Inject constructor(
                 localPercentage = localPercentage,
                 remoteLocatorJson = remote.locatorJson,
                 remoteDevice = null,
+                remoteProgress = remote,
             )
         }
     }
@@ -141,6 +152,9 @@ class ReaderViewModel @Inject constructor(
         val conflict = _syncConflict.value ?: return
         _syncConflict.value = null
         val locator = conflict.remoteLocatorJson?.toLocator() ?: return
+        viewModelScope.launch {
+            conflict.remoteProgress?.let { readingProgressRepository.applyRemoteProgress(it) }
+        }
         _uiState.update { state ->
             if (state is ReaderUiState.Ready) {
                 state.copy(initialLocator = locator)
@@ -200,15 +214,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private suspend fun pushProgressOnClose() {
-        val loadedBook = book ?: return
-        val serverId = loadedBook.serverId ?: return
-        val fileHash = loadedBook.fileHash ?: return
-
-        val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
-        if (syncFrequency == SyncFrequency.MANUAL) return
-
-        val server = serverRepository.getById(serverId) ?: return
-        if (server.kosyncUsername.isBlank()) return
+        val (server, fileHash) = getSyncContext() ?: return
 
         readingProgressRepository.pushProgress(server, bookId, fileHash).onFailure {
             Timber.w(it, "Failed to push progress on close")
@@ -220,6 +226,8 @@ class ReaderViewModel @Inject constructor(
         _currentLocator.value?.let { locator ->
             kotlinx.coroutines.runBlocking {
                 saveProgress(locator)
+            }
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 pushProgressOnClose()
             }
         }
@@ -247,4 +255,5 @@ data class SyncConflict(
     val localPercentage: Float,
     val remoteLocatorJson: String?,
     val remoteDevice: String?,
+    val remoteProgress: com.ember.reader.core.model.ReadingProgress? = null,
 )

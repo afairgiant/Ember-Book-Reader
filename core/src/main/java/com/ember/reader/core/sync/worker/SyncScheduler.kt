@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.ember.reader.core.model.SyncFrequency
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -19,16 +20,32 @@ class SyncScheduler @Inject constructor(
     private val workManager: WorkManager
         get() = WorkManager.getInstance(context)
 
-    fun schedulePeriodicSync(intervalMinutes: Long = DEFAULT_INTERVAL_MINUTES) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+    private val networkConstraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
 
+    fun applyFrequency(frequency: SyncFrequency) {
+        val interval = frequency.intervalMinutes
+        if (interval != null) {
+            schedulePeriodicSync(interval)
+        } else {
+            cancelPeriodicSync()
+        }
+    }
+
+    fun syncNow() {
+        val request = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(networkConstraints)
+            .build()
+        workManager.enqueue(request)
+    }
+
+    private fun schedulePeriodicSync(intervalMinutes: Long) {
         val request = PeriodicWorkRequestBuilder<SyncWorker>(
             intervalMinutes,
             TimeUnit.MINUTES,
         )
-            .setConstraints(constraints)
+            .setConstraints(networkConstraints)
             .build()
 
         workManager.enqueueUniquePeriodicWork(
@@ -38,23 +55,7 @@ class SyncScheduler @Inject constructor(
         )
     }
 
-    fun cancelPeriodicSync() {
+    private fun cancelPeriodicSync() {
         workManager.cancelUniqueWork(SyncWorker.WORK_NAME)
-    }
-
-    fun syncNow() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val request = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(constraints)
-            .build()
-
-        workManager.enqueue(request)
-    }
-
-    companion object {
-        const val DEFAULT_INTERVAL_MINUTES = 15L
     }
 }

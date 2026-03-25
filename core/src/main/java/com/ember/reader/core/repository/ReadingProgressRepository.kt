@@ -82,28 +82,25 @@ class ReadingProgressRepository @Inject constructor(
         ).getOrNull() ?: return@runCatching null
 
         val remotePercentage = remote.percentage ?: return@runCatching null
-        val local = getByBookId(bookId)
 
-        if (local == null || remotePercentage > local.percentage) {
-            val updated = ReadingProgress(
-                bookId = bookId,
-                serverId = server.id,
-                percentage = remotePercentage,
-                locatorJson = remote.progress,
-                kosyncProgress = remote.progress,
-                lastReadAt = Instant.now(),
-                syncedAt = Instant.now(),
-                needsSync = false,
-            )
-            readingProgressDao.upsert(updated.toEntity())
-            updated
-        } else {
-            local
-        }
+        ReadingProgress(
+            bookId = bookId,
+            serverId = server.id,
+            percentage = remotePercentage,
+            locatorJson = remote.progress,
+            kosyncProgress = remote.progress,
+            lastReadAt = Instant.now(),
+            syncedAt = Instant.now(),
+            needsSync = false,
+        )
+    }
+
+    suspend fun applyRemoteProgress(progress: ReadingProgress) {
+        readingProgressDao.upsert(progress.toEntity())
     }
 
     suspend fun syncUnsyncedProgress(server: Server, getDocumentHash: suspend (String) -> String?) {
-        val unsynced = readingProgressDao.getUnsyncedProgress()
+        val unsynced = readingProgressDao.getUnsyncedProgress(server.id)
         for (entity in unsynced) {
             val hash = getDocumentHash(entity.bookId) ?: continue
             pushProgress(server, entity.bookId, hash).onFailure {
