@@ -96,5 +96,6 @@ Ember is a modern Android EPUB/PDF reader app. Primary companion to self-hosted 
 Response contains: document, progress, percentage, device, device_id, timestamp
 
 ## Current Status
-- **Phase**: 1 — Foundation
-- **In Progress**: Project scaffolding, build system, core data layer
+- **Phase**: 5 — Release Prep
+- **Completed**: Foundation, Reader Core, Sync, Polish
+- **In Progress**: Unit tests, CI/CD, documentation

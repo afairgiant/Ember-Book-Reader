@@ -25,6 +25,10 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions {
+        unitTests.all { it.useJUnitPlatform() }
+    }
+
     room {
         schemaDirectory("$projectDir/schemas")
     }
@@ -74,4 +78,5 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.room.testing)
+    testImplementation(libs.ktor.client.mock)
 }

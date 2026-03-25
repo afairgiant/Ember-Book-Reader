@@ -44,6 +44,10 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions {
+        unitTests.all { it.useJUnitPlatform() }
+    }
+
     buildFeatures {
         compose = true
         viewBinding = true
