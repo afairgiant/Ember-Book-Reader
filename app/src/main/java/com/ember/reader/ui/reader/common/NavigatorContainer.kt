@@ -10,6 +10,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
+import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.commit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,8 @@ fun NavigatorContainer(
     key: Any,
     containerId: Int,
     fragmentTag: String,
-    createFragment: () -> Fragment,
+    fragmentClass: Class<out Fragment>,
+    fragmentFactory: FragmentFactory,
     locatorFlow: (Fragment) -> StateFlow<Locator>?,
     onLocatorChanged: (Locator) -> Unit,
 ) {
@@ -47,9 +49,9 @@ fun NavigatorContainer(
     DisposableEffect(key) {
         val existingFragment = fragmentManager.findFragmentByTag(fragmentTag)
         if (existingFragment == null) {
-            val fragment = createFragment()
+            activity.supportFragmentManager.fragmentFactory = fragmentFactory
             fragmentManager.commit {
-                add(containerId, fragment, fragmentTag)
+                add(containerId, fragmentClass, null, fragmentTag)
             }
         }
 
