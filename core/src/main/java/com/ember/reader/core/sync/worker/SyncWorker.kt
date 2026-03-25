@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.assisted.Assisted
@@ -17,7 +17,7 @@ class SyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
-    private val bookDao: BookDao,
+    private val bookRepository: BookRepository,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -30,7 +30,7 @@ class SyncWorker @AssistedInject constructor(
             if (server.kosyncUsername.isBlank()) continue
 
             readingProgressRepository.syncUnsyncedProgress(server) { bookId ->
-                bookDao.getById(bookId)?.fileHash
+                bookRepository.getById(bookId)?.fileHash
             }
         }
 

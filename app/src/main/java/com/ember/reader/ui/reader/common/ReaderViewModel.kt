@@ -133,8 +133,9 @@ class ReaderViewModel @Inject constructor(
     ) {
         val (server, fileHash) = getSyncContext() ?: return
 
-        val remoteResult = readingProgressRepository.pullProgress(server, bookId, fileHash)
-        val remote = remoteResult.getOrNull() ?: return
+        val result = readingProgressRepository.pullProgress(server, bookId, fileHash)
+        val remoteResult = result.getOrNull() ?: return
+        val remote = remoteResult.progress
 
         val localPercentage = localProgress?.percentage ?: 0f
         if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
@@ -142,7 +143,7 @@ class ReaderViewModel @Inject constructor(
                 remotePercentage = remote.percentage,
                 localPercentage = localPercentage,
                 remoteLocatorJson = remote.locatorJson,
-                remoteDevice = null,
+                remoteDevice = remoteResult.deviceName,
                 remoteProgress = remote,
             )
         }

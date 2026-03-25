@@ -15,8 +15,9 @@ fun SyncConflictDialog(
         onDismissRequest = onKeepLocal,
         title = { Text("Sync Conflict") },
         text = {
+            val deviceInfo = conflict.remoteDevice?.let { " from $it" } ?: ""
             Text(
-                "A newer reading position was found on the server " +
+                "A newer reading position was found on the server$deviceInfo " +
                     "(${(conflict.remotePercentage * 100).toInt()}%). " +
                     "Your local position is at ${(conflict.localPercentage * 100).toInt()}%. " +
                     "Would you like to jump to the server position?",

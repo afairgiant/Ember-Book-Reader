@@ -27,8 +27,9 @@ class SyncPreferencesRepository @Inject constructor(
 
     val syncFrequencyFlow: Flow<SyncFrequency> =
         context.syncPreferencesDataStore.data.map { prefs ->
-            prefs[Keys.SYNC_FREQUENCY]?.let { SyncFrequency.valueOf(it) }
-                ?: SyncFrequency.ON_OPEN_CLOSE
+            prefs[Keys.SYNC_FREQUENCY]?.let { name ->
+                runCatching { SyncFrequency.valueOf(name) }.getOrNull()
+            } ?: SyncFrequency.ON_OPEN_CLOSE
         }
 
     suspend fun updateSyncFrequency(frequency: SyncFrequency) {

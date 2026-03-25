@@ -69,11 +69,16 @@ class ReadingProgressRepository @Inject constructor(
         }
     }
 
+    data class RemoteProgressResult(
+        val progress: ReadingProgress,
+        val deviceName: String?,
+    )
+
     suspend fun pullProgress(
         server: Server,
         bookId: String,
         documentHash: String,
-    ): Result<ReadingProgress?> = runCatching {
+    ): Result<RemoteProgressResult?> = runCatching {
         val remote = kosyncClient.pullProgress(
             baseUrl = server.url,
             username = server.kosyncUsername,
@@ -83,15 +88,18 @@ class ReadingProgressRepository @Inject constructor(
 
         val remotePercentage = remote.percentage ?: return@runCatching null
 
-        ReadingProgress(
-            bookId = bookId,
-            serverId = server.id,
-            percentage = remotePercentage,
-            locatorJson = remote.progress,
-            kosyncProgress = remote.progress,
-            lastReadAt = Instant.now(),
-            syncedAt = Instant.now(),
-            needsSync = false,
+        RemoteProgressResult(
+            progress = ReadingProgress(
+                bookId = bookId,
+                serverId = server.id,
+                percentage = remotePercentage,
+                locatorJson = remote.progress,
+                kosyncProgress = remote.progress,
+                lastReadAt = Instant.now(),
+                syncedAt = Instant.now(),
+                needsSync = false,
+            ),
+            deviceName = remote.device,
         )
     }
 
