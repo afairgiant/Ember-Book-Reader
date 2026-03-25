@@ -22,6 +22,7 @@ core-ktx = "1.15.0"
 activity-compose = "1.9.3"
 serialization = "1.7.3"
 timber = "5.0.1"
+desugar-jdk-libs = "2.1.4"
 
 # Testing
 junit = "5.10.3"
@@ -105,6 +106,9 @@ work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "w
 # Coroutines
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# Desugaring
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 
 # Logging
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
