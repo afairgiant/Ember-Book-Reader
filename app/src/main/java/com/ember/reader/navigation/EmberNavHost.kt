@@ -14,6 +14,7 @@ import com.ember.reader.ui.reader.pdf.PdfReaderScreen
 import com.ember.reader.ui.server.ServerFormScreen
 import com.ember.reader.ui.server.ServerListScreen
 import com.ember.reader.ui.settings.SettingsScreen
+import com.ember.reader.ui.settings.StorageScreen
 
 object Routes {
     const val ARG_SERVER_ID = "serverId"
@@ -25,6 +26,7 @@ object Routes {
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
     const val SETTINGS = "settings"
+    const val STORAGE = "storage"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
@@ -115,6 +117,13 @@ fun EmberNavHost(
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenStorage = { navController.navigate(Routes.STORAGE) },
+            )
+        }
+
+        composable(Routes.STORAGE) {
+            StorageScreen(
                 onNavigateBack = { navController.popBackStack() },
             )
         }

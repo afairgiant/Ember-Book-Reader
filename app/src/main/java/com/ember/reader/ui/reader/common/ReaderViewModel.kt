@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Bookmark
+import com.ember.reader.core.model.Highlight
+import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.SyncFrequency
@@ -14,6 +16,7 @@ import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
+import com.ember.reader.core.repository.HighlightRepository
 import com.ember.reader.core.repository.ReaderPreferencesRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -42,6 +45,7 @@ class ReaderViewModel @Inject constructor(
     private val bookOpener: BookOpener,
     private val readingProgressRepository: ReadingProgressRepository,
     private val bookmarkRepository: BookmarkRepository,
+    private val highlightRepository: HighlightRepository,
     private val readerPreferencesRepository: ReaderPreferencesRepository,
     private val serverRepository: ServerRepository,
     private val syncPreferencesRepository: SyncPreferencesRepository,
@@ -65,6 +69,9 @@ class ReaderViewModel @Inject constructor(
     private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
     val bookmarks: StateFlow<List<Bookmark>> = _bookmarks.asStateFlow()
 
+    private val _highlights = MutableStateFlow<List<Highlight>>(emptyList())
+    val highlights: StateFlow<List<Highlight>> = _highlights.asStateFlow()
+
     private val _currentLocator = MutableStateFlow<Locator?>(null)
     val currentLocator: StateFlow<Locator?> = _currentLocator.asStateFlow()
 
@@ -76,6 +83,9 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { loadBook() }
         viewModelScope.launch {
             bookmarkRepository.observeByBookId(bookId).collect { _bookmarks.value = it }
+        }
+        viewModelScope.launch {
+            highlightRepository.observeByBookId(bookId).collect { _highlights.value = it }
         }
     }
 
@@ -191,6 +201,22 @@ class ReaderViewModel @Inject constructor(
 
     fun deleteBookmark(id: Long) {
         viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
+    }
+
+    fun addHighlight(locatorJson: String, color: HighlightColor, annotation: String? = null) {
+        viewModelScope.launch {
+            highlightRepository.addHighlight(bookId, locatorJson, color, annotation)
+        }
+    }
+
+    fun updateHighlightAnnotation(highlight: Highlight, annotation: String?) {
+        viewModelScope.launch {
+            highlightRepository.updateAnnotation(highlight, annotation)
+        }
+    }
+
+    fun deleteHighlight(id: Long) {
+        viewModelScope.launch { highlightRepository.deleteHighlight(id) }
     }
 
     fun updatePreferences(preferences: ReaderPreferences) {

@@ -52,7 +52,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.model.DownloadState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

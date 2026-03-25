@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +36,7 @@ import com.ember.reader.ui.common.SectionLabel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onOpenStorage: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
@@ -90,6 +93,21 @@ fun SettingsScreen(
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 Text("Sync Now")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            SectionLabel("Storage")
+
+            OutlinedButton(
+                onClick = onOpenStorage,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Default.Storage,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text("Manage Downloads")
             }
         }
     }

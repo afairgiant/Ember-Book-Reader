@@ -1,10 +1,15 @@
 package com.ember.reader.ui.common
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,9 +24,21 @@ fun LoadingScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ErrorScreen(message: String, modifier: Modifier = Modifier) {
+fun ErrorScreen(
+    message: String,
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null,
+) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(message, color = MaterialTheme.colorScheme.error)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(message, color = MaterialTheme.colorScheme.error)
+            if (onRetry != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(onClick = onRetry) {
+                    Text("Retry")
+                }
+            }
+        }
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -36,6 +37,15 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
+    private val _sortOrder = MutableStateFlow(SortOrder.TITLE)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    private val _formatFilter = MutableStateFlow<BookFormat?>(null)
+    val formatFilter: StateFlow<BookFormat?> = _formatFilter.asStateFlow()
+
+    private val _downloadedOnly = MutableStateFlow(false)
+    val downloadedOnly: StateFlow<Boolean> = _downloadedOnly.asStateFlow()
+
     private val _downloadingBooks = MutableStateFlow<Set<String>>(emptySet())
 
     private var server: Server? = null
@@ -44,15 +54,18 @@ class LibraryViewModel @Inject constructor(
         bookRepository.observeByServer(serverId),
         _downloadingBooks,
         _searchQuery,
-    ) { books, downloading, query ->
-        val filtered = if (query.isBlank()) {
-            books
-        } else {
-            books.filter { book ->
-                book.title.contains(query, ignoreCase = true) ||
-                    book.author?.contains(query, ignoreCase = true) == true
+        _sortOrder,
+        combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded },
+    ) { books, downloading, query, sort, (formatFilter, downloadedOnly) ->
+        val filtered = books
+            .filter { book ->
+                (query.isBlank() || book.title.contains(query, ignoreCase = true) ||
+                    book.author?.contains(query, ignoreCase = true) == true) &&
+                    (formatFilter == null || book.format == formatFilter) &&
+                    (!downloadedOnly || book.isDownloaded)
             }
-        }
+            .sortedWith(sort.comparator)
+
         LibraryUiState.Success(
             books = filtered,
             downloadingBookIds = downloading,
@@ -75,15 +88,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun toggleViewMode() {
-        _viewMode.update {
-            if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID
-        }
-    }
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+    fun toggleViewMode() { _viewMode.update { if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID } }
+    fun updateSortOrder(order: SortOrder) { _sortOrder.value = order }
+    fun updateFormatFilter(format: BookFormat?) { _formatFilter.value = format }
+    fun toggleDownloadedOnly() { _downloadedOnly.update { !it } }
 
     fun downloadBook(book: Book) {
         val currentServer = server ?: return
@@ -105,3 +114,10 @@ sealed interface LibraryUiState {
 }
 
 enum class ViewMode { GRID, LIST }
+
+enum class SortOrder(val displayName: String, val comparator: Comparator<Book>) {
+    TITLE("Title", compareBy { it.title.lowercase() }),
+    AUTHOR("Author", compareBy { it.author?.lowercase() ?: "" }),
+    RECENT("Recently Added", compareByDescending { it.addedAt }),
+    SERIES("Series", compareBy<Book> { it.series?.lowercase() ?: "" }.thenBy { it.seriesIndex ?: 0f }),
+}
