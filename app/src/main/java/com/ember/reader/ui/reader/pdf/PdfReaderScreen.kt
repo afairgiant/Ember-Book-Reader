@@ -14,6 +14,7 @@ import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
+import com.ember.reader.ui.reader.common.SyncConflictDialog
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
 
@@ -30,6 +31,7 @@ fun PdfReaderScreen(
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     var showBookmarks by remember { mutableStateOf(false) }
 
     when (val state = uiState) {
@@ -79,6 +81,14 @@ fun PdfReaderScreen(
                     onNavigate = { showBookmarks = false },
                     onDelete = viewModel::deleteBookmark,
                     onDismiss = { showBookmarks = false },
+                )
+            }
+
+            syncConflict?.let { conflict ->
+                SyncConflictDialog(
+                    conflict = conflict,
+                    onAcceptRemote = viewModel::acceptRemoteProgress,
+                    onKeepLocal = viewModel::dismissSyncConflict,
                 )
             }
         }

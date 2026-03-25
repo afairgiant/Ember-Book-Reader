@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.ReaderPreferences
+import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.readium.BookOpener
-import com.ember.reader.core.readium.LocatorSerializer
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
@@ -15,6 +16,8 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.ReaderPreferencesRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
+import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.repository.SyncPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,6 +43,8 @@ class ReaderViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val readerPreferencesRepository: ReaderPreferencesRepository,
+    private val serverRepository: ServerRepository,
+    private val syncPreferencesRepository: SyncPreferencesRepository,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -48,6 +54,9 @@ class ReaderViewModel @Inject constructor(
 
     private val _chromeVisible = MutableStateFlow(true)
     val chromeVisible: StateFlow<Boolean> = _chromeVisible.asStateFlow()
+
+    private val _syncConflict = MutableStateFlow<SyncConflict?>(null)
+    val syncConflict: StateFlow<SyncConflict?> = _syncConflict.asStateFlow()
 
     val preferences: StateFlow<ReaderPreferences> =
         readerPreferencesRepository.preferencesFlow
@@ -64,9 +73,7 @@ class ReaderViewModel @Inject constructor(
     private var progressSaveJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            loadBook()
-        }
+        viewModelScope.launch { loadBook() }
         viewModelScope.launch {
             bookmarkRepository.observeByBookId(bookId).collect { _bookmarks.value = it }
         }
@@ -92,14 +99,59 @@ class ReaderViewModel @Inject constructor(
         }
         publication = pub
 
-        val progress = readingProgressRepository.getByBookId(bookId)
-        val initialLocator = progress?.locatorJson?.toLocator()
+        val localProgress = readingProgressRepository.getByBookId(bookId)
+        val initialLocator = localProgress?.locatorJson?.toLocator()
 
         _uiState.value = ReaderUiState.Ready(
             publication = pub,
             initialLocator = initialLocator,
             book = loadedBook,
         )
+
+        pullRemoteProgressOnOpen(loadedBook, localProgress)
+    }
+
+    private suspend fun pullRemoteProgressOnOpen(
+        loadedBook: Book,
+        localProgress: ReadingProgress?,
+    ) {
+        val serverId = loadedBook.serverId ?: return
+        val fileHash = loadedBook.fileHash ?: return
+        val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
+        if (syncFrequency == SyncFrequency.MANUAL) return
+
+        val server = serverRepository.getById(serverId) ?: return
+        if (server.kosyncUsername.isBlank()) return
+
+        val remoteResult = readingProgressRepository.pullProgress(server, bookId, fileHash)
+        val remote = remoteResult.getOrNull() ?: return
+
+        val localPercentage = localProgress?.percentage ?: 0f
+        if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
+            _syncConflict.value = SyncConflict(
+                remotePercentage = remote.percentage,
+                localPercentage = localPercentage,
+                remoteLocatorJson = remote.locatorJson,
+                remoteDevice = null,
+            )
+        }
+    }
+
+    fun acceptRemoteProgress() {
+        val conflict = _syncConflict.value ?: return
+        _syncConflict.value = null
+        val locator = conflict.remoteLocatorJson?.toLocator() ?: return
+        _uiState.update { state ->
+            if (state is ReaderUiState.Ready) {
+                state.copy(initialLocator = locator)
+            } else {
+                state
+            }
+        }
+    }
+
+    fun dismissSyncConflict() {
+        _syncConflict.value = null
     }
 
     fun onLocatorChanged(locator: Locator) {
@@ -123,15 +175,11 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun deleteBookmark(id: Long) {
-        viewModelScope.launch {
-            bookmarkRepository.deleteBookmark(id)
-        }
+        viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
     }
 
     fun updatePreferences(preferences: ReaderPreferences) {
-        viewModelScope.launch {
-            readerPreferencesRepository.updatePreferences(preferences)
-        }
+        viewModelScope.launch { readerPreferencesRepository.updatePreferences(preferences) }
     }
 
     private fun scheduleSaveProgress(locator: Locator) {
@@ -151,11 +199,28 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
+    private suspend fun pushProgressOnClose() {
+        val loadedBook = book ?: return
+        val serverId = loadedBook.serverId ?: return
+        val fileHash = loadedBook.fileHash ?: return
+
+        val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
+        if (syncFrequency == SyncFrequency.MANUAL) return
+
+        val server = serverRepository.getById(serverId) ?: return
+        if (server.kosyncUsername.isBlank()) return
+
+        readingProgressRepository.pushProgress(server, bookId, fileHash).onFailure {
+            Timber.w(it, "Failed to push progress on close")
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         _currentLocator.value?.let { locator ->
             kotlinx.coroutines.runBlocking {
                 saveProgress(locator)
+                pushProgressOnClose()
             }
         }
         publication?.close()
@@ -163,6 +228,7 @@ class ReaderViewModel @Inject constructor(
 
     companion object {
         private const val SAVE_DEBOUNCE_MS = 5000L
+        private const val CONFLICT_THRESHOLD = 0.01f
     }
 }
 
@@ -175,3 +241,10 @@ sealed interface ReaderUiState {
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
+
+data class SyncConflict(
+    val remotePercentage: Float,
+    val localPercentage: Float,
+    val remoteLocatorJson: String?,
+    val remoteDevice: String?,
+)

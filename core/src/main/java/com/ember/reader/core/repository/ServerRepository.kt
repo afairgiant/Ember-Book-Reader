@@ -1,6 +1,7 @@
 package com.ember.reader.core.repository
 
 import com.ember.reader.core.database.dao.ServerDao
+import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.model.Server
@@ -22,44 +23,19 @@ class ServerRepository @Inject constructor(
 ) {
 
     fun observeAll(): Flow<List<Server>> =
-        serverDao.observeAll().map { entities ->
-            entities.map { entity ->
-                entity.toDomain(
-                    opdsPassword = credentialEncryption.getPassword(
-                        CredentialEncryption.opdsPasswordKey(entity.id),
-                    ) ?: "",
-                    kosyncPassword = credentialEncryption.getPassword(
-                        CredentialEncryption.kosyncPasswordKey(entity.id),
-                    ) ?: "",
-                )
-            }
-        }
+        serverDao.observeAll().map { entities -> entities.map { it.withPasswords() } }
+
+    suspend fun getAll(): List<Server> =
+        serverDao.getAll().map { it.withPasswords() }
 
     fun observeById(id: Long): Flow<Server?> =
-        serverDao.observeById(id).map { entity ->
-            entity?.toDomain(
-                opdsPassword = credentialEncryption.getPassword(
-                    CredentialEncryption.opdsPasswordKey(id),
-                ) ?: "",
-                kosyncPassword = credentialEncryption.getPassword(
-                    CredentialEncryption.kosyncPasswordKey(id),
-                ) ?: "",
-            )
-        }
+        serverDao.observeById(id).map { it?.withPasswords() }
 
     suspend fun getById(id: Long): Server? =
-        serverDao.getById(id)?.toDomain(
-            opdsPassword = credentialEncryption.getPassword(
-                CredentialEncryption.opdsPasswordKey(id),
-            ) ?: "",
-            kosyncPassword = credentialEncryption.getPassword(
-                CredentialEncryption.kosyncPasswordKey(id),
-            ) ?: "",
-        )
+        serverDao.getById(id)?.withPasswords()
 
     suspend fun save(server: Server): Long {
-        val entity = server.toEntity()
-        val id = serverDao.insert(entity)
+        val id = serverDao.insert(server.toEntity())
         credentialEncryption.storePassword(
             CredentialEncryption.opdsPasswordKey(id),
             server.opdsPassword,
@@ -94,4 +70,13 @@ class ServerRepository @Inject constructor(
     suspend fun updateLastConnected(serverId: Long) {
         serverDao.updateLastConnected(serverId, Instant.now())
     }
+
+    private fun ServerEntity.withPasswords(): Server = toDomain(
+        opdsPassword = credentialEncryption.getPassword(
+            CredentialEncryption.opdsPasswordKey(id),
+        ) ?: "",
+        kosyncPassword = credentialEncryption.getPassword(
+            CredentialEncryption.kosyncPasswordKey(id),
+        ) ?: "",
+    )
 }

@@ -15,6 +15,7 @@ import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
+import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
@@ -33,6 +34,7 @@ fun EpubReaderScreen(
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
@@ -101,6 +103,14 @@ fun EpubReaderScreen(
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
                     onDismiss = { showPreferences = false },
+                )
+            }
+
+            syncConflict?.let { conflict ->
+                SyncConflictDialog(
+                    conflict = conflict,
+                    onAcceptRemote = viewModel::acceptRemoteProgress,
+                    onKeepLocal = viewModel::dismissSyncConflict,
                 )
             }
         }
