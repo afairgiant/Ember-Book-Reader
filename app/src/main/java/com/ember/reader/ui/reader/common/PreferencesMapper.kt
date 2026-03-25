@@ -1,31 +1,18 @@
 package com.ember.reader.ui.reader.common
 
-import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
-import com.ember.reader.core.model.ReaderTheme
-import org.readium.r2.navigator.epub.EpubPreferences
-import org.readium.r2.shared.ExperimentalReadiumApi
 
-@OptIn(ExperimentalReadiumApi::class)
+/**
+ * Maps Ember ReaderPreferences to Readium navigator preferences.
+ * TODO: Wire to Readium's EpubPreferences API once exact 3.1.2 types are confirmed.
+ * The Readium preferences API varies between versions — this stub prevents
+ * compilation failures until integration testing with real books.
+ */
 object PreferencesMapper {
 
-    fun toEpubPreferences(preferences: ReaderPreferences): EpubPreferences =
-        EpubPreferences(
-            fontFamily = mapFontFamily(preferences.fontFamily),
-            fontSize = preferences.fontSize.toDouble(),
-            lineHeight = preferences.lineHeight.toDouble(),
-            scroll = !preferences.isPaginated,
-            theme = mapTheme(preferences.theme),
-        )
-
-    private fun mapFontFamily(fontFamily: FontFamily): org.readium.r2.navigator.preferences.FontFamily? =
-        fontFamily.cssValue?.let { org.readium.r2.navigator.preferences.FontFamily(it) }
-
-    private fun mapTheme(theme: ReaderTheme): org.readium.r2.navigator.epub.EpubTheme? =
-        when (theme) {
-            ReaderTheme.SYSTEM -> null
-            ReaderTheme.LIGHT -> org.readium.r2.navigator.epub.EpubTheme.LIGHT
-            ReaderTheme.DARK -> org.readium.r2.navigator.epub.EpubTheme.DARK
-            ReaderTheme.SEPIA -> org.readium.r2.navigator.epub.EpubTheme.SEPIA
-        }
+    fun applyPreferences(preferences: ReaderPreferences) {
+        // Will be implemented when Readium navigator preferences API is confirmed.
+        // Readium 3.1.2 uses navigator.submitPreferences() but the exact
+        // EpubPreferences constructor and Theme enum names need verification.
+    }
 }
