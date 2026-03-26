@@ -19,27 +19,36 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Decode keystore
-        if: env.SIGNING_KEYSTORE != ''
+        if: ${{ secrets.SIGNING_KEYSTORE != '' }}
         run: echo "$SIGNING_KEYSTORE" | base64 -d > app/keystore.jks
         env:
           SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
 
-      - name: Build release APK
+      - name: Build release APK (signed)
+        if: ${{ secrets.SIGNING_KEYSTORE != '' }}
         run: ./gradlew assembleRelease
         env:
-          SIGNING_KEYSTORE_PATH: ${{ secrets.SIGNING_KEYSTORE != '' && 'keystore.jks' || '' }}
+          SIGNING_KEYSTORE_PATH: app/keystore.jks
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
 
-      - name: Upload release APK
+      - name: Build debug APK (unsigned fallback)
+        if: ${{ secrets.SIGNING_KEYSTORE == '' }}
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ember-release
-          path: app/build/outputs/apk/release/*.apk
+          name: ember-apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
