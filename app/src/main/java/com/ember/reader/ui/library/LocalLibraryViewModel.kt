@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,14 +28,36 @@ import javax.inject.Inject
 class LocalLibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
+    private val serverRepository: ServerRepository,
 ) : ViewModel() {
 
     val books: StateFlow<List<Book>> = bookRepository.observeLocalBooks()
-        .map { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Map of serverId → Basic auth header for cover loading
+    private val _coverAuthHeaders = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val coverAuthHeaders: StateFlow<Map<Long, String>> = _coverAuthHeaders.asStateFlow()
 
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            serverRepository.observeAll().collect { servers ->
+                _coverAuthHeaders.value = servers.associate { server ->
+                    val credentials = "${server.opdsUsername}:${server.opdsPassword}"
+                    val encoded = android.util.Base64.encodeToString(
+                        credentials.toByteArray(),
+                        android.util.Base64.NO_WRAP,
+                    )
+                    server.id to "Basic $encoded"
+                }
+            }
+        }
+    }
 
     fun importBook(uri: Uri) {
         _importing.value = true

@@ -21,11 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,9 +45,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.model.Book
@@ -67,6 +72,7 @@ fun ServerListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
+    val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -121,6 +127,7 @@ fun ServerListScreen(
                                         ContinueReadingCard(
                                             book = recent.book,
                                             percentage = recent.percentage,
+                                            coverAuthHeader = recent.book.serverId?.let { coverAuthHeaders[it] },
                                             onClick = { onOpenReader(recent.book.id, recent.book.format) },
                                         )
                                     }
@@ -217,7 +224,7 @@ private fun LocalBooksCard(onClick: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    Icons.Default.LibraryBooks,
+                    Icons.AutoMirrored.Filled.LibraryBooks,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
@@ -248,54 +255,94 @@ private fun LocalBooksCard(onClick: () -> Unit) {
     }
 }
 
+private val placeholderColors = listOf(
+    Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
+    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
+)
+
 @Composable
 private fun ContinueReadingCard(
     book: Book,
     percentage: Float,
+    coverAuthHeader: String? = null,
     onClick: () -> Unit,
 ) {
+    val colorIndex = book.title.hashCode().mod(placeholderColors.size).let {
+        if (it < 0) it + placeholderColors.size else it
+    }
+
     Card(
         modifier = Modifier
-            .width(150.dp)
+            .width(130.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
         shape = RoundedCornerShape(14.dp),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.height(40.dp),
-            )
-            book.author?.let {
+        Column {
+            // Cover image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+            ) {
+                if (book.coverUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(book.coverUrl)
+                            .apply {
+                                coverAuthHeader?.let { addHeader("Authorization", it) }
+                            }
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = book.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(placeholderColors[colorIndex]),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = book.title.take(2).uppercase(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color(0xFF5D4037),
+                        )
+                    }
+                }
+            }
+
+            // Title + progress
+            Column(modifier = Modifier.padding(10.dp)) {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = book.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { percentage },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                )
+                Text(
+                    text = "${(percentage * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            LinearProgressIndicator(
-                progress = { percentage },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-            )
-            Text(
-                text = "${(percentage * 100).toInt()}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
         }
     }
 }
