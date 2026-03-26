@@ -63,6 +63,15 @@ fun EmberNavHost(
                 onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
                 onOpenLocalLibrary = { navController.navigate(Routes.LOCAL_LIBRARY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenReader = { bookId, format ->
+                    when (format) {
+                        com.ember.reader.core.model.BookFormat.EPUB ->
+                            navController.navigate(Routes.epubReader(bookId))
+                        com.ember.reader.core.model.BookFormat.PDF ->
+                            navController.navigate(Routes.pdfReader(bookId))
+                        com.ember.reader.core.model.BookFormat.AUDIOBOOK -> {}
+                    }
+                },
             )
         }
 

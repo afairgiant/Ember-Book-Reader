@@ -51,6 +51,9 @@ class LibraryViewModel @Inject constructor(
 
     private var server: Server? = null
 
+    private val _coverAuthHeader = MutableStateFlow<String?>(null)
+    val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
+
     val uiState: StateFlow<LibraryUiState> = combine(
         bookRepository.observeByServer(serverId),
         _downloadingBooks,
@@ -76,6 +79,14 @@ class LibraryViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
+            server?.let { s ->
+                val credentials = "${s.opdsUsername}:${s.opdsPassword}"
+                val encoded = android.util.Base64.encodeToString(
+                    credentials.toByteArray(),
+                    android.util.Base64.NO_WRAP,
+                )
+                _coverAuthHeader.value = "Basic $encoded"
+            }
             refresh()
         }
     }

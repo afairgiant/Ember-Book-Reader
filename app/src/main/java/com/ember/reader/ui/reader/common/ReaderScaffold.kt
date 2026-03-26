@@ -28,6 +28,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,16 +49,14 @@ fun ReaderScaffold(
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
     onOpenPreferences: () -> Unit,
+    onSeekToProgression: (Float) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        content()
-
+    Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { -it },
             exit = slideOutVertically { -it },
-            modifier = Modifier.align(Alignment.TopCenter),
         ) {
             ReaderTopBar(
                 title = title,
@@ -65,13 +68,19 @@ fun ReaderScaffold(
             )
         }
 
+        Box(modifier = Modifier.weight(1f)) {
+            content()
+        }
+
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { it },
             exit = slideOutVertically { it },
-            modifier = Modifier.align(Alignment.BottomCenter),
         ) {
-            ReaderBottomBar(currentLocator = currentLocator)
+            ReaderBottomBar(
+                currentLocator = currentLocator,
+                onSeekToProgression = onSeekToProgression,
+            )
         }
     }
 }
@@ -121,9 +130,12 @@ private fun ReaderTopBar(
 @Composable
 private fun ReaderBottomBar(
     currentLocator: Locator?,
+    onSeekToProgression: (Float) -> Unit = {},
 ) {
     val progression = currentLocator?.locations?.totalProgression?.toFloat() ?: 0f
     val chapterTitle = currentLocator?.title
+    var dragging by remember { mutableStateOf(false) }
+    var dragValue by remember { mutableFloatStateOf(0f) }
 
     Column(
         modifier = Modifier
@@ -143,14 +155,20 @@ private fun ReaderBottomBar(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
-                value = progression,
-                onValueChange = {},
-                enabled = false,
+                value = if (dragging) dragValue else progression,
+                onValueChange = { value ->
+                    dragging = true
+                    dragValue = value
+                },
+                onValueChangeFinished = {
+                    onSeekToProgression(dragValue)
+                    dragging = false
+                },
                 modifier = Modifier.weight(1f),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "${(progression * 100).toInt()}%",
+                text = "${((if (dragging) dragValue else progression) * 100).toInt()}%",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

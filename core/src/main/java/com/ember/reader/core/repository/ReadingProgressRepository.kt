@@ -22,6 +22,9 @@ class ReadingProgressRepository @Inject constructor(
     private val deviceIdentity: DeviceIdentity,
 ) {
 
+    fun observeAll(): Flow<List<ReadingProgress>> =
+        readingProgressDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
     fun observeByBookId(bookId: String): Flow<ReadingProgress?> =
         readingProgressDao.observeByBookId(bookId).map { it?.toDomain() }
 

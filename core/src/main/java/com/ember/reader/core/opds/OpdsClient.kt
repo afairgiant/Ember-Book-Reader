@@ -8,8 +8,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.Dispatchers
@@ -32,12 +34,15 @@ class OpdsClient @Inject constructor(
         password: String,
     ): Result<String> = runCatching {
         val response = httpClient.get(buildServerUrl(baseUrl, "/api/v1/opds")) {
+            header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            Timber.e("OPDS connection failed: ${response.status}\n$errorBody")
             error("OPDS connection failed: ${response.status}")
         }
-        val body = response.bodyAsText()
+        val body = requireXmlBody(response)
         OpdsParser.parseFeedTitle(body) ?: "Connected"
     }
 
@@ -49,12 +54,13 @@ class OpdsClient @Inject constructor(
     ): Result<OpdsFeed> = runCatching {
         val url = buildServerUrl(baseUrl, path)
         val response = httpClient.get(url) {
+            header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
             error("OPDS fetch failed: ${response.status}")
         }
-        OpdsParser.parseFeed(response.bodyAsText(), baseUrl)
+        OpdsParser.parseFeed(requireXmlBody(response), baseUrl)
     }
 
     suspend fun fetchBooks(
@@ -67,12 +73,13 @@ class OpdsClient @Inject constructor(
     ): Result<OpdsBookPage> = runCatching {
         val url = buildServerUrl(baseUrl, "$path?page=$page")
         val response = httpClient.get(url) {
+            header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
             error("OPDS book fetch failed: ${response.status}")
         }
-        OpdsParser.parseBookFeed(response.bodyAsText(), baseUrl, serverId)
+        OpdsParser.parseBookFeed(requireXmlBody(response), baseUrl, serverId)
     }
 
     suspend fun searchBooks(
@@ -85,12 +92,13 @@ class OpdsClient @Inject constructor(
     ): Result<OpdsBookPage> = runCatching {
         val url = buildServerUrl(baseUrl, "/api/v1/opds/catalog?q=$query&page=$page")
         val response = httpClient.get(url) {
+            header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
             error("OPDS search failed: ${response.status}")
         }
-        OpdsParser.parseBookFeed(response.bodyAsText(), baseUrl, serverId)
+        OpdsParser.parseBookFeed(requireXmlBody(response), baseUrl, serverId)
     }
 
     suspend fun downloadBookToFile(
@@ -120,6 +128,15 @@ class OpdsClient @Inject constructor(
                 }
             }
         }
+    }
+
+    private suspend fun requireXmlBody(response: HttpResponse): String {
+        val body = response.bodyAsText()
+        val contentType = response.contentType()?.toString().orEmpty()
+        if (contentType.contains("html") || body.trimStart().startsWith("<!")) {
+            error("Server returned HTML instead of OPDS XML — check the server URL and credentials")
+        }
+        return body
     }
 
     private fun basicAuth(username: String, password: String): String {

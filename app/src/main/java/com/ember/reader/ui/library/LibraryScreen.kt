@@ -43,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 
@@ -65,6 +67,7 @@ fun LibraryScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
+    val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -139,6 +142,7 @@ fun LibraryScreen(
                             BookGrid(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
+                                coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
                                 if (book.isDownloaded) onOpenReader(book.id, book.format)
                             },
@@ -148,6 +152,7 @@ fun LibraryScreen(
                             BookList(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
+                                coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
                                 if (book.isDownloaded) onOpenReader(book.id, book.format)
                             },
@@ -165,6 +170,7 @@ fun LibraryScreen(
 private fun BookGrid(
     books: List<Book>,
     downloadingIds: Set<String>,
+    coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
 ) {
@@ -178,6 +184,7 @@ private fun BookGrid(
             BookGridItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
+                coverAuthHeader = coverAuthHeader,
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) },
             )
@@ -189,6 +196,7 @@ private fun BookGrid(
 private fun BookGridItem(
     book: Book,
     isDownloading: Boolean,
+    coverAuthHeader: String?,
     onClick: () -> Unit,
     onDownload: () -> Unit,
 ) {
@@ -205,7 +213,13 @@ private fun BookGridItem(
             ) {
                 if (book.coverUrl != null) {
                     AsyncImage(
-                        model = book.coverUrl,
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(book.coverUrl)
+                            .apply {
+                                coverAuthHeader?.let { addHeader("Authorization", it) }
+                            }
+                            .crossfade(true)
+                            .build(),
                         contentDescription = book.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -271,6 +285,7 @@ private fun BookGridItem(
 private fun BookList(
     books: List<Book>,
     downloadingIds: Set<String>,
+    coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
 ) {
@@ -282,6 +297,7 @@ private fun BookList(
             BookListItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
+                coverAuthHeader = coverAuthHeader,
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) },
             )
@@ -293,6 +309,7 @@ private fun BookList(
 private fun BookListItem(
     book: Book,
     isDownloading: Boolean,
+    coverAuthHeader: String?,
     onClick: () -> Unit,
     onDownload: () -> Unit,
 ) {
@@ -309,7 +326,13 @@ private fun BookListItem(
         ) {
             if (book.coverUrl != null) {
                 AsyncImage(
-                    model = book.coverUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(book.coverUrl)
+                        .apply {
+                            coverAuthHeader?.let { addHeader("Authorization", it) }
+                        }
+                        .crossfade(true)
+                        .build(),
                     contentDescription = book.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

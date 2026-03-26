@@ -20,6 +20,17 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE localPath IS NOT NULL ORDER BY title ASC")
     fun observeDownloadedBooks(): Flow<List<BookEntity>>
 
+    @Query(
+        """
+        SELECT b.* FROM books b
+        INNER JOIN reading_progress rp ON b.id = rp.bookId
+        WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 1
+        ORDER BY rp.lastReadAt DESC
+        LIMIT 10
+        """,
+    )
+    fun observeRecentlyReading(): Flow<List<BookEntity>>
+
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getById(id: String): BookEntity?
 

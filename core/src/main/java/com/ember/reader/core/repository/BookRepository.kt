@@ -38,6 +38,9 @@ class BookRepository @Inject constructor(
     fun observeDownloadedBooks(): Flow<List<Book>> =
         bookDao.observeDownloadedBooks().map { entities -> entities.map { it.toDomain() } }
 
+    fun observeRecentlyReading(): Flow<List<Book>> =
+        bookDao.observeRecentlyReading().map { entities -> entities.map { it.toDomain() } }
+
     fun observeById(id: String): Flow<Book?> =
         bookDao.observeById(id).map { it?.toDomain() }
 
@@ -102,6 +105,16 @@ class BookRepository @Inject constructor(
             downloadPath = downloadUrl,
             destination = file,
         ).getOrThrow()
+
+        if (file.length() < 100) {
+            file.delete()
+            error("Downloaded file is too small — server may have returned an error")
+        }
+        val header = file.inputStream().use { it.readNBytes(5) }
+        if (header.decodeToString().startsWith("<!") || header.decodeToString().startsWith("<html")) {
+            file.delete()
+            error("Downloaded file is HTML, not a book — check server URL and credentials")
+        }
 
         val fileHash = PartialMd5.compute(file)
         bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())

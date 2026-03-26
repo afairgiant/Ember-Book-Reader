@@ -4,13 +4,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -24,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -32,9 +37,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,9 +54,11 @@ fun ServerListScreen(
     onOpenLibrary: (Long) -> Unit,
     onOpenLocalLibrary: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     viewModel: ServerListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -79,8 +90,31 @@ fun ServerListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        contentPadding = PaddingValues(16.dp),
                     ) {
+                        if (recentlyReading.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Continue Reading",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 4.dp),
+                                )
+                            }
+                            item {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    items(recentlyReading, key = { it.book.id }) { recent ->
+                                        ContinueReadingCard(
+                                            book = recent.book,
+                                            percentage = recent.percentage,
+                                            onClick = { onOpenReader(recent.book.id, recent.book.format) },
+                                        )
+                                    }
+                                }
+                            }
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                        }
                         item {
                             LocalBooksCard(onClick = onOpenLocalLibrary)
                         }
@@ -89,7 +123,7 @@ fun ServerListScreen(
                                 server = server,
                                 onOpenLibrary = { onOpenLibrary(server.id) },
                                 onEdit = { onEditServer(server.id) },
-                                onDelete = { onDeleteServer(server.id) },
+                                onDelete = { viewModel.deleteServer(server.id) },
                             )
                         }
                     }
@@ -157,6 +191,51 @@ private fun LocalBooksCard(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ContinueReadingCard(
+    book: Book,
+    percentage: Float,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.height(40.dp),
+            )
+            book.author?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { percentage },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small),
+            )
+            Text(
+                text = "${(percentage * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
     }
 }

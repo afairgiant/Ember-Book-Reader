@@ -15,6 +15,8 @@ import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
+import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
+import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
 
@@ -57,12 +59,14 @@ fun PdfReaderScreen(
                     containerId = CONTAINER_ID,
                     fragmentTag = FRAGMENT_TAG,
                     fragmentClass = PdfNavigatorFragment::class.java,
-                    fragmentFactory = PdfNavigatorFragment.createFactory(
+                    fragmentFactory = PdfNavigatorFactory(
                         publication = state.publication,
+                        pdfEngineProvider = PdfiumEngineProvider(),
+                    ).createFragmentFactory(
                         initialLocator = state.initialLocator,
                     ),
                     locatorFlow = { fragment ->
-                        (fragment as? PdfNavigatorFragment)?.currentLocator
+                        (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
                     },
                     onLocatorChanged = viewModel::onLocatorChanged,
                 )
