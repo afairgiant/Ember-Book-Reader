@@ -150,8 +150,10 @@ object OpdsParser {
                                 if (rel == "next") nextPagePath = href
                             } else {
                                 when {
-                                    rel.contains("opds-spec.org/image/thumbnail") ||
-                                        rel.contains("opds-spec.org/image") -> {
+                                    rel.contains("opds-spec.org/image/thumbnail") -> {
+                                        coverUrl = resolveUrl(baseUrl, href)
+                                    }
+                                    rel.contains("opds-spec.org/image") && coverUrl == null -> {
                                         coverUrl = resolveUrl(baseUrl, href)
                                     }
                                     rel.contains("opds-spec.org/acquisition") -> {

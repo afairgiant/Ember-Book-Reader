@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -58,6 +59,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.ui.common.BookCoverPlaceholderColors
+import com.ember.reader.ui.common.bookCoverColorIndex
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,11 +207,7 @@ private fun BookGridItem(
     onClick: () -> Unit,
     onDownload: () -> Unit,
 ) {
-    val placeholderColors = listOf(
-        Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
-        Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
-    )
-    val placeholderColor = placeholderColors[book.title.hashCode().mod(placeholderColors.size).let { if (it < 0) it + placeholderColors.size else it }]
+    val placeholderColor = BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]
 
     Card(
         modifier = Modifier
@@ -226,14 +225,18 @@ private fun BookGridItem(
                     .aspectRatio(0.67f),
             ) {
                 if (book.coverUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
+                    val context = LocalContext.current
+                    val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                        ImageRequest.Builder(context)
                             .data(book.coverUrl)
                             .apply {
                                 coverAuthHeader?.let { addHeader("Authorization", it) }
                             }
                             .crossfade(true)
-                            .build(),
+                            .build()
+                    }
+                    AsyncImage(
+                        model = imageModel,
                         contentDescription = book.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -341,14 +344,18 @@ private fun BookListItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (book.coverUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
+                val context = LocalContext.current
+                val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                    ImageRequest.Builder(context)
                         .data(book.coverUrl)
                         .apply {
                             coverAuthHeader?.let { addHeader("Authorization", it) }
                         }
                         .crossfade(true)
-                        .build(),
+                        .build()
+                }
+                AsyncImage(
+                    model = imageModel,
                     contentDescription = book.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

@@ -8,6 +8,7 @@ import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.readium.BookOpener
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -34,6 +35,12 @@ class BookRepositoryTest {
     @MockK
     private lateinit var opdsClient: OpdsClient
 
+    @MockK
+    private lateinit var bookOpener: BookOpener
+
+    @MockK
+    private lateinit var serverRepository: ServerRepository
+
     @TempDir
     lateinit var tempDir: File
 
@@ -42,17 +49,19 @@ class BookRepositoryTest {
     private val testServer = Server(
         id = 1L,
         name = "Test Server",
-        url = "http://localhost",
+        url = "http://localhost/api/v1/opds",
         opdsUsername = "user",
         opdsPassword = "pass",
         kosyncUsername = "kuser",
         kosyncPassword = "kpass",
     )
 
+    private val catalogPath = "/api/v1/opds/catalog"
+
     @BeforeEach
     fun setUp() {
         every { context.filesDir } returns tempDir
-        repository = BookRepository(context, bookDao, opdsClient)
+        repository = BookRepository(context, bookDao, opdsClient, bookOpener, serverRepository)
     }
 
     @Test
@@ -74,14 +83,14 @@ class BookRepositoryTest {
                 username = testServer.opdsUsername,
                 password = testServer.opdsPassword,
                 serverId = testServer.id,
-                path = "/api/v1/opds/catalog",
+                path = catalogPath,
                 page = 1,
             )
         } returns Result.success(bookPage)
         coEvery { bookDao.getByOpdsEntryId("opds-entry-1", 1L) } returns null
         coEvery { bookDao.insert(any()) } returns Unit
 
-        val result = repository.refreshFromServer(testServer)
+        val result = repository.refreshFromServer(testServer, path = catalogPath)
 
         assertTrue(result.isSuccess)
         coVerify { bookDao.insert(any()) }
@@ -116,14 +125,14 @@ class BookRepositoryTest {
                 username = testServer.opdsUsername,
                 password = testServer.opdsPassword,
                 serverId = testServer.id,
-                path = "/api/v1/opds/catalog",
+                path = catalogPath,
                 page = 1,
             )
         } returns Result.success(bookPage)
         coEvery { bookDao.getByOpdsEntryId("opds-entry-1", 1L) } returns existingEntity
         coEvery { bookDao.update(any()) } returns Unit
 
-        val result = repository.refreshFromServer(testServer)
+        val result = repository.refreshFromServer(testServer, path = catalogPath)
 
         assertTrue(result.isSuccess)
         coVerify {
@@ -139,7 +148,6 @@ class BookRepositoryTest {
     @Test
     fun `addLocalBook computes file hash`() = runTest {
         val bookFile = File(tempDir, "test-book.epub").apply {
-            // Write enough data for PartialMd5 to compute
             writeBytes(ByteArray(2048) { it.toByte() })
         }
 
