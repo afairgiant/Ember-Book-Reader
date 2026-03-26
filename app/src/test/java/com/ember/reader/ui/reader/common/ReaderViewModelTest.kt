@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.SyncFrequency
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
@@ -64,6 +66,12 @@ class ReaderViewModelTest {
     @MockK
     private lateinit var syncPreferencesRepository: SyncPreferencesRepository
 
+    @MockK
+    private lateinit var grimmoryClient: GrimmoryClient
+
+    @MockK
+    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
+
     private val testDispatcher = StandardTestDispatcher()
 
     @BeforeEach
@@ -91,6 +99,8 @@ class ReaderViewModelTest {
             readerPreferencesRepository = readerPreferencesRepository,
             serverRepository = serverRepository,
             syncPreferencesRepository = syncPreferencesRepository,
+            grimmoryClient = grimmoryClient,
+            grimmoryTokenManager = grimmoryTokenManager,
         )
     }
 

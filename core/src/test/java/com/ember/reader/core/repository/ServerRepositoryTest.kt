@@ -3,6 +3,8 @@ package com.ember.reader.core.repository
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.sync.KosyncClient
@@ -33,13 +35,19 @@ class ServerRepositoryTest {
     private lateinit var kosyncClient: KosyncClient
 
     @MockK
+    private lateinit var grimmoryClient: GrimmoryClient
+
+    @MockK
+    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
+
+    @MockK
     private lateinit var credentialEncryption: CredentialEncryption
 
     private lateinit var repository: ServerRepository
 
     @BeforeEach
     fun setUp() {
-        repository = ServerRepository(serverDao, opdsClient, kosyncClient, credentialEncryption)
+        repository = ServerRepository(serverDao, opdsClient, kosyncClient, grimmoryClient, grimmoryTokenManager, credentialEncryption)
     }
 
     @Test
@@ -77,6 +85,7 @@ class ServerRepositoryTest {
     fun `delete removes passwords from CredentialEncryption`() = runTest {
         coEvery { serverDao.deleteById(10L) } returns Unit
         every { credentialEncryption.removePassword(any()) } returns Unit
+        every { grimmoryTokenManager.logout(10L) } returns Unit
 
         repository.delete(10L)
 
@@ -101,6 +110,9 @@ class ServerRepositoryTest {
         every {
             credentialEncryption.getPassword(CredentialEncryption.kosyncPasswordKey(7L))
         } returns "stored_kosync_pass"
+        every {
+            credentialEncryption.getPassword("grimmory_password_7")
+        } returns ""
 
         val server = repository.getById(7L)
 

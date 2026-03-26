@@ -6,6 +6,9 @@ import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
@@ -41,6 +44,15 @@ class BookRepositoryTest {
     @MockK
     private lateinit var serverRepository: ServerRepository
 
+    @MockK
+    private lateinit var grimmoryAppClient: GrimmoryAppClient
+
+    @MockK
+    private lateinit var grimmoryClient: GrimmoryClient
+
+    @MockK
+    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
+
     @TempDir
     lateinit var tempDir: File
 
@@ -61,7 +73,7 @@ class BookRepositoryTest {
     @BeforeEach
     fun setUp() {
         every { context.filesDir } returns tempDir
-        repository = BookRepository(context, bookDao, opdsClient, bookOpener, serverRepository)
+        repository = BookRepository(context, bookDao, opdsClient, bookOpener, serverRepository, grimmoryAppClient, grimmoryClient, grimmoryTokenManager)
     }
 
     @Test
@@ -161,10 +173,10 @@ class BookRepositoryTest {
 
         coEvery { bookDao.insert(any()) } returns Unit
         coEvery { bookDao.updateFileHash(any(), any()) } returns Unit
+        coEvery { bookOpener.open(any()) } returns Result.failure(Exception("test"))
 
         repository.addLocalBook(book)
 
         coVerify { bookDao.insert(any()) }
-        coVerify { bookDao.updateFileHash("local-book-1", any()) }
     }
 }

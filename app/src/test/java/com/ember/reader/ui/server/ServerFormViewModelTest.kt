@@ -89,6 +89,7 @@ class ServerFormViewModelTest {
         coEvery {
             serverRepository.testOpdsConnection(any(), any(), any())
         } returns Result.success("My Library")
+        coEvery { serverRepository.detectGrimmory(any()) } returns false
 
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -116,6 +117,7 @@ class ServerFormViewModelTest {
         coEvery {
             serverRepository.testOpdsConnection(any(), any(), any())
         } returns Result.failure(RuntimeException("Connection refused"))
+        coEvery { serverRepository.detectGrimmory(any()) } returns false
 
         val viewModel = createViewModel()
         advanceUntilIdle()
