@@ -25,13 +25,20 @@ import com.ember.reader.core.database.entity.ServerEntity
         BookmarkEntity::class,
         HighlightEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class EmberDatabase : RoomDatabase() {
 
     companion object {
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE servers ADD COLUMN grimmoryUsername TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE servers ADD COLUMN isGrimmory INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         /**
          * Migration 1→2: Change books foreign key from CASCADE to SET_NULL
          * so deleting a server doesn't destroy downloaded books.

@@ -36,6 +36,9 @@ class ServerFormViewModel @Inject constructor(
                             opdsPassword = server.opdsPassword,
                             kosyncUsername = server.kosyncUsername,
                             kosyncPassword = server.kosyncPassword,
+                            grimmoryUsername = server.grimmoryUsername,
+                            grimmoryPassword = server.grimmoryPassword,
+                            isGrimmory = server.isGrimmory,
                             isEditing = true,
                         )
                     }
@@ -50,6 +53,8 @@ class ServerFormViewModel @Inject constructor(
     fun updateOpdsPassword(value: String) = _uiState.update { it.copy(opdsPassword = value) }
     fun updateKosyncUsername(value: String) = _uiState.update { it.copy(kosyncUsername = value) }
     fun updateKosyncPassword(value: String) = _uiState.update { it.copy(kosyncPassword = value) }
+    fun updateGrimmoryUsername(value: String) = _uiState.update { it.copy(grimmoryUsername = value) }
+    fun updateGrimmoryPassword(value: String) = _uiState.update { it.copy(grimmoryPassword = value) }
 
     fun testOpdsConnection() {
         val state = _uiState.value
@@ -57,6 +62,8 @@ class ServerFormViewModel @Inject constructor(
 
         _uiState.update { it.copy(opdsTestResult = TestResult.Testing) }
         viewModelScope.launch {
+            // Also detect if this is a Grimmory server
+            val isGrimmory = serverRepository.detectGrimmory(state.url)
             val result = serverRepository.testOpdsConnection(
                 url = state.url,
                 username = state.opdsUsername,
@@ -64,6 +71,7 @@ class ServerFormViewModel @Inject constructor(
             )
             _uiState.update {
                 it.copy(
+                    isGrimmory = isGrimmory,
                     opdsTestResult = result.fold(
                         onSuccess = { msg -> TestResult.Success(msg) },
                         onFailure = { err -> TestResult.Error(err.message ?: "Connection failed") },
@@ -95,6 +103,28 @@ class ServerFormViewModel @Inject constructor(
         }
     }
 
+    fun testGrimmoryConnection() {
+        val state = _uiState.value
+        if (state.url.isBlank() || state.grimmoryUsername.isBlank()) return
+
+        _uiState.update { it.copy(grimmoryTestResult = TestResult.Testing) }
+        viewModelScope.launch {
+            val result = serverRepository.testGrimmoryConnection(
+                url = state.url,
+                username = state.grimmoryUsername,
+                password = state.grimmoryPassword,
+            )
+            _uiState.update {
+                it.copy(
+                    grimmoryTestResult = result.fold(
+                        onSuccess = { msg -> TestResult.Success(msg) },
+                        onFailure = { err -> TestResult.Error(err.message ?: "Login failed") },
+                    ),
+                )
+            }
+        }
+    }
+
     fun save(onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.name.isBlank() || state.url.isBlank()) {
@@ -112,6 +142,9 @@ class ServerFormViewModel @Inject constructor(
                 opdsPassword = state.opdsPassword,
                 kosyncUsername = state.kosyncUsername.trim(),
                 kosyncPassword = state.kosyncPassword,
+                grimmoryUsername = state.grimmoryUsername.trim(),
+                grimmoryPassword = state.grimmoryPassword,
+                isGrimmory = state.isGrimmory,
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -127,11 +160,15 @@ data class ServerFormUiState(
     val opdsPassword: String = "",
     val kosyncUsername: String = "",
     val kosyncPassword: String = "",
+    val grimmoryUsername: String = "",
+    val grimmoryPassword: String = "",
+    val isGrimmory: Boolean = false,
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
     val validationError: String? = null,
     val opdsTestResult: TestResult = TestResult.Idle,
     val kosyncTestResult: TestResult = TestResult.Idle,
+    val grimmoryTestResult: TestResult = TestResult.Idle,
 )
 
 sealed interface TestResult {

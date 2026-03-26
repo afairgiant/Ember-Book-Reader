@@ -27,7 +27,7 @@ object DatabaseModule {
             EmberDatabase::class.java,
             "ember.db",
         )
-            .addMigrations(EmberDatabase.MIGRATION_1_2)
+            .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3)
             .build()
 
     @Provides

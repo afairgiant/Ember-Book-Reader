@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -204,6 +205,64 @@ fun ServerFormScreen(
                 onClick = viewModel::testKosyncConnection,
                 label = "Test Kosync",
             )
+
+            // Grimmory Native section (shown when detected or credentials exist)
+            if (uiState.isGrimmory || uiState.grimmoryUsername.isNotBlank()) {
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionHeader(
+                        icon = Icons.Default.Public,
+                        title = "Grimmory Login",
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    ) {
+                        Text(
+                            text = "OPTIONAL",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = "For native progress sync with Grimmory web reader",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = uiState.grimmoryUsername,
+                    onValueChange = viewModel::updateGrimmoryUsername,
+                    label = { Text("Username") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = uiState.grimmoryPassword,
+                    onValueChange = viewModel::updateGrimmoryPassword,
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TestConnectionButton(
+                    result = uiState.grimmoryTestResult,
+                    onClick = viewModel::testGrimmoryConnection,
+                    label = "Test Grimmory",
+                )
+            }
 
             uiState.validationError?.let { error ->
                 Spacer(modifier = Modifier.height(16.dp))

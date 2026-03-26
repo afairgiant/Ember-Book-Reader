@@ -11,7 +11,11 @@ import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 
-fun ServerEntity.toDomain(opdsPassword: String = "", kosyncPassword: String = ""): Server = Server(
+fun ServerEntity.toDomain(
+    opdsPassword: String = "",
+    kosyncPassword: String = "",
+    grimmoryPassword: String = "",
+): Server = Server(
     id = id,
     name = name,
     url = url,
@@ -19,6 +23,9 @@ fun ServerEntity.toDomain(opdsPassword: String = "", kosyncPassword: String = ""
     opdsPassword = opdsPassword,
     kosyncUsername = kosyncUsername,
     kosyncPassword = kosyncPassword,
+    grimmoryUsername = grimmoryUsername,
+    grimmoryPassword = grimmoryPassword,
+    isGrimmory = isGrimmory,
     lastConnected = lastConnected,
 )
 
@@ -28,6 +35,8 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     url = url,
     opdsUsername = opdsUsername,
     kosyncUsername = kosyncUsername,
+    grimmoryUsername = grimmoryUsername,
+    isGrimmory = isGrimmory,
     lastConnected = lastConnected,
 )
 

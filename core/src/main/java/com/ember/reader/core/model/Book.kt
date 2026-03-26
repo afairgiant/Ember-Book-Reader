@@ -21,4 +21,10 @@ data class Book(
 ) {
     val isDownloaded: Boolean get() = localPath != null
     val isLocal: Boolean get() = serverId == null
+
+    /** Extracts Grimmory's numeric book ID from opdsEntryId like "urn:booklore:book:123" */
+    val grimmoryBookId: Long?
+        get() = opdsEntryId
+            ?.substringAfterLast(":")
+            ?.toLongOrNull()
 }

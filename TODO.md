@@ -43,12 +43,12 @@
 Full API reference: `docs/grimmory-api.md`
 
 **Phase 1 — Auth & Progress:**
-- [ ] JWT auth flow: `POST /api/v1/auth/login` → store access + refresh tokens securely
-- [ ] Token refresh: `POST /api/v1/auth/refresh` (10hr access, 30day refresh)
-- [ ] Push progress: `POST /api/v1/books/progress` with `epubProgress` (CFI + percentage) — native web reader sync
-- [ ] Pull progress: `GET /api/v1/app/books/{bookId}` returns `readProgress`, `epubProgress`, `koreaderProgress`
-- [ ] Continue Reading: `GET /api/v1/app/books/continue-reading` — shows in-progress books without needing file hashes
-- [ ] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF)
+- [x] JWT auth flow: `POST /api/v1/auth/login` → store access + refresh tokens securely
+- [x] Token refresh: `POST /api/v1/auth/refresh` (10hr access, 30day refresh, auto-refresh on 401)
+- [x] Push progress: `POST /api/v1/books/progress` via `fileProgress.progressPercent` on reader close + SyncWorker
+- [x] Pull progress: `GET /api/v1/app/books/{bookId}` on reader open (supplement kosync pull)
+- [x] Continue Reading: `GET /api/v1/app/books/continue-reading` pulled in SyncWorker
+- [ ] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF) — API ready, not wired to UI yet
 - [ ] Reading sessions: `POST /api/v1/reading-sessions` for time tracking
 
 **Phase 2 — Catalog via App API (alternative to OPDS):**

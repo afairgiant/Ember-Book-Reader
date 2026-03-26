@@ -10,6 +10,10 @@ import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.SyncFrequency
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryFileProgress
+import com.ember.reader.core.grimmory.GrimmoryProgressRequest
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -49,6 +53,8 @@ class ReaderViewModel @Inject constructor(
     private val readerPreferencesRepository: ReaderPreferencesRepository,
     private val serverRepository: ServerRepository,
     private val syncPreferencesRepository: SyncPreferencesRepository,
+    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -127,6 +133,44 @@ class ReaderViewModel @Inject constructor(
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
+        pullGrimmoryProgressOnOpen(loadedBook, localProgress)
+    }
+
+    private suspend fun pullGrimmoryProgressOnOpen(
+        loadedBook: Book,
+        localProgress: ReadingProgress?,
+    ) {
+        val serverId = loadedBook.serverId ?: return
+        val server = serverRepository.getById(serverId) ?: return
+        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return
+        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+
+        runCatching {
+            val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+            val remotePercentage = detail.readProgress ?: return
+
+            val localPercentage = localProgress?.percentage ?: 0f
+            Timber.d("Grimmory pull: remote=${remotePercentage} local=$localPercentage")
+
+            if (remotePercentage > localPercentage + CONFLICT_THRESHOLD) {
+                _syncConflict.value = SyncConflict(
+                    remotePercentage = remotePercentage,
+                    localPercentage = localPercentage,
+                    remoteLocatorJson = null,
+                    remoteDevice = "Grimmory Web Reader",
+                    remoteProgress = ReadingProgress(
+                        bookId = bookId,
+                        serverId = serverId,
+                        percentage = remotePercentage,
+                        lastReadAt = java.time.Instant.now(),
+                        syncedAt = java.time.Instant.now(),
+                        needsSync = false,
+                    ),
+                )
+            }
+        }.onFailure {
+            Timber.w(it, "Failed to pull Grimmory progress on open")
+        }
     }
 
     private data class SyncContext(
@@ -258,8 +302,31 @@ class ReaderViewModel @Inject constructor(
     private suspend fun pushProgressOnClose() {
         val (server, fileHash) = getSyncContext() ?: return
 
+        // Kosync push
         readingProgressRepository.pushProgress(server, bookId, fileHash).onFailure {
-            Timber.w(it, "Failed to push progress on close")
+            Timber.w(it, "Failed to push kosync progress on close")
+        }
+
+        // Grimmory native push
+        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+            val loadedBook = book ?: return
+            val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+            val progress = readingProgressRepository.getByBookId(bookId) ?: return
+            runCatching {
+                grimmoryClient.pushProgress(
+                    baseUrl = server.url,
+                    serverId = server.id,
+                    request = GrimmoryProgressRequest(
+                        bookId = grimmoryBookId,
+                        fileProgress = GrimmoryFileProgress(
+                            progressPercent = progress.percentage,
+                        ),
+                    ),
+                ).getOrThrow()
+                Timber.d("Pushed Grimmory progress: ${(progress.percentage * 100).toInt()}%")
+            }.onFailure {
+                Timber.w(it, "Failed to push Grimmory progress on close")
+            }
         }
     }
 

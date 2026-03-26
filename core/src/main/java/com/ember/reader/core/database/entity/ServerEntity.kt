@@ -12,5 +12,7 @@ data class ServerEntity(
     val url: String,
     val opdsUsername: String,
     val kosyncUsername: String,
+    val grimmoryUsername: String = "",
+    val isGrimmory: Boolean = false,
     val lastConnected: Instant? = null,
 )
