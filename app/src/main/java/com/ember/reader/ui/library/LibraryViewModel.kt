@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -26,6 +27,7 @@ class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -90,7 +92,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
             server?.let { s ->
-                _coverAuthHeader.value = com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
+                _coverAuthHeader.value = if (s.isGrimmory && grimmoryTokenManager.isLoggedIn(s.id)) {
+                    grimmoryTokenManager.getAccessToken(s.id)?.let { "Bearer $it" }
+                } else {
+                    com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
+                }
             }
             refresh()
         }
@@ -101,14 +107,33 @@ class LibraryViewModel @Inject constructor(
         if (catalogPath.isEmpty()) return
         _isRefreshing.value = true
         viewModelScope.launch {
-            val result = bookRepository.refreshFromServer(currentServer, path = catalogPath)
-            if (isSubcategory) {
+            val result = if (catalogPath.startsWith("grimmory:")) {
+                refreshFromGrimmory(currentServer)
+            } else {
+                bookRepository.refreshFromServer(currentServer, path = catalogPath)
+            }
+            if (isSubcategory || catalogPath.startsWith("grimmory:")) {
                 result.onSuccess { page ->
                     _fetchedBookIds.value = page.resolvedBookIds.toSet()
                 }
             }
             _isRefreshing.value = false
         }
+    }
+
+    private suspend fun refreshFromGrimmory(server: com.ember.reader.core.model.Server): Result<com.ember.reader.core.opds.OpdsBookPage> {
+        val params = catalogPath.removePrefix("grimmory:").split("&").associate {
+            val (key, value) = it.split("=", limit = 2)
+            key to value
+        }
+        return bookRepository.refreshFromGrimmory(
+            server = server,
+            libraryId = params["libraryId"]?.toLongOrNull(),
+            shelfId = params["shelfId"]?.toLongOrNull(),
+            seriesName = params["seriesName"],
+            status = params["status"],
+            search = params["search"],
+        )
     }
 
     fun updateSearchQuery(query: String) { _searchQuery.value = query }

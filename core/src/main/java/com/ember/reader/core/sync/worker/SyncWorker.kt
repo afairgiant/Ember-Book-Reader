@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ember.reader.core.grimmory.GrimmoryClient
-import com.ember.reader.core.grimmory.GrimmoryFileProgress
+import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.repository.BookRepository
@@ -69,13 +69,15 @@ class SyncWorker @AssistedInject constructor(
             if (!progress.needsSync) continue
 
             runCatching {
+                val pct = kotlin.math.round(progress.percentage * 1000f) / 10f
                 grimmoryClient.pushProgress(
                     baseUrl = server.url,
                     serverId = server.id,
                     request = GrimmoryProgressRequest(
                         bookId = grimmoryBookId,
-                        fileProgress = GrimmoryFileProgress(
-                            progressPercent = progress.percentage,
+                        epubProgress = GrimmoryEpubProgress(
+                            cfi = "epubcfi(/6/2)",
+                            percentage = pct,
                         ),
                     ),
                 ).getOrThrow()
@@ -93,8 +95,10 @@ class SyncWorker @AssistedInject constructor(
             ).getOrThrow()
 
             for (summary in continueReading) {
-                val percentage = summary.readProgress ?: continue
-                if (percentage <= 0f) continue
+                val rawPct = summary.readProgress ?: continue
+                if (rawPct <= 0f) continue
+                // Grimmory returns 0-100, Ember uses 0-1
+                val percentage = if (rawPct > 1f) rawPct / 100f else rawPct
 
                 // Find matching local book by grimmoryBookId
                 val localBook = downloadedBooks.find { it.grimmoryBookId == summary.id }

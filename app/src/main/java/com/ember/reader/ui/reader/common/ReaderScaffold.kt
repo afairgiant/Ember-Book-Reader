@@ -1,4 +1,5 @@
 package com.ember.reader.ui.reader.common
+import kotlin.math.roundToInt
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -168,7 +169,7 @@ private fun ReaderBottomBar(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "${((if (dragging) dragValue else progression) * 100).toInt()}%",
+                text = "${((if (dragging) dragValue else progression) * 100).roundToInt()}%",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

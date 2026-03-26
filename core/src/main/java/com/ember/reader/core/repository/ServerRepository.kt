@@ -48,6 +48,20 @@ class ServerRepository @Inject constructor(
         credentialEncryption.storePassword(CredentialEncryption.opdsPasswordKey(id), server.opdsPassword)
         credentialEncryption.storePassword(CredentialEncryption.kosyncPasswordKey(id), server.kosyncPassword)
         credentialEncryption.storePassword(grimmoryPasswordKey(id), server.grimmoryPassword)
+
+        // Auto-login to Grimmory if credentials are provided
+        if (server.isGrimmory && server.grimmoryUsername.isNotBlank() && server.grimmoryPassword.isNotBlank()) {
+            timber.log.Timber.d("Grimmory auto-login: attempting for server $id (${server.grimmoryUsername})")
+            grimmoryClient.login(server.url, server.grimmoryUsername, server.grimmoryPassword)
+                .onSuccess { tokens ->
+                    grimmoryTokenManager.storeTokens(id, tokens)
+                    timber.log.Timber.d("Grimmory auto-login: tokens stored for server $id")
+                }
+                .onFailure { timber.log.Timber.w(it, "Grimmory auto-login failed for server $id") }
+        } else {
+            timber.log.Timber.d("Grimmory auto-login skipped: isGrimmory=${server.isGrimmory} username='${server.grimmoryUsername}' hasPassword=${server.grimmoryPassword.isNotBlank()}")
+        }
+
         return id
     }
 

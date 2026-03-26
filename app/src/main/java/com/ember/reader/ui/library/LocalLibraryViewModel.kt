@@ -1,4 +1,5 @@
 package com.ember.reader.ui.library
+import kotlin.math.roundToInt
 
 import android.content.Context
 import android.net.Uri
@@ -167,7 +168,7 @@ class LocalLibraryViewModel @Inject constructor(
             val remote = result.getOrNull()
             if (remote != null) {
                 readingProgressRepository.applyRemoteProgress(remote.progress)
-                _operationResult.value = "Synced: ${(remote.progress.percentage * 100).toInt()}% from ${remote.deviceName ?: "server"}"
+                _operationResult.value = "Synced: ${(remote.progress.percentage * 100).roundToInt()}% from ${remote.deviceName ?: "server"}"
             } else {
                 _operationResult.value = "No remote progress found"
             }

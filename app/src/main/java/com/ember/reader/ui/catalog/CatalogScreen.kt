@@ -108,14 +108,22 @@ fun CatalogScreen(
                             CatalogEntryCard(
                                 entry = entry,
                                 onClick = {
-                                    if (entry.href.contains("catalog") ||
-                                        entry.href.contains("?page=") ||
-                                        entry.href.contains("recent") ||
-                                        entry.href.contains("surprise")
-                                    ) {
-                                        onNavigateToBooks(entry.href)
-                                    } else {
-                                        onNavigateToFeed(entry.href)
+                                    when {
+                                        // Grimmory App API entries — all go to books view
+                                        entry.href.startsWith("grimmory:") -> {
+                                            onNavigateToBooks(entry.href)
+                                        }
+                                        // OPDS acquisition feeds
+                                        entry.href.contains("catalog") ||
+                                            entry.href.contains("?page=") ||
+                                            entry.href.contains("recent") ||
+                                            entry.href.contains("surprise") -> {
+                                            onNavigateToBooks(entry.href)
+                                        }
+                                        // OPDS navigation feeds
+                                        else -> {
+                                            onNavigateToFeed(entry.href)
+                                        }
                                     }
                                 },
                             )

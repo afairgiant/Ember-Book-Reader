@@ -1,4 +1,5 @@
 package com.ember.reader.ui.reader.common
+import kotlin.math.roundToInt
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -11,8 +12,10 @@ import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
+import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.readium.toJsonString
@@ -92,6 +95,8 @@ class ReaderViewModel @Inject constructor(
     private var publication: Publication? = null
     private var book: Book? = null
     private var progressSaveJob: Job? = null
+    private var sessionStartTime: java.time.Instant? = null
+    private var sessionStartProgress: Float = 0f
 
     init {
         viewModelScope.launch { loadBook() }
@@ -126,6 +131,9 @@ class ReaderViewModel @Inject constructor(
         val localProgress = readingProgressRepository.getByBookId(bookId)
         val initialLocator = localProgress?.locatorJson?.toLocator()
 
+        sessionStartTime = java.time.Instant.now()
+        sessionStartProgress = localProgress?.percentage ?: 0f
+
         _uiState.value = ReaderUiState.Ready(
             publication = pub,
             initialLocator = initialLocator,
@@ -147,10 +155,12 @@ class ReaderViewModel @Inject constructor(
 
         runCatching {
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-            val remotePercentage = detail.readProgress ?: return
+            val rawRemote = detail.readProgress ?: return
+            // Grimmory returns 0-100, Ember uses 0-1
+            val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
 
             val localPercentage = localProgress?.percentage ?: 0f
-            Timber.d("Grimmory pull: remote=${remotePercentage} local=$localPercentage")
+            Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
 
             if (remotePercentage > localPercentage + CONFLICT_THRESHOLD) {
                 _syncConflict.value = SyncConflict(
@@ -308,22 +318,41 @@ class ReaderViewModel @Inject constructor(
         }
 
         // Grimmory native push
+        val loadedBook = book
+        Timber.d("Grimmory push check: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} opdsEntryId=${loadedBook?.opdsEntryId} grimmoryBookId=${loadedBook?.grimmoryBookId}")
         if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-            val loadedBook = book ?: return
-            val grimmoryBookId = loadedBook.grimmoryBookId ?: return
-            val progress = readingProgressRepository.getByBookId(bookId) ?: return
+            if (loadedBook == null) { Timber.d("Grimmory push: no book loaded"); return }
+            val grimmoryBookId = loadedBook.grimmoryBookId
+            if (grimmoryBookId == null) { Timber.d("Grimmory push: no grimmoryBookId from opdsEntryId='${loadedBook.opdsEntryId}'"); return }
+            val progress = readingProgressRepository.getByBookId(bookId) ?: run { Timber.d("Grimmory push: no local progress"); return }
             runCatching {
+                // Get book detail to find the primary file ID
+                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
+                val fileId = detail?.files?.firstOrNull()?.id
+
+                // Grimmory stores percentages as 0-100, not 0-1
+                val pct = kotlin.math.round(progress.percentage * 1000f) / 10f  // e.g. 0.2393 → 23.9
+
+                val request = GrimmoryProgressRequest(
+                    bookId = grimmoryBookId,
+                    fileProgress = fileId?.let {
+                        GrimmoryFileProgress(
+                            bookFileId = it,
+                            progressPercent = pct,
+                        )
+                    },
+                    epubProgress = GrimmoryEpubProgress(
+                        cfi = "epubcfi(/6/2)",
+                        percentage = pct,
+                    ),
+                )
+                Timber.d("Grimmory push: bookId=$grimmoryBookId fileId=$fileId percentage=${progress.percentage}")
                 grimmoryClient.pushProgress(
                     baseUrl = server.url,
                     serverId = server.id,
-                    request = GrimmoryProgressRequest(
-                        bookId = grimmoryBookId,
-                        fileProgress = GrimmoryFileProgress(
-                            progressPercent = progress.percentage,
-                        ),
-                    ),
+                    request = request,
                 ).getOrThrow()
-                Timber.d("Pushed Grimmory progress: ${(progress.percentage * 100).toInt()}%")
+                Timber.d("Pushed Grimmory progress: ${(progress.percentage * 100).roundToInt()}%")
             }.onFailure {
                 Timber.w(it, "Failed to push Grimmory progress on close")
             }
@@ -338,9 +367,52 @@ class ReaderViewModel @Inject constructor(
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 pushProgressOnClose()
+                recordReadingSession()
             }
         }
         publication?.close()
+    }
+
+    private suspend fun recordReadingSession() {
+        val startTime = sessionStartTime ?: return
+        val loadedBook = book ?: return
+        val serverId = loadedBook.serverId ?: return
+        val server = serverRepository.getById(serverId) ?: return
+        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return
+        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+
+        val endTime = java.time.Instant.now()
+        val durationSeconds = java.time.Duration.between(startTime, endTime).seconds
+        if (durationSeconds < 30) return // Skip accidental opens
+
+        val endProgress = readingProgressRepository.getByBookId(bookId)?.percentage ?: 0f
+        val startPct = kotlin.math.round(sessionStartProgress * 1000f) / 10f
+        val endPct = kotlin.math.round(endProgress * 1000f) / 10f
+
+        val bookType = when (loadedBook.format) {
+            com.ember.reader.core.model.BookFormat.PDF -> "PDF"
+            else -> "EPUB"
+        }
+
+        runCatching {
+            grimmoryClient.recordReadingSession(
+                baseUrl = server.url,
+                serverId = server.id,
+                request = GrimmoryReadingSessionRequest(
+                    bookId = grimmoryBookId,
+                    bookType = bookType,
+                    startTime = startTime.toString(),
+                    endTime = endTime.toString(),
+                    durationSeconds = durationSeconds,
+                    startProgress = startPct,
+                    endProgress = endPct,
+                    progressDelta = endPct - startPct,
+                ),
+            ).getOrThrow()
+            Timber.d("Recorded reading session: ${durationSeconds}s, $startPct% → $endPct%")
+        }.onFailure {
+            Timber.w(it, "Failed to record reading session")
+        }
     }
 
     companion object {

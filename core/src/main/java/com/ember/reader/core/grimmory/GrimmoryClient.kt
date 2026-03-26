@@ -116,6 +116,21 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
+    suspend fun recordReadingSession(
+        baseUrl: String,
+        serverId: Long,
+        request: GrimmoryReadingSessionRequest,
+    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/reading-sessions") {
+            header("Authorization", "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) {
+            error("Reading session failed: ${response.status}")
+        }
+    }
+
     /**
      * Executes a block with a valid access token.
      * If the token is expired (401), refreshes and retries once.

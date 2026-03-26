@@ -57,6 +57,13 @@ data class GrimmoryFileProgress(
 )
 
 @Serializable
+data class GrimmoryBookFile(
+    val id: Long,
+    val fileName: String? = null,
+    val fileType: String? = null,
+)
+
+@Serializable
 data class GrimmoryBookDetail(
     val id: Long,
     val title: String,
@@ -65,6 +72,7 @@ data class GrimmoryBookDetail(
     val epubProgress: GrimmoryEpubProgress? = null,
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
+    val files: List<GrimmoryBookFile> = emptyList(),
 )
 
 @Serializable
@@ -78,4 +86,18 @@ data class GrimmoryProgressRequest(
 @Serializable
 data class GrimmoryStatusRequest(
     val status: ReadStatus,
+)
+
+@Serializable
+data class GrimmoryReadingSessionRequest(
+    val bookId: Long,
+    val bookType: String,
+    val startTime: String,
+    val endTime: String,
+    val durationSeconds: Long,
+    val startProgress: Float,
+    val endProgress: Float,
+    val progressDelta: Float,
+    val startLocation: String? = null,
+    val endLocation: String? = null,
 )

@@ -1,4 +1,5 @@
 package com.ember.reader.ui.server
+import kotlin.math.roundToInt
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -337,7 +338,7 @@ private fun ContinueReadingCard(
                     trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                 )
                 Text(
-                    text = "${(percentage * 100).toInt()}%",
+                    text = "${(percentage * 100).roundToInt()}%",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),

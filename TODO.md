@@ -49,7 +49,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Pull progress: `GET /api/v1/app/books/{bookId}` on reader open (supplement kosync pull)
 - [x] Continue Reading: `GET /api/v1/app/books/continue-reading` pulled in SyncWorker
 - [ ] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF) — API ready, not wired to UI yet
-- [ ] Reading sessions: `POST /api/v1/reading-sessions` for time tracking
+- [x] Reading sessions: `POST /api/v1/reading-sessions` — records duration, start/end progress on reader close (skips < 30s)
 
 **Phase 2 — Catalog via App API (alternative to OPDS):**
 - [ ] Books: `GET /api/v1/app/books` — paginated, filterable, includes progress & covers

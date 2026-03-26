@@ -4,10 +4,15 @@ import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
+import com.ember.reader.core.grimmory.GrimmoryAppBook
+import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryAppPage
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
@@ -32,6 +37,8 @@ class BookRepository @Inject constructor(
     private val opdsClient: OpdsClient,
     private val bookOpener: BookOpener,
     private val serverRepository: ServerRepository,
+    private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) {
 
     private val booksDir: File by lazy {
@@ -106,6 +113,98 @@ class BookRepository @Inject constructor(
             }
         }
         return result.map { it.copy(resolvedBookIds = resolvedIds) }
+    }
+
+    /**
+     * Refreshes book list from Grimmory's App API instead of OPDS.
+     * Returns the same OpdsBookPage structure for UI compatibility.
+     */
+    suspend fun refreshFromGrimmory(
+        server: Server,
+        page: Int = 0,
+        size: Int = 50,
+        libraryId: Long? = null,
+        shelfId: Long? = null,
+        seriesName: String? = null,
+        status: String? = null,
+        search: String? = null,
+    ): Result<OpdsBookPage> {
+        val appPage = if (seriesName != null) {
+            grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
+        } else {
+            grimmoryAppClient.getBooks(
+                baseUrl = server.url,
+                serverId = server.id,
+                page = page,
+                size = size,
+                libraryId = libraryId,
+                shelfId = shelfId,
+                status = status,
+                search = search,
+            )
+        }
+
+        val result = appPage.getOrElse { return Result.failure(it) }
+        val origin = serverOrigin(server.url)
+        val resolvedIds = mutableListOf<String>()
+
+        for (appBook in result.content) {
+            val opdsEntryId = "urn:booklore:book:${appBook.id}"
+            val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
+
+            val format = when (appBook.primaryFileType?.uppercase()) {
+                "PDF" -> BookFormat.PDF
+                "AUDIOBOOK" -> BookFormat.AUDIOBOOK
+                else -> BookFormat.EPUB
+            }
+
+            if (existing != null) {
+                bookDao.update(
+                    existing.copy(
+                        title = appBook.title,
+                        author = appBook.authors.firstOrNull(),
+                        coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                        downloadUrl = "/api/v1/books/${appBook.id}/download",
+                    ),
+                )
+                resolvedIds.add(existing.id)
+            } else {
+                val book = Book(
+                    id = java.util.UUID.randomUUID().toString(),
+                    serverId = server.id,
+                    opdsEntryId = opdsEntryId,
+                    title = appBook.title,
+                    author = appBook.authors.firstOrNull(),
+                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                    downloadUrl = "/api/v1/books/${appBook.id}/download",
+                    format = format,
+                    addedAt = Instant.now(),
+                )
+                bookDao.insert(book.toEntity())
+                resolvedIds.add(book.id)
+            }
+        }
+
+        val books = result.content.map { appBook ->
+            Book(
+                id = "",
+                serverId = server.id,
+                opdsEntryId = "urn:booklore:book:${appBook.id}",
+                title = appBook.title,
+                author = appBook.authors.firstOrNull(),
+                format = BookFormat.EPUB,
+                addedAt = Instant.now(),
+            )
+        }
+
+        return Result.success(
+            OpdsBookPage(
+                books = books,
+                resolvedBookIds = resolvedIds,
+                totalResults = result.totalElements.toInt(),
+                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null,
+            ),
+        )
     }
 
     suspend fun downloadBook(book: Book, server: Server): Result<Book> = runCatching {

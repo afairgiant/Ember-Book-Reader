@@ -3,8 +3,11 @@ package com.ember.reader.ui.catalog
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsFeed
+import com.ember.reader.core.opds.OpdsFeedEntry
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +22,8 @@ class CatalogViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val serverRepository: ServerRepository,
     private val opdsClient: OpdsClient,
+    private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -50,10 +55,110 @@ class CatalogViewModel @Inject constructor(
 
     private suspend fun fetchFeed() {
         val currentServer = server ?: return
+
+        if (currentServer.isGrimmory && grimmoryTokenManager.isLoggedIn(currentServer.id) && path.isEmpty()) {
+            fetchGrimmoryCatalog(currentServer)
+        } else {
+            fetchOpdsFeed(currentServer)
+        }
+    }
+
+    private suspend fun fetchGrimmoryCatalog(server: Server) {
+        val entries = mutableListOf<OpdsFeedEntry>()
+
+        // Continue Reading
+        entries.add(
+            OpdsFeedEntry(
+                id = "grimmory:continue-reading",
+                title = "Continue Reading",
+                href = "grimmory:status=READING",
+                content = "Books you're currently reading",
+            ),
+        )
+
+        // Recently Added
+        entries.add(
+            OpdsFeedEntry(
+                id = "grimmory:recent",
+                title = "Recently Added",
+                href = "grimmory:sort=addedOn&dir=desc",
+                content = "Latest additions to your library",
+            ),
+        )
+
+        // Libraries
+        grimmoryAppClient.getLibraries(server.url, server.id).onSuccess { libraries ->
+            for (lib in libraries) {
+                entries.add(
+                    OpdsFeedEntry(
+                        id = "grimmory:library:${lib.id}",
+                        title = lib.name,
+                        href = "grimmory:libraryId=${lib.id}",
+                        content = "${lib.bookCount} books",
+                    ),
+                )
+            }
+        }
+
+        // Shelves
+        grimmoryAppClient.getShelves(server.url, server.id).onSuccess { shelves ->
+            if (shelves.isNotEmpty()) {
+                for (shelf in shelves) {
+                    entries.add(
+                        OpdsFeedEntry(
+                            id = "grimmory:shelf:${shelf.id}",
+                            title = shelf.name,
+                            href = "grimmory:shelfId=${shelf.id}",
+                            content = "${shelf.bookCount} books",
+                        ),
+                    )
+                }
+            }
+        }
+
+        // Series
+        entries.add(
+            OpdsFeedEntry(
+                id = "grimmory:series",
+                title = "Series",
+                href = "grimmory:series",
+                content = "Browse books by series",
+            ),
+        )
+
+        // Authors
+        entries.add(
+            OpdsFeedEntry(
+                id = "grimmory:authors",
+                title = "Authors",
+                href = "grimmory:authors",
+                content = "Browse books by author",
+            ),
+        )
+
+        // All Books
+        entries.add(
+            OpdsFeedEntry(
+                id = "grimmory:all",
+                title = "All Books",
+                href = "grimmory:all",
+                content = "Browse the full catalog",
+            ),
+        )
+
+        _uiState.value = CatalogUiState.Success(
+            feed = OpdsFeed(
+                title = "${server.name} Catalog",
+                entries = entries,
+            ),
+        )
+    }
+
+    private suspend fun fetchOpdsFeed(server: Server) {
         val result = opdsClient.fetchCatalog(
-            baseUrl = currentServer.url,
-            username = currentServer.opdsUsername,
-            password = currentServer.opdsPassword,
+            baseUrl = server.url,
+            username = server.opdsUsername,
+            password = server.opdsPassword,
             path = path.ifEmpty { null },
         )
         result.fold(

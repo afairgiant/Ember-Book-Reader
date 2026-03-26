@@ -1,4 +1,5 @@
 package com.ember.reader.ui.library
+import kotlin.math.roundToInt
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -549,7 +550,7 @@ private fun UnifiedBookCard(
                         trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                     )
                     Text(
-                        text = "${(progress * 100).toInt()}%",
+                        text = "${(progress * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp),
