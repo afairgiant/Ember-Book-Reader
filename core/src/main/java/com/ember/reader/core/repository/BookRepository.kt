@@ -51,6 +51,12 @@ class BookRepository @Inject constructor(
     fun observeDownloadedBooks(): Flow<List<Book>> =
         bookDao.observeDownloadedBooks().map { entities -> entities.map { it.toDomain() } }
 
+    fun observeServerDownloads(): Flow<List<Book>> =
+        bookDao.observeServerDownloads().map { entities -> entities.map { it.toDomain() } }
+
+    suspend fun getDownloadedBooksForServer(serverId: Long): List<Book> =
+        bookDao.getDownloadedBooksForServer(serverId).map { it.toDomain() }
+
     fun observeRecentlyReading(): Flow<List<Book>> =
         bookDao.observeRecentlyReading().map { entities -> entities.map { it.toDomain() } }
 
@@ -144,14 +150,29 @@ class BookRepository @Inject constructor(
     }
 
     suspend fun addLocalBook(book: Book) {
-        bookDao.insert(book.toEntity())
-        book.localPath?.let { path ->
-            val file = File(path)
-            if (file.exists()) {
+        val file = book.localPath?.let { File(it) }
+
+        // Extract metadata and cover from the file
+        val enrichedBook = if (file != null && file.exists()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val metadata = extractMetadata(file)
                 val hash = PartialMd5.compute(file)
-                bookDao.updateFileHash(book.id, hash)
+                book.copy(
+                    title = if (book.title == "Untitled" || book.title == file.nameWithoutExtension) {
+                        metadata.title
+                    } else {
+                        book.title
+                    },
+                    author = book.author ?: metadata.author,
+                    coverUrl = metadata.coverUrl,
+                    fileHash = hash,
+                )
             }
+        } else {
+            book
         }
+
+        bookDao.insert(enrichedBook.toEntity())
     }
 
     suspend fun deleteBook(bookId: String) {

@@ -110,6 +110,32 @@ class ReadingProgressRepository @Inject constructor(
         readingProgressDao.upsert(progress.toEntity())
     }
 
+    /**
+     * Pulls remote progress for all downloaded books on a server.
+     * Only updates local progress if the remote is newer (higher percentage).
+     */
+    suspend fun pullProgressForAllBooks(
+        server: Server,
+        books: List<Pair<String, String>>,
+    ) {
+        for ((bookId, fileHash) in books) {
+            runCatching {
+                val result = pullProgress(server, bookId, fileHash)
+                val remote = result.getOrNull() ?: return@runCatching
+
+                val local = getByBookId(bookId)
+                val localPercentage = local?.percentage ?: 0f
+
+                if (remote.progress.percentage > localPercentage) {
+                    applyRemoteProgress(remote.progress)
+                    Timber.d("Pulled progress for $bookId: ${(remote.progress.percentage * 100).toInt()}%")
+                }
+            }.onFailure {
+                Timber.w(it, "Failed to pull progress for book $bookId")
+            }
+        }
+    }
+
     suspend fun syncUnsyncedProgress(server: Server, getDocumentHash: suspend (String) -> String?) {
         val unsynced = readingProgressDao.getUnsyncedProgress(server.id)
         for (entity in unsynced) {

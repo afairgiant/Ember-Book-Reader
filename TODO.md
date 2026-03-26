@@ -29,9 +29,47 @@
 - [ ] Need `syncWithBookloreReader` enabled on the KOReader user in Grimmory settings
 
 ### Background Progress Pull
-- [ ] Add a pull pass to `SyncWorker` that fetches remote kosync progress for all downloaded books with a `fileHash`
-- [ ] Pre-populates reading progress so books show in "Continue Reading" without needing to open them first
-- [ ] Useful when switching devices — all in-progress books appear immediately after sync
+- [x] Add a pull pass to `SyncWorker` that fetches remote kosync progress for all downloaded books with a `fileHash`
+- [x] Pre-populates reading progress so books show in "Continue Reading" without needing to open them first
+- [x] Useful when switching devices — all in-progress books appear immediately after sync
+
+### Progress Sync for Non-Downloaded Books
+- [ ] Currently progress only syncs for books that have been downloaded at least once (we need the `fileHash` to query kosync)
+- [ ] **Option A — Grimmory PR**: Add a "list all progress" bulk endpoint to kosync API (e.g., `GET /api/koreader/syncs/progress` returning all entries for the user). Ember could then match by OPDS entry ID or title instead of hash.
+- [ ] **Option B — Grimmory PR**: Include the file hash in the OPDS feed entries (e.g., as a `<link>` or `<dc:identifier>` element). Ember could then query kosync for any book in the catalog without downloading it first.
+- [ ] Either option would let "Continue Reading" show books read on other devices even before downloading them in Ember.
+
+### Grimmory Native API Integration
+Full API reference: `docs/grimmory-api.md`
+
+**Phase 1 — Auth & Progress:**
+- [ ] JWT auth flow: `POST /api/v1/auth/login` → store access + refresh tokens securely
+- [ ] Token refresh: `POST /api/v1/auth/refresh` (10hr access, 30day refresh)
+- [ ] Push progress: `POST /api/v1/books/progress` with `epubProgress` (CFI + percentage) — native web reader sync
+- [ ] Pull progress: `GET /api/v1/app/books/{bookId}` returns `readProgress`, `epubProgress`, `koreaderProgress`
+- [ ] Continue Reading: `GET /api/v1/app/books/continue-reading` — shows in-progress books without needing file hashes
+- [ ] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF)
+- [ ] Reading sessions: `POST /api/v1/reading-sessions` for time tracking
+
+**Phase 2 — Catalog via App API (alternative to OPDS):**
+- [ ] Books: `GET /api/v1/app/books` — paginated, filterable, includes progress & covers
+- [ ] Libraries: `GET /api/v1/app/libraries`
+- [ ] Shelves: `GET /api/v1/app/shelves` + magic shelves
+- [ ] Series: `GET /api/v1/app/series` with book counts and read progress
+- [ ] Authors: `GET /api/v1/app/authors` with photos
+- [ ] Search: `GET /api/v1/app/books/search?q=`
+- [ ] Covers: `GET /api/v1/media/book/{bookId}/cover` (JWT auth, cacheable)
+
+**Phase 3 — Annotations & Bookmarks Sync:**
+- [ ] Annotations: `GET/POST/PUT/DELETE /api/v1/annotations` (CFI-based highlights)
+- [ ] Bookmarks: `GET/POST/PUT/DELETE /api/v1/bookmarks` (CFI-based)
+- [ ] Notes: `GET/POST/PUT/DELETE /api/v2/book-notes` (V2 CFI-based notes)
+- [ ] Notebook: `GET /api/v1/app/notebook/books` + entries per book
+
+**Infrastructure:**
+- [ ] Auto-detect Grimmory servers (`GET /api/v1/healthcheck` or `/api/v1/version`)
+- [ ] Keep kosync as fallback for non-Grimmory OPDS servers and KOReader compat
+- [ ] Server form: optional Grimmory login (username/password → JWT) alongside OPDS + kosync credentials
 
 ### Bidirectional Position Sync
 - [ ] Investigate converting Readium Locator ↔ EPUB CFI for exact position sync (not just percentage)
@@ -70,10 +108,10 @@
 - [ ] App version info
 
 ### Storage Management
-- [ ] Show available device storage alongside used
-- [ ] Sort options (latest first, largest first, alphabetical)
-- [ ] Batch delete
-- [ ] Auto-cleanup for old downloads
+- [x] Show available device storage alongside used
+- [x] Sort options (latest first, largest first, alphabetical)
+- [x] Batch delete
+- [ ] Auto-cleanup for old downloads (toggle + 90-day threshold on app startup)
 
 ## Technical
 

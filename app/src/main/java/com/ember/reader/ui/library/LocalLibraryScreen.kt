@@ -3,8 +3,10 @@ package com.ember.reader.ui.library
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,28 +23,35 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -66,10 +75,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.ui.common.BookCoverPlaceholderColors
+import com.ember.reader.ui.common.bookCoverColorIndex
 
 enum class LibraryFilter { ALL, SERVER, LOCAL }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalLibraryScreen(
     onNavigateBack: () -> Unit,
@@ -82,13 +93,27 @@ fun LocalLibraryScreen(
     val progressMap by viewModel.progressMap.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     val operationResult by viewModel.operationResult.collectAsStateWithLifecycle()
+    val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
+    val sortReversed by viewModel.sortReversed.collectAsStateWithLifecycle()
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
 
-    val filteredBooks = when (filter) {
-        LibraryFilter.ALL -> allBooks
-        LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
-        LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
+    val isSelecting = selectedIds.isNotEmpty()
+
+    val filteredBooks = remember(allBooks, filter, sortMode, sortReversed, progressMap) {
+        val filtered = when (filter) {
+            LibraryFilter.ALL -> allBooks
+            LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
+            LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
+        }
+        val sorted = when (sortMode) {
+            LibrarySortMode.RECENT -> filtered.sortedByDescending { it.downloadedAt ?: it.addedAt }
+            LibrarySortMode.TITLE -> filtered.sortedBy { it.title.lowercase() }
+            LibrarySortMode.AUTHOR -> filtered.sortedBy { it.author?.lowercase() ?: "" }
+            LibrarySortMode.PROGRESS -> filtered.sortedByDescending { progressMap[it.id] ?: 0f }
+        }
+        if (sortReversed) sorted.reversed() else sorted
     }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -107,19 +132,64 @@ fun LocalLibraryScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
-                },
-            ) {
-                if (importing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                } else {
-                    Icon(Icons.Default.Add, contentDescription = "Import Book")
+            if (!isSelecting) {
+                FloatingActionButton(
+                    onClick = {
+                        filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
+                    },
+                ) {
+                    if (importing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    } else {
+                        Icon(Icons.Default.Add, contentDescription = "Import Book")
+                    }
+                }
+            }
+        },
+        bottomBar = {
+            if (isSelecting) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(onClick = { viewModel.selectAll(filteredBooks) }) {
+                            Text("All")
+                        }
+                        TextButton(onClick = viewModel::clearSelection) {
+                            Text("Clear")
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        OutlinedButton(
+                            onClick = viewModel::syncSelectedProgress,
+                            shape = RoundedCornerShape(10.dp),
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Sync ${selectedIds.size}")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = viewModel::deleteSelected,
+                            shape = RoundedCornerShape(10.dp),
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Delete ${selectedIds.size}")
+                        }
+                    }
                 }
             }
         },
@@ -129,11 +199,11 @@ fun LocalLibraryScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Filter chips
+            // Source filter chips
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
@@ -153,9 +223,36 @@ fun LocalLibraryScreen(
                 )
             }
 
+            // Sort chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                LibrarySortMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = sortMode == mode,
+                        onClick = { viewModel.updateSortMode(mode) },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(mode.displayName)
+                                if (sortMode == mode && sortReversed) {
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "\u2191",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+
             if (filteredBooks.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -172,18 +269,33 @@ fun LocalLibraryScreen(
                     }
                 }
             } else {
+                val gridState = rememberLazyGridState()
+                LaunchedEffect(sortMode, sortReversed) {
+                    gridState.scrollToItem(0)
+                }
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Adaptive(120.dp),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f),
                 ) {
                     items(filteredBooks, key = { it.id }) { book ->
                         UnifiedBookCard(
                             book = book,
                             progress = progressMap[book.id],
                             coverAuthHeader = book.serverId?.let { coverAuthHeaders[it] },
-                            onClick = { onOpenReader(book.id, book.format) },
+                            isSelected = book.id in selectedIds,
+                            isSelecting = isSelecting,
+                            onClick = {
+                                if (isSelecting) {
+                                    viewModel.toggleSelection(book.id)
+                                } else {
+                                    onOpenReader(book.id, book.format)
+                                }
+                            },
+                            onLongClick = { viewModel.toggleSelection(book.id) },
                             onDelete = { viewModel.deleteBook(book.id) },
                             onRelink = if (book.serverId == null && servers.isNotEmpty()) {
                                 { relinkBookId = book.id }
@@ -228,7 +340,7 @@ fun LocalLibraryScreen(
             )
         }
 
-        // Relink result snackbar
+        // Operation result dialog
         operationResult?.let { result ->
             AlertDialog(
                 onDismissRequest = viewModel::dismissOperationResult,
@@ -243,33 +355,37 @@ fun LocalLibraryScreen(
     }
 }
 
-private val placeholderColors = listOf(
-    Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
-    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
-)
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun UnifiedBookCard(
     book: Book,
     progress: Float? = null,
     coverAuthHeader: String? = null,
+    isSelected: Boolean = false,
+    isSelecting: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
     onRelink: (() -> Unit)? = null,
     onSyncProgress: (() -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val colorIndex = book.title.hashCode().mod(placeholderColors.size).let {
-        if (it < 0) it + placeholderColors.size else it
-    }
+    val colorIndex = bookCoverColorIndex(book.title)
     val isFromServer = book.serverId != null
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
         ),
         shape = RoundedCornerShape(14.dp),
     ) {
@@ -280,14 +396,18 @@ private fun UnifiedBookCard(
                     .aspectRatio(0.67f),
             ) {
                 if (book.coverUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
+                    val context = LocalContext.current
+                    val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                        ImageRequest.Builder(context)
                             .data(book.coverUrl)
                             .apply {
                                 coverAuthHeader?.let { addHeader("Authorization", it) }
                             }
                             .crossfade(true)
-                            .build(),
+                            .build()
+                    }
+                    AsyncImage(
+                        model = imageModel,
                         contentDescription = book.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -298,7 +418,7 @@ private fun UnifiedBookCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(placeholderColors[colorIndex]),
+                            .background(BookCoverPlaceholderColors[colorIndex]),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -309,52 +429,63 @@ private fun UnifiedBookCard(
                     }
                 }
 
-                // 3-dot menu
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(2.dp),
-                ) {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(28.dp),
+                // Selection checkbox
+                if (isSelecting) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onClick() },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp),
+                    )
+                } else {
+                    // 3-dot menu
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp),
                     ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "More",
-                            tint = Color.White.copy(alpha = 0.9f),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                    ) {
-                        if (onRelink != null) {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "More",
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                        ) {
+                            if (onRelink != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Relink to Server") },
+                                    onClick = {
+                                        showMenu = false
+                                        onRelink()
+                                    },
+                                )
+                            }
+                            if (onSyncProgress != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Sync Progress") },
+                                    onClick = {
+                                        showMenu = false
+                                        onSyncProgress()
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text("Relink to Server") },
+                                text = { Text("Delete") },
                                 onClick = {
                                     showMenu = false
-                                    onRelink()
+                                    onDelete()
                                 },
                             )
                         }
-                        if (onSyncProgress != null) {
-                            DropdownMenuItem(
-                                text = { Text("Sync Progress") },
-                                onClick = {
-                                    showMenu = false
-                                    onSyncProgress()
-                                },
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
-                            },
-                        )
                     }
                 }
 

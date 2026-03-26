@@ -20,6 +20,12 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE localPath IS NOT NULL ORDER BY title ASC")
     fun observeDownloadedBooks(): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books WHERE localPath IS NOT NULL AND serverId IS NOT NULL ORDER BY title ASC")
+    fun observeServerDownloads(): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books WHERE serverId = :serverId AND fileHash IS NOT NULL AND localPath IS NOT NULL")
+    suspend fun getDownloadedBooksForServer(serverId: Long): List<BookEntity>
+
     @Query(
         """
         SELECT b.* FROM books b

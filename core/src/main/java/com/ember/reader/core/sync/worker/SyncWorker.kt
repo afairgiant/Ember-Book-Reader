@@ -29,8 +29,20 @@ class SyncWorker @AssistedInject constructor(
         for (server in servers) {
             if (server.kosyncUsername.isBlank()) continue
 
+            // Push local changes first
             readingProgressRepository.syncUnsyncedProgress(server) { bookId ->
                 bookRepository.getById(bookId)?.fileHash
+            }
+
+            // Pull remote progress for all downloaded books
+            val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
+            if (downloadedBooks.isNotEmpty()) {
+                val bookHashPairs = downloadedBooks.mapNotNull { book ->
+                    val hash = book.fileHash ?: return@mapNotNull null
+                    book.id to hash
+                }
+                readingProgressRepository.pullProgressForAllBooks(server, bookHashPairs)
+                Timber.d("SyncWorker: pulled progress for ${bookHashPairs.size} books on ${server.name}")
             }
         }
 

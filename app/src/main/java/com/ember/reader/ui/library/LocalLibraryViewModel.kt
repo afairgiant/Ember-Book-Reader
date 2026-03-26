@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -26,6 +27,13 @@ import java.io.File
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
+
+enum class LibrarySortMode(val displayName: String) {
+    RECENT("Recent"),
+    TITLE("A-Z"),
+    AUTHOR("Author"),
+    PROGRESS("Progress"),
+}
 
 @HiltViewModel
 class LocalLibraryViewModel @Inject constructor(
@@ -38,17 +46,30 @@ class LocalLibraryViewModel @Inject constructor(
     val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Map of bookId → reading percentage
     val progressMap: StateFlow<Map<String, Float>> = readingProgressRepository.observeAll()
         .map { list -> list.associate { it.bookId to it.percentage } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    // Map of serverId → Basic auth header for cover loading
     private val _coverAuthHeaders = MutableStateFlow<Map<Long, String>>(emptyMap())
     val coverAuthHeaders: StateFlow<Map<Long, String>> = _coverAuthHeaders.asStateFlow()
 
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing.asStateFlow()
+
+    private val _sortMode = MutableStateFlow(LibrarySortMode.RECENT)
+    val sortMode: StateFlow<LibrarySortMode> = _sortMode.asStateFlow()
+
+    private val _sortReversed = MutableStateFlow(false)
+    val sortReversed: StateFlow<Boolean> = _sortReversed.asStateFlow()
+
+    private val _selectedIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedIds: StateFlow<Set<String>> = _selectedIds.asStateFlow()
+
+    private val _operationResult = MutableStateFlow<String?>(null)
+    val operationResult: StateFlow<String?> = _operationResult.asStateFlow()
+
+    val servers: StateFlow<List<Server>> = serverRepository.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -58,6 +79,116 @@ class LocalLibraryViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun updateSortMode(mode: LibrarySortMode) {
+        if (_sortMode.value == mode) {
+            _sortReversed.update { !it }
+        } else {
+            _sortMode.value = mode
+            _sortReversed.value = false
+        }
+    }
+
+    fun sortBooks(books: List<Book>): List<Book> {
+        val progress = progressMap.value
+        return when (_sortMode.value) {
+            LibrarySortMode.RECENT -> books.sortedByDescending { it.downloadedAt ?: it.addedAt }
+            LibrarySortMode.TITLE -> books.sortedBy { it.title.lowercase() }
+            LibrarySortMode.AUTHOR -> books.sortedBy { it.author?.lowercase() ?: "" }
+            LibrarySortMode.PROGRESS -> books.sortedByDescending { progress[it.id] ?: 0f }
+        }
+    }
+
+    // Selection
+    fun toggleSelection(bookId: String) {
+        _selectedIds.update { ids ->
+            if (bookId in ids) ids - bookId else ids + bookId
+        }
+    }
+
+    fun selectAll(books: List<Book>) {
+        _selectedIds.value = books.map { it.id }.toSet()
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun deleteSelected() {
+        val ids = _selectedIds.value.toList()
+        _selectedIds.value = emptySet()
+        viewModelScope.launch {
+            for (id in ids) {
+                bookRepository.deleteBook(id)
+            }
+            _operationResult.value = "Deleted ${ids.size} book(s)"
+        }
+    }
+
+    fun syncSelectedProgress() {
+        val ids = _selectedIds.value.toList()
+        _selectedIds.value = emptySet()
+        viewModelScope.launch {
+            var synced = 0
+            val books = ids.mapNotNull { bookRepository.getById(it) }
+            for (book in books) {
+                val serverId = book.serverId ?: continue
+                val fileHash = book.fileHash ?: continue
+                val server = serverRepository.getById(serverId) ?: continue
+                if (server.kosyncUsername.isBlank()) continue
+                val result = readingProgressRepository.pullProgress(server, book.id, fileHash)
+                val remote = result.getOrNull() ?: continue
+                readingProgressRepository.applyRemoteProgress(remote.progress)
+                synced++
+            }
+            _operationResult.value = if (synced > 0) "Synced $synced book(s)" else "No remote progress found"
+        }
+    }
+
+    // Single book operations
+    fun deleteBook(bookId: String) {
+        viewModelScope.launch { bookRepository.deleteBook(bookId) }
+    }
+
+    fun syncBookProgress(book: Book) {
+        val serverId = book.serverId ?: return
+        val fileHash = book.fileHash ?: return
+        viewModelScope.launch {
+            val server = serverRepository.getById(serverId) ?: run {
+                _operationResult.value = "Server not found"
+                return@launch
+            }
+            if (server.kosyncUsername.isBlank()) {
+                _operationResult.value = "Kosync credentials not configured"
+                return@launch
+            }
+            val result = readingProgressRepository.pullProgress(server, book.id, fileHash)
+            val remote = result.getOrNull()
+            if (remote != null) {
+                readingProgressRepository.applyRemoteProgress(remote.progress)
+                _operationResult.value = "Synced: ${(remote.progress.percentage * 100).toInt()}% from ${remote.deviceName ?: "server"}"
+            } else {
+                _operationResult.value = "No remote progress found"
+            }
+        }
+    }
+
+    fun relinkBook(bookId: String, serverId: Long) {
+        viewModelScope.launch {
+            _operationResult.value = "Searching..."
+            val match = bookRepository.findRelinkMatches(bookId, serverId)
+            if (match != null) {
+                bookRepository.relinkToServerBook(bookId, match.serverBookId)
+                _operationResult.value = "Linked to ${match.serverName}"
+            } else {
+                _operationResult.value = "No matching book found on this server"
+            }
+        }
+    }
+
+    fun dismissOperationResult() {
+        _operationResult.value = null
     }
 
     fun importBook(uri: Uri) {
@@ -87,10 +218,12 @@ class LocalLibraryViewModel @Inject constructor(
                     } ?: error("Cannot open file")
                 }
 
-                val title = uri.lastPathSegment
-                    ?.substringAfterLast('/')
-                    ?.substringBeforeLast('.')
-                    ?: "Untitled"
+                val title = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (cursor.moveToFirst() && nameIndex >= 0) {
+                        cursor.getString(nameIndex)?.substringBeforeLast('.')
+                    } else null
+                } ?: "Untitled"
 
                 val book = Book(
                     id = id,
@@ -105,56 +238,6 @@ class LocalLibraryViewModel @Inject constructor(
                 Timber.e(it, "Failed to import book")
             }
             _importing.value = false
-        }
-    }
-
-    val servers: StateFlow<List<Server>> = serverRepository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private val _operationResult = MutableStateFlow<String?>(null)
-    val operationResult: StateFlow<String?> = _operationResult.asStateFlow()
-
-    fun deleteBook(bookId: String) {
-        viewModelScope.launch { bookRepository.deleteBook(bookId) }
-    }
-
-    fun relinkBook(bookId: String, serverId: Long) {
-        viewModelScope.launch {
-            _operationResult.value = "Searching..."
-            val match = bookRepository.findRelinkMatches(bookId, serverId)
-            if (match != null) {
-                val result = bookRepository.relinkToServerBook(bookId, match.serverBookId)
-                _operationResult.value = "Linked to ${match.serverName}"
-            } else {
-                _operationResult.value = "No matching book found on this server"
-            }
-        }
-    }
-
-    fun dismissOperationResult() {
-        _operationResult.value = null
-    }
-
-    fun syncBookProgress(book: Book) {
-        val serverId = book.serverId ?: return
-        val fileHash = book.fileHash ?: return
-        viewModelScope.launch {
-            val server = serverRepository.getById(serverId) ?: run {
-                _operationResult.value = "Server not found"
-                return@launch
-            }
-            if (server.kosyncUsername.isBlank()) {
-                _operationResult.value = "Kosync credentials not configured"
-                return@launch
-            }
-            val result = readingProgressRepository.pullProgress(server, book.id, fileHash)
-            val remote = result.getOrNull()
-            if (remote != null) {
-                readingProgressRepository.applyRemoteProgress(remote.progress)
-                _operationResult.value = "Synced: ${(remote.progress.percentage * 100).toInt()}% from ${remote.deviceName ?: "server"}"
-            } else {
-                _operationResult.value = "No remote progress found"
-            }
         }
     }
 }
