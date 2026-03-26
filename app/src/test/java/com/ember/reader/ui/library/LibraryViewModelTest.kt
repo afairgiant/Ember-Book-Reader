@@ -9,6 +9,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -40,7 +41,7 @@ class LibraryViewModelTest {
     private val testServer = Server(
         id = 1L,
         name = "Test",
-        url = "http://localhost",
+        url = "http://localhost/api/v1/opds",
         opdsUsername = "user",
         opdsPassword = "pass",
         kosyncUsername = "kuser",
@@ -50,6 +51,8 @@ class LibraryViewModelTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        mockkStatic(android.util.Base64::class)
+        every { android.util.Base64.encodeToString(any(), any()) } returns "dXNlcjpwYXNz"
         every { bookRepository.observeByServer(1L) } returns flowOf(emptyList())
         coEvery { serverRepository.getById(1L) } returns testServer
         coEvery { bookRepository.refreshFromServer(any(), any(), any()) } returns Result.success(
