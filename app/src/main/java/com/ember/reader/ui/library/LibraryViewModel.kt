@@ -49,6 +49,10 @@ class LibraryViewModel @Inject constructor(
 
     private val _downloadingBooks = MutableStateFlow<Set<String>>(emptySet())
 
+    // When viewing a subcategory (series, shelf, etc.), only show books from that fetch
+    private val isSubcategory = catalogPath != "/api/v1/opds/catalog"
+    private val _fetchedBookIds = MutableStateFlow<Set<String>?>(null)
+
     private var server: Server? = null
 
     private val _coverAuthHeader = MutableStateFlow<String?>(null)
@@ -58,13 +62,15 @@ class LibraryViewModel @Inject constructor(
         bookRepository.observeByServer(serverId),
         _downloadingBooks,
         _searchQuery,
-        _sortOrder,
+        combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
         combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded },
-    ) { books, downloading, query, sort, (formatFilter, downloadedOnly) ->
+    ) { books, downloading, query, (sort, fetchedIds), (formatFilter, downloadedOnly) ->
         val filtered = books
             .filter { book ->
-                (query.isBlank() || book.title.contains(query, ignoreCase = true) ||
-                    book.author?.contains(query, ignoreCase = true) == true) &&
+                // In subcategory view, only show books from the current fetch
+                (fetchedIds == null || book.id in fetchedIds) &&
+                    (query.isBlank() || book.title.contains(query, ignoreCase = true) ||
+                        book.author?.contains(query, ignoreCase = true) == true) &&
                     (formatFilter == null || book.format == formatFilter) &&
                     (!downloadedOnly || book.isDownloaded)
             }
@@ -95,7 +101,12 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         _isRefreshing.value = true
         viewModelScope.launch {
-            bookRepository.refreshFromServer(currentServer, path = catalogPath)
+            val result = bookRepository.refreshFromServer(currentServer, path = catalogPath)
+            if (isSubcategory) {
+                result.onSuccess { page ->
+                    _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                }
+            }
             _isRefreshing.value = false
         }
     }

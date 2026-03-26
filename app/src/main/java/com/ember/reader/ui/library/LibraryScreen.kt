@@ -45,11 +45,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.core.model.Book
@@ -200,10 +204,20 @@ private fun BookGridItem(
     onClick: () -> Unit,
     onDownload: () -> Unit,
 ) {
+    val placeholderColors = listOf(
+        Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
+        Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
+    )
+    val placeholderColor = placeholderColors[book.title.hashCode().mod(placeholderColors.size).let { if (it < 0) it + placeholderColors.size else it }]
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        shape = RoundedCornerShape(14.dp),
     ) {
         Column {
             Box(
@@ -224,17 +238,19 @@ private fun BookGridItem(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(MaterialTheme.shapes.medium),
+                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
                     )
                 } else {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(placeholderColor),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = book.title.take(2).uppercase(),
                             style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Color(0xFF5D4037),
                         )
                     }
                 }

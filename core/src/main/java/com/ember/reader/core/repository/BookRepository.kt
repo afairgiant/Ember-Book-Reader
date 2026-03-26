@@ -63,6 +63,7 @@ class BookRepository @Inject constructor(
             path = path,
             page = page,
         )
+        val resolvedIds = mutableListOf<String>()
         result.onSuccess { bookPage ->
             for (book in bookPage.books) {
                 val existing = book.opdsEntryId?.let {
@@ -78,12 +79,14 @@ class BookRepository @Inject constructor(
                             downloadUrl = book.downloadUrl,
                         ),
                     )
+                    resolvedIds.add(existing.id)
                 } else {
                     bookDao.insert(book.toEntity())
+                    resolvedIds.add(book.id)
                 }
             }
         }
-        return result
+        return result.map { it.copy(resolvedBookIds = resolvedIds) }
     }
 
     suspend fun downloadBook(book: Book, server: Server): Result<Book> = runCatching {

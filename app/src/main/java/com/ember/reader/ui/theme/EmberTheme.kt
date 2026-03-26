@@ -15,6 +15,10 @@ private val EmberOrange = Color(0xFFE65100)
 private val EmberOrangeLight = Color(0xFFFF833A)
 private val EmberOrangeDark = Color(0xFFAC1900)
 
+// Warm tinted surfaces for the ember aesthetic
+val EmberCardLight = Color(0xFFFFF0E8)
+val EmberCardDark = Color(0xFF2E2220)
+
 private val LightColorScheme = lightColorScheme(
     primary = EmberOrange,
     onPrimary = Color.White,
@@ -22,12 +26,16 @@ private val LightColorScheme = lightColorScheme(
     onPrimaryContainer = Color(0xFF3A0A00),
     secondary = Color(0xFF77574D),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFDBCF),
+    secondaryContainer = Color(0xFFFFE0D6),
     onSecondaryContainer = Color(0xFF2C160E),
     tertiary = Color(0xFF6A5E2F),
     tertiaryContainer = Color(0xFFF3E2A7),
-    surface = Color(0xFFFFFBFF),
+    surface = Color(0xFFFFF8F5),
     onSurface = Color(0xFF201A18),
+    surfaceVariant = Color(0xFFFFF0E8),
+    onSurfaceVariant = Color(0xFF534340),
+    background = Color(0xFFFFF8F5),
+    outline = Color(0xFFD4A898),
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -41,14 +49,18 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFFFDBCF),
     tertiary = Color(0xFFD6C68D),
     tertiaryContainer = Color(0xFF51461A),
-    surface = Color(0xFF201A18),
+    surface = Color(0xFF1A1210),
     onSurface = Color(0xFFEDE0DB),
+    surfaceVariant = Color(0xFF2E2220),
+    onSurfaceVariant = Color(0xFFD8C2BA),
+    background = Color(0xFF1A1210),
+    outline = Color(0xFF7D5D53),
 )
 
 @Composable
 fun EmberTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {

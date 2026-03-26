@@ -1,18 +1,32 @@
 package com.ember.reader.ui.catalog
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.CollectionsBookmark
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,11 +34,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,6 +70,7 @@ fun CatalogScreen(
                             is CatalogUiState.Success -> state.feed.title
                             else -> "Catalog"
                         },
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
@@ -59,6 +78,9 @@ fun CatalogScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         },
     ) { padding ->
@@ -79,15 +101,17 @@ fun CatalogScreen(
                 ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(16.dp),
                     ) {
                         items(state.feed.entries, key = { it.id }) { entry ->
                             CatalogEntryCard(
                                 entry = entry,
                                 onClick = {
                                     if (entry.href.contains("catalog") ||
-                                        entry.href.contains("?page=")
+                                        entry.href.contains("?page=") ||
+                                        entry.href.contains("recent") ||
+                                        entry.href.contains("surprise")
                                     ) {
                                         onNavigateToBooks(entry.href)
                                     } else {
@@ -103,6 +127,18 @@ fun CatalogScreen(
     }
 }
 
+private fun iconForEntry(title: String): ImageVector = when {
+    title.contains("librar", ignoreCase = true) -> Icons.Default.LibraryBooks
+    title.contains("shelv", ignoreCase = true) -> Icons.Default.CollectionsBookmark
+    title.contains("magic", ignoreCase = true) -> Icons.Default.AutoStories
+    title.contains("author", ignoreCase = true) -> Icons.Default.Person
+    title.contains("series", ignoreCase = true) -> Icons.Default.CollectionsBookmark
+    title.contains("recent", ignoreCase = true) -> Icons.Default.History
+    title.contains("surprise", ignoreCase = true) -> Icons.Default.Shuffle
+    title.contains("all", ignoreCase = true) -> Icons.Default.LibraryBooks
+    else -> Icons.Default.Explore
+}
+
 @Composable
 private fun CatalogEntryCard(
     entry: OpdsFeedEntry,
@@ -112,6 +148,10 @@ private fun CatalogEntryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Row(
             modifier = Modifier
@@ -119,10 +159,29 @@ private fun CatalogEntryCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    iconForEntry(entry.title),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 14.dp),
+            ) {
                 Text(
                     text = entry.title,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

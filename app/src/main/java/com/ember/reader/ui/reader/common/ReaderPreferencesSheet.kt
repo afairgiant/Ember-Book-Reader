@@ -1,6 +1,12 @@
 package com.ember.reader.ui.reader.common
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -27,6 +33,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
@@ -122,15 +130,43 @@ fun ReaderPreferencesSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel("Theme")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(vertical = 8.dp),
             ) {
                 ReaderTheme.entries.forEach { theme ->
-                    FilterChip(
-                        selected = preferences.theme == theme,
-                        onClick = { onPreferencesChanged(preferences.copy(theme = theme)) },
-                        label = { Text(theme.displayName) },
-                    )
+                    val bgColor = when (theme) {
+                        ReaderTheme.LIGHT -> Color.White
+                        ReaderTheme.DARK -> Color(0xFF2A2A2A)
+                        ReaderTheme.SEPIA -> Color(0xFFF5E6D0)
+                        ReaderTheme.SYSTEM -> MaterialTheme.colorScheme.surface
+                    }
+                    val borderColor = if (preferences.theme == theme) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        Color.Gray.copy(alpha = 0.3f)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(bgColor)
+                                .border(
+                                    width = if (preferences.theme == theme) 3.dp else 1.dp,
+                                    color = borderColor,
+                                    shape = CircleShape,
+                                )
+                                .clickable {
+                                    onPreferencesChanged(preferences.copy(theme = theme))
+                                },
+                        )
+                        Text(
+                            text = theme.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
                 }
             }
 
@@ -141,7 +177,7 @@ fun ReaderPreferencesSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Paginated", style = MaterialTheme.typography.bodyMedium)
+                Text("Paginated Mode", style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.isPaginated,
                     onCheckedChange = {

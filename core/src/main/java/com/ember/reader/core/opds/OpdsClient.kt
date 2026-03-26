@@ -71,7 +71,8 @@ class OpdsClient @Inject constructor(
         path: String = "/api/v1/opds/catalog",
         page: Int = 1,
     ): Result<OpdsBookPage> = runCatching {
-        val url = buildServerUrl(baseUrl, "$path?page=$page")
+        val separator = if ("?" in path) "&" else "?"
+        val url = buildServerUrl(baseUrl, "${path}${separator}page=$page")
         val response = httpClient.get(url) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
@@ -165,4 +166,5 @@ data class OpdsBookPage(
     val books: List<Book>,
     val nextPagePath: String? = null,
     val totalResults: Int? = null,
+    val resolvedBookIds: List<String> = emptyList(),
 )
