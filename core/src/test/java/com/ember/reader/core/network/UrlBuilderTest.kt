@@ -5,45 +5,38 @@ import org.junit.jupiter.api.Test
 
 class UrlBuilderTest {
 
-    // --- buildServerUrl ---
+    // --- normalizeUrl ---
 
     @Test
-    fun `buildServerUrl joins base and path`() {
+    fun `normalizeUrl adds http scheme when missing`() {
+        assertEquals("http://example.com", normalizeUrl("example.com"))
+    }
+
+    @Test
+    fun `normalizeUrl preserves existing https scheme`() {
+        assertEquals("https://example.com", normalizeUrl("https://example.com"))
+    }
+
+    @Test
+    fun `normalizeUrl trims trailing slash`() {
+        assertEquals("https://example.com", normalizeUrl("https://example.com/"))
+    }
+
+    // --- serverOrigin ---
+
+    @Test
+    fun `serverOrigin extracts origin from full URL`() {
         assertEquals(
-            "https://example.com/api/v1/opds",
-            buildServerUrl("https://example.com", "/api/v1/opds"),
+            "http://192.168.0.174:6060",
+            serverOrigin("http://192.168.0.174:6060/api/v1/opds"),
         )
     }
 
     @Test
-    fun `buildServerUrl trims trailing slash from base`() {
-        assertEquals(
-            "https://example.com/api/v1/opds",
-            buildServerUrl("https://example.com/", "/api/v1/opds"),
-        )
-    }
-
-    @Test
-    fun `buildServerUrl trims multiple trailing slashes`() {
-        assertEquals(
-            "https://example.com/api",
-            buildServerUrl("https://example.com///", "/api"),
-        )
-    }
-
-    @Test
-    fun `buildServerUrl with empty path`() {
+    fun `serverOrigin returns URL when no path`() {
         assertEquals(
             "https://example.com",
-            buildServerUrl("https://example.com/", ""),
-        )
-    }
-
-    @Test
-    fun `buildServerUrl with empty base`() {
-        assertEquals(
-            "/api/v1/opds",
-            buildServerUrl("", "/api/v1/opds"),
+            serverOrigin("https://example.com"),
         )
     }
 
@@ -62,18 +55,26 @@ class UrlBuilderTest {
     }
 
     @Test
-    fun `resolveUrl resolves relative href against baseUrl`() {
+    fun `resolveUrl resolves absolute path against origin`() {
         assertEquals(
             "https://example.com/api/books",
-            resolveUrl("https://example.com", "/api/books"),
+            resolveUrl("https://example.com/api/v1/opds", "/api/books"),
         )
     }
 
     @Test
-    fun `resolveUrl resolves relative href trimming trailing slash`() {
+    fun `resolveUrl resolves relative path against base`() {
         assertEquals(
-            "https://example.com/api/books",
-            resolveUrl("https://example.com/", "/api/books"),
+            "https://example.com/api/v1/opds/catalog",
+            resolveUrl("https://example.com/api/v1/opds", "catalog"),
+        )
+    }
+
+    @Test
+    fun `resolveUrl resolves with IP and port`() {
+        assertEquals(
+            "http://192.168.0.174:6060/api/koreader/syncs",
+            resolveUrl("http://192.168.0.174:6060/api/v1/opds", "/api/koreader/syncs"),
         )
     }
 }

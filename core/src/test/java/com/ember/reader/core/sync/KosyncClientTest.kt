@@ -95,7 +95,7 @@ class KosyncClientTest {
         var capturedBody: String? = null
 
         val engine = MockEngine { request ->
-            capturedBody = String(request.body.toByteArray())
+            capturedBody = (request.body as io.ktor.http.content.TextContent).text
             respond(content = ByteReadChannel(""), status = HttpStatusCode.OK)
         }
 
