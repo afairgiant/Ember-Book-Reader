@@ -224,7 +224,7 @@ fun SettingsScreen(
             // About
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Ember v0.1.0",
+                text = "Ember v0.1.2",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
