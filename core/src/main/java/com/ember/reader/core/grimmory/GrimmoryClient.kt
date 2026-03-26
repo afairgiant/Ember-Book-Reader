@@ -7,11 +7,17 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -113,6 +119,33 @@ class GrimmoryClient @Inject constructor(
         }
         if (!response.status.isSuccess()) {
             error("Status update failed: ${response.status}")
+        }
+    }
+
+    suspend fun downloadBook(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+        destination: File,
+    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+        httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
+            header("Authorization", "Bearer $token")
+        }.execute { response ->
+            if (!response.status.isSuccess()) {
+                error("Download failed: ${response.status}")
+            }
+            val channel = response.bodyAsChannel()
+            withContext(Dispatchers.IO) {
+                destination.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val bytesRead = channel.readAvailable(buffer)
+                        if (bytesRead > 0) {
+                            output.write(buffer, 0, bytesRead)
+                        }
+                    }
+                }
+            }
         }
     }
 

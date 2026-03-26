@@ -7,6 +7,7 @@ import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryAppPage
+import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -38,6 +39,7 @@ class BookRepository @Inject constructor(
     private val bookOpener: BookOpener,
     private val serverRepository: ServerRepository,
     private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
 ) {
 
@@ -163,8 +165,8 @@ class BookRepository @Inject constructor(
                     existing.copy(
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
-                        coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
-                        downloadUrl = "/api/v1/books/${appBook.id}/download",
+                        coverUrl = "$origin/api/v1/opds/${appBook.id}/cover",
+                        downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     ),
                 )
                 resolvedIds.add(existing.id)
@@ -175,8 +177,8 @@ class BookRepository @Inject constructor(
                     opdsEntryId = opdsEntryId,
                     title = appBook.title,
                     author = appBook.authors.firstOrNull(),
-                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
-                    downloadUrl = "/api/v1/books/${appBook.id}/download",
+                    coverUrl = "$origin/api/v1/opds/${appBook.id}/cover",
+                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     format = format,
                     addedAt = Instant.now(),
                 )
@@ -219,13 +221,23 @@ class BookRepository @Inject constructor(
         val fileName = "${book.id}.$extension"
         val file = File(booksDir, fileName)
 
-        opdsClient.downloadBookToFile(
-            baseUrl = server.url,
-            username = server.opdsUsername,
-            password = server.opdsPassword,
-            downloadPath = downloadUrl,
-            destination = file,
-        ).getOrThrow()
+        val grimmoryBookId = book.grimmoryBookId
+        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
+            grimmoryClient.downloadBook(
+                baseUrl = server.url,
+                serverId = server.id,
+                grimmoryBookId = grimmoryBookId,
+                destination = file,
+            ).getOrThrow()
+        } else {
+            opdsClient.downloadBookToFile(
+                baseUrl = server.url,
+                username = server.opdsUsername,
+                password = server.opdsPassword,
+                downloadPath = downloadUrl,
+                destination = file,
+            ).getOrThrow()
+        }
 
         if (file.length() < 100) {
             file.delete()

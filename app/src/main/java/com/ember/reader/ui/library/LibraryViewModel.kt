@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -27,7 +26,6 @@ class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -92,11 +90,8 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
             server?.let { s ->
-                _coverAuthHeader.value = if (s.isGrimmory && grimmoryTokenManager.isLoggedIn(s.id)) {
-                    grimmoryTokenManager.getAccessToken(s.id)?.let { "Bearer $it" }
-                } else {
-                    com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
-                }
+                // Always use Basic Auth for OPDS covers — it's reliable and doesn't expire
+                _coverAuthHeader.value = com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
             }
             refresh()
         }
