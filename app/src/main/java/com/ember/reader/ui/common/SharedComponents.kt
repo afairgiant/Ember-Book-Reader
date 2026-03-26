@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -40,6 +41,16 @@ fun ErrorScreen(
             }
         }
     }
+}
+
+val BookCoverPlaceholderColors = listOf(
+    Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
+    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
+)
+
+fun bookCoverColorIndex(title: String): Int {
+    val index = title.hashCode().mod(BookCoverPlaceholderColors.size)
+    return if (index < 0) index + BookCoverPlaceholderColors.size else index
 }
 
 @Composable

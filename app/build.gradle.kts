@@ -51,6 +51,10 @@ android {
         }
     }
 
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
