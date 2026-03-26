@@ -231,7 +231,7 @@ class BookRepository @Inject constructor(
             file.delete()
             error("Downloaded file is too small — server may have returned an error")
         }
-        val header = file.inputStream().use { it.readNBytes(5) }
+        val header = ByteArray(5).also { buf -> file.inputStream().use { it.read(buf) } }
         if (header.decodeToString().startsWith("<!") || header.decodeToString().startsWith("<html")) {
             file.delete()
             error("Downloaded file is HTML, not a book — check server URL and credentials")
