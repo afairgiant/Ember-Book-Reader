@@ -36,12 +36,7 @@ class ServerListViewModel @Inject constructor(
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
                 _coverAuthHeaders.value = servers.associate { server ->
-                    val credentials = "${server.opdsUsername}:${server.opdsPassword}"
-                    val encoded = android.util.Base64.encodeToString(
-                        credentials.toByteArray(),
-                        android.util.Base64.NO_WRAP,
-                    )
-                    server.id to "Basic $encoded"
+                    server.id to com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword)
                 }
             }
         }

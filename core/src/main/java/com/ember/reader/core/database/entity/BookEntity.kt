@@ -14,7 +14,7 @@ import java.time.Instant
             entity = ServerEntity::class,
             parentColumns = ["id"],
             childColumns = ["serverId"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.SET_NULL,
         ),
     ],
     indices = [

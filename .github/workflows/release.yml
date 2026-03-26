@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore
+        if: env.SIGNING_KEYSTORE != ''
+        run: echo "$SIGNING_KEYSTORE" | base64 -d > app/keystore.jks
+        env:
+          SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
+
+      - name: Build release APK
+        run: ./gradlew assembleRelease
+        env:
+          SIGNING_KEYSTORE_PATH: ${{ secrets.SIGNING_KEYSTORE != '' && 'keystore.jks' || '' }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ember-release
+          path: app/build/outputs/apk/release/*.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: app/build/outputs/apk/release/*.apk

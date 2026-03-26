@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,8 +33,22 @@ class StorageViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StorageUiState())
 
+    private val _recoveryResult = MutableStateFlow<String?>(null)
+    val recoveryResult: StateFlow<String?> = _recoveryResult.asStateFlow()
+
     fun removeDownload(bookId: String) {
         viewModelScope.launch { bookRepository.removeDownload(bookId) }
+    }
+
+    fun recoverOrphanedBooks() {
+        viewModelScope.launch {
+            val count = bookRepository.recoverOrphanedFiles()
+            _recoveryResult.value = if (count > 0) "Recovered $count book(s)" else "No orphaned files found"
+        }
+    }
+
+    fun dismissRecoveryResult() {
+        _recoveryResult.value = null
     }
 }
 

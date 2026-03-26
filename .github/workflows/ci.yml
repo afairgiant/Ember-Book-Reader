@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,11 +24,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Run unit tests
+      - name: Lint
+        run: ./gradlew lintDebug
+
+      - name: Unit tests
         run: ./gradlew testDebugUnitTest
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: |
+            app/build/reports/lint-results-debug.html
+            core/build/reports/lint-results-debug.html
 
       - name: Upload test results
         if: always()
@@ -35,9 +51,9 @@ jobs:
             app/build/reports/tests/
             core/build/reports/tests/
 
-      - name: Upload APK
+      - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: ember-debug
           path: app/build/outputs/apk/debug/*.apk

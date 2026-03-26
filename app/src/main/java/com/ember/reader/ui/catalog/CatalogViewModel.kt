@@ -22,7 +22,7 @@ class CatalogViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
-    private val path: String = savedStateHandle.get<String>("path") ?: "/api/v1/opds"
+    private val path: String = savedStateHandle.get<String>("path") ?: ""
 
     private val _uiState = MutableStateFlow<CatalogUiState>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
@@ -54,7 +54,7 @@ class CatalogViewModel @Inject constructor(
             baseUrl = currentServer.url,
             username = currentServer.opdsUsername,
             password = currentServer.opdsPassword,
-            path = path,
+            path = path.ifEmpty { null },
         )
         result.fold(
             onSuccess = { feed ->

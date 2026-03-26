@@ -11,6 +11,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.core.readium.toLocator
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.BookmarksSheet
@@ -48,6 +49,7 @@ fun EpubReaderScreen(
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
+    val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
@@ -89,6 +91,7 @@ fun EpubReaderScreen(
                         publication = state.publication,
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
+                        initialPreferences = preferences.toEpubPreferences(),
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? EpubNavigatorFragment)?.currentLocator
@@ -124,6 +127,16 @@ fun EpubReaderScreen(
                 }
             }
 
+            // Handle sync navigation (accept remote progress)
+            LaunchedEffect(pendingNavigation, navigator) {
+                val progression = pendingNavigation ?: return@LaunchedEffect
+                val nav = navigator ?: return@LaunchedEffect
+                state.publication.locateProgression(progression.toDouble())?.let {
+                    nav.go(it)
+                }
+                viewModel.onNavigationHandled()
+            }
+
             if (showToc) {
                 TableOfContentsSheet(
                     publication = state.publication,
@@ -139,7 +152,12 @@ fun EpubReaderScreen(
             if (showBookmarks) {
                 BookmarksSheet(
                     bookmarks = bookmarks,
-                    onNavigate = { showBookmarks = false },
+                    onNavigate = { bookmark ->
+                        bookmark.locatorJson.toLocator()?.let { locator ->
+                            scope.launch { navigator?.go(locator) }
+                        }
+                        showBookmarks = false
+                    },
                     onDelete = viewModel::deleteBookmark,
                     onDismiss = { showBookmarks = false },
                 )

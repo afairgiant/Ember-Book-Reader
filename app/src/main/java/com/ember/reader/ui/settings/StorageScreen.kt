@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,10 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,6 +50,7 @@ fun StorageScreen(
     viewModel: StorageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val recoveryResult by viewModel.recoveryResult.collectAsStateWithLifecycle()
 
     // Estimate total device storage (rough approximation for display)
     val totalEstimate = if (uiState.totalSize > 0) (uiState.totalSize * 4).coerceAtLeast(5L * 1024 * 1024 * 1024) else 5L * 1024 * 1024 * 1024
@@ -128,6 +132,50 @@ fun StorageScreen(
                                     text = "${uiState.downloadedBooks.size} books",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Recover orphaned files
+            item {
+                OutlinedButton(
+                    onClick = viewModel::recoverOrphanedBooks,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text("Recover Orphaned Books")
+                }
+            }
+
+            // Recovery result message
+            if (recoveryResult != null) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = recoveryResult ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = viewModel::dismissRecoveryResult) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    modifier = Modifier.size(18.dp),
                                 )
                             }
                         }

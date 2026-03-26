@@ -28,6 +28,11 @@
 - [ ] Enables reading on phone (Ember) → continuing on PC (Grimmory web reader) and vice versa
 - [ ] Need `syncWithBookloreReader` enabled on the KOReader user in Grimmory settings
 
+### Background Progress Pull
+- [ ] Add a pull pass to `SyncWorker` that fetches remote kosync progress for all downloaded books with a `fileHash`
+- [ ] Pre-populates reading progress so books show in "Continue Reading" without needing to open them first
+- [ ] Useful when switching devices — all in-progress books appear immediately after sync
+
 ### Bidirectional Position Sync
 - [ ] Investigate converting Readium Locator ↔ EPUB CFI for exact position sync (not just percentage)
 - [ ] Would give precise page-level sync between Ember and Grimmory's web reader
@@ -96,5 +101,3 @@
 
 ## Bugs / Known Issues
 - [ ] Horizontal swipe in scroll mode still changes chapters (Readium limitation — `disablePageTurnsWhileScrolling` blocks all chapter transitions)
-- [ ] Reader preferences don't persist across app restarts for the navigator (saved in DB but need to re-apply on fragment creation)
-- [ ] Bookmarks sheet navigation doesn't navigate to the bookmarked position (same issue as TOC was)

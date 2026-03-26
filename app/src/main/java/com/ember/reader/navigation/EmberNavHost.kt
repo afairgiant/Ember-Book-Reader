@@ -54,8 +54,9 @@ object Routes {
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
 
-    fun catalog(serverId: Long, path: String = "/api/v1/opds"): String =
-        "catalog/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
+    fun catalog(serverId: Long, path: String? = null): String =
+        if (path != null) "catalog/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
+        else "catalog/$serverId"
 
     fun library(serverId: Long, path: String? = null): String =
         if (path != null) "library/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
@@ -190,7 +191,7 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_SERVER_ID) { type = NavType.LongType },
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
-                        defaultValue = "/api/v1/opds"
+                        defaultValue = ""
                     },
                 ),
             ) { backStackEntry ->
@@ -213,7 +214,7 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_SERVER_ID) { type = NavType.LongType },
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
-                        defaultValue = "/api/v1/opds/catalog"
+                        defaultValue = ""
                     },
                 ),
             ) { backStackEntry ->

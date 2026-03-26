@@ -1,7 +1,7 @@
 package com.ember.reader.core.sync
 
-import com.ember.reader.core.network.buildServerUrl
 import com.ember.reader.core.network.md5Hash
+import com.ember.reader.core.network.serverOrigin
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -27,7 +27,7 @@ class KosyncClient @Inject constructor(
         username: String,
         password: String,
     ): Result<Unit> = runCatching {
-        val response = httpClient.get(buildServerUrl(baseUrl, "/api/koreader/users/auth")) {
+        val response = httpClient.get(serverOrigin(baseUrl) + "/api/koreader/users/auth") {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
             header("Accept", ACCEPT_HEADER)
@@ -43,7 +43,7 @@ class KosyncClient @Inject constructor(
         password: String,
         request: KosyncProgressRequest,
     ): Result<Unit> = runCatching {
-        val response = httpClient.put(buildServerUrl(baseUrl, "/api/koreader/syncs/progress")) {
+        val response = httpClient.put(serverOrigin(baseUrl) + "/api/koreader/syncs/progress") {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
             header("Accept", ACCEPT_HEADER)
@@ -62,7 +62,7 @@ class KosyncClient @Inject constructor(
         documentHash: String,
     ): Result<KosyncProgressResponse?> = runCatching {
         val response = httpClient.get(
-            buildServerUrl(baseUrl, "/api/koreader/syncs/progress/$documentHash"),
+            serverOrigin(baseUrl) + "/api/koreader/syncs/progress/$documentHash",
         ) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))

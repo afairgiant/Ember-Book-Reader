@@ -2,8 +2,10 @@ package com.ember.reader.core.opds
 
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.network.buildServerUrl
+import com.ember.reader.core.network.basicAuthHeader
+import com.ember.reader.core.network.normalizeUrl
 import com.ember.reader.core.network.resolveUrl
+import com.ember.reader.core.network.serverOrigin
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -33,7 +35,7 @@ class OpdsClient @Inject constructor(
         username: String,
         password: String,
     ): Result<String> = runCatching {
-        val response = httpClient.get(buildServerUrl(baseUrl, "/api/v1/opds")) {
+        val response = httpClient.get(normalizeUrl(baseUrl)) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
@@ -50,9 +52,9 @@ class OpdsClient @Inject constructor(
         baseUrl: String,
         username: String,
         password: String,
-        path: String = "/api/v1/opds",
+        path: String? = null,
     ): Result<OpdsFeed> = runCatching {
-        val url = buildServerUrl(baseUrl, path)
+        val url = if (path != null) resolveUrl(baseUrl, path) else normalizeUrl(baseUrl)
         val response = httpClient.get(url) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
@@ -60,7 +62,7 @@ class OpdsClient @Inject constructor(
         if (!response.status.isSuccess()) {
             error("OPDS fetch failed: ${response.status}")
         }
-        OpdsParser.parseFeed(requireXmlBody(response), baseUrl)
+        OpdsParser.parseFeed(requireXmlBody(response), serverOrigin(baseUrl))
     }
 
     suspend fun fetchBooks(
@@ -68,11 +70,12 @@ class OpdsClient @Inject constructor(
         username: String,
         password: String,
         serverId: Long,
-        path: String = "/api/v1/opds/catalog",
+        path: String,
         page: Int = 1,
     ): Result<OpdsBookPage> = runCatching {
         val separator = if ("?" in path) "&" else "?"
-        val url = buildServerUrl(baseUrl, "${path}${separator}page=$page")
+        val resolvedPath = "${path}${separator}page=$page"
+        val url = resolveUrl(baseUrl, resolvedPath)
         val response = httpClient.get(url) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
@@ -80,7 +83,7 @@ class OpdsClient @Inject constructor(
         if (!response.status.isSuccess()) {
             error("OPDS book fetch failed: ${response.status}")
         }
-        OpdsParser.parseBookFeed(requireXmlBody(response), baseUrl, serverId)
+        OpdsParser.parseBookFeed(requireXmlBody(response), serverOrigin(baseUrl), serverId)
     }
 
     suspend fun searchBooks(
@@ -91,15 +94,15 @@ class OpdsClient @Inject constructor(
         query: String,
         page: Int = 1,
     ): Result<OpdsBookPage> = runCatching {
-        val url = buildServerUrl(baseUrl, "/api/v1/opds/catalog?q=$query&page=$page")
-        val response = httpClient.get(url) {
+        val searchPath = "${normalizeUrl(baseUrl)}/catalog?q=$query&page=$page"
+        val response = httpClient.get(searchPath) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
             error("OPDS search failed: ${response.status}")
         }
-        OpdsParser.parseBookFeed(requireXmlBody(response), baseUrl, serverId)
+        OpdsParser.parseBookFeed(requireXmlBody(response), serverOrigin(baseUrl), serverId)
     }
 
     suspend fun downloadBookToFile(
@@ -140,14 +143,8 @@ class OpdsClient @Inject constructor(
         return body
     }
 
-    private fun basicAuth(username: String, password: String): String {
-        val credentials = "$username:$password"
-        val encoded = android.util.Base64.encodeToString(
-            credentials.toByteArray(),
-            android.util.Base64.NO_WRAP,
-        )
-        return "Basic $encoded"
-    }
+    private fun basicAuth(username: String, password: String): String =
+        basicAuthHeader(username, password)
 }
 
 data class OpdsFeed(

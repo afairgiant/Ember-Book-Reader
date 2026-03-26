@@ -27,7 +27,7 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
-    private val catalogPath: String = savedStateHandle.get<String>("path") ?: "/api/v1/opds/catalog"
+    private val catalogPath: String = savedStateHandle.get<String>("path") ?: ""
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -50,7 +50,7 @@ class LibraryViewModel @Inject constructor(
     private val _downloadingBooks = MutableStateFlow<Set<String>>(emptySet())
 
     // When viewing a subcategory (series, shelf, etc.), only show books from that fetch
-    private val isSubcategory = catalogPath != "/api/v1/opds/catalog"
+    private val isSubcategory = catalogPath.contains("?") || catalogPath.contains("recent") || catalogPath.contains("surprise")
     private val _fetchedBookIds = MutableStateFlow<Set<String>?>(null)
 
     private var server: Server? = null
@@ -86,12 +86,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
             server?.let { s ->
-                val credentials = "${s.opdsUsername}:${s.opdsPassword}"
-                val encoded = android.util.Base64.encodeToString(
-                    credentials.toByteArray(),
-                    android.util.Base64.NO_WRAP,
-                )
-                _coverAuthHeader.value = "Basic $encoded"
+                _coverAuthHeader.value = com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
             }
             refresh()
         }
@@ -99,6 +94,7 @@ class LibraryViewModel @Inject constructor(
 
     fun refresh() {
         val currentServer = server ?: return
+        if (catalogPath.isEmpty()) return
         _isRefreshing.value = true
         viewModelScope.launch {
             val result = bookRepository.refreshFromServer(currentServer, path = catalogPath)

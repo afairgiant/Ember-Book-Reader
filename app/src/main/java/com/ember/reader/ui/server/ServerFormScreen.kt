@@ -111,8 +111,8 @@ fun ServerFormScreen(
             OutlinedTextField(
                 value = uiState.url,
                 onValueChange = viewModel::updateUrl,
-                label = { Text("URL") },
-                placeholder = { Text("http://192.168.0.174:6060") },
+                label = { Text("OPDS URL") },
+                placeholder = { Text("http://192.168.0.174:6060/api/v1/opds") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 shape = RoundedCornerShape(12.dp),

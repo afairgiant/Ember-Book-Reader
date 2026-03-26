@@ -25,14 +25,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,6 +48,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,7 +79,11 @@ fun LocalLibraryScreen(
     val allBooks by viewModel.allDownloadedBooks.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
     val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
+    val progressMap by viewModel.progressMap.collectAsStateWithLifecycle()
+    val servers by viewModel.servers.collectAsStateWithLifecycle()
+    val operationResult by viewModel.operationResult.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
+    var relinkBookId by remember { mutableStateOf<String?>(null) }
 
     val filteredBooks = when (filter) {
         LibraryFilter.ALL -> allBooks
@@ -169,12 +181,64 @@ fun LocalLibraryScreen(
                     items(filteredBooks, key = { it.id }) { book ->
                         UnifiedBookCard(
                             book = book,
+                            progress = progressMap[book.id],
                             coverAuthHeader = book.serverId?.let { coverAuthHeaders[it] },
                             onClick = { onOpenReader(book.id, book.format) },
+                            onDelete = { viewModel.deleteBook(book.id) },
+                            onRelink = if (book.serverId == null && servers.isNotEmpty()) {
+                                { relinkBookId = book.id }
+                            } else null,
+                            onSyncProgress = if (book.serverId != null && book.fileHash != null) {
+                                { viewModel.syncBookProgress(book) }
+                            } else null,
                         )
                     }
                 }
             }
+        }
+
+        // Server picker dialog for relinking
+        relinkBookId?.let { bookId ->
+            AlertDialog(
+                onDismissRequest = { relinkBookId = null },
+                title = { Text("Relink to Server") },
+                text = {
+                    Column {
+                        Text("Choose a server to search for this book:")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        servers.forEach { server ->
+                            TextButton(
+                                onClick = {
+                                    viewModel.relinkBook(bookId, server.id)
+                                    relinkBookId = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(server.name)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { relinkBookId = null }) {
+                        Text("Cancel")
+                    }
+                },
+            )
+        }
+
+        // Relink result snackbar
+        operationResult?.let { result ->
+            AlertDialog(
+                onDismissRequest = viewModel::dismissOperationResult,
+                text = { Text(result) },
+                confirmButton = {
+                    TextButton(onClick = viewModel::dismissOperationResult) {
+                        Text("OK")
+                    }
+                },
+            )
         }
     }
 }
@@ -187,9 +251,14 @@ private val placeholderColors = listOf(
 @Composable
 private fun UnifiedBookCard(
     book: Book,
+    progress: Float? = null,
     coverAuthHeader: String? = null,
     onClick: () -> Unit,
+    onDelete: () -> Unit = {},
+    onRelink: (() -> Unit)? = null,
+    onSyncProgress: (() -> Unit)? = null,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     val colorIndex = book.title.hashCode().mod(placeholderColors.size).let {
         if (it < 0) it + placeholderColors.size else it
     }
@@ -236,6 +305,55 @@ private fun UnifiedBookCard(
                             text = book.title.take(2).uppercase(),
                             style = MaterialTheme.typography.headlineMedium,
                             color = Color(0xFF5D4037),
+                        )
+                    }
+                }
+
+                // 3-dot menu
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp),
+                ) {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        if (onRelink != null) {
+                            DropdownMenuItem(
+                                text = { Text("Relink to Server") },
+                                onClick = {
+                                    showMenu = false
+                                    onRelink()
+                                },
+                            )
+                        }
+                        if (onSyncProgress != null) {
+                            DropdownMenuItem(
+                                text = { Text("Sync Progress") },
+                                onClick = {
+                                    showMenu = false
+                                    onSyncProgress()
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            },
                         )
                     }
                 }
@@ -287,6 +405,23 @@ private fun UnifiedBookCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (progress != null && progress > 0f) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    )
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }

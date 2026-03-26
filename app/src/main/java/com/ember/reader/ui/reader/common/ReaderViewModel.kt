@@ -75,6 +75,14 @@ class ReaderViewModel @Inject constructor(
     private val _currentLocator = MutableStateFlow<Locator?>(null)
     val currentLocator: StateFlow<Locator?> = _currentLocator.asStateFlow()
 
+    // Navigation request that the screen should execute on the navigator
+    private val _pendingNavigation = MutableStateFlow<Float?>(null)
+    val pendingNavigation: StateFlow<Float?> = _pendingNavigation.asStateFlow()
+
+    fun onNavigationHandled() {
+        _pendingNavigation.value = null
+    }
+
     private var publication: Publication? = null
     private var book: Book? = null
     private var progressSaveJob: Job? = null
@@ -127,13 +135,18 @@ class ReaderViewModel @Inject constructor(
     )
 
     private suspend fun getSyncContext(): SyncContext? {
-        val loadedBook = book ?: return null
-        val serverId = loadedBook.serverId ?: return null
-        val fileHash = loadedBook.fileHash ?: return null
+        val loadedBook = book
+            ?: return null.also { Timber.d("Sync: no book loaded") }
+        val serverId = loadedBook.serverId
+            ?: return null.also { Timber.d("Sync: no serverId") }
+        val fileHash = loadedBook.fileHash
+            ?: return null.also { Timber.d("Sync: no fileHash") }
         val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
-        if (syncFrequency == SyncFrequency.MANUAL) return null
-        val server = serverRepository.getById(serverId) ?: return null
-        if (server.kosyncUsername.isBlank()) return null
+        if (syncFrequency == SyncFrequency.MANUAL) return null.also { Timber.d("Sync: frequency is MANUAL, skipping") }
+        val server = serverRepository.getById(serverId)
+            ?: return null.also { Timber.d("Sync: server $serverId not found") }
+        if (server.kosyncUsername.isBlank()) return null.also { Timber.d("Sync: kosync username blank") }
+        Timber.d("Sync: context ready — server='${server.name}' hash='$fileHash'")
         return SyncContext(server, fileHash)
     }
 
@@ -143,11 +156,17 @@ class ReaderViewModel @Inject constructor(
     ) {
         val (server, fileHash) = getSyncContext() ?: return
 
+        Timber.d("Sync: pulling progress for hash=$fileHash")
         val result = readingProgressRepository.pullProgress(server, bookId, fileHash)
-        val remoteResult = result.getOrNull() ?: return
+        val remoteResult = result.getOrNull()
+        if (remoteResult == null) {
+            Timber.d("Sync: no remote progress found (result=${result.exceptionOrNull()?.message})")
+            return
+        }
         val remote = remoteResult.progress
 
         val localPercentage = localProgress?.percentage ?: 0f
+        Timber.d("Sync: remote=${remote.percentage} local=$localPercentage device=${remoteResult.deviceName}")
         if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
             _syncConflict.value = SyncConflict(
                 remotePercentage = remote.percentage,
@@ -156,23 +175,19 @@ class ReaderViewModel @Inject constructor(
                 remoteDevice = remoteResult.deviceName,
                 remoteProgress = remote,
             )
+        } else {
+            Timber.d("Sync: remote not ahead enough to show conflict (threshold=$CONFLICT_THRESHOLD)")
         }
     }
 
     fun acceptRemoteProgress() {
         val conflict = _syncConflict.value ?: return
         _syncConflict.value = null
-        val locator = conflict.remoteLocatorJson?.toLocator() ?: return
         viewModelScope.launch {
             conflict.remoteProgress?.let { readingProgressRepository.applyRemoteProgress(it) }
         }
-        _uiState.update { state ->
-            if (state is ReaderUiState.Ready) {
-                state.copy(initialLocator = locator)
-            } else {
-                state
-            }
-        }
+        // Navigate by percentage — works regardless of progress format (Locator, XPointer, CFI)
+        _pendingNavigation.value = conflict.remotePercentage
     }
 
     fun dismissSyncConflict() {

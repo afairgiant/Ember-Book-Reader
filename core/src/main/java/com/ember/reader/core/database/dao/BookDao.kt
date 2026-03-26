@@ -43,6 +43,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE fileHash = :hash LIMIT 1")
     suspend fun getByFileHash(hash: String): BookEntity?
 
+    @Query("SELECT * FROM books WHERE serverId = :serverId AND (fileHash = :hash OR title LIKE '%' || :title || '%' COLLATE NOCASE) LIMIT 1")
+    suspend fun getByServerAndHashOrTitle(serverId: Long, hash: String, title: String): BookEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(book: BookEntity)
 

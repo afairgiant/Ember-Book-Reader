@@ -26,7 +26,9 @@ object DatabaseModule {
             context,
             EmberDatabase::class.java,
             "ember.db",
-        ).build()
+        )
+            .addMigrations(EmberDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideServerDao(database: EmberDatabase): ServerDao = database.serverDao()
