@@ -1,6 +1,12 @@
 package com.ember.reader.core.sync.worker
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -57,7 +63,22 @@ class SyncWorker @AssistedInject constructor(
         }
 
         Timber.d("SyncWorker: sync complete")
+        showSyncNotification()
         return Result.success()
+    }
+
+    private fun showSyncNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val notification = NotificationCompat.Builder(applicationContext, "ember_sync")
+            .setSmallIcon(android.R.drawable.ic_popup_sync)
+            .setContentTitle("Sync Complete")
+            .setContentText("Reading progress synced")
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(applicationContext).notify("sync".hashCode(), notification)
     }
 
     private suspend fun syncGrimmoryProgress(server: com.ember.reader.core.model.Server) {

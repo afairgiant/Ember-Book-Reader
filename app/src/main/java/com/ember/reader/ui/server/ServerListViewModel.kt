@@ -2,6 +2,7 @@ package com.ember.reader.ui.server
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
@@ -23,6 +24,7 @@ class ServerListViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     bookRepository: BookRepository,
     readingProgressRepository: ReadingProgressRepository,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     val uiState: StateFlow<ServerListUiState> = serverRepository.observeAll()
@@ -36,7 +38,10 @@ class ServerListViewModel @Inject constructor(
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
                 _coverAuthHeaders.value = servers.associate { server ->
-                    server.id to com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword)
+                    val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                        grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
+                    } else null
+                    server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
                 }
             }
         }

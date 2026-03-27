@@ -1,24 +1,38 @@
 package com.ember.reader.core.repository
 
+import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
+import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.sync.KosyncClient
+import android.content.Context
+import android.graphics.Bitmap
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import org.readium.r2.shared.publication.services.cover
+import timber.log.Timber
+import java.io.File
+import java.io.FileOutputStream
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ServerRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val serverDao: ServerDao,
+    private val bookDao: BookDao,
+    private val bookOpener: BookOpener,
     private val opdsClient: OpdsClient,
     private val kosyncClient: KosyncClient,
     private val grimmoryClient: GrimmoryClient,
@@ -49,28 +63,64 @@ class ServerRepository @Inject constructor(
         credentialEncryption.storePassword(CredentialEncryption.kosyncPasswordKey(id), server.kosyncPassword)
         credentialEncryption.storePassword(grimmoryPasswordKey(id), server.grimmoryPassword)
 
-        // Auto-login to Grimmory if credentials are provided
-        if (server.isGrimmory && server.grimmoryUsername.isNotBlank() && server.grimmoryPassword.isNotBlank()) {
-            timber.log.Timber.d("Grimmory auto-login: attempting for server $id (${server.grimmoryUsername})")
+        // Auto-login to Grimmory if credentials are provided (regardless of isGrimmory flag)
+        if (server.grimmoryUsername.isNotBlank() && server.grimmoryPassword.isNotBlank()) {
+            Timber.d("Grimmory auto-login: attempting for server $id (${server.grimmoryUsername})")
             grimmoryClient.login(server.url, server.grimmoryUsername, server.grimmoryPassword)
                 .onSuccess { tokens ->
                     grimmoryTokenManager.storeTokens(id, tokens)
-                    timber.log.Timber.d("Grimmory auto-login: tokens stored for server $id")
+                    // Mark as Grimmory if login succeeds
+                    if (!server.isGrimmory) {
+                        serverDao.update(server.copy(id = id, isGrimmory = true).toEntity())
+                    }
+                    Timber.d("Grimmory auto-login: tokens stored for server $id")
                 }
-                .onFailure { timber.log.Timber.w(it, "Grimmory auto-login failed for server $id") }
-        } else {
-            timber.log.Timber.d("Grimmory auto-login skipped: isGrimmory=${server.isGrimmory} username='${server.grimmoryUsername}' hasPassword=${server.grimmoryPassword.isNotBlank()}")
+                .onFailure { Timber.w(it, "Grimmory auto-login failed for server $id") }
         }
 
         return id
     }
 
     suspend fun delete(serverId: Long) {
+        // Extract local covers for downloaded books before server deletion
+        // (SET_NULL will clear serverId, making server cover URLs inaccessible)
+        withContext(Dispatchers.IO) {
+            extractLocalCoversForServer(serverId)
+        }
+
         serverDao.deleteById(serverId)
         credentialEncryption.removePassword(CredentialEncryption.opdsPasswordKey(serverId))
         credentialEncryption.removePassword(CredentialEncryption.kosyncPasswordKey(serverId))
         credentialEncryption.removePassword(grimmoryPasswordKey(serverId))
         grimmoryTokenManager.logout(serverId)
+    }
+
+    private suspend fun extractLocalCoversForServer(serverId: Long) {
+        val coversDir = File(context.filesDir, "covers").also { it.mkdirs() }
+        val books = bookDao.getDownloadedBooksForServer(serverId)
+
+        for (entity in books) {
+            val localPath = entity.localPath ?: continue
+            val file = File(localPath)
+            if (!file.exists()) continue
+            // Skip if cover is already local
+            if (entity.coverUrl?.startsWith("file:") == true) continue
+
+            runCatching {
+                val publication = bookOpener.open(file).getOrNull() ?: return@runCatching
+                val bitmap = publication.cover()
+                if (bitmap != null) {
+                    val coverFile = File(coversDir, "${file.nameWithoutExtension}.jpg")
+                    FileOutputStream(coverFile).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                    }
+                    bookDao.update(entity.copy(coverUrl = coverFile.toURI().toString()))
+                }
+                publication.close()
+            }.onFailure {
+                Timber.w(it, "Failed to extract cover for ${entity.title}")
+            }
+        }
     }
 
     suspend fun testOpdsConnection(

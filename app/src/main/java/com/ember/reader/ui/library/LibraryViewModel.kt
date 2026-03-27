@@ -5,7 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import android.content.Context
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
+import com.ember.reader.ui.common.NotificationHelper
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,8 +30,12 @@ import javax.inject.Inject
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
+    private val readingProgressRepository: ReadingProgressRepository,
+    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -67,6 +77,7 @@ class LibraryViewModel @Inject constructor(
         combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
         combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded },
     ) { books, downloading, query, (sort, fetchedIds), (formatFilter, downloadedOnly) ->
+        timber.log.Timber.d("LibraryVM combine: totalBooks=${books.size} fetchedIds=${fetchedIds?.size} query='$query'")
         val filtered = books
             .filter { book ->
                 // In subcategory view, only show books from the current fetch
@@ -90,8 +101,15 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
             server?.let { s ->
-                // Always use Basic Auth for OPDS covers — it's reliable and doesn't expire
-                _coverAuthHeader.value = com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
+                // Grimmory media covers use ?token= query param, not Authorization header
+                // For OPDS covers, use Basic Auth header as before
+                _coverAuthHeader.value = if (s.isGrimmory && grimmoryTokenManager.isLoggedIn(s.id)) {
+                    // Special marker: "jwt:<token>" — the UI will append ?token= to the URL
+                    grimmoryTokenManager.getAccessToken(s.id)?.let { "jwt:$it" }
+                        ?: com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
+                } else {
+                    com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
+                }
             }
             refresh()
         }
@@ -100,6 +118,7 @@ class LibraryViewModel @Inject constructor(
     fun refresh() {
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
+        _fetchedBookIds.value = null // Reset for fresh load
         _isRefreshing.value = true
         viewModelScope.launch {
             val result = if (catalogPath.startsWith("grimmory:")) {
@@ -109,7 +128,12 @@ class LibraryViewModel @Inject constructor(
             }
             if (isSubcategory || catalogPath.startsWith("grimmory:")) {
                 result.onSuccess { page ->
-                    _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                    val newIds = page.resolvedBookIds.toSet()
+                    // Accumulate IDs (for pagination) rather than replacing
+                    val existing = _fetchedBookIds.value ?: emptySet()
+                    val combined = existing + newIds
+                    timber.log.Timber.d("LibraryVM: fetchedBookIds count=${combined.size} (was ${existing.size}, new ${newIds.size})")
+                    _fetchedBookIds.value = combined
                 }
             }
             _isRefreshing.value = false
@@ -117,10 +141,14 @@ class LibraryViewModel @Inject constructor(
     }
 
     private suspend fun refreshFromGrimmory(server: com.ember.reader.core.model.Server): Result<com.ember.reader.core.opds.OpdsBookPage> {
-        val params = catalogPath.removePrefix("grimmory:").split("&").associate {
-            val (key, value) = it.split("=", limit = 2)
-            key to value
-        }
+        val paramString = catalogPath.removePrefix("grimmory:")
+        val params = paramString.split("&")
+            .filter { "=" in it }
+            .associate {
+                val (key, value) = it.split("=", limit = 2)
+                key to value
+            }
+        timber.log.Timber.d("GrimmoryRefresh: catalogPath='$catalogPath' paramString='$paramString' params=$params")
         return bookRepository.refreshFromGrimmory(
             server = server,
             libraryId = params["libraryId"]?.toLongOrNull(),
@@ -131,7 +159,35 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        // For Grimmory servers, trigger server-side search
+        if (catalogPath.startsWith("grimmory:")) {
+            searchServerDebounceJob?.cancel()
+            if (query.isBlank()) {
+                // Reload original catalog page
+                refresh()
+                return
+            }
+        }
+        if (catalogPath.startsWith("grimmory:") && query.length >= 3) {
+            searchServerDebounceJob?.cancel()
+            searchServerDebounceJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(500)
+                val currentServer = server ?: return@launch
+                _isRefreshing.value = true
+                val result = bookRepository.refreshFromGrimmory(
+                    server = currentServer,
+                    search = query,
+                )
+                result.onSuccess { page ->
+                    _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                }
+                _isRefreshing.value = false
+            }
+        }
+    }
+    private var searchServerDebounceJob: kotlinx.coroutines.Job? = null
     fun toggleViewMode() { _viewMode.update { if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID } }
     fun updateSortOrder(order: SortOrder) { _sortOrder.value = order }
     fun updateFormatFilter(format: BookFormat?) { _formatFilter.value = format }
@@ -141,8 +197,45 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         _downloadingBooks.update { it + book.id }
         viewModelScope.launch {
-            bookRepository.downloadBook(book, currentServer)
+            bookRepository.downloadBook(book, currentServer).onSuccess { downloadedBook ->
+                pullProgressAfterDownload(downloadedBook, currentServer)
+                NotificationHelper.showDownloadComplete(context, book.title, book.id)
+            }
             _downloadingBooks.update { it - book.id }
+        }
+    }
+
+    private suspend fun pullProgressAfterDownload(book: Book, server: Server) {
+        // Try Grimmory API
+        val grimmoryBookId = book.grimmoryBookId
+        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
+            runCatching {
+                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+                val rawPct = detail.readProgress
+                if (rawPct != null && rawPct > 0f) {
+                    val pct = if (rawPct > 1f) rawPct / 100f else rawPct
+                    readingProgressRepository.applyRemoteProgress(
+                        com.ember.reader.core.model.ReadingProgress(
+                            bookId = book.id,
+                            serverId = server.id,
+                            percentage = pct,
+                            lastReadAt = java.time.Instant.now(),
+                            syncedAt = java.time.Instant.now(),
+                            needsSync = false,
+                        ),
+                    )
+                    return
+                }
+            }
+        }
+
+        // Fall back to kosync
+        val fileHash = book.fileHash
+        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
+            val remote = readingProgressRepository.pullProgress(server, book.id, fileHash).getOrNull()
+            if (remote != null) {
+                readingProgressRepository.applyRemoteProgress(remote.progress)
+            }
         }
     }
 }

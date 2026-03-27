@@ -116,6 +116,7 @@ class ServerFormViewModel @Inject constructor(
             )
             _uiState.update {
                 it.copy(
+                    isGrimmory = result.isSuccess || it.isGrimmory,
                     grimmoryTestResult = result.fold(
                         onSuccess = { msg -> TestResult.Success(msg) },
                         onFailure = { err -> TestResult.Error(err.message ?: "Login failed") },

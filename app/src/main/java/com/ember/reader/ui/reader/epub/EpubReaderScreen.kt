@@ -1,8 +1,13 @@
 package com.ember.reader.ui.reader.epub
 
 import androidx.compose.runtime.Composable
+import android.content.pm.ActivityInfo
+import android.view.WindowManager
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -17,6 +22,7 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
+import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
@@ -50,11 +56,58 @@ fun EpubReaderScreen(
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+
+    // Keep screen on while reading
+    val view = LocalView.current
+    DisposableEffect(keepScreenOn) {
+        if (keepScreenOn) {
+            view.keepScreenOn = true
+        }
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Apply orientation lock
+    val context = LocalContext.current
+    DisposableEffect(preferences.orientationLock) {
+        val activity = context as? android.app.Activity
+        if (activity != null) {
+            activity.requestedOrientation = when (preferences.orientationLock) {
+                com.ember.reader.core.model.OrientationLock.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                com.ember.reader.core.model.OrientationLock.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                com.ember.reader.core.model.OrientationLock.AUTO -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+        onDispose {
+            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    // Apply brightness setting to window
+    DisposableEffect(preferences.brightness) {
+        val activity = context as? android.app.Activity
+        if (activity != null && preferences.brightness >= 0) {
+            val params = activity.window.attributes
+            params.screenBrightness = preferences.brightness
+            activity.window.attributes = params
+        }
+        onDispose {
+            val act = context as? android.app.Activity
+            if (act != null) {
+                val params = act.window.attributes
+                params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                act.window.attributes = params
+            }
+        }
+    }
+
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
+    var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     val scope = rememberCoroutineScope()
 
     when (val state = uiState) {
@@ -74,6 +127,7 @@ fun EpubReaderScreen(
                 onToggleBookmark = viewModel::addBookmark,
                 onOpenTableOfContents = { showToc = true },
                 onOpenPreferences = { showPreferences = true },
+                onOpenSearch = { showSearch = true },
                 onSeekToProgression = { progression ->
                     scope.launch {
                         state.publication.locateProgression(progression.toDouble())?.let {
@@ -100,13 +154,6 @@ fun EpubReaderScreen(
                     onNavigatorReady = { fragment ->
                         val nav = fragment as? EpubNavigatorFragment ?: return@NavigatorContainer
                         navigator = nav
-                        // Center tap to toggle chrome
-                        nav.addInputListener(object : InputListener {
-                            override fun onTap(event: TapEvent): Boolean {
-                                viewModel.toggleChrome()
-                                return true
-                            }
-                        })
                     },
                 )
             }
@@ -116,15 +163,36 @@ fun EpubReaderScreen(
                 val nav = navigator ?: return@LaunchedEffect
                 nav.submitPreferences(preferences.toEpubPreferences())
 
-                // Only enable edge-tap/swipe page turns in paginated mode
+                // Remove old listeners
                 dirNavAdapter?.let { nav.removeInputListener(it) }
-                if (preferences.isPaginated) {
-                    val adapter = DirectionalNavigationAdapter(nav)
-                    dirNavAdapter = adapter
-                    nav.addInputListener(adapter)
-                } else {
-                    dirNavAdapter = null
+                dirNavAdapter = null
+                currentTapListener?.let { nav.removeInputListener(it) }
+
+                // Configurable tap zone handler
+                val tapPrefs = preferences
+                val listener = object : InputListener {
+                    override fun onTap(event: TapEvent): Boolean {
+                        val viewWidth = nav.requireView().width.toFloat()
+                        val tapX = event.point.x
+                        val zone = when {
+                            tapX < viewWidth / 3f -> tapPrefs.leftTapZone
+                            tapX > viewWidth * 2f / 3f -> tapPrefs.rightTapZone
+                            else -> tapPrefs.centerTapZone
+                        }
+                        when (zone) {
+                            com.ember.reader.core.model.TapZoneBehavior.PREVIOUS_PAGE ->
+                                scope.launch { nav.goBackward() }
+                            com.ember.reader.core.model.TapZoneBehavior.NEXT_PAGE ->
+                                scope.launch { nav.goForward() }
+                            com.ember.reader.core.model.TapZoneBehavior.TOGGLE_CHROME ->
+                                viewModel.toggleChrome()
+                            com.ember.reader.core.model.TapZoneBehavior.NOTHING -> {}
+                        }
+                        return true
+                    }
                 }
+                currentTapListener = listener
+                nav.addInputListener(listener)
             }
 
             // Handle sync navigation (accept remote progress)
@@ -163,6 +231,17 @@ fun EpubReaderScreen(
                 )
             }
 
+            if (showSearch) {
+                SearchSheet(
+                    publication = state.publication,
+                    onNavigate = { locator ->
+                        scope.launch { navigator?.go(locator) }
+                        showSearch = false
+                    },
+                    onDismiss = { showSearch = false },
+                )
+            }
+
             if (showPreferences) {
                 ReaderPreferencesSheet(
                     preferences = preferences,
@@ -184,7 +263,7 @@ fun EpubReaderScreen(
 
 private fun ReaderPreferences.toEpubPreferences(): EpubPreferences = EpubPreferences(
     fontFamily = fontFamily.cssValue?.let { ReadiumFontFamily(it) },
-    fontSize = fontSize.toDouble() / 16.0, // Readium uses a scale factor (1.0 = default)
+    fontSize = fontSize.toDouble() / 16.0,
     lineHeight = lineHeight.toDouble(),
     scroll = !isPaginated,
     theme = when (theme) {
@@ -193,4 +272,13 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences = EpubPrefere
         ReaderTheme.SEPIA -> Theme.SEPIA
         ReaderTheme.SYSTEM -> null
     },
+    textAlign = when (textAlign) {
+        com.ember.reader.core.model.TextAlign.START -> org.readium.r2.navigator.preferences.TextAlign.START
+        com.ember.reader.core.model.TextAlign.JUSTIFY -> org.readium.r2.navigator.preferences.TextAlign.JUSTIFY
+        com.ember.reader.core.model.TextAlign.CENTER -> org.readium.r2.navigator.preferences.TextAlign.CENTER
+    },
+    publisherStyles = publisherStyles,
+    pageMargins = pageMargins.toDouble(),
+    wordSpacing = wordSpacing.toDouble(),
+    letterSpacing = letterSpacing.toDouble(),
 )

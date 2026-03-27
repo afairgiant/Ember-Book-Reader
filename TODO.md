@@ -3,14 +3,14 @@
 ## Reader Enhancements
 
 ### Reader Customization (Reference: Grimmory's web reader)
-- [ ] Configurable tap zones (left/center/right tap behavior)
-- [ ] Margins / padding control (horizontal and vertical)
-- [ ] Word spacing, letter spacing, paragraph spacing
-- [ ] Text alignment options (left, justify, etc.)
-- [ ] Publisher styles toggle (respect or override EPUB CSS)
+- [x] Configurable tap zones (left/center/right — Previous Page, Next Page, Toggle Menu, Nothing)
+- [x] Page margins control (0.5x to 2.5x)
+- [x] Word spacing and letter spacing controls
+- [x] Text alignment options (Left, Justify, Center)
+- [x] Publisher styles toggle (respect or override EPUB CSS)
 - [ ] Custom font loading (user-provided fonts)
 - [ ] Reading progress persistence per-preference (remember font/theme per book vs global)
-- [ ] Brightness control that actually adjusts screen brightness (currently UI-only)
+- [x] Brightness control that adjusts system screen brightness via WindowManager
 
 ### Continuous Scroll Mode
 - [ ] True continuous scroll across chapters (currently per-chapter with swipe between)
@@ -67,9 +67,9 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Notebook: `GET /api/v1/app/notebook/books` + entries per book
 
 **Infrastructure:**
-- [ ] Auto-detect Grimmory servers (`GET /api/v1/healthcheck` or `/api/v1/version`)
-- [ ] Keep kosync as fallback for non-Grimmory OPDS servers and KOReader compat
-- [ ] Server form: optional Grimmory login (username/password → JWT) alongside OPDS + kosync credentials
+- [x] Auto-detect Grimmory servers (`GET /api/v1/healthcheck`)
+- [x] Keep kosync as fallback for non-Grimmory OPDS servers and KOReader compat
+- [x] Server form: Grimmory login section always visible alongside OPDS + kosync credentials
 
 ### Bidirectional Position Sync
 - [ ] Investigate converting Readium Locator ↔ EPUB CFI for exact position sync (not just percentage)
@@ -86,56 +86,152 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] "Featured Publication" card (from OPDS featured/recent feed)
 
 ### Library
-- [ ] Search across all downloaded books (currently filter chips only)
-- [ ] Sort options (title, author, recently read, date added)
-- [ ] Long-press to delete downloaded books from library view
-- [ ] Batch selection / multi-delete
+- [x] Search across all downloaded books
+- [x] Sort options (title, author, recently read, date added, progress)
+- [x] Long-press to delete downloaded books from library view
+- [x] Batch selection / multi-delete + batch sync
 
 ### Catalog Browser
-- [ ] OPDS search integration (Grimmory has `/api/v1/opds/search.opds`)
+- [x] Catalog search (search icon in top bar, navigates to book results)
 - [ ] Pagination support (load more books on scroll — `nextPagePath` exists but UI doesn't paginate)
 - [ ] "Featured Publication" card at bottom of catalog (shown in designs)
 
 ### Server Form
-- [ ] Show connection status indicator on saved servers
+- [x] Show connection status indicator on saved servers (OPDS · Kosync · Grimmory)
 - [ ] Auto-detect server capabilities (OPDS version, kosync availability)
 
 ### Settings / Profile
+- [x] Connected accounts with status indicators (OPDS/Kosync/Grimmory)
+- [x] Reading stats (downloaded, reading, completed)
+- [x] App version info
 - [ ] Actual user profile (pull from server if available)
-- [ ] Appearance settings (theme toggle light/dark/system, dynamic color toggle)
+- [x] Appearance settings (theme toggle light/dark/system + keep screen on toggle)
 - [ ] Reading goals configuration
 - [ ] Export/import reading data
-- [ ] App version info
 
 ### Storage Management
 - [x] Show available device storage alongside used
 - [x] Sort options (latest first, largest first, alphabetical)
 - [x] Batch delete
-- [ ] Auto-cleanup for old downloads (toggle + 90-day threshold on app startup)
+- [x] Auto-cleanup for old downloads (toggle in Profile + 90-day threshold on app startup)
 
 ## Technical
 
 ### Testing
-- [ ] Unit tests for OPDS parser
-- [ ] Unit tests for PartialMd5 (verify KOReader compatibility)
-- [ ] Unit tests for URL builder
+- [x] Unit tests for OPDS parser (OpdsParserTest — 24 tests)
+- [x] Unit tests for PartialMd5 (PartialMd5Test — 8 tests)
+- [x] Unit tests for URL builder (UrlBuilderTest — 7 tests)
 - [ ] Integration tests for kosync push/pull
 - [ ] UI tests for critical flows (connect server, download book, open reader)
 
 ### CI/CD
-- [ ] GitHub Actions build pipeline
-- [ ] Automated APK/AAB builds on release tags
-- [ ] Lint and test checks on PRs
+- [x] GitHub Actions build pipeline (ci.yml)
+- [x] Automated APK builds on release tags + manual dispatch (release.yml)
+- [x] Lint and test checks on PRs
 
 ### Performance
-- [ ] Coil disk cache configuration for cover images
+- [x] Coil disk cache (50MB) + memory cache (25%) configured in EmberApplication
 - [ ] Lazy loading for large book catalogs (currently loads all at once)
 - [ ] Database indices optimization for large libraries
 
 ### Offline
 - [ ] Queue downloads for when network is available
-- [ ] Offline indicator in UI
+- [x] Offline indicator in UI (banner on home screen when no network)
 - [ ] Graceful degradation when server is unreachable
+
+## Reader Features (Standard in E-Readers)
+
+### Text-to-Speech (TTS)
+- [ ] Android TTS engine integration for read-aloud
+- [ ] Play/pause/skip controls overlay
+- [ ] Highlight current sentence/paragraph being read
+- [ ] Speed control and voice selection
+- [ ] Background playback (continue reading with screen off)
+- [ ] Readium has TTS support via `readium-navigator-media`
+
+### Search in Book
+- [x] Full-text search within the current book (via Readium SearchService)
+- [x] Search results list with context snippets (highlighted match text)
+- [x] Navigate to search result (taps locator)
+- [x] Search icon in reader top bar → SearchSheet bottom sheet
+
+### Dictionary / Lookup
+- [ ] Long-press word to select
+- [ ] Built-in dictionary lookup (or Android system dictionary intent)
+- [ ] Wikipedia / web search for selected text
+- [ ] Translate selected text (via Android translation intent)
+
+### Highlights & Annotations
+- [ ] Select text → highlight with color picker
+- [ ] Add notes to highlights
+- [ ] Highlights list/export
+- [ ] Underline, strikethrough styles
+- [ ] Readium `DecorableNavigator` supports decorations for highlights
+
+### Reading Statistics
+- [ ] Time spent reading today/week/month
+- [ ] Pages/percentage per session
+- [ ] Estimated time to finish book
+- [ ] Daily reading goal tracker
+- [ ] Reading streak calendar (similar to GitHub contribution graph)
+
+### Book Details Screen
+- [ ] Dedicated book detail page (cover, description, metadata, series info)
+- [ ] Rating (personal + Goodreads if available from Grimmory)
+- [ ] Read status toggle (Unread/Reading/Read/DNF)
+- [ ] Shelves/collections management
+- [ ] Download progress indicator
+- [ ] Similar books / recommendations (Grimmory has `/api/v1/books/{id}/recommendations`)
+
+### Collections / Shelves
+- [ ] Create/manage custom collections locally
+- [ ] Sync shelves with Grimmory (`GET/POST /api/v1/shelves`)
+- [ ] Assign books to multiple shelves
+- [ ] Smart collections (auto-populated by rules: genre, author, read status)
+
+### Night Mode / Blue Light Filter
+- [ ] True system brightness control (not just theme)
+- [ ] Blue light filter (warm color temperature overlay)
+- [ ] Auto-switch based on time of day
+- [x] Screen keep-awake while reading (configurable in Profile → Appearance)
+
+### Page Turn Animations
+- [ ] Curl/flip animation option
+- [ ] Slide animation
+- [ ] Fade transition
+- [ ] None (instant, current default)
+
+### Orientation Lock
+- [x] Lock to portrait/landscape while reading (Auto/Portrait/Landscape in reader settings)
+- [ ] Per-book orientation preference
+- [ ] Auto-rotate toggle in reader chrome
+
+### File Management
+- [ ] Import from file manager / Downloads folder
+- [ ] Share book file (export)
+- [ ] Bulk import from folder
+- [ ] Support for more formats (FB2, MOBI, CBZ/CBR via Readium)
+
+### Multi-Language Support
+- [ ] App UI localization (strings.xml for multiple languages)
+- [ ] Per-book language setting (for TTS and dictionary)
+- [ ] RTL layout support for Arabic/Hebrew
+
+### Accessibility
+- [ ] Screen reader (TalkBack) compatibility
+- [ ] Large touch targets
+- [ ] High contrast mode
+- [ ] Reduce motion option
+
+### Notifications
+- [x] Download complete notification
+- [x] Sync complete notification (shown after SyncWorker completes)
+- [ ] Daily reading reminder (configurable time)
+- [ ] New books available on server notification
+
+### Widgets
+- [ ] Home screen widget showing current book + progress
+- [ ] "Continue Reading" widget that opens directly to last book
 
 ## Bugs / Known Issues
 - [ ] Horizontal swipe in scroll mode still changes chapters (Readium limitation — `disablePageTurnsWhileScrolling` blocks all chapter transitions)

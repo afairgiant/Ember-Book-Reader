@@ -10,8 +10,11 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.ember.reader.core.model.FontFamily
+import com.ember.reader.core.model.OrientationLock
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.core.model.TapZoneBehavior
+import com.ember.reader.core.model.TextAlign
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,6 +38,15 @@ class ReaderPreferencesRepository @Inject constructor(
         val THEME = stringPreferencesKey("theme")
         val IS_PAGINATED = booleanPreferencesKey("is_paginated")
         val BRIGHTNESS = floatPreferencesKey("brightness")
+        val ORIENTATION_LOCK = stringPreferencesKey("orientation_lock")
+        val TEXT_ALIGN = stringPreferencesKey("text_align")
+        val PUBLISHER_STYLES = booleanPreferencesKey("publisher_styles")
+        val PAGE_MARGINS = floatPreferencesKey("page_margins")
+        val WORD_SPACING = floatPreferencesKey("word_spacing")
+        val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val LEFT_TAP_ZONE = stringPreferencesKey("left_tap_zone")
+        val CENTER_TAP_ZONE = stringPreferencesKey("center_tap_zone")
+        val RIGHT_TAP_ZONE = stringPreferencesKey("right_tap_zone")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -50,6 +62,25 @@ class ReaderPreferencesRepository @Inject constructor(
                     ?: ReaderTheme.SYSTEM,
                 isPaginated = prefs[Keys.IS_PAGINATED] ?: true,
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
+                orientationLock = prefs[Keys.ORIENTATION_LOCK]?.let {
+                    runCatching { OrientationLock.valueOf(it) }.getOrNull()
+                } ?: OrientationLock.AUTO,
+                textAlign = prefs[Keys.TEXT_ALIGN]?.let {
+                    runCatching { TextAlign.valueOf(it) }.getOrNull()
+                } ?: TextAlign.START,
+                publisherStyles = prefs[Keys.PUBLISHER_STYLES] ?: true,
+                pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
+                wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
+                letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
+                leftTapZone = prefs[Keys.LEFT_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.PREVIOUS_PAGE,
+                centerTapZone = prefs[Keys.CENTER_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.TOGGLE_CHROME,
+                rightTapZone = prefs[Keys.RIGHT_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.NEXT_PAGE,
             )
         }
 
@@ -63,6 +94,15 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.THEME] = preferences.theme.name
             prefs[Keys.IS_PAGINATED] = preferences.isPaginated
             prefs[Keys.BRIGHTNESS] = preferences.brightness
+            prefs[Keys.ORIENTATION_LOCK] = preferences.orientationLock.name
+            prefs[Keys.TEXT_ALIGN] = preferences.textAlign.name
+            prefs[Keys.PUBLISHER_STYLES] = preferences.publisherStyles
+            prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
+            prefs[Keys.WORD_SPACING] = preferences.wordSpacing
+            prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
+            prefs[Keys.LEFT_TAP_ZONE] = preferences.leftTapZone.name
+            prefs[Keys.CENTER_TAP_ZONE] = preferences.centerTapZone.name
+            prefs[Keys.RIGHT_TAP_ZONE] = preferences.rightTapZone.name
         }
     }
 }

@@ -52,6 +52,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE serverId = :serverId AND (fileHash = :hash OR title LIKE '%' || :title || '%' COLLATE NOCASE) LIMIT 1")
     suspend fun getByServerAndHashOrTitle(serverId: Long, hash: String, title: String): BookEntity?
 
+    @Query("SELECT * FROM books WHERE localPath IS NOT NULL AND serverId IS NOT NULL AND downloadedAt < :before")
+    suspend fun getOldServerDownloads(before: java.time.Instant): List<BookEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(book: BookEntity)
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Explore
@@ -38,6 +39,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +64,8 @@ fun CatalogScreen(
     viewModel: CatalogViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchActive by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -76,6 +82,11 @@ fun CatalogScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { searchActive = !searchActive }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -99,6 +110,31 @@ fun CatalogScreen(
                         .fillMaxSize()
                         .padding(padding),
                 ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (searchActive) {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = { Text("Search catalog...") },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                    onSearch = {
+                                        if (searchQuery.isNotBlank()) {
+                                            onNavigateToBooks("grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                                            searchActive = false
+                                            searchQuery = ""
+                                        }
+                                    },
+                                ),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+                                ),
+                            )
+                        }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -129,6 +165,7 @@ fun CatalogScreen(
                             )
                         }
                     }
+                    } // Column
                 }
             }
         }

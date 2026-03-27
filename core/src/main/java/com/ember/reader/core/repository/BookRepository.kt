@@ -131,10 +131,11 @@ class BookRepository @Inject constructor(
         status: String? = null,
         search: String? = null,
     ): Result<OpdsBookPage> {
-        val appPage = if (seriesName != null) {
-            grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
-        } else {
-            grimmoryAppClient.getBooks(
+        Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId status='$status'")
+        val appPage = when {
+            seriesName != null -> grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
+            search != null -> grimmoryAppClient.searchBooks(server.url, server.id, search, page, size)
+            else -> grimmoryAppClient.getBooks(
                 baseUrl = server.url,
                 serverId = server.id,
                 page = page,
@@ -142,11 +143,15 @@ class BookRepository @Inject constructor(
                 libraryId = libraryId,
                 shelfId = shelfId,
                 status = status,
-                search = search,
             )
         }
 
-        val result = appPage.getOrElse { return Result.failure(it) }
+        val result = appPage.getOrElse {
+            Timber.e(it, "GrimmoryRefresh: API call failed")
+            return Result.failure(it)
+        }
+        Timber.d("GrimmoryRefresh: got ${result.content.size} books (total=${result.totalElements}, hasNext=${result.hasNext})")
+        result.content.take(5).forEach { Timber.d("  - '${it.title}' by ${it.authors}") }
         val origin = serverOrigin(server.url)
         val resolvedIds = mutableListOf<String>()
 
@@ -165,7 +170,7 @@ class BookRepository @Inject constructor(
                     existing.copy(
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
-                        coverUrl = "$origin/api/v1/opds/${appBook.id}/cover",
+                        coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
                         downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     ),
                 )
@@ -177,7 +182,7 @@ class BookRepository @Inject constructor(
                     opdsEntryId = opdsEntryId,
                     title = appBook.title,
                     author = appBook.authors.firstOrNull(),
-                    coverUrl = "$origin/api/v1/opds/${appBook.id}/cover",
+                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
                     downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     format = format,
                     addedAt = Instant.now(),
@@ -198,6 +203,8 @@ class BookRepository @Inject constructor(
                 addedAt = Instant.now(),
             )
         }
+
+        Timber.d("GrimmoryRefresh: resolvedIds count=${resolvedIds.size}")
 
         return Result.success(
             OpdsBookPage(
@@ -222,6 +229,7 @@ class BookRepository @Inject constructor(
         val file = File(booksDir, fileName)
 
         val grimmoryBookId = book.grimmoryBookId
+        Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId opdsEntryId=${book.opdsEntryId} downloadUrl=$downloadUrl")
         if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
             grimmoryClient.downloadBook(
                 baseUrl = server.url,
@@ -239,6 +247,7 @@ class BookRepository @Inject constructor(
             ).getOrThrow()
         }
 
+        Timber.d("Download complete: file=${file.name} size=${file.length()}")
         if (file.length() < 100) {
             file.delete()
             error("Downloaded file is too small — server may have returned an error")
@@ -253,9 +262,18 @@ class BookRepository @Inject constructor(
         bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
         bookDao.updateFileHash(book.id, fileHash)
 
+        // Extract and cache cover locally so it works offline
+        val metadata = extractMetadata(file)
+        if (metadata.coverUrl != null) {
+            bookDao.getById(book.id)?.let { entity ->
+                bookDao.update(entity.copy(coverUrl = metadata.coverUrl))
+            }
+        }
+
         book.copy(
             localPath = file.absolutePath,
             fileHash = fileHash,
+            coverUrl = metadata.coverUrl ?: book.coverUrl,
             downloadedAt = Instant.now(),
         )
     }
@@ -302,6 +320,19 @@ class BookRepository @Inject constructor(
         bookDao.updateLocalPath(bookId, null, null)
     }
 
+    suspend fun cleanupOldDownloads(daysOld: Int = 90): Int {
+        val cutoff = Instant.now().minus(java.time.Duration.ofDays(daysOld.toLong()))
+        val oldBooks = bookDao.getOldServerDownloads(cutoff)
+        var cleaned = 0
+        for (entity in oldBooks) {
+            entity.localPath?.let { path -> File(path).delete() }
+            bookDao.updateLocalPath(entity.id, null, null)
+            cleaned++
+        }
+        if (cleaned > 0) Timber.d("Auto-cleanup: removed $cleaned old downloads")
+        return cleaned
+    }
+
     data class RelinkMatch(
         val serverBookId: String,
         val serverName: String,
@@ -328,24 +359,78 @@ class BookRepository @Inject constructor(
             val serverBooks = bookDao.observeByServer(server.id).first()
             if (serverBooks.isEmpty()) {
                 Timber.d("Relink: no books cached for server, fetching catalog...")
-                val catalogPath = server.url.trimEnd('/') + "/catalog"
-                val pathPart = catalogPath.substringAfter(
-                    com.ember.reader.core.network.serverOrigin(server.url),
-                )
-                runCatching { refreshFromServer(server, path = pathPart) }
-                    .onFailure { Timber.w(it, "Relink: catalog fetch failed") }
+                if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                    runCatching { refreshFromGrimmory(server) }
+                        .onFailure { Timber.w(it, "Relink: Grimmory catalog fetch failed") }
+                } else {
+                    val catalogPath = server.url.trimEnd('/') + "/catalog"
+                    val pathPart = catalogPath.substringAfter(
+                        com.ember.reader.core.network.serverOrigin(server.url),
+                    )
+                    runCatching { refreshFromServer(server, path = pathPart) }
+                        .onFailure { Timber.w(it, "Relink: OPDS catalog fetch failed") }
+                }
             }
 
-            // Try hash or title match
+            // Strategy 1: hash or title match in local DB
             val match = bookDao.getByServerAndHashOrTitle(server.id, hash, book.title)
             if (match != null && match.id != book.id) {
-                Timber.d("Relink: found match: '${match.title}' (${match.id})")
+                Timber.d("Relink: found match via DB: '${match.title}' (${match.id})")
                 return@withContext RelinkMatch(match.id, server.name, server.id)
             }
 
+            // Strategy 2: search Grimmory API by title (server-side fuzzy search)
+            if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                Timber.d("Relink: trying Grimmory search for '${book.title}'")
+                val searchResult = grimmoryAppClient.searchBooks(
+                    baseUrl = server.url,
+                    serverId = server.id,
+                    query = book.title,
+                    size = 5,
+                ).getOrNull()
+
+                if (searchResult != null) {
+                    for (appBook in searchResult.content) {
+                        // Match by exact title or author+title combo
+                        val titleMatch = appBook.title.equals(book.title, ignoreCase = true) ||
+                            appBook.title.contains(book.title, ignoreCase = true) ||
+                            book.title.contains(appBook.title, ignoreCase = true)
+                        if (titleMatch) {
+                            // Ensure this book exists in our DB, create if not
+                            val opdsEntryId = "urn:booklore:book:${appBook.id}"
+                            val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
+                            val matchId = if (existing != null) {
+                                existing.id
+                            } else {
+                                val origin = com.ember.reader.core.network.serverOrigin(server.url)
+                                val newBook = Book(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    serverId = server.id,
+                                    opdsEntryId = opdsEntryId,
+                                    title = appBook.title,
+                                    author = appBook.authors.firstOrNull(),
+                                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                                    format = when (appBook.primaryFileType?.uppercase()) {
+                                        "PDF" -> BookFormat.PDF
+                                        else -> BookFormat.EPUB
+                                    },
+                                    addedAt = java.time.Instant.now(),
+                                )
+                                bookDao.insert(newBook.toEntity())
+                                newBook.id
+                            }
+                            if (matchId != book.id) {
+                                Timber.d("Relink: found match via Grimmory search: '${appBook.title}' (${appBook.id})")
+                                return@withContext RelinkMatch(matchId, server.name, server.id)
+                            }
+                        }
+                    }
+                }
+            }
+
             val currentBooks = if (serverBooks.isEmpty()) bookDao.observeByServer(server.id).first() else serverBooks
-            Timber.d("Relink: no match. ${currentBooks.size} books on server. Looking for '${book.title}'")
-            currentBooks.take(10).forEach { Timber.d("  - '${it.title}'") }
+            Timber.d("Relink: no match found. ${currentBooks.size} books on server. Looking for '${book.title}'")
 
             null
         }

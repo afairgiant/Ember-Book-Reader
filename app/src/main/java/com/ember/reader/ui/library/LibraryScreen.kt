@@ -227,10 +227,16 @@ private fun BookGridItem(
                 if (book.coverUrl != null) {
                     val context = LocalContext.current
                     val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
+                            val token = coverAuthHeader.removePrefix("jwt:")
+                            "${book.coverUrl}?token=$token"
+                        } else book.coverUrl
                         ImageRequest.Builder(context)
-                            .data(book.coverUrl)
+                            .data(url)
                             .apply {
-                                coverAuthHeader?.let { addHeader("Authorization", it) }
+                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                                    addHeader("Authorization", coverAuthHeader)
+                                }
                             }
                             .crossfade(true)
                             .build()
@@ -346,10 +352,16 @@ private fun BookListItem(
             if (book.coverUrl != null) {
                 val context = LocalContext.current
                 val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                    val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
+                        val token = coverAuthHeader.removePrefix("jwt:")
+                        "${book.coverUrl}?token=$token"
+                    } else book.coverUrl
                     ImageRequest.Builder(context)
-                        .data(book.coverUrl)
+                        .data(url)
                         .apply {
-                            coverAuthHeader?.let { addHeader("Authorization", it) }
+                            if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                                addHeader("Authorization", coverAuthHeader)
+                            }
                         }
                         .crossfade(true)
                         .build()

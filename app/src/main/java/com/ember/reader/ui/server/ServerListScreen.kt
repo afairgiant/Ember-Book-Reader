@@ -74,6 +74,7 @@ fun ServerListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
+    val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
     Scaffold(
         topBar = {
@@ -96,14 +97,17 @@ fun ServerListScreen(
             )
         },
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            com.ember.reader.ui.common.OfflineBanner(isOffline = !networkAvailable)
             when (val state = uiState) {
                 ServerListUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
                 is ServerListUiState.Success -> {
                     LazyColumn(
@@ -289,11 +293,17 @@ private fun ContinueReadingCard(
                     .height(160.dp),
             ) {
                 if (book.coverUrl != null) {
+                    val coverUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
+                        val token = coverAuthHeader.removePrefix("jwt:")
+                        "${book.coverUrl}?token=$token"
+                    } else book.coverUrl
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(book.coverUrl)
+                            .data(coverUrl)
                             .apply {
-                                coverAuthHeader?.let { addHeader("Authorization", it) }
+                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                                    addHeader("Authorization", coverAuthHeader)
+                                }
                             }
                             .crossfade(true)
                             .build(),
@@ -394,13 +404,26 @@ private fun ServerCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Text(
-                    text = server.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                            .align(Alignment.CenterVertically),
+                    )
+                    Text(
+                        text = buildString {
+                            append("OPDS")
+                            if (server.kosyncUsername.isNotBlank()) append(" · Kosync")
+                            if (server.isGrimmory) append(" · Grimmory")
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(

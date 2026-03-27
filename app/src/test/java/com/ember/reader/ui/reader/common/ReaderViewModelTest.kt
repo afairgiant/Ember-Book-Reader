@@ -6,6 +6,7 @@ import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
@@ -72,12 +73,16 @@ class ReaderViewModelTest {
     @MockK
     private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
+    @MockK
+    private lateinit var appPreferencesRepository: AppPreferencesRepository
+
     private val testDispatcher = StandardTestDispatcher()
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { readerPreferencesRepository.preferencesFlow } returns flowOf(ReaderPreferences())
+        every { appPreferencesRepository.keepScreenOnFlow } returns flowOf(false)
         every { bookmarkRepository.observeByBookId(any()) } returns flowOf(emptyList())
         every { highlightRepository.observeByBookId(any()) } returns flowOf(emptyList())
     }
@@ -101,6 +106,7 @@ class ReaderViewModelTest {
             syncPreferencesRepository = syncPreferencesRepository,
             grimmoryClient = grimmoryClient,
             grimmoryTokenManager = grimmoryTokenManager,
+            appPreferencesRepository = appPreferencesRepository,
         )
     }
 

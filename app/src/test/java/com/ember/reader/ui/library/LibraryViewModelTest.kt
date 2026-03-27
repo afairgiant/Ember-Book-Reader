@@ -1,9 +1,13 @@
 package com.ember.reader.ui.library
 
 import androidx.lifecycle.SavedStateHandle
+import android.content.Context
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -31,10 +35,22 @@ import org.junit.jupiter.api.extension.ExtendWith
 class LibraryViewModelTest {
 
     @MockK
+    private lateinit var context: Context
+
+    @MockK
     private lateinit var bookRepository: BookRepository
 
     @MockK
     private lateinit var serverRepository: ServerRepository
+
+    @MockK
+    private lateinit var readingProgressRepository: ReadingProgressRepository
+
+    @MockK
+    private lateinit var grimmoryClient: GrimmoryClient
+
+    @MockK
+    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -69,7 +85,7 @@ class LibraryViewModelTest {
         val savedStateHandle = SavedStateHandle(
             mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog"),
         )
-        return LibraryViewModel(savedStateHandle, bookRepository, serverRepository)
+        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryTokenManager)
     }
 
     @Test

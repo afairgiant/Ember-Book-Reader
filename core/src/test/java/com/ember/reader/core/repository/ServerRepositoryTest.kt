@@ -1,5 +1,7 @@
 package com.ember.reader.core.repository
 
+import android.content.Context
+import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.model.Server
@@ -7,6 +9,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.KosyncClient
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -26,7 +29,16 @@ import org.junit.jupiter.api.extension.ExtendWith
 class ServerRepositoryTest {
 
     @MockK
+    private lateinit var context: Context
+
+    @MockK
     private lateinit var serverDao: ServerDao
+
+    @MockK
+    private lateinit var bookDao: BookDao
+
+    @MockK
+    private lateinit var bookOpener: BookOpener
 
     @MockK
     private lateinit var opdsClient: OpdsClient
@@ -47,7 +59,7 @@ class ServerRepositoryTest {
 
     @BeforeEach
     fun setUp() {
-        repository = ServerRepository(serverDao, opdsClient, kosyncClient, grimmoryClient, grimmoryTokenManager, credentialEncryption)
+        repository = ServerRepository(context, serverDao, bookDao, bookOpener, opdsClient, kosyncClient, grimmoryClient, grimmoryTokenManager, credentialEncryption)
     }
 
     @Test
@@ -83,6 +95,9 @@ class ServerRepositoryTest {
 
     @Test
     fun `delete removes passwords from CredentialEncryption`() = runTest {
+        val tempDir = java.io.File.createTempFile("test", "dir").apply { delete(); mkdirs() }
+        every { context.filesDir } returns tempDir
+        coEvery { bookDao.getDownloadedBooksForServer(10L) } returns emptyList()
         coEvery { serverDao.deleteById(10L) } returns Unit
         every { credentialEncryption.removePassword(any()) } returns Unit
         every { grimmoryTokenManager.logout(10L) } returns Unit

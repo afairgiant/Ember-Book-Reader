@@ -9,7 +9,35 @@ data class ReaderPreferences(
     val theme: ReaderTheme = ReaderTheme.SYSTEM,
     val isPaginated: Boolean = true,
     val brightness: Float = -1f,
+    val orientationLock: OrientationLock = OrientationLock.AUTO,
+    val textAlign: TextAlign = TextAlign.START,
+    val publisherStyles: Boolean = true,
+    val pageMargins: Float = 1.0f,
+    val wordSpacing: Float = 0f,
+    val letterSpacing: Float = 0f,
+    val leftTapZone: TapZoneBehavior = TapZoneBehavior.PREVIOUS_PAGE,
+    val centerTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
+    val rightTapZone: TapZoneBehavior = TapZoneBehavior.NEXT_PAGE,
 )
+
+enum class TapZoneBehavior(val displayName: String) {
+    PREVIOUS_PAGE("Previous Page"),
+    NEXT_PAGE("Next Page"),
+    TOGGLE_CHROME("Toggle Menu"),
+    NOTHING("Nothing"),
+}
+
+enum class TextAlign(val displayName: String) {
+    START("Left"),
+    JUSTIFY("Justify"),
+    CENTER("Center"),
+}
+
+enum class OrientationLock(val displayName: String) {
+    AUTO("Auto"),
+    PORTRAIT("Portrait"),
+    LANDSCAPE("Landscape"),
+}
 
 enum class FontFamily(val displayName: String, val cssValue: String?) {
     SYSTEM("System Default", null),
