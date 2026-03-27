@@ -224,7 +224,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Reduce motion option
 
 ### Notifications
-- [ ] Download complete notification
+- [x] Download complete notification
 - [ ] Sync complete notification
 - [ ] Daily reading reminder (configurable time)
 - [ ] New books available on server notification

@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import android.content.Context
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
+import com.ember.reader.ui.common.NotificationHelper
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -27,6 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
@@ -158,8 +162,8 @@ class LibraryViewModel @Inject constructor(
         _downloadingBooks.update { it + book.id }
         viewModelScope.launch {
             bookRepository.downloadBook(book, currentServer).onSuccess { downloadedBook ->
-                // Pull reading progress after download
                 pullProgressAfterDownload(downloadedBook, currentServer)
+                NotificationHelper.showDownloadComplete(context, book.title, book.id)
             }
             _downloadingBooks.update { it - book.id }
         }

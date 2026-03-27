@@ -8,6 +8,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.ember.reader.core.repository.AppPreferencesRepository
+import com.ember.reader.ui.common.NotificationHelper
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
@@ -51,6 +52,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        NotificationHelper.createChannels(this)
         initializeSync()
         runAutoCleanup()
     }
