@@ -147,6 +147,7 @@ fun EmberNavHost(
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
                     },
+                    onOpenStats = { navController.navigate(Routes.STATS) },
                 )
             }
 

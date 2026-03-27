@@ -36,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,6 +71,7 @@ fun ServerListScreen(
     onOpenLocalLibrary: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
+    onOpenStats: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -196,6 +199,24 @@ fun ServerListScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Add Server")
                             }
+                        }
+
+                        // Reading Statistics
+                        item {
+                            OutlinedButton(
+                                onClick = onOpenStats,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Reading Statistics")
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
