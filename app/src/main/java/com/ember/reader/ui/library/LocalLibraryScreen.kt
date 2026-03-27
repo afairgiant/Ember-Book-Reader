@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -104,6 +106,15 @@ fun LocalLibraryScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show snackbar when operation result changes
+    LaunchedEffect(operationResult) {
+        operationResult?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.dismissOperationResult()
+        }
+    }
 
     val isSelecting = selectedIds.isNotEmpty()
 
@@ -135,6 +146,7 @@ fun LocalLibraryScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Library", fontWeight = FontWeight.Bold) },
@@ -377,18 +389,6 @@ fun LocalLibraryScreen(
             )
         }
 
-        // Operation result dialog
-        operationResult?.let { result ->
-            AlertDialog(
-                onDismissRequest = viewModel::dismissOperationResult,
-                text = { Text(result) },
-                confirmButton = {
-                    TextButton(onClick = viewModel::dismissOperationResult) {
-                        Text("OK")
-                    }
-                },
-            )
-        }
     }
 }
 

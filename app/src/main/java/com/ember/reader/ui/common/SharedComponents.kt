@@ -43,6 +43,23 @@ fun ErrorScreen(
     }
 }
 
+/** Converts raw exception messages to user-friendly error strings. */
+fun friendlyErrorMessage(error: Throwable): String = when {
+    error.message?.contains("Unable to resolve host") == true -> "Can't reach server — check your internet connection"
+    error.message?.contains("timeout") == true -> "Connection timed out — server may be down"
+    error.message?.contains("Connection refused") == true -> "Connection refused — server may be offline"
+    error.message?.contains("SSL") == true || error.message?.contains("Certificate") == true ->
+        "SSL/certificate error — check your server's HTTPS setup"
+    error.message?.contains("401") == true -> "Authentication failed — check your credentials"
+    error.message?.contains("403") == true -> "Access denied — you may not have permission"
+    error.message?.contains("404") == true -> "Not found — the resource doesn't exist on this server"
+    error.message?.contains("500") == true -> "Server error — try again later"
+    error is java.net.UnknownHostException -> "Can't reach server — check your internet connection"
+    error is java.net.ConnectException -> "Can't connect to server"
+    error is java.net.SocketTimeoutException -> "Connection timed out"
+    else -> error.message ?: "An unexpected error occurred"
+}
+
 val BookCoverPlaceholderColors = listOf(
     Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
     Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),

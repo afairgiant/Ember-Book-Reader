@@ -10,6 +10,7 @@ import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +87,14 @@ class CatalogViewModel @Inject constructor(
     }
 
     private suspend fun fetchGrimmoryCatalog(server: Server) {
+        try {
+        fetchGrimmoryCatalogInner(server)
+        } catch (e: Exception) {
+            _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
+        }
+    }
+
+    private suspend fun fetchGrimmoryCatalogInner(server: Server) {
         val entries = mutableListOf<OpdsFeedEntry>()
 
         // Continue Reading
@@ -200,7 +209,7 @@ class CatalogViewModel @Inject constructor(
                 )
             },
             onFailure = { error ->
-                _uiState.value = CatalogUiState.Error(error.message ?: "Failed to load series")
+                _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
             },
         )
     }
@@ -224,7 +233,7 @@ class CatalogViewModel @Inject constructor(
                 )
             },
             onFailure = { error ->
-                _uiState.value = CatalogUiState.Error(error.message ?: "Failed to load authors")
+                _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
             },
         )
     }
@@ -241,7 +250,7 @@ class CatalogViewModel @Inject constructor(
                 _uiState.value = CatalogUiState.Success(feed = feed)
             },
             onFailure = { error ->
-                _uiState.value = CatalogUiState.Error(error.message ?: "Failed to load catalog")
+                _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
             },
         )
     }

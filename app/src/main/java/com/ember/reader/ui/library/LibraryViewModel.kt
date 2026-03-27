@@ -154,6 +154,9 @@ class LibraryViewModel @Inject constructor(
                     _nextPagePath.value = page.nextPagePath
                 }
             }
+            result.onFailure {
+                timber.log.Timber.w(it, "LibraryVM: refresh failed")
+            }
             _isRefreshing.value = false
         }
     }

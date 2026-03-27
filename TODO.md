@@ -140,7 +140,7 @@ Full API reference: `docs/grimmory-api.md`
 ### Offline
 - [ ] Queue downloads for when network is available
 - [x] Offline indicator in UI (banner on home screen when no network)
-- [ ] Graceful degradation when server is unreachable
+- [x] Graceful degradation when server is unreachable (cached data shown, friendly error messages, retry buttons)
 
 ## Reader Features (Standard in E-Readers)
 
@@ -230,12 +230,13 @@ Full API reference: `docs/grimmory-api.md`
 ### Notifications & In-App Feedback
 - [x] Download complete notification (system notification)
 - [x] Sync complete notification (shown after SyncWorker completes)
-- [ ] In-app snackbar/toast system for transient feedback (success, errors, info)
-- [ ] Manual sync success/failure feedback (push/pull result shown as snackbar)
-- [ ] Download started/progress/complete snackbar with "Open" action
+- [x] In-app snackbar system for transient feedback (replaces AlertDialogs in Library + Book Details)
+- [x] Manual sync success/failure feedback (push/pull result shown as snackbar)
+- [x] Download success/failure snackbar on Book Details screen
+- [ ] Download progress indicator with "Open" action
 - [ ] Sync conflict notification (remote progress differs from local)
-- [ ] Server connection error feedback (couldn't reach server, auth expired)
-- [ ] Book import success/failure notification
+- [x] Server connection error feedback (friendly messages for timeout, DNS, SSL, auth, 500 errors)
+- [x] Book import success/failure notification
 - [ ] Daily reading reminder (configurable time)
 - [ ] New books available on server notification
 - [ ] Reading milestone notifications (finished book, streak achievements)

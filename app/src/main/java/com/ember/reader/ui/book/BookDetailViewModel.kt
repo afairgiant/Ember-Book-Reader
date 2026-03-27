@@ -49,6 +49,11 @@ class BookDetailViewModel @Inject constructor(
     private val _downloading = MutableStateFlow(false)
     val downloading: StateFlow<Boolean> = _downloading.asStateFlow()
 
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    fun dismissMessage() { _message.value = null }
+
     private val _coverAuthHeader = MutableStateFlow<String?>(null)
     val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
 
@@ -108,6 +113,9 @@ class BookDetailViewModel @Inject constructor(
                 _book.value = downloadedBook
                 pullProgressAfterDownload(downloadedBook, server)
                 NotificationHelper.showDownloadComplete(context, book.title, book.id)
+                _message.value = "Downloaded successfully"
+            }.onFailure {
+                _message.value = "Download failed: ${it.message}"
             }
             _downloading.value = false
         }
@@ -146,6 +154,10 @@ class BookDetailViewModel @Inject constructor(
             grimmoryClient.updateReadStatus(server.url, server.id, grimmoryBookId, status)
                 .onSuccess {
                     _readStatus.value = status
+                    _message.value = "Status updated to ${status.name.lowercase().replaceFirstChar { it.uppercase() }}"
+                }
+                .onFailure {
+                    _message.value = "Failed to update status"
                 }
         }
     }
