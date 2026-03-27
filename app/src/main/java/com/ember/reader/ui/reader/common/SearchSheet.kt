@@ -79,11 +79,11 @@ fun SearchSheet(
                                 val iterator = publication.search(query)
                                 if (iterator != null) {
                                     val allResults = mutableListOf<Locator>()
-                                    when (val page = iterator.next()) {
-                                        is Try.Success -> {
-                                            page.value?.let { allResults.addAll(it.locators) }
-                                        }
-                                        is Try.Failure -> {}
+                                    // Iterate through all pages of results
+                                    iterator.forEach { collection ->
+                                        allResults.addAll(collection.locators)
+                                        // Update results incrementally
+                                        results = allResults.toList()
                                     }
                                     results = allResults
                                     noResults = allResults.isEmpty()
