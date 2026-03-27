@@ -107,6 +107,7 @@ fun EpubReaderScreen(
     var showSearch by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
+    var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     val scope = rememberCoroutineScope()
 
     when (val state = uiState) {
@@ -162,20 +163,14 @@ fun EpubReaderScreen(
                 val nav = navigator ?: return@LaunchedEffect
                 nav.submitPreferences(preferences.toEpubPreferences())
 
-                // Remove old listeners and add configurable tap handler
+                // Remove old listeners
                 dirNavAdapter?.let { nav.removeInputListener(it) }
                 dirNavAdapter = null
+                currentTapListener?.let { nav.removeInputListener(it) }
 
-                // Add directional navigation for paginated mode (handles swipe)
-                if (preferences.isPaginated) {
-                    val adapter = DirectionalNavigationAdapter(nav)
-                    dirNavAdapter = adapter
-                    nav.addInputListener(adapter)
-                }
-
-                // Add configurable tap zone handler
+                // Configurable tap zone handler
                 val tapPrefs = preferences
-                nav.addInputListener(object : InputListener {
+                val listener = object : InputListener {
                     override fun onTap(event: TapEvent): Boolean {
                         val viewWidth = nav.requireView().width.toFloat()
                         val tapX = event.point.x
@@ -195,7 +190,9 @@ fun EpubReaderScreen(
                         }
                         return true
                     }
-                })
+                }
+                currentTapListener = listener
+                nav.addInputListener(listener)
             }
 
             // Handle sync navigation (accept remote progress)
