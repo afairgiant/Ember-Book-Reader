@@ -39,4 +39,9 @@ data class BookEntity(
     val seriesIndex: Float? = null,
     val addedAt: Instant,
     val downloadedAt: Instant? = null,
+    val publisher: String? = null,
+    val language: String? = null,
+    val subjects: String? = null,
+    val pageCount: Int? = null,
+    val publishedDate: String? = null,
 )

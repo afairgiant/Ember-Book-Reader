@@ -511,19 +511,32 @@ class BookRepository @Inject constructor(
         recovered
     }
 
-    private data class BookMetadata(
+    data class BookMetadata(
         val title: String,
         val author: String?,
         val coverUrl: String?,
+        val publisher: String? = null,
+        val language: String? = null,
+        val subjects: String? = null,
+        val pageCount: Int? = null,
+        val publishedDate: String? = null,
+        val description: String? = null,
     )
 
-    private suspend fun extractMetadata(file: File): BookMetadata {
+    suspend fun extractMetadata(file: File): BookMetadata {
         val publication = bookOpener.open(file).getOrNull()
             ?: return BookMetadata(file.nameWithoutExtension, null, null)
 
-        val title = publication.metadata.title?.takeIf { it.isNotBlank() }
+        val meta = publication.metadata
+        val title = meta.title?.takeIf { it.isNotBlank() }
             ?: file.nameWithoutExtension
-        val author = publication.metadata.authors.firstOrNull()?.name
+        val author = meta.authors.firstOrNull()?.name
+        val publisher = meta.publishers.firstOrNull()?.name
+        val language = meta.languages.firstOrNull()
+        val subjects = meta.subjects.map { it.name }.takeIf { it.isNotEmpty() }?.joinToString(", ")
+        val pageCount = meta.numberOfPages
+        val publishedDate = meta.published?.toString()
+        val description = meta.description
 
         // Extract and save cover image
         val coverUrl = try {
@@ -543,6 +556,24 @@ class BookRepository @Inject constructor(
         }
 
         publication.close()
-        return BookMetadata(title, author, coverUrl)
+        return BookMetadata(title, author, coverUrl, publisher, language, subjects, pageCount, publishedDate, description)
+    }
+
+    /** Update a book's metadata from its embedded file data (called after download). */
+    suspend fun enrichBookMetadata(bookId: String) {
+        val entity = bookDao.getById(bookId) ?: return
+        val localPath = entity.localPath ?: return
+        val metadata = extractMetadata(File(localPath))
+        bookDao.update(
+            entity.copy(
+                publisher = metadata.publisher ?: entity.publisher,
+                language = metadata.language ?: entity.language,
+                subjects = metadata.subjects ?: entity.subjects,
+                pageCount = metadata.pageCount ?: entity.pageCount,
+                publishedDate = metadata.publishedDate ?: entity.publishedDate,
+                description = metadata.description ?: entity.description,
+                coverUrl = metadata.coverUrl ?: entity.coverUrl,
+            ),
+        )
     }
 }

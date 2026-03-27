@@ -28,7 +28,7 @@ import com.ember.reader.core.database.entity.ServerEntity
         HighlightEntity::class,
         ReadingSessionEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -60,6 +60,16 @@ abstract class EmberDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX index_reading_sessions_bookId ON reading_sessions(bookId)")
                 db.execSQL("CREATE INDEX index_reading_sessions_startTime ON reading_sessions(startTime)")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE books ADD COLUMN publisher TEXT")
+                db.execSQL("ALTER TABLE books ADD COLUMN language TEXT")
+                db.execSQL("ALTER TABLE books ADD COLUMN subjects TEXT")
+                db.execSQL("ALTER TABLE books ADD COLUMN pageCount INTEGER")
+                db.execSQL("ALTER TABLE books ADD COLUMN publishedDate TEXT")
             }
         }
 

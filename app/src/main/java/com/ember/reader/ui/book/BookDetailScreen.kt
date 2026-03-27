@@ -340,11 +340,16 @@ fun BookDetailScreen(
 
                         InfoRow("Format", currentBook.format.name)
                         currentBook.author?.let { InfoRow("Author", it) }
+                        currentBook.publisher?.let { InfoRow("Publisher", it) }
                         currentBook.series?.let { InfoRow("Series", it) }
                         currentBook.seriesIndex?.let {
                             val idx = if (it == it.toLong().toFloat()) "${it.toLong()}" else "$it"
                             InfoRow("Volume", idx)
                         }
+                        currentBook.language?.let { InfoRow("Language", it.uppercase()) }
+                        currentBook.pageCount?.let { InfoRow("Pages", "$it") }
+                        currentBook.publishedDate?.let { InfoRow("Published", it) }
+                        currentBook.subjects?.let { InfoRow("Subjects", it) }
                         if (currentBook.isDownloaded) {
                             InfoRow("Status", "Downloaded")
                         } else if (currentBook.downloadUrl != null) {

@@ -18,6 +18,11 @@ data class Book(
     val seriesIndex: Float? = null,
     val addedAt: Instant = Instant.now(),
     val downloadedAt: Instant? = null,
+    val publisher: String? = null,
+    val language: String? = null,
+    val subjects: String? = null,
+    val pageCount: Int? = null,
+    val publishedDate: String? = null,
 ) {
     val isDownloaded: Boolean get() = localPath != null
     val isLocal: Boolean get() = serverId == null

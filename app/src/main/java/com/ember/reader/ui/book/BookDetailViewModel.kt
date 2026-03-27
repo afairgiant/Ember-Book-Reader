@@ -58,6 +58,13 @@ class BookDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // Enrich metadata from file if downloaded but missing metadata
+            val initial = bookRepository.getById(bookId)
+            if (initial?.isDownloaded == true && initial.publisher == null && initial.pageCount == null) {
+                bookRepository.enrichBookMetadata(bookId)
+            }
+        }
+        viewModelScope.launch {
             bookRepository.observeById(bookId).collect { book ->
                 _book.value = book
                 book?.serverId?.let { loadServer(it) }
