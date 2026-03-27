@@ -70,6 +70,19 @@ class LibraryViewModel @Inject constructor(
     private val _coverAuthHeader = MutableStateFlow<String?>(null)
     val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
 
+    private val _nextPagePath = MutableStateFlow<String?>(null)
+    val hasMore: StateFlow<Boolean> = _nextPagePath.asStateFlow()
+        .let { flow ->
+            kotlinx.coroutines.flow.MutableStateFlow(false).also { hasMoreFlow ->
+                viewModelScope.launch {
+                    _nextPagePath.collect { hasMoreFlow.value = it != null }
+                }
+            }
+        }
+
+    private val _loadingMore = MutableStateFlow(false)
+    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
+
     val uiState: StateFlow<LibraryUiState> = combine(
         bookRepository.observeByServer(serverId),
         _downloadingBooks,
@@ -119,6 +132,7 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
         _fetchedBookIds.value = null // Reset for fresh load
+        _nextPagePath.value = null
         _isRefreshing.value = true
         viewModelScope.launch {
             val result = if (catalogPath.startsWith("grimmory:")) {
@@ -129,15 +143,64 @@ class LibraryViewModel @Inject constructor(
             if (isSubcategory || catalogPath.startsWith("grimmory:")) {
                 result.onSuccess { page ->
                     val newIds = page.resolvedBookIds.toSet()
-                    // Accumulate IDs (for pagination) rather than replacing
                     val existing = _fetchedBookIds.value ?: emptySet()
                     val combined = existing + newIds
                     timber.log.Timber.d("LibraryVM: fetchedBookIds count=${combined.size} (was ${existing.size}, new ${newIds.size})")
                     _fetchedBookIds.value = combined
+                    _nextPagePath.value = page.nextPagePath
+                }
+            } else {
+                result.onSuccess { page ->
+                    _nextPagePath.value = page.nextPagePath
                 }
             }
             _isRefreshing.value = false
         }
+    }
+
+    fun loadMore() {
+        val nextPath = _nextPagePath.value ?: return
+        val currentServer = server ?: return
+        if (_loadingMore.value) return
+
+        _loadingMore.value = true
+        viewModelScope.launch {
+            val result = if (nextPath.startsWith("grimmory:")) {
+                val pageNum = nextPath.removePrefix("grimmory:page=").toIntOrNull() ?: 1
+                refreshFromGrimmoryPage(currentServer, pageNum)
+            } else {
+                bookRepository.refreshFromServer(currentServer, path = nextPath)
+            }
+            result.onSuccess { page ->
+                val newIds = page.resolvedBookIds.toSet()
+                val existing = _fetchedBookIds.value ?: emptySet()
+                _fetchedBookIds.value = existing + newIds
+                _nextPagePath.value = page.nextPagePath
+            }
+            _loadingMore.value = false
+        }
+    }
+
+    private suspend fun refreshFromGrimmoryPage(
+        server: com.ember.reader.core.model.Server,
+        page: Int,
+    ): Result<com.ember.reader.core.opds.OpdsBookPage> {
+        val paramString = catalogPath.removePrefix("grimmory:")
+        val params = paramString.split("&")
+            .filter { "=" in it }
+            .associate {
+                val (key, value) = it.split("=", limit = 2)
+                key to value
+            }
+        return bookRepository.refreshFromGrimmory(
+            server = server,
+            page = page,
+            libraryId = params["libraryId"]?.toLongOrNull(),
+            shelfId = params["shelfId"]?.toLongOrNull(),
+            seriesName = params["seriesName"],
+            status = params["status"],
+            search = params["search"],
+        )
     }
 
     private suspend fun refreshFromGrimmory(server: com.ember.reader.core.model.Server): Result<com.ember.reader.core.opds.OpdsBookPage> {

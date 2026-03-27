@@ -20,7 +20,7 @@
 - [ ] Requires custom Readium navigator or workaround — Readium's scroll mode is still per-resource
 
 ### PDF Reader
-- [ ] Apply reader preferences to PDF navigator (currently only EPUB gets preferences)
+- [x] Apply reader preferences to PDF navigator (brightness, orientation, keep screen on, preferences sheet)
 - [ ] PDF-specific controls (zoom, page fit mode)
 
 ## Sync
@@ -51,7 +51,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Push progress: `POST /api/v1/books/progress` via `fileProgress.progressPercent` on reader close + SyncWorker
 - [x] Pull progress: `GET /api/v1/app/books/{bookId}` on reader open (supplement kosync pull)
 - [x] Continue Reading: `GET /api/v1/app/books/continue-reading` pulled in SyncWorker
-- [ ] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF) — API ready, not wired to UI yet
+- [x] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF) — wired to Book Details screen
 - [x] Reading sessions: `POST /api/v1/reading-sessions` — records duration, start/end progress on reader close (skips < 30s)
 
 **Phase 2 — Catalog via App API (alternative to OPDS):**
@@ -96,7 +96,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Catalog Browser
 - [x] Catalog search (search icon in top bar, navigates to book results)
-- [ ] Pagination support (load more books on scroll — `nextPagePath` exists but UI doesn't paginate)
+- [x] Pagination support (infinite scroll — loads more books when near end of list via nextPagePath / Grimmory page param)
 - [ ] "Featured Publication" card at bottom of catalog (shown in designs)
 
 ### Server Form
@@ -180,9 +180,9 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Current reading streak counter (consecutive days)
 
 ### Book Details Screen
-- [ ] Dedicated book detail page (cover, description, metadata, series info)
+- [x] Dedicated book detail page (cover, description, metadata, series info)
 - [ ] Rating (personal + Goodreads if available from Grimmory)
-- [ ] Read status toggle (Unread/Reading/Read/DNF)
+- [x] Read status toggle (Unread/Reading/Read/DNF) — Grimmory API
 - [ ] Shelves/collections management
 - [ ] Download progress indicator
 - [ ] Similar books / recommendations (Grimmory has `/api/v1/books/{id}/recommendations`)
@@ -227,11 +227,18 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] High contrast mode
 - [ ] Reduce motion option
 
-### Notifications
-- [x] Download complete notification
+### Notifications & In-App Feedback
+- [x] Download complete notification (system notification)
 - [x] Sync complete notification (shown after SyncWorker completes)
+- [ ] In-app snackbar/toast system for transient feedback (success, errors, info)
+- [ ] Manual sync success/failure feedback (push/pull result shown as snackbar)
+- [ ] Download started/progress/complete snackbar with "Open" action
+- [ ] Sync conflict notification (remote progress differs from local)
+- [ ] Server connection error feedback (couldn't reach server, auth expired)
+- [ ] Book import success/failure notification
 - [ ] Daily reading reminder (configurable time)
 - [ ] New books available on server notification
+- [ ] Reading milestone notifications (finished book, streak achievements)
 
 ### Widgets
 - [ ] Home screen widget showing current book + progress

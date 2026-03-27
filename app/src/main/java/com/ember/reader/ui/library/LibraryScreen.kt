@@ -18,7 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
@@ -75,6 +80,8 @@ fun LibraryScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
     val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
+    val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
+    val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -151,9 +158,11 @@ fun LibraryScreen(
                                 downloadingIds = state.downloadingBookIds,
                                 coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
-                                if (book.isDownloaded) onOpenReader(book.id, book.format)
-                            },
+                                    if (book.isDownloaded) onOpenReader(book.id, book.format)
+                                },
                                 onDownloadClick = viewModel::downloadBook,
+                                loadingMore = loadingMore,
+                                onLoadMore = if (hasMore) viewModel::loadMore else null,
                             )
                         } else {
                             BookList(
@@ -161,9 +170,11 @@ fun LibraryScreen(
                                 downloadingIds = state.downloadingBookIds,
                                 coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
-                                if (book.isDownloaded) onOpenReader(book.id, book.format)
-                            },
+                                    if (book.isDownloaded) onOpenReader(book.id, book.format)
+                                },
                                 onDownloadClick = viewModel::downloadBook,
+                                loadingMore = loadingMore,
+                                onLoadMore = if (hasMore) viewModel::loadMore else null,
                             )
                         }
                     }
@@ -180,8 +191,26 @@ private fun BookGrid(
     coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
+    loadingMore: Boolean = false,
+    onLoadMore: (() -> Unit)? = null,
 ) {
+    val gridState = rememberLazyGridState()
+
+    // Trigger load more when near end
+    if (onLoadMore != null) {
+        LaunchedEffect(gridState) {
+            snapshotFlow {
+                val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                val totalItems = gridState.layoutInfo.totalItemsCount
+                lastVisible >= totalItems - 6
+            }.collect { nearEnd ->
+                if (nearEnd) onLoadMore()
+            }
+        }
+    }
+
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(120.dp),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -195,6 +224,16 @@ private fun BookGrid(
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) },
             )
+        }
+        if (loadingMore) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+            }
         }
     }
 }
@@ -313,8 +352,25 @@ private fun BookList(
     coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
+    loadingMore: Boolean = false,
+    onLoadMore: (() -> Unit)? = null,
 ) {
+    val listState = rememberLazyListState()
+
+    if (onLoadMore != null) {
+        LaunchedEffect(listState) {
+            snapshotFlow {
+                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                val totalItems = listState.layoutInfo.totalItemsCount
+                lastVisible >= totalItems - 4
+            }.collect { nearEnd ->
+                if (nearEnd) onLoadMore()
+            }
+        }
+    }
+
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -326,6 +382,16 @@ private fun BookList(
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) },
             )
+        }
+        if (loadingMore) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+            }
         }
     }
 }

@@ -1,20 +1,29 @@
 package com.ember.reader.ui.reader.pdf
 
+import android.content.pm.ActivityInfo
+import android.view.WindowManager
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.core.readium.toLocator
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
+import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
+import kotlinx.coroutines.launch
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
@@ -32,9 +41,57 @@ fun PdfReaderScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
+    val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+
+    // Keep screen on while reading
+    val view = LocalView.current
+    DisposableEffect(keepScreenOn) {
+        if (keepScreenOn) {
+            view.keepScreenOn = true
+        }
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Apply orientation lock
+    val context = LocalContext.current
+    DisposableEffect(preferences.orientationLock) {
+        val activity = context as? android.app.Activity
+        if (activity != null) {
+            activity.requestedOrientation = when (preferences.orientationLock) {
+                com.ember.reader.core.model.OrientationLock.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                com.ember.reader.core.model.OrientationLock.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                com.ember.reader.core.model.OrientationLock.AUTO -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+        onDispose {
+            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    // Apply brightness setting to window
+    DisposableEffect(preferences.brightness) {
+        val activity = context as? android.app.Activity
+        if (activity != null && preferences.brightness >= 0) {
+            val params = activity.window.attributes
+            params.screenBrightness = preferences.brightness
+            activity.window.attributes = params
+        }
+        onDispose {
+            val act = context as? android.app.Activity
+            if (act != null) {
+                val params = act.window.attributes
+                params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                act.window.attributes = params
+            }
+        }
+    }
+
     var showBookmarks by remember { mutableStateOf(false) }
+    var showPreferences by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     when (val state = uiState) {
         ReaderUiState.Loading -> LoadingScreen()
@@ -52,7 +109,7 @@ fun PdfReaderScreen(
                 onNavigateBack = onNavigateBack,
                 onToggleBookmark = viewModel::addBookmark,
                 onOpenTableOfContents = {},
-                onOpenPreferences = {},
+                onOpenPreferences = { showPreferences = true },
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -75,9 +132,22 @@ fun PdfReaderScreen(
             if (showBookmarks) {
                 BookmarksSheet(
                     bookmarks = bookmarks,
-                    onNavigate = { showBookmarks = false },
+                    onNavigate = { bookmark ->
+                        bookmark.locatorJson.toLocator()?.let { locator ->
+                            // PDF navigator doesn't support go() the same way
+                        }
+                        showBookmarks = false
+                    },
                     onDelete = viewModel::deleteBookmark,
                     onDismiss = { showBookmarks = false },
+                )
+            }
+
+            if (showPreferences) {
+                ReaderPreferencesSheet(
+                    preferences = preferences,
+                    onPreferencesChanged = viewModel::updatePreferences,
+                    onDismiss = { showPreferences = false },
                 )
             }
 
