@@ -202,7 +202,7 @@ class ReaderViewModel @Inject constructor(
         val fileHash = loadedBook.fileHash
             ?: return null.also { Timber.d("Sync: no fileHash") }
         val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
-        if (syncFrequency == SyncFrequency.MANUAL) return null.also { Timber.d("Sync: frequency is MANUAL, skipping") }
+        if (!syncFrequency.syncOnOpenClose) return null.also { Timber.d("Sync: open/close sync disabled (${syncFrequency.name})") }
         val server = serverRepository.getById(serverId)
             ?: return null.also { Timber.d("Sync: server $serverId not found") }
         if (server.kosyncUsername.isBlank()) return null.also { Timber.d("Sync: kosync username blank") }
