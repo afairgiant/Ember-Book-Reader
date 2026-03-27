@@ -44,9 +44,13 @@ class ReaderPreferencesRepository @Inject constructor(
         val PAGE_MARGINS = floatPreferencesKey("page_margins")
         val WORD_SPACING = floatPreferencesKey("word_spacing")
         val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val TOP_TAP_ZONE = stringPreferencesKey("top_tap_zone")
         val LEFT_TAP_ZONE = stringPreferencesKey("left_tap_zone")
         val CENTER_TAP_ZONE = stringPreferencesKey("center_tap_zone")
         val RIGHT_TAP_ZONE = stringPreferencesKey("right_tap_zone")
+        val TOP_ZONE_HEIGHT = floatPreferencesKey("top_zone_height")
+        val LEFT_ZONE_WIDTH = floatPreferencesKey("left_zone_width")
+        val RIGHT_ZONE_WIDTH = floatPreferencesKey("right_zone_width")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -72,15 +76,21 @@ class ReaderPreferencesRepository @Inject constructor(
                 pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
                 wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
                 letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
+                topTapZone = prefs[Keys.TOP_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.TOGGLE_CHROME,
                 leftTapZone = prefs[Keys.LEFT_TAP_ZONE]?.let {
                     runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
                 } ?: TapZoneBehavior.PREVIOUS_PAGE,
                 centerTapZone = prefs[Keys.CENTER_TAP_ZONE]?.let {
                     runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
-                } ?: TapZoneBehavior.TOGGLE_CHROME,
+                } ?: TapZoneBehavior.NOTHING,
                 rightTapZone = prefs[Keys.RIGHT_TAP_ZONE]?.let {
                     runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
                 } ?: TapZoneBehavior.NEXT_PAGE,
+                topZoneHeight = prefs[Keys.TOP_ZONE_HEIGHT] ?: 0.15f,
+                leftZoneWidth = prefs[Keys.LEFT_ZONE_WIDTH] ?: 0.33f,
+                rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f,
             )
         }
 
@@ -100,9 +110,13 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
             prefs[Keys.WORD_SPACING] = preferences.wordSpacing
             prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
+            prefs[Keys.TOP_TAP_ZONE] = preferences.topTapZone.name
             prefs[Keys.LEFT_TAP_ZONE] = preferences.leftTapZone.name
             prefs[Keys.CENTER_TAP_ZONE] = preferences.centerTapZone.name
             prefs[Keys.RIGHT_TAP_ZONE] = preferences.rightTapZone.name
+            prefs[Keys.TOP_ZONE_HEIGHT] = preferences.topZoneHeight
+            prefs[Keys.LEFT_ZONE_WIDTH] = preferences.leftZoneWidth
+            prefs[Keys.RIGHT_ZONE_WIDTH] = preferences.rightZoneWidth
         }
     }
 }

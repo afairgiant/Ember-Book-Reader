@@ -15,9 +15,13 @@ data class ReaderPreferences(
     val pageMargins: Float = 1.0f,
     val wordSpacing: Float = 0f,
     val letterSpacing: Float = 0f,
+    val topTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
     val leftTapZone: TapZoneBehavior = TapZoneBehavior.PREVIOUS_PAGE,
-    val centerTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
+    val centerTapZone: TapZoneBehavior = TapZoneBehavior.NOTHING,
     val rightTapZone: TapZoneBehavior = TapZoneBehavior.NEXT_PAGE,
+    val topZoneHeight: Float = 0.15f,
+    val leftZoneWidth: Float = 0.33f,
+    val rightZoneWidth: Float = 0.33f,
 )
 
 enum class TapZoneBehavior(val displayName: String) {

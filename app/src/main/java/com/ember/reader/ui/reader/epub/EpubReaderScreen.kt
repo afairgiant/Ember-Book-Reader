@@ -172,13 +172,24 @@ fun EpubReaderScreen(
                 val tapPrefs = preferences
                 val listener = object : InputListener {
                     override fun onTap(event: TapEvent): Boolean {
-                        val viewWidth = nav.requireView().width.toFloat()
+                        val view = nav.requireView()
+                        val viewWidth = view.width.toFloat()
+                        val viewHeight = view.height.toFloat()
                         val tapX = event.point.x
+                        val tapY = event.point.y
+
+                        // Determine which zone was tapped
                         val zone = when {
-                            tapX < viewWidth / 3f -> tapPrefs.leftTapZone
-                            tapX > viewWidth * 2f / 3f -> tapPrefs.rightTapZone
+                            // Top strip (configurable height, default 15%)
+                            tapY < viewHeight * tapPrefs.topZoneHeight -> tapPrefs.topTapZone
+                            // Left zone (configurable width)
+                            tapX < viewWidth * tapPrefs.leftZoneWidth -> tapPrefs.leftTapZone
+                            // Right zone (configurable width)
+                            tapX > viewWidth * (1f - tapPrefs.rightZoneWidth) -> tapPrefs.rightTapZone
+                            // Center (everything else)
                             else -> tapPrefs.centerTapZone
                         }
+
                         when (zone) {
                             com.ember.reader.core.model.TapZoneBehavior.PREVIOUS_PAGE ->
                                 scope.launch { nav.goBackward() }

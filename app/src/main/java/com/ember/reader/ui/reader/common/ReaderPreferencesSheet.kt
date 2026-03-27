@@ -259,6 +259,9 @@ fun ReaderPreferencesSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel("Tap Zones")
+            TapZoneSelector("Top tap", preferences.topTapZone) {
+                onPreferencesChanged(preferences.copy(topTapZone = it))
+            }
             TapZoneSelector("Left tap", preferences.leftTapZone) {
                 onPreferencesChanged(preferences.copy(leftTapZone = it))
             }
@@ -268,6 +271,28 @@ fun ReaderPreferencesSheet(
             TapZoneSelector("Right tap", preferences.rightTapZone) {
                 onPreferencesChanged(preferences.copy(rightTapZone = it))
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Top zone height: ${(preferences.topZoneHeight * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Slider(
+                value = preferences.topZoneHeight,
+                onValueChange = { onPreferencesChanged(preferences.copy(topZoneHeight = it)) },
+                valueRange = 0.05f..0.30f,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Left/Right zone width: ${(preferences.leftZoneWidth * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Slider(
+                value = preferences.leftZoneWidth,
+                onValueChange = {
+                    onPreferencesChanged(preferences.copy(leftZoneWidth = it, rightZoneWidth = it))
+                },
+                valueRange = 0.15f..0.45f,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
