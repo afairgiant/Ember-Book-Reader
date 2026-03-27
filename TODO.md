@@ -118,9 +118,9 @@ Full API reference: `docs/grimmory-api.md`
 ## Technical
 
 ### Testing
-- [ ] Unit tests for OPDS parser
-- [ ] Unit tests for PartialMd5 (verify KOReader compatibility)
-- [ ] Unit tests for URL builder
+- [x] Unit tests for OPDS parser (OpdsParserTest — 24 tests)
+- [x] Unit tests for PartialMd5 (PartialMd5Test — 8 tests)
+- [x] Unit tests for URL builder (UrlBuilderTest — 7 tests)
 - [ ] Integration tests for kosync push/pull
 - [ ] UI tests for critical flows (connect server, download book, open reader)
 
