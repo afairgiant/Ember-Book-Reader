@@ -42,6 +42,9 @@ class SettingsViewModel @Inject constructor(
     val keepScreenOn: StateFlow<Boolean> = appPreferencesRepository.keepScreenOnFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val autoCleanup: StateFlow<Boolean> = appPreferencesRepository.autoCleanupFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -78,6 +81,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateKeepScreenOn(enabled: Boolean) {
         viewModelScope.launch { appPreferencesRepository.updateKeepScreenOn(enabled) }
+    }
+
+    fun updateAutoCleanup(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateAutoCleanup(enabled) }
     }
 
     fun syncNow() {

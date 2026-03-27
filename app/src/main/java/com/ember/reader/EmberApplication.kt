@@ -7,6 +7,8 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.ember.reader.core.repository.AppPreferencesRepository
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -30,6 +32,12 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
     @Inject
     lateinit var syncPreferencesRepository: SyncPreferencesRepository
 
+    @Inject
+    lateinit var appPreferencesRepository: AppPreferencesRepository
+
+    @Inject
+    lateinit var bookRepository: BookRepository
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration by lazy {
@@ -44,6 +52,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
             Timber.plant(Timber.DebugTree())
         }
         initializeSync()
+        runAutoCleanup()
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -68,6 +77,15 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         applicationScope.launch {
             val frequency = syncPreferencesRepository.syncFrequencyFlow.first()
             syncScheduler.applyFrequency(frequency)
+        }
+    }
+
+    private fun runAutoCleanup() {
+        applicationScope.launch {
+            val enabled = appPreferencesRepository.autoCleanupFlow.first()
+            if (enabled) {
+                bookRepository.cleanupOldDownloads()
+            }
         }
     }
 }

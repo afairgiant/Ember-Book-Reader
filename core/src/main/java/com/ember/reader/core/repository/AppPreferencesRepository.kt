@@ -30,6 +30,7 @@ class AppPreferencesRepository @Inject constructor(
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -42,6 +43,9 @@ class AppPreferencesRepository @Inject constructor(
     val keepScreenOnFlow: Flow<Boolean> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.KEEP_SCREEN_ON] ?: false }
 
+    val autoCleanupFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUTO_CLEANUP] ?: false }
+
     suspend fun updateThemeMode(mode: ThemeMode) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.THEME_MODE] = mode.name
@@ -51,6 +55,12 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateKeepScreenOn(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.KEEP_SCREEN_ON] = enabled
+        }
+    }
+
+    suspend fun updateAutoCleanup(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUTO_CLEANUP] = enabled
         }
     }
 }

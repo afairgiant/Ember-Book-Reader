@@ -66,6 +66,7 @@ fun SettingsScreen(
     val readingStats by viewModel.readingStats.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+    val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -206,6 +207,29 @@ fun SettingsScreen(
                 Switch(
                     checked = keepScreenOn,
                     onCheckedChange = { viewModel.updateKeepScreenOn(it) },
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { viewModel.updateAutoCleanup(!autoCleanup) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Auto-cleanup old downloads", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Remove server downloads older than 90 days",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = autoCleanup,
+                    onCheckedChange = { viewModel.updateAutoCleanup(it) },
                 )
             }
 

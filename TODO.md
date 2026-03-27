@@ -113,7 +113,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Show available device storage alongside used
 - [x] Sort options (latest first, largest first, alphabetical)
 - [x] Batch delete
-- [ ] Auto-cleanup for old downloads (toggle + 90-day threshold on app startup)
+- [x] Auto-cleanup for old downloads (toggle in Profile + 90-day threshold on app startup)
 
 ## Technical
 

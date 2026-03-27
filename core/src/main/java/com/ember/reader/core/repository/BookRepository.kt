@@ -313,6 +313,19 @@ class BookRepository @Inject constructor(
         bookDao.updateLocalPath(bookId, null, null)
     }
 
+    suspend fun cleanupOldDownloads(daysOld: Int = 90): Int {
+        val cutoff = Instant.now().minus(java.time.Duration.ofDays(daysOld.toLong()))
+        val oldBooks = bookDao.getOldServerDownloads(cutoff)
+        var cleaned = 0
+        for (entity in oldBooks) {
+            entity.localPath?.let { path -> File(path).delete() }
+            bookDao.updateLocalPath(entity.id, null, null)
+            cleaned++
+        }
+        if (cleaned > 0) Timber.d("Auto-cleanup: removed $cleaned old downloads")
+        return cleaned
+    }
+
     data class RelinkMatch(
         val serverBookId: String,
         val serverName: String,
