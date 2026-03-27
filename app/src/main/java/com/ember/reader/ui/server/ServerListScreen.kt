@@ -74,6 +74,7 @@ fun ServerListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
+    val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
     Scaffold(
         topBar = {
@@ -96,14 +97,17 @@ fun ServerListScreen(
             )
         },
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            com.ember.reader.ui.common.OfflineBanner(isOffline = !networkAvailable)
             when (val state = uiState) {
                 ServerListUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
                 is ServerListUiState.Success -> {
                     LazyColumn(

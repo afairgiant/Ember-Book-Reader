@@ -136,7 +136,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Offline
 - [ ] Queue downloads for when network is available
-- [ ] Offline indicator in UI
+- [x] Offline indicator in UI (banner on home screen when no network)
 - [ ] Graceful degradation when server is unreachable
 
 ## Reader Features (Standard in E-Readers)
