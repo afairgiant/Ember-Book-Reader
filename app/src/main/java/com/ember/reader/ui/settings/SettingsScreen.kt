@@ -307,7 +307,7 @@ fun SettingsScreen(
             // About — long-press version to open developer logs
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Ember v0.1.2",
+                text = "Ember v0.1.3",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
