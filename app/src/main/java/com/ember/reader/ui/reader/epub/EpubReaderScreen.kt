@@ -33,6 +33,7 @@ import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.Color as ReadiumColor
 import org.readium.r2.navigator.preferences.FontFamily as ReadiumFontFamily
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.input.InputListener
@@ -272,24 +273,35 @@ fun EpubReaderScreen(
     }
 }
 
-private fun ReaderPreferences.toEpubPreferences(): EpubPreferences = EpubPreferences(
-    fontFamily = fontFamily.cssValue?.let { ReadiumFontFamily(it) },
-    fontSize = fontSize.toDouble() / 16.0,
-    lineHeight = lineHeight.toDouble(),
-    scroll = !isPaginated,
-    theme = when (theme) {
+private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
+    // Built-in themes use Readium's Theme enum; custom themes pass colors directly
+    val readiumTheme = when (theme) {
         ReaderTheme.LIGHT -> Theme.LIGHT
         ReaderTheme.DARK -> Theme.DARK
         ReaderTheme.SEPIA -> Theme.SEPIA
         ReaderTheme.SYSTEM -> null
-    },
-    textAlign = when (textAlign) {
-        com.ember.reader.core.model.TextAlign.START -> org.readium.r2.navigator.preferences.TextAlign.START
-        com.ember.reader.core.model.TextAlign.JUSTIFY -> org.readium.r2.navigator.preferences.TextAlign.JUSTIFY
-        com.ember.reader.core.model.TextAlign.CENTER -> org.readium.r2.navigator.preferences.TextAlign.CENTER
-    },
-    publisherStyles = publisherStyles,
-    pageMargins = pageMargins.toDouble(),
-    wordSpacing = wordSpacing.toDouble(),
-    letterSpacing = letterSpacing.toDouble(),
-)
+        else -> null // Custom themes don't use the Theme enum
+    }
+    val bgColor = if (!theme.isBuiltIn) ReadiumColor(theme.backgroundColor.toInt()) else null
+    val fgColor = if (!theme.isBuiltIn) ReadiumColor(theme.foregroundColor.toInt()) else null
+
+    return EpubPreferences(
+        fontFamily = fontFamily.cssValue?.let { ReadiumFontFamily(it) },
+        fontSize = fontSize.toDouble() / 16.0,
+        lineHeight = lineHeight.toDouble(),
+        scroll = !isPaginated,
+        theme = readiumTheme,
+        backgroundColor = bgColor,
+        textColor = fgColor,
+        hyphens = hyphenate,
+        textAlign = when (textAlign) {
+            com.ember.reader.core.model.TextAlign.START -> org.readium.r2.navigator.preferences.TextAlign.START
+            com.ember.reader.core.model.TextAlign.JUSTIFY -> org.readium.r2.navigator.preferences.TextAlign.JUSTIFY
+            com.ember.reader.core.model.TextAlign.CENTER -> org.readium.r2.navigator.preferences.TextAlign.CENTER
+        },
+        publisherStyles = publisherStyles,
+        pageMargins = pageMargins.toDouble(),
+        wordSpacing = wordSpacing.toDouble(),
+        letterSpacing = letterSpacing.toDouble(),
+    )
+}

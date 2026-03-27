@@ -44,6 +44,7 @@ class ReaderPreferencesRepository @Inject constructor(
         val PAGE_MARGINS = floatPreferencesKey("page_margins")
         val WORD_SPACING = floatPreferencesKey("word_spacing")
         val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val HYPHENATE = booleanPreferencesKey("hyphenate")
         val TOP_TAP_ZONE = stringPreferencesKey("top_tap_zone")
         val LEFT_TAP_ZONE = stringPreferencesKey("left_tap_zone")
         val CENTER_TAP_ZONE = stringPreferencesKey("center_tap_zone")
@@ -76,6 +77,7 @@ class ReaderPreferencesRepository @Inject constructor(
                 pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
                 wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
                 letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
+                hyphenate = prefs[Keys.HYPHENATE] ?: true,
                 topTapZone = prefs[Keys.TOP_TAP_ZONE]?.let {
                     runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
                 } ?: TapZoneBehavior.TOGGLE_CHROME,
@@ -110,6 +112,7 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
             prefs[Keys.WORD_SPACING] = preferences.wordSpacing
             prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
+            prefs[Keys.HYPHENATE] = preferences.hyphenate
             prefs[Keys.TOP_TAP_ZONE] = preferences.topTapZone.name
             prefs[Keys.LEFT_TAP_ZONE] = preferences.leftTapZone.name
             prefs[Keys.CENTER_TAP_ZONE] = preferences.centerTapZone.name

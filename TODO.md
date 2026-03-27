@@ -8,6 +8,9 @@
 - [x] Word spacing and letter spacing controls
 - [x] Text alignment options (Left, Justify, Center)
 - [x] Publisher styles toggle (respect or override EPUB CSS)
+- [x] 13 reader themes with Aa preview (AMOLED, Ember, Aurora, Ocean, Mist, Dawnlight, Rosewood, Meadow, Crimson + built-in Light/Dark/Sepia/System)
+- [x] Custom theme colors via Readium backgroundColor/textColor (not limited to built-in Theme enum)
+- [x] Hyphenation toggle (on by default, wired to Readium hyphens preference)
 - [ ] Custom font loading (user-provided fonts)
 - [ ] Reading progress persistence per-preference (remember font/theme per book vs global)
 - [x] Brightness control that adjusts system screen brightness via WindowManager

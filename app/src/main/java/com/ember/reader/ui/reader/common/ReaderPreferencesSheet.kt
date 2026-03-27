@@ -41,7 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
@@ -182,40 +185,71 @@ fun ReaderPreferencesSheet(
                 )
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Hyphenation", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = preferences.hyphenate,
+                    onCheckedChange = {
+                        onPreferencesChanged(preferences.copy(hyphenate = it))
+                    },
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel("Theme")
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(vertical = 8.dp),
             ) {
                 ReaderTheme.entries.forEach { theme ->
-                    val bgColor = when (theme) {
-                        ReaderTheme.LIGHT -> Color.White
-                        ReaderTheme.DARK -> Color(0xFF2A2A2A)
-                        ReaderTheme.SEPIA -> Color(0xFFF5E6D0)
-                        ReaderTheme.SYSTEM -> MaterialTheme.colorScheme.surface
+                    val bgColor = if (theme == ReaderTheme.SYSTEM) {
+                        MaterialTheme.colorScheme.surface
+                    } else {
+                        Color(theme.backgroundColor)
                     }
-                    val borderColor = if (preferences.theme == theme) {
+                    val fgColor = if (theme == ReaderTheme.SYSTEM) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        Color(theme.foregroundColor)
+                    }
+                    val isSelected = preferences.theme == theme
+                    val borderColor = if (isSelected) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         Color.Gray.copy(alpha = 0.3f)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
                                 .background(bgColor)
                                 .border(
-                                    width = if (preferences.theme == theme) 3.dp else 1.dp,
+                                    width = if (isSelected) 3.dp else 1.dp,
                                     color = borderColor,
                                     shape = CircleShape,
                                 )
                                 .clickable {
                                     onPreferencesChanged(preferences.copy(theme = theme))
                                 },
-                        )
+                        ) {
+                            Text(
+                                text = "Aa",
+                                color = fgColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = ComposeTextAlign.Center,
+                            )
+                        }
                         Text(
                             text = theme.displayName,
                             style = MaterialTheme.typography.labelSmall,

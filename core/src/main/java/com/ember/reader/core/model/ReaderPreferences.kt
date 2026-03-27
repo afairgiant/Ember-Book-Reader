@@ -15,6 +15,7 @@ data class ReaderPreferences(
     val pageMargins: Float = 1.0f,
     val wordSpacing: Float = 0f,
     val letterSpacing: Float = 0f,
+    val hyphenate: Boolean = true,
     val topTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
     val leftTapZone: TapZoneBehavior = TapZoneBehavior.PREVIOUS_PAGE,
     val centerTapZone: TapZoneBehavior = TapZoneBehavior.NOTHING,
@@ -51,9 +52,33 @@ enum class FontFamily(val displayName: String, val cssValue: String?) {
     OPEN_DYSLEXIC("OpenDyslexic", "OpenDyslexic"),
 }
 
-enum class ReaderTheme(val displayName: String) {
-    SYSTEM("System"),
-    LIGHT("Light"),
-    DARK("Dark"),
-    SEPIA("Sepia"),
+/**
+ * Reader color themes. The first four use Readium's built-in Theme enum.
+ * Custom themes pass [foregroundColor] and [backgroundColor] directly to
+ * Readium's EpubPreferences as textColor/backgroundColor.
+ *
+ * Color values sourced from Grimmory's web reader theme palette.
+ */
+enum class ReaderTheme(
+    val displayName: String,
+    val foregroundColor: Long,
+    val backgroundColor: Long,
+    val isBuiltIn: Boolean = false,
+) {
+    // Built-in Readium themes (colors here are for UI preview only)
+    SYSTEM("System", 0xFF000000, 0xFFFFFFFF, isBuiltIn = true),
+    LIGHT("Light", 0xFF000000, 0xFFFFFFFF, isBuiltIn = true),
+    DARK("Dark", 0xFFE0E0E0, 0xFF222222, isBuiltIn = true),
+    SEPIA("Sepia", 0xFF5B4636, 0xFFF1E8D0, isBuiltIn = true),
+
+    // Custom color themes
+    AMOLED("AMOLED", 0xFFFFFFFF, 0xFF000000),
+    EMBER("Ember", 0xFFEBDBB2, 0xFF282828),
+    AURORA("Aurora", 0xFFD8DEE9, 0xFF2E3440),
+    OCEAN("Ocean", 0xFFB2DFDB, 0xFF263238),
+    MIST("Mist", 0xFFC7B6DD, 0xFF3A3150),
+    DAWNLIGHT("Dawnlight", 0xFF93A1A1, 0xFF002B36),
+    ROSEWOOD("Rosewood", 0xFFE5C4C8, 0xFF462F32),
+    MEADOW("Meadow", 0xFFD8DEBA, 0xFF333627),
+    CRIMSON("Crimson", 0xFFDEE2E6, 0xFF343A40),
 }
