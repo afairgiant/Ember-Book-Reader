@@ -379,10 +379,14 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         _currentLocator.value?.let { locator ->
-            kotlinx.coroutines.runBlocking {
+            // Save progress to local DB — runs on IO, fast Room write
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                 saveProgress(locator)
             }
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            // Fire-and-forget: push to server + record session
+            // Uses GlobalScope intentionally — this work must outlive the ViewModel
+            @Suppress("OPT_IN_USAGE")
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 pushProgressOnClose()
                 recordReadingSession()
             }
