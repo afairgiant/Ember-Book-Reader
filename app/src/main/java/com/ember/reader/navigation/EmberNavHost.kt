@@ -31,6 +31,7 @@ import com.ember.reader.ui.reader.epub.EpubReaderScreen
 import com.ember.reader.ui.reader.pdf.PdfReaderScreen
 import com.ember.reader.ui.server.ServerFormScreen
 import com.ember.reader.ui.server.ServerListScreen
+import com.ember.reader.ui.settings.DevLogScreen
 import com.ember.reader.ui.settings.SettingsScreen
 import com.ember.reader.ui.settings.StorageScreen
 
@@ -53,6 +54,7 @@ object Routes {
     const val BOOK_DETAIL = "book_detail/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
     const val STATS = "stats"
+    const val DEV_LOG = "dev_log"
 
     fun bookDetail(bookId: String): String = "book_detail/$bookId"
 
@@ -167,6 +169,7 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenStorage = { navController.navigate(Routes.STORAGE) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
+                    onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
                 )
             }
 
@@ -262,6 +265,10 @@ fun EmberNavHost(
             // Detail: Storage
             composable(Routes.STORAGE) {
                 StorageScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.DEV_LOG) {
+                DevLogScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable(Routes.STATS) {

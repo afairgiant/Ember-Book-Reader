@@ -1,7 +1,9 @@
 package com.ember.reader.ui.settings
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,12 +57,13 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.repository.ThemeMode
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onOpenStorage: () -> Unit = {},
     onOpenStats: () -> Unit = {},
+    onOpenDevLog: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
@@ -301,7 +304,7 @@ fun SettingsScreen(
                 Text("Reading Statistics")
             }
 
-            // About
+            // About — long-press version to open developer logs
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "Ember v0.1.2",
@@ -309,6 +312,10 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = onOpenDevLog,
+                    )
                     .padding(bottom = 16.dp),
             )
         }

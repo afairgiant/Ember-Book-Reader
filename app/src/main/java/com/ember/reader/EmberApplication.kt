@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.ember.reader.ui.common.DevLog
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -52,6 +53,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        Timber.plant(DevLog.tree)
         NotificationHelper.createChannels(this)
         initializeSync()
         runAutoCleanup()
