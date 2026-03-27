@@ -68,7 +68,6 @@ fun ServerListScreen(
     onAddServer: () -> Unit,
     onEditServer: (Long) -> Unit,
     onOpenLibrary: (Long) -> Unit,
-    onOpenLocalLibrary: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenStats: () -> Unit = {},
@@ -144,11 +143,6 @@ fun ServerListScreen(
                             item { Spacer(modifier = Modifier.height(4.dp)) }
                         }
 
-                        // Local Books card
-                        item {
-                            LocalBooksCard(onClick = onOpenLocalLibrary)
-                        }
-
                         // Connected Servers header
                         item {
                             Row(
@@ -221,62 +215,6 @@ fun ServerListScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun LocalBooksCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.LibraryBooks,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp),
-            ) {
-                Text(
-                    text = "Local Books",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = "Imported EPUB and PDF files",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

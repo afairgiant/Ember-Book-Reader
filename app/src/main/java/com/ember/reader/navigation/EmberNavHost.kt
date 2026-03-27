@@ -130,13 +130,6 @@ fun EmberNavHost(
                     onAddServer = { navController.navigate(Routes.serverForm()) },
                     onEditServer = { serverId -> navController.navigate(Routes.serverForm(serverId)) },
                     onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
-                    onOpenLocalLibrary = {
-                        navController.navigate(Routes.LOCAL_LIBRARY) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
                     onOpenSettings = {
                         navController.navigate(Routes.SETTINGS) {
                             popUpTo(Routes.HOME) { saveState = true }
