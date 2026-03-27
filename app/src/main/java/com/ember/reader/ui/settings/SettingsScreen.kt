@@ -31,8 +31,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -50,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.SyncFrequency
+import com.ember.reader.core.repository.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +64,8 @@ fun SettingsScreen(
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     val readingStats by viewModel.readingStats.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -164,6 +169,43 @@ fun SettingsScreen(
                     label = "Completed",
                     value = "${readingStats.completed}",
                     modifier = Modifier.weight(1f),
+                )
+            }
+
+            // Appearance
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = themeMode == mode,
+                        onClick = { viewModel.updateThemeMode(mode) },
+                        label = { Text(mode.displayName) },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { viewModel.updateKeepScreenOn(!keepScreenOn) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Keep screen on while reading", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = keepScreenOn,
+                    onCheckedChange = { viewModel.updateKeepScreenOn(it) },
                 )
             }
 

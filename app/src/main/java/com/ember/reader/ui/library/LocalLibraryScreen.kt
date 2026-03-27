@@ -29,7 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -98,15 +100,23 @@ fun LocalLibraryScreen(
     val sortReversed by viewModel.sortReversed.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchActive by rememberSaveable { mutableStateOf(false) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
 
     val isSelecting = selectedIds.isNotEmpty()
 
-    val filteredBooks = remember(allBooks, filter, sortMode, sortReversed, progressMap) {
-        val filtered = when (filter) {
+    val filteredBooks = remember(allBooks, filter, sortMode, sortReversed, progressMap, searchQuery) {
+        val sourceFiltered = when (filter) {
             LibraryFilter.ALL -> allBooks
             LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
             LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
+        }
+        val filtered = if (searchQuery.isBlank()) sourceFiltered else {
+            sourceFiltered.filter { book ->
+                book.title.contains(searchQuery, ignoreCase = true) ||
+                    book.author?.contains(searchQuery, ignoreCase = true) == true
+            }
         }
         val sorted = when (sortMode) {
             LibrarySortMode.RECENT -> filtered.sortedByDescending { it.downloadedAt ?: it.addedAt }
@@ -127,6 +137,14 @@ fun LocalLibraryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Library", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { searchActive = !searchActive; if (!searchActive) searchQuery = "" }) {
+                        Icon(
+                            if (searchActive) Icons.Default.Clear else Icons.Default.Search,
+                            contentDescription = if (searchActive) "Close search" else "Search",
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -200,6 +218,20 @@ fun LocalLibraryScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // Search bar
+            if (searchActive) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search books...") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                )
+            }
+
             // Source filter chips
             Row(
                 modifier = Modifier

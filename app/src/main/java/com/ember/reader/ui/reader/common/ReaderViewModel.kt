@@ -17,6 +17,7 @@ import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -58,6 +59,7 @@ class ReaderViewModel @Inject constructor(
     private val syncPreferencesRepository: SyncPreferencesRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
+    appPreferencesRepository: AppPreferencesRepository,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -74,6 +76,9 @@ class ReaderViewModel @Inject constructor(
     val preferences: StateFlow<ReaderPreferences> =
         readerPreferencesRepository.preferencesFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReaderPreferences())
+
+    val keepScreenOn: StateFlow<Boolean> = appPreferencesRepository.keepScreenOnFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
     val bookmarks: StateFlow<List<Bookmark>> = _bookmarks.asStateFlow()

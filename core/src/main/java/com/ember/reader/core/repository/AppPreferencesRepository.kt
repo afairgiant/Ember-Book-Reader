@@ -1,0 +1,56 @@
+package com.ember.reader.core.repository
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+private val Context.appPreferencesDataStore: DataStore<Preferences>
+    by preferencesDataStore(name = "app_preferences")
+
+enum class ThemeMode(val displayName: String) {
+    SYSTEM("System"),
+    LIGHT("Light"),
+    DARK("Dark"),
+}
+
+@Singleton
+class AppPreferencesRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
+
+    private object Keys {
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+    }
+
+    val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
+        .map { prefs ->
+            prefs[Keys.THEME_MODE]?.let {
+                runCatching { ThemeMode.valueOf(it) }.getOrNull()
+            } ?: ThemeMode.SYSTEM
+        }
+
+    val keepScreenOnFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.KEEP_SCREEN_ON] ?: false }
+
+    suspend fun updateThemeMode(mode: ThemeMode) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.THEME_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateKeepScreenOn(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.KEEP_SCREEN_ON] = enabled
+        }
+    }
+}

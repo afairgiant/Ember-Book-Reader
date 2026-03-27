@@ -1,8 +1,11 @@
 package com.ember.reader.ui.reader.epub
 
 import androidx.compose.runtime.Composable
+import android.view.WindowManager
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,6 +53,17 @@ fun EpubReaderScreen(
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
+    val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+
+    // Keep screen on while reading
+    val view = LocalView.current
+    DisposableEffect(keepScreenOn) {
+        if (keepScreenOn) {
+            view.keepScreenOn = true
+        }
+        onDispose { view.keepScreenOn = false }
+    }
+
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
