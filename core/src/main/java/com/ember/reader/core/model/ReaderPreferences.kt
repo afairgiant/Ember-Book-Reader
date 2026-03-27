@@ -9,7 +9,14 @@ data class ReaderPreferences(
     val theme: ReaderTheme = ReaderTheme.SYSTEM,
     val isPaginated: Boolean = true,
     val brightness: Float = -1f,
+    val orientationLock: OrientationLock = OrientationLock.AUTO,
 )
+
+enum class OrientationLock(val displayName: String) {
+    AUTO("Auto"),
+    PORTRAIT("Portrait"),
+    LANDSCAPE("Landscape"),
+}
 
 enum class FontFamily(val displayName: String, val cssValue: String?) {
     SYSTEM("System Default", null),

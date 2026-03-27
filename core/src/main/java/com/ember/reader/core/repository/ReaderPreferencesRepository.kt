@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.ember.reader.core.model.FontFamily
+import com.ember.reader.core.model.OrientationLock
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -35,6 +36,7 @@ class ReaderPreferencesRepository @Inject constructor(
         val THEME = stringPreferencesKey("theme")
         val IS_PAGINATED = booleanPreferencesKey("is_paginated")
         val BRIGHTNESS = floatPreferencesKey("brightness")
+        val ORIENTATION_LOCK = stringPreferencesKey("orientation_lock")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -50,6 +52,9 @@ class ReaderPreferencesRepository @Inject constructor(
                     ?: ReaderTheme.SYSTEM,
                 isPaginated = prefs[Keys.IS_PAGINATED] ?: true,
                 brightness = prefs[Keys.BRIGHTNESS] ?: -1f,
+                orientationLock = prefs[Keys.ORIENTATION_LOCK]?.let {
+                    runCatching { OrientationLock.valueOf(it) }.getOrNull()
+                } ?: OrientationLock.AUTO,
             )
         }
 
@@ -63,6 +68,7 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.THEME] = preferences.theme.name
             prefs[Keys.IS_PAGINATED] = preferences.isPaginated
             prefs[Keys.BRIGHTNESS] = preferences.brightness
+            prefs[Keys.ORIENTATION_LOCK] = preferences.orientationLock.name
         }
     }
 }

@@ -188,6 +188,21 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            SectionLabel("Orientation")
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                com.ember.reader.core.model.OrientationLock.entries.forEach { lock ->
+                    FilterChip(
+                        selected = preferences.orientationLock == lock,
+                        onClick = { onPreferencesChanged(preferences.copy(orientationLock = lock)) },
+                        label = { Text(lock.displayName) },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             SectionLabel("Brightness")
             Slider(
                 value = if (preferences.brightness < 0) 0.5f else preferences.brightness,

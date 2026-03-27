@@ -1,10 +1,12 @@
 package com.ember.reader.ui.reader.epub
 
 import androidx.compose.runtime.Composable
+import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +64,40 @@ fun EpubReaderScreen(
             view.keepScreenOn = true
         }
         onDispose { view.keepScreenOn = false }
+    }
+
+    // Apply orientation lock
+    val context = LocalContext.current
+    DisposableEffect(preferences.orientationLock) {
+        val activity = context as? android.app.Activity
+        if (activity != null) {
+            activity.requestedOrientation = when (preferences.orientationLock) {
+                com.ember.reader.core.model.OrientationLock.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                com.ember.reader.core.model.OrientationLock.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                com.ember.reader.core.model.OrientationLock.AUTO -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+        onDispose {
+            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    // Apply brightness setting to window
+    DisposableEffect(preferences.brightness) {
+        val activity = context as? android.app.Activity
+        if (activity != null && preferences.brightness >= 0) {
+            val params = activity.window.attributes
+            params.screenBrightness = preferences.brightness
+            activity.window.attributes = params
+        }
+        onDispose {
+            val act = context as? android.app.Activity
+            if (act != null) {
+                val params = act.window.attributes
+                params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                act.window.attributes = params
+            }
+        }
     }
 
     var showToc by remember { mutableStateOf(false) }

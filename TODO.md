@@ -10,7 +10,7 @@
 - [ ] Publisher styles toggle (respect or override EPUB CSS)
 - [ ] Custom font loading (user-provided fonts)
 - [ ] Reading progress persistence per-preference (remember font/theme per book vs global)
-- [ ] Brightness control that actually adjusts screen brightness (currently UI-only)
+- [x] Brightness control that adjusts system screen brightness via WindowManager
 
 ### Continuous Scroll Mode
 - [ ] True continuous scroll across chapters (currently per-chapter with swipe between)
@@ -202,7 +202,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] None (instant, current default)
 
 ### Orientation Lock
-- [ ] Lock to portrait/landscape while reading
+- [x] Lock to portrait/landscape while reading (Auto/Portrait/Landscape in reader settings)
 - [ ] Per-book orientation preference
 - [ ] Auto-rotate toggle in reader chrome
 
