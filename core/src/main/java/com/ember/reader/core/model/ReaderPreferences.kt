@@ -15,7 +15,17 @@ data class ReaderPreferences(
     val pageMargins: Float = 1.0f,
     val wordSpacing: Float = 0f,
     val letterSpacing: Float = 0f,
+    val leftTapZone: TapZoneBehavior = TapZoneBehavior.PREVIOUS_PAGE,
+    val centerTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
+    val rightTapZone: TapZoneBehavior = TapZoneBehavior.NEXT_PAGE,
 )
+
+enum class TapZoneBehavior(val displayName: String) {
+    PREVIOUS_PAGE("Previous Page"),
+    NEXT_PAGE("Next Page"),
+    TOGGLE_CHROME("Toggle Menu"),
+    NOTHING("Nothing"),
+}
 
 enum class TextAlign(val displayName: String) {
     START("Left"),

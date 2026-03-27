@@ -150,13 +150,6 @@ fun EpubReaderScreen(
                     onNavigatorReady = { fragment ->
                         val nav = fragment as? EpubNavigatorFragment ?: return@NavigatorContainer
                         navigator = nav
-                        // Center tap to toggle chrome
-                        nav.addInputListener(object : InputListener {
-                            override fun onTap(event: TapEvent): Boolean {
-                                viewModel.toggleChrome()
-                                return true
-                            }
-                        })
                     },
                 )
             }
@@ -166,15 +159,40 @@ fun EpubReaderScreen(
                 val nav = navigator ?: return@LaunchedEffect
                 nav.submitPreferences(preferences.toEpubPreferences())
 
-                // Only enable edge-tap/swipe page turns in paginated mode
+                // Remove old listeners and add configurable tap handler
                 dirNavAdapter?.let { nav.removeInputListener(it) }
+                dirNavAdapter = null
+
+                // Add directional navigation for paginated mode (handles swipe)
                 if (preferences.isPaginated) {
                     val adapter = DirectionalNavigationAdapter(nav)
                     dirNavAdapter = adapter
                     nav.addInputListener(adapter)
-                } else {
-                    dirNavAdapter = null
                 }
+
+                // Add configurable tap zone handler
+                val tapPrefs = preferences
+                nav.addInputListener(object : InputListener {
+                    override fun onTap(event: TapEvent): Boolean {
+                        val viewWidth = nav.requireView().width.toFloat()
+                        val tapX = event.point.x
+                        val zone = when {
+                            tapX < viewWidth / 3f -> tapPrefs.leftTapZone
+                            tapX > viewWidth * 2f / 3f -> tapPrefs.rightTapZone
+                            else -> tapPrefs.centerTapZone
+                        }
+                        when (zone) {
+                            com.ember.reader.core.model.TapZoneBehavior.PREVIOUS_PAGE ->
+                                scope.launch { nav.goBackward() }
+                            com.ember.reader.core.model.TapZoneBehavior.NEXT_PAGE ->
+                                scope.launch { nav.goForward() }
+                            com.ember.reader.core.model.TapZoneBehavior.TOGGLE_CHROME ->
+                                viewModel.toggleChrome()
+                            com.ember.reader.core.model.TapZoneBehavior.NOTHING -> {}
+                        }
+                        return true
+                    }
+                })
             }
 
             // Handle sync navigation (accept remote progress)

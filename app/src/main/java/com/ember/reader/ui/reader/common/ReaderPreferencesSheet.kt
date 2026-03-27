@@ -7,6 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -252,6 +258,19 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            SectionLabel("Tap Zones")
+            TapZoneSelector("Left tap", preferences.leftTapZone) {
+                onPreferencesChanged(preferences.copy(leftTapZone = it))
+            }
+            TapZoneSelector("Center tap", preferences.centerTapZone) {
+                onPreferencesChanged(preferences.copy(centerTapZone = it))
+            }
+            TapZoneSelector("Right tap", preferences.rightTapZone) {
+                onPreferencesChanged(preferences.copy(rightTapZone = it))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             SectionLabel("Brightness")
             Slider(
                 value = if (preferences.brightness < 0) 0.5f else preferences.brightness,
@@ -261,6 +280,42 @@ fun ReaderPreferencesSheet(
                 valueRange = 0.01f..1.0f,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+@Composable
+private fun TapZoneSelector(
+    label: String,
+    selected: com.ember.reader.core.model.TapZoneBehavior,
+    onChanged: (com.ember.reader.core.model.TapZoneBehavior) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Box {
+            FilterChip(
+                selected = true,
+                onClick = { expanded = true },
+                label = { Text(selected.displayName) },
+            )
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                com.ember.reader.core.model.TapZoneBehavior.entries.forEach { behavior ->
+                    DropdownMenuItem(
+                        text = { Text(behavior.displayName) },
+                        onClick = {
+                            onChanged(behavior)
+                            expanded = false
+                        },
+                    )
+                }
+            }
         }
     }
 }

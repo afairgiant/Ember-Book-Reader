@@ -13,6 +13,7 @@ import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.OrientationLock
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.core.model.TapZoneBehavior
 import com.ember.reader.core.model.TextAlign
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +44,9 @@ class ReaderPreferencesRepository @Inject constructor(
         val PAGE_MARGINS = floatPreferencesKey("page_margins")
         val WORD_SPACING = floatPreferencesKey("word_spacing")
         val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val LEFT_TAP_ZONE = stringPreferencesKey("left_tap_zone")
+        val CENTER_TAP_ZONE = stringPreferencesKey("center_tap_zone")
+        val RIGHT_TAP_ZONE = stringPreferencesKey("right_tap_zone")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -68,6 +72,15 @@ class ReaderPreferencesRepository @Inject constructor(
                 pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
                 wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
                 letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
+                leftTapZone = prefs[Keys.LEFT_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.PREVIOUS_PAGE,
+                centerTapZone = prefs[Keys.CENTER_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.TOGGLE_CHROME,
+                rightTapZone = prefs[Keys.RIGHT_TAP_ZONE]?.let {
+                    runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
+                } ?: TapZoneBehavior.NEXT_PAGE,
             )
         }
 
@@ -87,6 +100,9 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
             prefs[Keys.WORD_SPACING] = preferences.wordSpacing
             prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
+            prefs[Keys.LEFT_TAP_ZONE] = preferences.leftTapZone.name
+            prefs[Keys.CENTER_TAP_ZONE] = preferences.centerTapZone.name
+            prefs[Keys.RIGHT_TAP_ZONE] = preferences.rightTapZone.name
         }
     }
 }

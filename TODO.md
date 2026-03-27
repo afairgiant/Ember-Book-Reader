@@ -3,7 +3,7 @@
 ## Reader Enhancements
 
 ### Reader Customization (Reference: Grimmory's web reader)
-- [ ] Configurable tap zones (left/center/right tap behavior)
+- [x] Configurable tap zones (left/center/right — Previous Page, Next Page, Toggle Menu, Nothing)
 - [x] Page margins control (0.5x to 2.5x)
 - [x] Word spacing and letter spacing controls
 - [x] Text alignment options (Left, Justify, Center)
