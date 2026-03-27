@@ -131,10 +131,10 @@ class BookRepository @Inject constructor(
         status: String? = null,
         search: String? = null,
     ): Result<OpdsBookPage> {
-        val appPage = if (seriesName != null) {
-            grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
-        } else {
-            grimmoryAppClient.getBooks(
+        val appPage = when {
+            seriesName != null -> grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
+            search != null -> grimmoryAppClient.searchBooks(server.url, server.id, search, page, size)
+            else -> grimmoryAppClient.getBooks(
                 baseUrl = server.url,
                 serverId = server.id,
                 page = page,
@@ -142,7 +142,6 @@ class BookRepository @Inject constructor(
                 libraryId = libraryId,
                 shelfId = shelfId,
                 status = status,
-                search = search,
             )
         }
 
