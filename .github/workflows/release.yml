@@ -26,7 +26,7 @@ jobs:
 
       - name: Decode keystore
         if: env.HAS_SIGNING == 'true'
-        run: echo "$SIGNING_KEYSTORE" | base64 -d > app/keystore.jks
+        run: echo "$SIGNING_KEYSTORE" | base64 -d > keystore.jks
         env:
           SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
 
@@ -34,7 +34,7 @@ jobs:
         if: env.HAS_SIGNING == 'true'
         run: ./gradlew assembleRelease
         env:
-          SIGNING_KEYSTORE_PATH: app/keystore.jks
+          SIGNING_KEYSTORE_PATH: keystore.jks
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
