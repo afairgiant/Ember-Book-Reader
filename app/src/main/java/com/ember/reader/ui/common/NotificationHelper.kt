@@ -22,7 +22,7 @@ object NotificationHelper {
         val downloadChannel = NotificationChannel(
             CHANNEL_DOWNLOADS,
             "Downloads",
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Book download notifications"
         }
@@ -30,7 +30,7 @@ object NotificationHelper {
         val syncChannel = NotificationChannel(
             CHANNEL_SYNC,
             "Sync",
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Reading progress sync notifications"
         }
@@ -68,8 +68,10 @@ object NotificationHelper {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(
                 context,
-                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
-        } else true
+        } else {
+            true
+        }
     }
 }

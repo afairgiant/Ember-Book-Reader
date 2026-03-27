@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,26 +39,26 @@ fun HighlightsSheet(
     highlights: List<Highlight>,
     onNavigate: (Highlight) -> Unit,
     onDelete: (Long) -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
                 text = "Highlights",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             if (highlights.isEmpty()) {
                 Text(
                     text = "No highlights yet",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
                 )
             } else {
                 LazyColumn {
@@ -68,7 +66,7 @@ fun HighlightsSheet(
                         HighlightItem(
                             highlight = highlight,
                             onClick = { onNavigate(highlight) },
-                            onDelete = { onDelete(highlight.id) },
+                            onDelete = { onDelete(highlight.id) }
                         )
                     }
                 }
@@ -78,46 +76,42 @@ fun HighlightsSheet(
 }
 
 @Composable
-private fun HighlightItem(
-    highlight: Highlight,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-) {
+private fun HighlightItem(highlight: Highlight, onClick: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(12.dp)
                 .clip(CircleShape)
-                .background(Color(highlight.color.argb)),
+                .background(Color(highlight.color.argb))
         )
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 12.dp),
+                .padding(start = 12.dp)
         ) {
             highlight.annotation?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
+                    maxLines = 3
                 )
             } ?: Text(
                 text = "Highlight",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
                 contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.error
             )
         }
     }
@@ -125,12 +119,9 @@ private fun HighlightItem(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HighlightColorPicker(
-    selectedColor: HighlightColor,
-    onColorSelected: (HighlightColor) -> Unit,
-) {
+fun HighlightColorPicker(selectedColor: HighlightColor, onColorSelected: (HighlightColor) -> Unit) {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HighlightColor.entries.forEach { color ->
             Box(
@@ -143,9 +134,9 @@ fun HighlightColorPicker(
                             Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
                         } else {
                             Modifier
-                        },
+                        }
                     )
-                    .clickable { onColorSelected(color) },
+                    .clickable { onColorSelected(color) }
             )
         }
     }

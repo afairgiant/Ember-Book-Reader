@@ -52,10 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun StorageScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: StorageViewModel = hiltViewModel(),
-) {
+fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recoveryResult by viewModel.recoveryResult.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
@@ -64,7 +61,9 @@ fun StorageScreen(
 
     val usageFraction = if (uiState.deviceTotalBytes > 0) {
         (uiState.totalSize.toFloat() / uiState.deviceTotalBytes).coerceIn(0f, 1f)
-    } else 0f
+    } else {
+        0f
+    }
 
     Scaffold(
         topBar = {
@@ -76,8 +75,8 @@ fun StorageScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         bottomBar = {
@@ -86,15 +85,15 @@ fun StorageScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = viewModel::selectAll) {
@@ -106,12 +105,12 @@ fun StorageScreen(
                         }
                         Button(
                             onClick = viewModel::deleteSelected,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Delete ${selectedIds.size}")
@@ -119,48 +118,48 @@ fun StorageScreen(
                     }
                 }
             }
-        },
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Storage usage card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom,
+                            verticalAlignment = Alignment.Bottom
                         ) {
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = uiState.totalSize.toReadableSize(),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
                                     text = " used",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             if (uiState.deviceTotalBytes > 0) {
                                 Text(
                                     text = "${uiState.deviceTotalBytes.toReadableSize()} Total",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -171,35 +170,35 @@ fun StorageScreen(
                                 .fillMaxWidth()
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp)),
-                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
                                 Text(
                                     text = "DOWNLOADED",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "${uiState.downloadedBooks.size} books",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = "AVAILABLE",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = uiState.deviceAvailableBytes.toReadableSize(),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -212,7 +211,7 @@ fun StorageScreen(
                 OutlinedButton(
                     onClick = viewModel::recoverOrphanedBooks,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Recover Orphaned Books")
                 }
@@ -223,27 +222,27 @@ fun StorageScreen(
                 item {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
                         ),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = recoveryResult ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = viewModel::dismissRecoveryResult) {
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = "Dismiss",
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -257,26 +256,26 @@ fun StorageScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Downloaded Books",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
             item {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     StorageSortMode.entries.forEach { mode ->
                         FilterChip(
                             selected = sortMode == mode,
                             onClick = { viewModel.updateSortMode(mode) },
-                            label = { Text(mode.displayName) },
+                            label = { Text(mode.displayName) }
                         )
                     }
                 }
@@ -287,7 +286,7 @@ fun StorageScreen(
                     Text(
                         text = "No downloaded books",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -300,7 +299,7 @@ fun StorageScreen(
                         onClick = {
                             if (isSelecting) viewModel.toggleSelection(item.book.id)
                         },
-                        onLongClick = { viewModel.toggleSelection(item.book.id) },
+                        onLongClick = { viewModel.toggleSelection(item.book.id) }
                     )
                 }
             }
@@ -311,7 +310,7 @@ fun StorageScreen(
                 Text(
                     text = "Deleting a book removes it from this device only. You can re-download any titles from your library at any time.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -326,34 +325,34 @@ private fun DownloadedBookCard(
     isSelecting: Boolean,
     onRemove: () -> Unit,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick,
+                onLongClick = onLongClick
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
-            },
+            }
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelecting) {
                 Checkbox(
                     checked = isSelected,
-                    onCheckedChange = { onClick() },
+                    onCheckedChange = { onClick() }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
@@ -363,7 +362,7 @@ private fun DownloadedBookCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 item.book.author?.let {
                     Text(
@@ -371,7 +370,7 @@ private fun DownloadedBookCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -379,21 +378,21 @@ private fun DownloadedBookCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                     ) {
                         Text(
                             text = item.book.format.name,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = item.fileSize.toReadableSize(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -402,7 +401,7 @@ private fun DownloadedBookCard(
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = "Remove download",
-                        tint = MaterialTheme.colorScheme.error,
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
             }

@@ -6,7 +6,7 @@ import javax.inject.Singleton
 
 @Singleton
 class GrimmoryTokenManager @Inject constructor(
-    private val credentialEncryption: CredentialEncryption,
+    private val credentialEncryption: CredentialEncryption
 ) {
 
     fun getAccessToken(serverId: Long): String? =
@@ -20,8 +20,7 @@ class GrimmoryTokenManager @Inject constructor(
         credentialEncryption.storePassword(refreshTokenKey(serverId), tokens.refreshToken)
     }
 
-    fun isLoggedIn(serverId: Long): Boolean =
-        getAccessToken(serverId) != null
+    fun isLoggedIn(serverId: Long): Boolean = getAccessToken(serverId) != null
 
     fun logout(serverId: Long) {
         credentialEncryption.removePassword(accessTokenKey(serverId))

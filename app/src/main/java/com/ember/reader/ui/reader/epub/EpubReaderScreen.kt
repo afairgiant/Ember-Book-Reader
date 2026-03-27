@@ -1,17 +1,17 @@
 package com.ember.reader.ui.reader.epub
 
-import androidx.compose.runtime.Composable
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.model.ReaderPreferences
@@ -22,22 +22,22 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
-import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
+import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import kotlinx.coroutines.launch
-import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.input.InputListener
+import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.navigator.preferences.Color as ReadiumColor
 import org.readium.r2.navigator.preferences.FontFamily as ReadiumFontFamily
 import org.readium.r2.navigator.preferences.Theme
-import org.readium.r2.navigator.input.InputListener
-import org.readium.r2.navigator.input.TapEvent
+import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.services.locateProgression
 
@@ -46,10 +46,7 @@ private const val CONTAINER_ID = 0x7F_FF_00_01
 
 @OptIn(ExperimentalReadiumApi::class)
 @Composable
-fun EpubReaderScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: ReaderViewModel = hiltViewModel(),
-) {
+fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
@@ -135,7 +132,7 @@ fun EpubReaderScreen(
                             navigator?.go(it)
                         }
                     }
-                },
+                }
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -143,10 +140,10 @@ fun EpubReaderScreen(
                     fragmentTag = FRAGMENT_TAG,
                     fragmentClass = EpubNavigatorFragment::class.java,
                     fragmentFactory = EpubNavigatorFactory(
-                        publication = state.publication,
+                        publication = state.publication
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = preferences.toEpubPreferences(),
+                        initialPreferences = preferences.toEpubPreferences()
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? EpubNavigatorFragment)?.currentLocator
@@ -155,7 +152,7 @@ fun EpubReaderScreen(
                     onNavigatorReady = { fragment ->
                         val nav = fragment as? EpubNavigatorFragment ?: return@NavigatorContainer
                         navigator = nav
-                    },
+                    }
                 )
             }
 
@@ -225,7 +222,7 @@ fun EpubReaderScreen(
                         scope.launch { navigator?.go(locator) }
                         showToc = false
                     },
-                    onDismiss = { showToc = false },
+                    onDismiss = { showToc = false }
                 )
             }
 
@@ -239,7 +236,7 @@ fun EpubReaderScreen(
                         showBookmarks = false
                     },
                     onDelete = viewModel::deleteBookmark,
-                    onDismiss = { showBookmarks = false },
+                    onDismiss = { showBookmarks = false }
                 )
             }
 
@@ -250,7 +247,7 @@ fun EpubReaderScreen(
                         scope.launch { navigator?.go(locator) }
                         showSearch = false
                     },
-                    onDismiss = { showSearch = false },
+                    onDismiss = { showSearch = false }
                 )
             }
 
@@ -258,7 +255,7 @@ fun EpubReaderScreen(
                 ReaderPreferencesSheet(
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
-                    onDismiss = { showPreferences = false },
+                    onDismiss = { showPreferences = false }
                 )
             }
 
@@ -266,7 +263,7 @@ fun EpubReaderScreen(
                 SyncConflictDialog(
                     conflict = conflict,
                     onAcceptRemote = viewModel::acceptRemoteProgress,
-                    onKeepLocal = viewModel::dismissSyncConflict,
+                    onKeepLocal = viewModel::dismissSyncConflict
                 )
             }
         }
@@ -302,6 +299,6 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
         publisherStyles = publisherStyles,
         pageMargins = pageMargins.toDouble(),
         wordSpacing = wordSpacing.toDouble(),
-        letterSpacing = letterSpacing.toDouble(),
+        letterSpacing = letterSpacing.toDouble()
     )
 }

@@ -29,7 +29,7 @@ class SyncWorker @AssistedInject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val bookRepository: BookRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -70,7 +70,9 @@ class SyncWorker @AssistedInject constructor(
     private fun showSyncNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) {
+            return
+        }
 
         val notification = NotificationCompat.Builder(applicationContext, "ember_sync")
             .setSmallIcon(android.R.drawable.ic_popup_sync)
@@ -98,9 +100,9 @@ class SyncWorker @AssistedInject constructor(
                         bookId = grimmoryBookId,
                         epubProgress = GrimmoryEpubProgress(
                             cfi = "epubcfi(/6/2)",
-                            percentage = pct,
-                        ),
-                    ),
+                            percentage = pct
+                        )
+                    )
                 ).getOrThrow()
                 Timber.d("SyncWorker: pushed Grimmory progress for ${book.title}")
             }.onFailure {
@@ -112,7 +114,7 @@ class SyncWorker @AssistedInject constructor(
         runCatching {
             val continueReading = grimmoryClient.getContinueReading(
                 baseUrl = server.url,
-                serverId = server.id,
+                serverId = server.id
             ).getOrThrow()
 
             for (summary in continueReading) {
@@ -133,8 +135,8 @@ class SyncWorker @AssistedInject constructor(
                                 percentage = percentage,
                                 lastReadAt = java.time.Instant.now(),
                                 syncedAt = java.time.Instant.now(),
-                                needsSync = false,
-                            ),
+                                needsSync = false
+                            )
                         )
                         Timber.d("SyncWorker: pulled Grimmory progress for ${localBook.title}: ${(percentage * 100).toInt()}%")
                     }

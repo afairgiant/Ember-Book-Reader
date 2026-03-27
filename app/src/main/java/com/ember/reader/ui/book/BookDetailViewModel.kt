@@ -16,13 +16,13 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.NotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class BookDetailViewModel @Inject constructor(
@@ -32,7 +32,7 @@ class BookDetailViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -52,7 +52,9 @@ class BookDetailViewModel @Inject constructor(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
-    fun dismissMessage() { _message.value = null }
+    fun dismissMessage() {
+        _message.value = null
+    }
 
     private val _coverAuthHeader = MutableStateFlow<String?>(null)
     val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
@@ -88,7 +90,7 @@ class BookDetailViewModel @Inject constructor(
         } else if (srv.opdsUsername.isNotBlank()) {
             val credentials = android.util.Base64.encodeToString(
                 "${srv.opdsUsername}:${srv.opdsPassword}".toByteArray(),
-                android.util.Base64.NO_WRAP,
+                android.util.Base64.NO_WRAP
             )
             _coverAuthHeader.value = "Basic $credentials"
         }
@@ -136,8 +138,8 @@ class BookDetailViewModel @Inject constructor(
                             percentage = pct,
                             lastReadAt = java.time.Instant.now(),
                             syncedAt = java.time.Instant.now(),
-                            needsSync = false,
-                        ),
+                            needsSync = false
+                        )
                     )
                 }
             }

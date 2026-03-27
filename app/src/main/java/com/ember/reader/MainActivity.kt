@@ -31,7 +31,7 @@ class MainActivity : FragmentActivity() {
                     ThemeMode.LIGHT -> false
                     ThemeMode.DARK -> true
                     ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-                },
+                }
             ) {
                 EmberNavHost()
             }

@@ -7,5 +7,5 @@ data class Bookmark(
     val bookId: String,
     val locatorJson: String,
     val title: String? = null,
-    val createdAt: Instant = Instant.now(),
+    val createdAt: Instant = Instant.now()
 )

@@ -9,6 +9,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,14 +18,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ServerListViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     bookRepository: BookRepository,
     readingProgressRepository: ReadingProgressRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     val uiState: StateFlow<ServerListUiState> = serverRepository.observeAll()
@@ -40,7 +40,9 @@ class ServerListViewModel @Inject constructor(
                 _coverAuthHeaders.value = servers.associate { server ->
                     val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
                         grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
-                    } else null
+                    } else {
+                        null
+                    }
                     server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
                 }
             }
@@ -65,7 +67,7 @@ class ServerListViewModel @Inject constructor(
 
 data class RecentBook(
     val book: Book,
-    val percentage: Float,
+    val percentage: Float
 )
 
 sealed interface ServerListUiState {

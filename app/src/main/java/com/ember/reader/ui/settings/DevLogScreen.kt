@@ -51,10 +51,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ember.reader.ui.common.DevLog
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 private val bgColor = Color(0xFF0D1117)
 private val dividerColor = Color(0xFF21262D)
@@ -66,7 +66,7 @@ private val levelColors = mapOf(
     "W" to Color(0xFFD29922),
     "I" to Color(0xFF3FB950),
     "D" to Color(0xFF58A6FF),
-    "V" to Color(0xFF6E7681),
+    "V" to Color(0xFF6E7681)
 )
 
 private val levelLabels = mapOf(
@@ -74,7 +74,7 @@ private val levelLabels = mapOf(
     "W" to "WARN",
     "I" to "INFO",
     "D" to "DEBUG",
-    "V" to "VERBOSE",
+    "V" to "VERBOSE"
 )
 
 private val levelBgColors = mapOf(
@@ -82,16 +82,14 @@ private val levelBgColors = mapOf(
     "W" to Color(0xFF2D2000),
     "I" to Color(0xFF0D2818),
     "D" to Color(0xFF0D1B2A),
-    "V" to Color(0xFF161B22),
+    "V" to Color(0xFF161B22)
 )
 
 private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevLogScreen(
-    onNavigateBack: () -> Unit,
-) {
+fun DevLogScreen(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -113,7 +111,7 @@ fun DevLogScreen(
                         Text(
                             "${entries.size} entries",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -147,10 +145,10 @@ fun DevLogScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = bgColor,
-                ),
+                    containerColor = bgColor
+                )
             )
-        },
+        }
     ) { padding ->
         if (entries.isEmpty()) {
             Column(
@@ -159,17 +157,17 @@ fun DevLogScreen(
                     .padding(padding)
                     .background(bgColor),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     "No log entries yet",
                     color = timeColor,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
                     "Logs will appear as the app runs",
                     color = timeColor.copy(alpha = 0.6f),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         } else {
@@ -178,7 +176,7 @@ fun DevLogScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(bgColor),
+                    .background(bgColor)
             ) {
                 items(entries) { entry ->
                     LogEntry(entry)
@@ -199,12 +197,12 @@ private fun LogEntry(entry: DevLog.Entry) {
         modifier = Modifier
             .fillMaxWidth()
             .background(if (entry.level == "E" || entry.level == "W") entryBg else Color.Transparent)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         // Header row: level badge + tag + timestamp
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             // Level badge
             Text(
@@ -216,7 +214,7 @@ private fun LogEntry(entry: DevLog.Entry) {
                 modifier = Modifier
                     .clip(RoundedCornerShape(3.dp))
                     .background(levelColor.copy(alpha = 0.2f))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
             )
 
             // Tag
@@ -228,7 +226,7 @@ private fun LogEntry(entry: DevLog.Entry) {
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Medium,
                     color = tagColor,
-                    maxLines = 1,
+                    maxLines = 1
                 )
             }
 
@@ -239,7 +237,7 @@ private fun LogEntry(entry: DevLog.Entry) {
                 text = timeFormat.format(Date(entry.timestamp)),
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
-                color = timeColor,
+                color = timeColor
             )
         }
 
@@ -253,7 +251,7 @@ private fun LogEntry(entry: DevLog.Entry) {
             lineHeight = 16.sp,
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
         )
     }
 }

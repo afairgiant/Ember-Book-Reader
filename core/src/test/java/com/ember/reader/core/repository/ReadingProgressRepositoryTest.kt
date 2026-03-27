@@ -44,7 +44,7 @@ class ReadingProgressRepositoryTest {
         opdsUsername = "opds_user",
         opdsPassword = "opds_pass",
         kosyncUsername = "kosync_user",
-        kosyncPassword = "kosync_pass",
+        kosyncPassword = "kosync_pass"
     )
 
     @BeforeEach
@@ -61,7 +61,7 @@ class ReadingProgressRepositoryTest {
             bookId = "book-1",
             serverId = 1L,
             percentage = 0.5f,
-            locatorJson = "{\"locator\":\"test\"}",
+            locatorJson = "{\"locator\":\"test\"}"
         )
 
         assertTrue(entitySlot.captured.needsSync)
@@ -77,7 +77,7 @@ class ReadingProgressRepositoryTest {
             bookId = "book-1",
             serverId = null,
             percentage = 0.3f,
-            locatorJson = null,
+            locatorJson = null
         )
 
         assertFalse(entitySlot.captured.needsSync)
@@ -93,7 +93,7 @@ class ReadingProgressRepositoryTest {
             locatorJson = "{\"locator\":\"data\"}",
             kosyncProgress = "{\"locator\":\"data\"}",
             lastReadAt = java.time.Instant.now(),
-            needsSync = true,
+            needsSync = true
         )
         coEvery { readingProgressDao.getByBookId("book-1") } returns progressEntity
 
@@ -125,7 +125,7 @@ class ReadingProgressRepositoryTest {
             locatorJson = "{}",
             kosyncProgress = "{}",
             lastReadAt = java.time.Instant.now(),
-            needsSync = true,
+            needsSync = true
         )
         coEvery { readingProgressDao.getByBookId("book-1") } returns progressEntity
         every { deviceIdentity.deviceName } returns "Ember"
@@ -147,14 +147,14 @@ class ReadingProgressRepositoryTest {
             percentage = 0.8f,
             device = "KOReader",
             deviceId = "remote-device",
-            timestamp = 1700000000L,
+            timestamp = 1700000000L
         )
         coEvery {
             kosyncClient.pullProgress(
                 baseUrl = testServer.url,
                 username = testServer.kosyncUsername,
                 password = testServer.kosyncPassword,
-                documentHash = "doc-hash",
+                documentHash = "doc-hash"
             )
         } returns Result.success(response)
 
@@ -181,7 +181,7 @@ class ReadingProgressRepositoryTest {
             percentage = 0.75f,
             locatorJson = "{\"locator\":\"remote\"}",
             kosyncProgress = "{\"locator\":\"remote\"}",
-            needsSync = false,
+            needsSync = false
         )
         coEvery { readingProgressDao.upsert(any()) } returns Unit
 
@@ -199,7 +199,7 @@ class ReadingProgressRepositoryTest {
             locatorJson = "{}",
             kosyncProgress = "{}",
             lastReadAt = java.time.Instant.now(),
-            needsSync = true,
+            needsSync = true
         )
         coEvery { readingProgressDao.getUnsyncedProgress(1L) } returns listOf(unsyncedEntity)
         coEvery { readingProgressDao.getByBookId("book-1") } returns unsyncedEntity

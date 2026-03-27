@@ -15,7 +15,7 @@ class CredentialEncryption(context: Context) {
         "ember_credentials",
         masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
     fun storePassword(key: String, password: String) {

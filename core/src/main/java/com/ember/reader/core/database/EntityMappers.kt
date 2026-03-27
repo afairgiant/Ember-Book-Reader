@@ -16,7 +16,7 @@ import com.ember.reader.core.model.Server
 fun ServerEntity.toDomain(
     opdsPassword: String = "",
     kosyncPassword: String = "",
-    grimmoryPassword: String = "",
+    grimmoryPassword: String = ""
 ): Server = Server(
     id = id,
     name = name,
@@ -28,7 +28,7 @@ fun ServerEntity.toDomain(
     grimmoryUsername = grimmoryUsername,
     grimmoryPassword = grimmoryPassword,
     isGrimmory = isGrimmory,
-    lastConnected = lastConnected,
+    lastConnected = lastConnected
 )
 
 fun Server.toEntity(): ServerEntity = ServerEntity(
@@ -39,7 +39,7 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     kosyncUsername = kosyncUsername,
     grimmoryUsername = grimmoryUsername,
     isGrimmory = isGrimmory,
-    lastConnected = lastConnected,
+    lastConnected = lastConnected
 )
 
 fun BookEntity.toDomain(): Book = Book(
@@ -62,7 +62,7 @@ fun BookEntity.toDomain(): Book = Book(
     language = language,
     subjects = subjects,
     pageCount = pageCount,
-    publishedDate = publishedDate,
+    publishedDate = publishedDate
 )
 
 fun Book.toEntity(): BookEntity = BookEntity(
@@ -85,7 +85,7 @@ fun Book.toEntity(): BookEntity = BookEntity(
     language = language,
     subjects = subjects,
     pageCount = pageCount,
-    publishedDate = publishedDate,
+    publishedDate = publishedDate
 )
 
 fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
@@ -96,7 +96,7 @@ fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
     kosyncProgress = kosyncProgress,
     lastReadAt = lastReadAt,
     syncedAt = syncedAt,
-    needsSync = needsSync,
+    needsSync = needsSync
 )
 
 fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
@@ -107,7 +107,7 @@ fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
     kosyncProgress = kosyncProgress,
     lastReadAt = lastReadAt,
     syncedAt = syncedAt,
-    needsSync = needsSync,
+    needsSync = needsSync
 )
 
 fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
@@ -115,7 +115,7 @@ fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
     bookId = bookId,
     locatorJson = locatorJson,
     title = title,
-    createdAt = createdAt,
+    createdAt = createdAt
 )
 
 fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
@@ -123,7 +123,7 @@ fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
     bookId = bookId,
     locatorJson = locatorJson,
     title = title,
-    createdAt = createdAt,
+    createdAt = createdAt
 )
 
 fun HighlightEntity.toDomain(): Highlight = Highlight(
@@ -132,7 +132,7 @@ fun HighlightEntity.toDomain(): Highlight = Highlight(
     locatorJson = locatorJson,
     color = color,
     annotation = annotation,
-    createdAt = createdAt,
+    createdAt = createdAt
 )
 
 fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -141,7 +141,7 @@ fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
     locatorJson = locatorJson,
     color = color,
     annotation = annotation,
-    createdAt = createdAt,
+    createdAt = createdAt
 )
 
 fun ReadingSessionEntity.toDomain(): ReadingSession = ReadingSession(
@@ -151,7 +151,7 @@ fun ReadingSessionEntity.toDomain(): ReadingSession = ReadingSession(
     endTime = endTime,
     durationSeconds = durationSeconds,
     startProgress = startProgress,
-    endProgress = endProgress,
+    endProgress = endProgress
 )
 
 fun ReadingSession.toEntity(): ReadingSessionEntity = ReadingSessionEntity(
@@ -161,5 +161,5 @@ fun ReadingSession.toEntity(): ReadingSessionEntity = ReadingSessionEntity(
     endTime = endTime,
     durationSeconds = durationSeconds,
     startProgress = startProgress,
-    endProgress = endProgress,
+    endProgress = endProgress
 )

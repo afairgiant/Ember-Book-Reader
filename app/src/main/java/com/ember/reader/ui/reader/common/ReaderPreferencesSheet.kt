@@ -5,14 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -21,11 +13,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,6 +33,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,35 +55,35 @@ import com.ember.reader.ui.common.SectionLabel
 fun ReaderPreferencesSheet(
     preferences: ReaderPreferences,
     onPreferencesChanged: (ReaderPreferences) -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 text = "Reader Settings",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
             SectionLabel("Font")
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FontFamily.entries.forEach { font ->
                     FilterChip(
                         selected = preferences.fontFamily == font,
                         onClick = { onPreferencesChanged(preferences.copy(fontFamily = font)) },
-                        label = { Text(font.displayName) },
+                        label = { Text(font.displayName) }
                     )
                 }
             }
@@ -93,26 +93,26 @@ fun ReaderPreferencesSheet(
             SectionLabel("Font Size")
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 IconButton(
                     onClick = {
                         val newSize = (preferences.fontSize - 1f).coerceAtLeast(12f)
                         onPreferencesChanged(preferences.copy(fontSize = newSize))
-                    },
+                    }
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = "Decrease")
                 }
                 Text(
                     text = "${preferences.fontSize.toInt()}",
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 IconButton(
                     onClick = {
                         val newSize = (preferences.fontSize + 1f).coerceAtMost(32f)
                         onPreferencesChanged(preferences.copy(fontSize = newSize))
-                    },
+                    }
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Increase")
                 }
@@ -128,25 +128,25 @@ fun ReaderPreferencesSheet(
                 },
                 valueRange = 1.0f..2.5f,
                 steps = 14,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "%.1f".format(preferences.lineHeight),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel("Text Align")
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 com.ember.reader.core.model.TextAlign.entries.forEach { align ->
                     FilterChip(
                         selected = preferences.textAlign == align,
                         onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
-                        label = { Text(align.displayName) },
+                        label = { Text(align.displayName) }
                     )
                 }
             }
@@ -161,12 +161,12 @@ fun ReaderPreferencesSheet(
                 },
                 valueRange = 0.5f..2.5f,
                 steps = 7,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "%.1f".format(preferences.pageMargins),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -174,14 +174,14 @@ fun ReaderPreferencesSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Publisher Styles", style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.publisherStyles,
                     onCheckedChange = {
                         onPreferencesChanged(preferences.copy(publisherStyles = it))
-                    },
+                    }
                 )
             }
 
@@ -190,14 +190,14 @@ fun ReaderPreferencesSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Hyphenation", style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.hyphenate,
                     onCheckedChange = {
                         onPreferencesChanged(preferences.copy(hyphenate = it))
-                    },
+                    }
                 )
             }
 
@@ -207,7 +207,7 @@ fun ReaderPreferencesSheet(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier = Modifier.padding(vertical = 8.dp)
             ) {
                 ReaderTheme.entries.forEach { theme ->
                     val bgColor = if (theme == ReaderTheme.SYSTEM) {
@@ -236,24 +236,24 @@ fun ReaderPreferencesSheet(
                                 .border(
                                     width = if (isSelected) 3.dp else 1.dp,
                                     color = borderColor,
-                                    shape = CircleShape,
+                                    shape = CircleShape
                                 )
                                 .clickable {
                                     onPreferencesChanged(preferences.copy(theme = theme))
-                                },
+                                }
                         ) {
                             Text(
                                 text = "Aa",
                                 color = fgColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                textAlign = ComposeTextAlign.Center,
+                                textAlign = ComposeTextAlign.Center
                             )
                         }
                         Text(
                             text = theme.displayName,
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(top = 4.dp),
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
@@ -264,14 +264,14 @@ fun ReaderPreferencesSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Paginated Mode", style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.isPaginated,
                     onCheckedChange = {
                         onPreferencesChanged(preferences.copy(isPaginated = it))
-                    },
+                    }
                 )
             }
 
@@ -279,13 +279,13 @@ fun ReaderPreferencesSheet(
 
             SectionLabel("Orientation")
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 com.ember.reader.core.model.OrientationLock.entries.forEach { lock ->
                     FilterChip(
                         selected = preferences.orientationLock == lock,
                         onClick = { onPreferencesChanged(preferences.copy(orientationLock = lock)) },
-                        label = { Text(lock.displayName) },
+                        label = { Text(lock.displayName) }
                     )
                 }
             }
@@ -307,25 +307,29 @@ fun ReaderPreferencesSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Top zone height: ${(preferences.topZoneHeight * 100).toInt()}%",
+            Text(
+                "Top zone height: ${(preferences.topZoneHeight * 100).toInt()}%",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Slider(
                 value = preferences.topZoneHeight,
                 onValueChange = { onPreferencesChanged(preferences.copy(topZoneHeight = it)) },
                 valueRange = 0.05f..0.30f,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
-            Text("Left/Right zone width: ${(preferences.leftZoneWidth * 100).toInt()}%",
+            Text(
+                "Left/Right zone width: ${(preferences.leftZoneWidth * 100).toInt()}%",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Slider(
                 value = preferences.leftZoneWidth,
                 onValueChange = {
                     onPreferencesChanged(preferences.copy(leftZoneWidth = it, rightZoneWidth = it))
                 },
                 valueRange = 0.15f..0.45f,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -337,7 +341,7 @@ fun ReaderPreferencesSheet(
                     onPreferencesChanged(preferences.copy(brightness = it))
                 },
                 valueRange = 0.01f..1.0f,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -347,7 +351,7 @@ fun ReaderPreferencesSheet(
 private fun TapZoneSelector(
     label: String,
     selected: com.ember.reader.core.model.TapZoneBehavior,
-    onChanged: (com.ember.reader.core.model.TapZoneBehavior) -> Unit,
+    onChanged: (com.ember.reader.core.model.TapZoneBehavior) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Row(
@@ -355,14 +359,14 @@ private fun TapZoneSelector(
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Box {
             FilterChip(
                 selected = true,
                 onClick = { expanded = true },
-                label = { Text(selected.displayName) },
+                label = { Text(selected.displayName) }
             )
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 com.ember.reader.core.model.TapZoneBehavior.entries.forEach { behavior ->
@@ -371,7 +375,7 @@ private fun TapZoneSelector(
                         onClick = {
                             onChanged(behavior)
                             expanded = false
-                        },
+                        }
                     )
                 }
             }

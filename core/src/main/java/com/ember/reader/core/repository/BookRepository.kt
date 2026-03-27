@@ -1,35 +1,32 @@
 package com.ember.reader.core.repository
 
 import android.content.Context
+import android.graphics.Bitmap
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
-import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
-import com.ember.reader.core.grimmory.GrimmoryAppPage
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
-import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.PartialMd5
-import org.readium.r2.shared.publication.services.cover
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import android.graphics.Bitmap
-import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import org.readium.r2.shared.publication.services.cover
+import timber.log.Timber
 
 @Singleton
 class BookRepository @Inject constructor(
@@ -40,7 +37,7 @@ class BookRepository @Inject constructor(
     private val serverRepository: ServerRepository,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) {
 
     private val booksDir: File by lazy {
@@ -69,11 +66,9 @@ class BookRepository @Inject constructor(
     fun observeRecentlyReading(): Flow<List<Book>> =
         bookDao.observeRecentlyReading().map { entities -> entities.map { it.toDomain() } }
 
-    fun observeById(id: String): Flow<Book?> =
-        bookDao.observeById(id).map { it?.toDomain() }
+    fun observeById(id: String): Flow<Book?> = bookDao.observeById(id).map { it?.toDomain() }
 
-    suspend fun getById(id: String): Book? =
-        bookDao.getById(id)?.toDomain()
+    suspend fun getById(id: String): Book? = bookDao.getById(id)?.toDomain()
 
     fun search(serverId: Long?, query: String): Flow<List<Book>> =
         bookDao.search(serverId, query).map { entities -> entities.map { it.toDomain() } }
@@ -81,7 +76,7 @@ class BookRepository @Inject constructor(
     suspend fun refreshFromServer(
         server: Server,
         page: Int = 1,
-        path: String,
+        path: String
     ): Result<OpdsBookPage> {
         val result = opdsClient.fetchBooks(
             baseUrl = server.url,
@@ -89,7 +84,7 @@ class BookRepository @Inject constructor(
             password = server.opdsPassword,
             serverId = server.id,
             path = path,
-            page = page,
+            page = page
         )
         val resolvedIds = mutableListOf<String>()
         result.onSuccess { bookPage ->
@@ -104,8 +99,8 @@ class BookRepository @Inject constructor(
                             author = book.author,
                             description = book.description,
                             coverUrl = book.coverUrl,
-                            downloadUrl = book.downloadUrl,
-                        ),
+                            downloadUrl = book.downloadUrl
+                        )
                     )
                     resolvedIds.add(existing.id)
                 } else {
@@ -129,7 +124,7 @@ class BookRepository @Inject constructor(
         shelfId: Long? = null,
         seriesName: String? = null,
         status: String? = null,
-        search: String? = null,
+        search: String? = null
     ): Result<OpdsBookPage> {
         Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId status='$status'")
         val appPage = when {
@@ -142,7 +137,7 @@ class BookRepository @Inject constructor(
                 size = size,
                 libraryId = libraryId,
                 shelfId = shelfId,
-                status = status,
+                status = status
             )
         }
 
@@ -171,8 +166,8 @@ class BookRepository @Inject constructor(
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
                         coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
-                        downloadUrl = "/api/v1/opds/${appBook.id}/download",
-                    ),
+                        downloadUrl = "/api/v1/opds/${appBook.id}/download"
+                    )
                 )
                 resolvedIds.add(existing.id)
             } else {
@@ -185,7 +180,7 @@ class BookRepository @Inject constructor(
                     coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
                     downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     format = format,
-                    addedAt = Instant.now(),
+                    addedAt = Instant.now()
                 )
                 bookDao.insert(book.toEntity())
                 resolvedIds.add(book.id)
@@ -200,7 +195,7 @@ class BookRepository @Inject constructor(
                 title = appBook.title,
                 author = appBook.authors.firstOrNull(),
                 format = BookFormat.EPUB,
-                addedAt = Instant.now(),
+                addedAt = Instant.now()
             )
         }
 
@@ -211,8 +206,8 @@ class BookRepository @Inject constructor(
                 books = books,
                 resolvedBookIds = resolvedIds,
                 totalResults = result.totalElements.toInt(),
-                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null,
-            ),
+                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null
+            )
         )
     }
 
@@ -235,7 +230,7 @@ class BookRepository @Inject constructor(
                 baseUrl = server.url,
                 serverId = server.id,
                 grimmoryBookId = grimmoryBookId,
-                destination = file,
+                destination = file
             ).getOrThrow()
         } else {
             opdsClient.downloadBookToFile(
@@ -243,7 +238,7 @@ class BookRepository @Inject constructor(
                 username = server.opdsUsername,
                 password = server.opdsPassword,
                 downloadPath = downloadUrl,
-                destination = file,
+                destination = file
             ).getOrThrow()
         }
 
@@ -274,7 +269,7 @@ class BookRepository @Inject constructor(
             localPath = file.absolutePath,
             fileHash = fileHash,
             coverUrl = metadata.coverUrl ?: book.coverUrl,
-            downloadedAt = Instant.now(),
+            downloadedAt = Instant.now()
         )
     }
 
@@ -294,7 +289,7 @@ class BookRepository @Inject constructor(
                     },
                     author = book.author ?: metadata.author,
                     coverUrl = metadata.coverUrl,
-                    fileHash = hash,
+                    fileHash = hash
                 )
             }
         } else {
@@ -336,7 +331,7 @@ class BookRepository @Inject constructor(
     data class RelinkMatch(
         val serverBookId: String,
         val serverName: String,
-        val serverId: Long,
+        val serverId: Long
     )
 
     /**
@@ -365,7 +360,7 @@ class BookRepository @Inject constructor(
                 } else {
                     val catalogPath = server.url.trimEnd('/') + "/catalog"
                     val pathPart = catalogPath.substringAfter(
-                        com.ember.reader.core.network.serverOrigin(server.url),
+                        com.ember.reader.core.network.serverOrigin(server.url)
                     )
                     runCatching { refreshFromServer(server, path = pathPart) }
                         .onFailure { Timber.w(it, "Relink: OPDS catalog fetch failed") }
@@ -386,7 +381,7 @@ class BookRepository @Inject constructor(
                     baseUrl = server.url,
                     serverId = server.id,
                     query = book.title,
-                    size = 5,
+                    size = 5
                 ).getOrNull()
 
                 if (searchResult != null) {
@@ -415,7 +410,7 @@ class BookRepository @Inject constructor(
                                         "PDF" -> BookFormat.PDF
                                         else -> BookFormat.EPUB
                                     },
-                                    addedAt = java.time.Instant.now(),
+                                    addedAt = java.time.Instant.now()
                                 )
                                 bookDao.insert(newBook.toEntity())
                                 newBook.id
@@ -458,58 +453,59 @@ class BookRepository @Inject constructor(
      * - If no match, creates a new local book entry from the file.
      * Returns the number of recovered books.
      */
-    suspend fun recoverOrphanedFiles(): Int = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val trackedPaths = bookDao.observeDownloadedBooks().first()
-            .mapNotNull { it.localPath }
-            .toSet()
+    suspend fun recoverOrphanedFiles(): Int =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val trackedPaths = bookDao.observeDownloadedBooks().first()
+                .mapNotNull { it.localPath }
+                .toSet()
 
-        var recovered = 0
-        val files = booksDir.listFiles() ?: return@withContext 0
+            var recovered = 0
+            val files = booksDir.listFiles() ?: return@withContext 0
 
-        for (file in files) {
-            if (file.absolutePath in trackedPaths) continue
-            if (!file.isFile) continue
+            for (file in files) {
+                if (file.absolutePath in trackedPaths) continue
+                if (!file.isFile) continue
 
-            val extension = file.extension.lowercase()
-            val format = when (extension) {
-                "epub" -> BookFormat.EPUB
-                "pdf" -> BookFormat.PDF
-                else -> continue
+                val extension = file.extension.lowercase()
+                val format = when (extension) {
+                    "epub" -> BookFormat.EPUB
+                    "pdf" -> BookFormat.PDF
+                    else -> continue
+                }
+
+                val hash = PartialMd5.compute(file)
+
+                // Try to match by hash (book exists in DB but localPath was cleared)
+                val existingByHash = bookDao.getByFileHash(hash)
+                if (existingByHash != null && existingByHash.localPath == null) {
+                    bookDao.updateLocalPath(existingByHash.id, file.absolutePath, Instant.now())
+                    Timber.i("Recovered orphan: re-linked ${file.name} to ${existingByHash.title}")
+                    recovered++
+                    continue
+                }
+
+                // No match — extract metadata and create a local book
+                if (existingByHash == null) {
+                    val (title, author, coverUrl) = extractMetadata(file)
+                    val book = Book(
+                        id = java.util.UUID.randomUUID().toString(),
+                        title = title,
+                        author = author,
+                        format = format,
+                        localPath = file.absolutePath,
+                        fileHash = hash,
+                        coverUrl = coverUrl,
+                        addedAt = Instant.now(),
+                        downloadedAt = Instant.now()
+                    )
+                    bookDao.insert(book.toEntity())
+                    Timber.i("Recovered orphan: created entry for '$title' from ${file.name}")
+                    recovered++
+                }
             }
 
-            val hash = PartialMd5.compute(file)
-
-            // Try to match by hash (book exists in DB but localPath was cleared)
-            val existingByHash = bookDao.getByFileHash(hash)
-            if (existingByHash != null && existingByHash.localPath == null) {
-                bookDao.updateLocalPath(existingByHash.id, file.absolutePath, Instant.now())
-                Timber.i("Recovered orphan: re-linked ${file.name} to ${existingByHash.title}")
-                recovered++
-                continue
-            }
-
-            // No match — extract metadata and create a local book
-            if (existingByHash == null) {
-                val (title, author, coverUrl) = extractMetadata(file)
-                val book = Book(
-                    id = java.util.UUID.randomUUID().toString(),
-                    title = title,
-                    author = author,
-                    format = format,
-                    localPath = file.absolutePath,
-                    fileHash = hash,
-                    coverUrl = coverUrl,
-                    addedAt = Instant.now(),
-                    downloadedAt = Instant.now(),
-                )
-                bookDao.insert(book.toEntity())
-                Timber.i("Recovered orphan: created entry for '$title' from ${file.name}")
-                recovered++
-            }
+            recovered
         }
-
-        recovered
-    }
 
     data class BookMetadata(
         val title: String,
@@ -520,7 +516,7 @@ class BookRepository @Inject constructor(
         val subjects: String? = null,
         val pageCount: Int? = null,
         val publishedDate: String? = null,
-        val description: String? = null,
+        val description: String? = null
     )
 
     suspend fun extractMetadata(file: File): BookMetadata {
@@ -572,8 +568,8 @@ class BookRepository @Inject constructor(
                 pageCount = metadata.pageCount ?: entity.pageCount,
                 publishedDate = metadata.publishedDate ?: entity.publishedDate,
                 description = metadata.description ?: entity.description,
-                coverUrl = metadata.coverUrl ?: entity.coverUrl,
-            ),
+                coverUrl = metadata.coverUrl ?: entity.coverUrl
+            )
         )
     }
 }

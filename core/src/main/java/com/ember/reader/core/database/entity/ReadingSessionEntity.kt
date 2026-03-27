@@ -13,13 +13,13 @@ import java.time.Instant
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
+            onDelete = ForeignKey.CASCADE
+        )
     ],
     indices = [
         Index("bookId"),
-        Index("startTime"),
-    ],
+        Index("startTime")
+    ]
 )
 data class ReadingSessionEntity(
     @PrimaryKey(autoGenerate = true)
@@ -29,5 +29,5 @@ data class ReadingSessionEntity(
     val endTime: Instant,
     val durationSeconds: Long,
     val startProgress: Float,
-    val endProgress: Float,
+    val endProgress: Float
 )

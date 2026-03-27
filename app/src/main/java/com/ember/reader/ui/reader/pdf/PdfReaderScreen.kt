@@ -23,7 +23,6 @@ import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
-import kotlinx.coroutines.launch
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
@@ -34,10 +33,7 @@ private const val CONTAINER_ID = 0x7F_FF_00_02
 
 @OptIn(ExperimentalReadiumApi::class)
 @Composable
-fun PdfReaderScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: ReaderViewModel = hiltViewModel(),
-) {
+fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
@@ -109,7 +105,7 @@ fun PdfReaderScreen(
                 onNavigateBack = onNavigateBack,
                 onToggleBookmark = viewModel::addBookmark,
                 onOpenTableOfContents = {},
-                onOpenPreferences = { showPreferences = true },
+                onOpenPreferences = { showPreferences = true }
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -118,14 +114,14 @@ fun PdfReaderScreen(
                     fragmentClass = PdfNavigatorFragment::class.java,
                     fragmentFactory = PdfNavigatorFactory(
                         publication = state.publication,
-                        pdfEngineProvider = PdfiumEngineProvider(),
+                        pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
-                        initialLocator = state.initialLocator,
+                        initialLocator = state.initialLocator
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
                     },
-                    onLocatorChanged = viewModel::onLocatorChanged,
+                    onLocatorChanged = viewModel::onLocatorChanged
                 )
             }
 
@@ -139,7 +135,7 @@ fun PdfReaderScreen(
                         showBookmarks = false
                     },
                     onDelete = viewModel::deleteBookmark,
-                    onDismiss = { showBookmarks = false },
+                    onDismiss = { showBookmarks = false }
                 )
             }
 
@@ -147,7 +143,7 @@ fun PdfReaderScreen(
                 ReaderPreferencesSheet(
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
-                    onDismiss = { showPreferences = false },
+                    onDismiss = { showPreferences = false }
                 )
             }
 
@@ -155,7 +151,7 @@ fun PdfReaderScreen(
                 SyncConflictDialog(
                     conflict = conflict,
                     onAcceptRemote = viewModel::acceptRemoteProgress,
-                    onKeepLocal = viewModel::dismissSyncConflict,
+                    onKeepLocal = viewModel::dismissSyncConflict
                 )
             }
         }

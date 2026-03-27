@@ -4,9 +4,9 @@ import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
-import com.ember.reader.core.model.Server
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
@@ -71,7 +71,7 @@ class ServerRepositoryTest {
             opdsUsername = "opds_user",
             opdsPassword = "opds_pass",
             kosyncUsername = "kosync_user",
-            kosyncPassword = "kosync_pass",
+            kosyncPassword = "kosync_pass"
         )
         coEvery { serverDao.insert(any()) } returns 5L
         every { credentialEncryption.storePassword(any(), any()) } returns Unit
@@ -82,20 +82,23 @@ class ServerRepositoryTest {
         verify {
             credentialEncryption.storePassword(
                 CredentialEncryption.opdsPasswordKey(5L),
-                "opds_pass",
+                "opds_pass"
             )
         }
         verify {
             credentialEncryption.storePassword(
                 CredentialEncryption.kosyncPasswordKey(5L),
-                "kosync_pass",
+                "kosync_pass"
             )
         }
     }
 
     @Test
     fun `delete removes passwords from CredentialEncryption`() = runTest {
-        val tempDir = java.io.File.createTempFile("test", "dir").apply { delete(); mkdirs() }
+        val tempDir = java.io.File.createTempFile("test", "dir").apply {
+            delete()
+            mkdirs()
+        }
         every { context.filesDir } returns tempDir
         coEvery { bookDao.getDownloadedBooksForServer(10L) } returns emptyList()
         coEvery { serverDao.deleteById(10L) } returns Unit
@@ -116,7 +119,7 @@ class ServerRepositoryTest {
             name = "My Server",
             url = "http://example.com",
             opdsUsername = "opds_user",
-            kosyncUsername = "kosync_user",
+            kosyncUsername = "kosync_user"
         )
         coEvery { serverDao.getById(7L) } returns entity
         every {

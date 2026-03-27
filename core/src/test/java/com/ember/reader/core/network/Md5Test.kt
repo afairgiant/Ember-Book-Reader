@@ -26,7 +26,7 @@ class Md5Test {
     fun `toHexString converts arbitrary bytes`() {
         assertEquals(
             "deadbeef",
-            byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte()).toHexString(),
+            byteArrayOf(0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte()).toHexString()
         )
     }
 

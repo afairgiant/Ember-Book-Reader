@@ -10,9 +10,9 @@ import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.json
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 
 object HttpClientFactory {
 
@@ -33,7 +33,7 @@ object HttpClientFactory {
                     ignoreUnknownKeys = true
                     isLenient = true
                     encodeDefaults = true
-                },
+                }
             )
         }
 

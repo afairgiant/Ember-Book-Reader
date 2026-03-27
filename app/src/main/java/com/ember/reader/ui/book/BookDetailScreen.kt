@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -68,7 +67,7 @@ import kotlin.math.roundToInt
 fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
-    viewModel: BookDetailViewModel = hiltViewModel(),
+    viewModel: BookDetailViewModel = hiltViewModel()
 ) {
     val book by viewModel.book.collectAsStateWithLifecycle()
     val server by viewModel.server.collectAsStateWithLifecycle()
@@ -97,10 +96,10 @@ fun BookDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                ),
+                    containerColor = Color.Transparent
+                )
             )
-        },
+        }
     ) { padding ->
         val currentBook = book
         if (currentBook == null) {
@@ -108,7 +107,7 @@ fun BookDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
@@ -117,13 +116,13 @@ fun BookDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
             ) {
                 // Cover + basic info header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
                 ) {
                     // Cover image
                     BookCover(
@@ -131,7 +130,7 @@ fun BookDetailScreen(
                         coverAuthHeader = coverAuthHeader,
                         modifier = Modifier
                             .width(140.dp)
-                            .aspectRatio(0.67f),
+                            .aspectRatio(0.67f)
                     )
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -143,7 +142,7 @@ fun BookDetailScreen(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         currentBook.author?.let { author ->
@@ -153,7 +152,7 @@ fun BookDetailScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
@@ -172,7 +171,7 @@ fun BookDetailScreen(
                             Text(
                                 text = seriesText,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -187,7 +186,7 @@ fun BookDetailScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
                         )
 
                         // Reading progress
@@ -200,13 +199,13 @@ fun BookDetailScreen(
                                     .fillMaxWidth()
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
-                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                             )
                             Text(
                                 text = "${(pct * 100).roundToInt()}% complete",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp),
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
                     }
@@ -219,18 +218,18 @@ fun BookDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (currentBook.isDownloaded) {
                         Button(
                             onClick = { onOpenReader(currentBook.id, currentBook.format) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.MenuBook,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             val buttonText = if (progress?.percentage?.let { it > 0f } == true) {
@@ -245,19 +244,19 @@ fun BookDetailScreen(
                             onClick = { viewModel.downloadBook() },
                             enabled = !downloading,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             if (downloading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {
                                 Icon(
                                     Icons.Default.CloudDownload,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -275,26 +274,26 @@ fun BookDetailScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "Read Status",
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 ReadStatus.entries.forEach { status ->
                                     FilterChip(
                                         selected = readStatus == status,
                                         onClick = { viewModel.updateReadStatus(status) },
-                                        label = { Text(status.displayName) },
+                                        label = { Text(status.displayName) }
                                     )
                                 }
                             }
@@ -311,21 +310,21 @@ fun BookDetailScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = "Description",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = cleanHtml(description),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -339,15 +338,15 @@ fun BookDetailScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "Details",
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -381,18 +380,16 @@ fun BookDetailScreen(
 }
 
 @Composable
-private fun BookCover(
-    book: Book,
-    coverAuthHeader: String?,
-    modifier: Modifier = Modifier,
-) {
+private fun BookCover(book: Book, coverAuthHeader: String?, modifier: Modifier = Modifier) {
     if (book.coverUrl != null) {
         val context = LocalContext.current
         val imageModel = remember(book.coverUrl, coverAuthHeader) {
             val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
                 val token = coverAuthHeader.removePrefix("jwt:")
                 "${book.coverUrl}?token=$token"
-            } else book.coverUrl
+            } else {
+                book.coverUrl
+            }
             ImageRequest.Builder(context)
                 .data(url)
                 .apply {
@@ -407,7 +404,7 @@ private fun BookCover(
             model = imageModel,
             contentDescription = book.title,
             contentScale = ContentScale.Crop,
-            modifier = modifier.clip(RoundedCornerShape(12.dp)),
+            modifier = modifier.clip(RoundedCornerShape(12.dp))
         )
     } else {
         val colorIndex = bookCoverColorIndex(book.title)
@@ -415,12 +412,12 @@ private fun BookCover(
             modifier = modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(BookCoverPlaceholderColors[colorIndex]),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = book.title.take(2).uppercase(),
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color(0xFF5D4037),
+                color = Color(0xFF5D4037)
             )
         }
     }
@@ -432,31 +429,30 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
 /** Simple HTML tag stripper for OPDS descriptions. */
-private fun cleanHtml(html: String): String =
-    html.replace(Regex("<[^>]*>"), "")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ")
-        .trim()
+private fun cleanHtml(html: String): String = html.replace(Regex("<[^>]*>"), "")
+    .replace("&amp;", "&")
+    .replace("&lt;", "<")
+    .replace("&gt;", ">")
+    .replace("&quot;", "\"")
+    .replace("&#39;", "'")
+    .replace("&nbsp;", " ")
+    .trim()
 
 private val ReadStatus.displayName: String
     get() = when (this) {

@@ -1,10 +1,10 @@
 package com.ember.reader.ui.common
 
-import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
+import timber.log.Timber
 
 /**
  * In-memory ring buffer that captures Timber logs for the developer log viewer.
@@ -18,7 +18,7 @@ object DevLog {
         val timestamp: Long,
         val level: String,
         val tag: String?,
-        val message: String,
+        val message: String
     ) {
         private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 

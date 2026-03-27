@@ -8,19 +8,19 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.ember.reader.core.repository.AppPreferencesRepository
-import com.ember.reader.ui.common.NotificationHelper
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
+import com.ember.reader.ui.common.DevLog
+import com.ember.reader.ui.common.NotificationHelper
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import com.ember.reader.ui.common.DevLog
 import timber.log.Timber
-import javax.inject.Inject
 
 @HiltAndroidApp
 class EmberApplication : Application(), Configuration.Provider, ImageLoaderFactory {

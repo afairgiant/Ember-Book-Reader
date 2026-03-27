@@ -1,13 +1,11 @@
 package com.ember.reader.ui.reader.common
 
 import androidx.lifecycle.SavedStateHandle
-import com.ember.reader.core.model.Bookmark
-import com.ember.reader.core.model.ReaderPreferences
-import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
-import com.ember.reader.core.repository.AppPreferencesRepository
+import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.readium.BookOpener
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.HighlightRepository
@@ -74,7 +72,8 @@ class ReaderViewModelTest {
     private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
     @MockK
-    private lateinit var readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository
+    private lateinit var readingSessionRepository:
+        com.ember.reader.core.repository.ReadingSessionRepository
 
     @MockK
     private lateinit var appPreferencesRepository: AppPreferencesRepository
@@ -110,7 +109,7 @@ class ReaderViewModelTest {
             grimmoryClient = grimmoryClient,
             grimmoryTokenManager = grimmoryTokenManager,
             readingSessionRepository = readingSessionRepository,
-            appPreferencesRepository = appPreferencesRepository,
+            appPreferencesRepository = appPreferencesRepository
         )
     }
 
@@ -170,7 +169,7 @@ class ReaderViewModelTest {
         val testLocator = mockk<Locator>(relaxed = true)
         every { testLocator.title } returns "Chapter 1"
         every { testLocator.toJSON() } returns org.json.JSONObject(
-            mapOf("href" to "/chapter1.xhtml", "type" to "application/xhtml+xml"),
+            mapOf("href" to "/chapter1.xhtml", "type" to "application/xhtml+xml")
         )
         every { testLocator.locations } returns mockk(relaxed = true) {
             every { totalProgression } returns 0.1
@@ -189,7 +188,7 @@ class ReaderViewModelTest {
             bookmarkRepository.addBookmark(
                 bookId = "book-123",
                 locatorJson = any(),
-                title = "Chapter 1",
+                title = "Chapter 1"
             )
         }
     }

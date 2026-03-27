@@ -1,23 +1,26 @@
 package com.ember.reader.ui.library
-import kotlin.math.roundToInt
-
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.model.Server
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.time.Instant
+import java.util.UUID
+import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,16 +32,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.File
-import java.time.Instant
-import java.util.UUID
-import javax.inject.Inject
 
 enum class LibrarySortMode(val displayName: String) {
     RECENT("Recent"),
     TITLE("A-Z"),
     AUTHOR("Author"),
-    PROGRESS("Progress"),
+    PROGRESS("Progress")
 }
 
 @HiltViewModel
@@ -48,7 +47,7 @@ class LocalLibraryViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
@@ -85,7 +84,9 @@ class LocalLibraryViewModel @Inject constructor(
                 _coverAuthHeaders.value = servers.associate { server ->
                     val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
                         grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
-                    } else null
+                    } else {
+                        null
+                    }
                     server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
                 }
             }
@@ -210,8 +211,8 @@ class LocalLibraryViewModel @Inject constructor(
                         },
                         epubProgress = GrimmoryEpubProgress(
                             cfi = "epubcfi(/6/2)",
-                            percentage = pct,
-                        ),
+                            percentage = pct
+                        )
                     )
                     grimmoryClient.pushProgress(server.url, server.id, request).getOrThrow()
                     pushed = true
@@ -272,14 +273,16 @@ class LocalLibraryViewModel @Inject constructor(
                     percentage = bestPercentage!!,
                     lastReadAt = java.time.Instant.now(),
                     syncedAt = java.time.Instant.now(),
-                    needsSync = false,
-                ),
+                    needsSync = false
+                )
             )
         }
 
         return if (bestPercentage != null) {
             " (${(bestPercentage!! * 100).roundToInt()}% from $source)"
-        } else ""
+        } else {
+            ""
+        }
     }
 
     fun relinkBook(bookId: String, serverId: Long) {
@@ -334,7 +337,9 @@ class LocalLibraryViewModel @Inject constructor(
                     val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                     if (cursor.moveToFirst() && nameIndex >= 0) {
                         cursor.getString(nameIndex)?.substringBeforeLast('.')
-                    } else null
+                    } else {
+                        null
+                    }
                 } ?: "Untitled"
 
                 val book = Book(
@@ -351,7 +356,7 @@ class LocalLibraryViewModel @Inject constructor(
                     pageCount = metadata.pageCount,
                     publishedDate = metadata.publishedDate,
                     addedAt = Instant.now(),
-                    downloadedAt = Instant.now(),
+                    downloadedAt = Instant.now()
                 )
                 bookRepository.addLocalBook(book)
             }.onFailure {

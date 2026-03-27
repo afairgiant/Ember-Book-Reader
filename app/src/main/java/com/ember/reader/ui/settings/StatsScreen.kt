@@ -41,7 +41,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -49,10 +48,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: StatsViewModel = hiltViewModel(),
-) {
+fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
     val stats by viewModel.stats.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -65,77 +61,77 @@ fun StatsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Streak + All Time
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
                                 Icons.Default.LocalFireDepartment,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = "${stats.currentStreak}",
                                 style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Day Streak",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
                                 Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = stats.allTimeSeconds.formatDuration(),
                                 style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "All Time",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -146,7 +142,7 @@ fun StatsScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TimeCard("Today", stats.todaySeconds, Modifier.weight(1f))
                     TimeCard("This Week", stats.weekSeconds, Modifier.weight(1f))
@@ -159,27 +155,27 @@ fun StatsScreen(
                 item {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = "Estimated time to finish current book:",
                                 style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
                             )
                             Text(
                                 text = (minutes * 60).formatDuration(),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -191,7 +187,7 @@ fun StatsScreen(
                 Text(
                     text = "Reading Activity",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             item {
@@ -204,13 +200,13 @@ fun StatsScreen(
                     Text(
                         text = "Recent Sessions",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 items(stats.recentSessions) { session ->
                     SessionCard(
                         session = session,
-                        bookTitle = stats.bookTitles[session.bookId] ?: "Unknown",
+                        bookTitle = stats.bookTitles[session.bookId] ?: "Unknown"
                     )
                 }
             }
@@ -221,12 +217,12 @@ fun StatsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No reading sessions yet. Open a book and start reading!",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -239,26 +235,26 @@ fun StatsScreen(
 private fun TimeCard(label: String, seconds: Long, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = seconds.formatDuration(),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -272,16 +268,16 @@ private fun StreakCalendar(readingDays: Set<Long>) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             // Day labels
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Mon", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.weight(1f))
@@ -293,7 +289,7 @@ private fun StreakCalendar(readingDays: Set<Long>) {
             // Calendar grid
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
-                reverseLayout = true,
+                reverseLayout = true
             ) {
                 items(weeks) { weekIdx ->
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -304,16 +300,21 @@ private fun StreakCalendar(readingDays: Set<Long>) {
                             // The DAO returns startTime/86400000 — convert to epoch day
                             val hasActivity = epochDay in readingDays ||
                                 // Also check millisecond-based epoch day (startTime stored as millis)
-                                readingDays.any { it == date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() / 86400000 }
+                                readingDays.any {
+                                    it == date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() / 86400000
+                                }
 
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(
-                                        if (hasActivity) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                    ),
+                                        if (hasActivity) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                        } else {
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                        }
+                                    )
                             )
                         }
                     }
@@ -326,22 +327,19 @@ private fun StreakCalendar(readingDays: Set<Long>) {
 private val sessionDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, HH:mm")
 
 @Composable
-private fun SessionCard(
-    session: com.ember.reader.core.model.ReadingSession,
-    bookTitle: String,
-) {
+private fun SessionCard(session: com.ember.reader.core.model.ReadingSession, bookTitle: String) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -349,14 +347,14 @@ private fun SessionCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = session.startTime
                         .atZone(ZoneId.systemDefault())
                         .format(sessionDateFormatter),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -364,14 +362,14 @@ private fun SessionCard(
                 Text(
                     text = session.durationSeconds.formatDuration(),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 val delta = ((session.endProgress - session.startProgress) * 100).roundToInt()
                 if (delta > 0) {
                     Text(
-                        text = "+${delta}%",
+                        text = "+$delta%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

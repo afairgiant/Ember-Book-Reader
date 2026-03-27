@@ -28,7 +28,7 @@ class UrlBuilderTest {
     fun `serverOrigin extracts origin from full URL`() {
         assertEquals(
             "http://192.168.0.174:6060",
-            serverOrigin("http://192.168.0.174:6060/api/v1/opds"),
+            serverOrigin("http://192.168.0.174:6060/api/v1/opds")
         )
     }
 
@@ -36,7 +36,7 @@ class UrlBuilderTest {
     fun `serverOrigin returns URL when no path`() {
         assertEquals(
             "https://example.com",
-            serverOrigin("https://example.com"),
+            serverOrigin("https://example.com")
         )
     }
 
@@ -58,7 +58,7 @@ class UrlBuilderTest {
     fun `resolveUrl resolves absolute path against origin`() {
         assertEquals(
             "https://example.com/api/books",
-            resolveUrl("https://example.com/api/v1/opds", "/api/books"),
+            resolveUrl("https://example.com/api/v1/opds", "/api/books")
         )
     }
 
@@ -66,7 +66,7 @@ class UrlBuilderTest {
     fun `resolveUrl resolves relative path against base`() {
         assertEquals(
             "https://example.com/api/v1/opds/catalog",
-            resolveUrl("https://example.com/api/v1/opds", "catalog"),
+            resolveUrl("https://example.com/api/v1/opds", "catalog")
         )
     }
 
@@ -74,7 +74,7 @@ class UrlBuilderTest {
     fun `resolveUrl resolves with IP and port`() {
         assertEquals(
             "http://192.168.0.174:6060/api/koreader/syncs",
-            resolveUrl("http://192.168.0.174:6060/api/v1/opds", "/api/koreader/syncs"),
+            resolveUrl("http://192.168.0.174:6060/api/v1/opds", "/api/koreader/syncs")
         )
     }
 }

@@ -4,8 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.ember.reader.core.database.entity.ReadingSessionEntity
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReadingSessionDao {
@@ -39,7 +39,7 @@ interface ReadingSessionDao {
         SELECT DISTINCT CAST(startTime / 86400000 AS INTEGER) as day
         FROM reading_sessions
         WHERE startTime >= :start AND startTime < :end
-        """,
+        """
     )
     suspend fun getReadingDaysInRange(start: Instant, end: Instant): List<Long>
 }

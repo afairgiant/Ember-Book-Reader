@@ -7,10 +7,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ember.reader.core.database.converter.Converters
 import com.ember.reader.core.database.dao.BookDao
-import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
+import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
@@ -26,10 +26,10 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingProgressEntity::class,
         BookmarkEntity::class,
         HighlightEntity::class,
-        ReadingSessionEntity::class,
+        ReadingSessionEntity::class
     ],
     version = 5,
-    exportSchema = true,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class EmberDatabase : RoomDatabase() {
@@ -56,7 +56,7 @@ abstract class EmberDatabase : RoomDatabase() {
                         endProgress REAL NOT NULL,
                         FOREIGN KEY (bookId) REFERENCES books(id) ON DELETE CASCADE
                     )
-                    """.trimIndent(),
+                    """.trimIndent()
                 )
                 db.execSQL("CREATE INDEX index_reading_sessions_bookId ON reading_sessions(bookId)")
                 db.execSQL("CREATE INDEX index_reading_sessions_startTime ON reading_sessions(startTime)")
@@ -100,7 +100,7 @@ abstract class EmberDatabase : RoomDatabase() {
                         downloadedAt INTEGER,
                         FOREIGN KEY (serverId) REFERENCES servers(id) ON DELETE SET NULL
                     )
-                    """.trimIndent(),
+                    """.trimIndent()
                 )
                 db.execSQL("INSERT INTO books_new SELECT * FROM books")
                 db.execSQL("DROP TABLE books")

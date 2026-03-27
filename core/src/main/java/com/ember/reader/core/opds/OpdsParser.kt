@@ -3,12 +3,11 @@ package com.ember.reader.core.opds
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.network.resolveUrl
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import timber.log.Timber
 import java.io.StringReader
 import java.time.Instant
 import java.util.UUID
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 
 /**
  * Parses OPDS 1.2 Atom XML feeds from Grimmory.
@@ -88,8 +87,8 @@ object OpdsParser {
                                 id = entryId,
                                 title = entryTitle,
                                 href = entryHref,
-                                content = entryContent,
-                            ),
+                                content = entryContent
+                            )
                         )
                         inEntry = false
                     }
@@ -178,8 +177,8 @@ object OpdsParser {
                                 coverUrl = coverUrl,
                                 downloadUrl = downloadUrl,
                                 format = format,
-                                addedAt = Instant.now(),
-                            ),
+                                addedAt = Instant.now()
+                            )
                         )
                         inEntry = false
                     }

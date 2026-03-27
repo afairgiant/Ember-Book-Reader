@@ -35,7 +35,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color(0xFFFFF0E8),
     onSurfaceVariant = Color(0xFF534340),
     background = Color(0xFFFFF8F5),
-    outline = Color(0xFFD4A898),
+    outline = Color(0xFFD4A898)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -54,14 +54,14 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = Color(0xFF2E2220),
     onSurfaceVariant = Color(0xFFD8C2BA),
     background = Color(0xFF1A1210),
-    outline = Color(0xFF7D5D53),
+    outline = Color(0xFF7D5D53)
 )
 
 @Composable
 fun EmberTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -74,6 +74,6 @@ fun EmberTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        content = content,
+        content = content
     )
 }

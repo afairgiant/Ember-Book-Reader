@@ -14,7 +14,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SyncScheduler @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) {
 
     private val workManager: WorkManager
@@ -43,7 +43,7 @@ class SyncScheduler @Inject constructor(
     private fun schedulePeriodicSync(intervalMinutes: Long) {
         val request = PeriodicWorkRequestBuilder<SyncWorker>(
             intervalMinutes,
-            TimeUnit.MINUTES,
+            TimeUnit.MINUTES
         )
             .setConstraints(networkConstraints)
             .build()
@@ -51,7 +51,7 @@ class SyncScheduler @Inject constructor(
         workManager.enqueueUniquePeriodicWork(
             SyncWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
-            request,
+            request
         )
     }
 

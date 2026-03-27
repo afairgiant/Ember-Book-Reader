@@ -1,31 +1,31 @@
 package com.ember.reader.core.repository
 
+import android.content.Context
+import android.graphics.Bitmap
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
-import com.ember.reader.core.readium.BookOpener
-import com.ember.reader.core.model.Server
-import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.Server
+import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.KosyncClient
-import android.content.Context
-import android.graphics.Bitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.FileOutputStream
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.services.cover
 import timber.log.Timber
-import java.io.File
-import java.io.FileOutputStream
-import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class ServerRepository @Inject constructor(
@@ -37,20 +37,17 @@ class ServerRepository @Inject constructor(
     private val kosyncClient: KosyncClient,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val credentialEncryption: CredentialEncryption,
+    private val credentialEncryption: CredentialEncryption
 ) {
 
     fun observeAll(): Flow<List<Server>> =
         serverDao.observeAll().map { entities -> entities.map { it.withPasswords() } }
 
-    suspend fun getAll(): List<Server> =
-        serverDao.getAll().map { it.withPasswords() }
+    suspend fun getAll(): List<Server> = serverDao.getAll().map { it.withPasswords() }
 
-    fun observeById(id: Long): Flow<Server?> =
-        serverDao.observeById(id).map { it?.withPasswords() }
+    fun observeById(id: Long): Flow<Server?> = serverDao.observeById(id).map { it?.withPasswords() }
 
-    suspend fun getById(id: Long): Server? =
-        serverDao.getById(id)?.withPasswords()
+    suspend fun getById(id: Long): Server? = serverDao.getById(id)?.withPasswords()
 
     suspend fun save(server: Server): Long {
         val id = if (server.id > 0) {
@@ -126,21 +123,19 @@ class ServerRepository @Inject constructor(
     suspend fun testOpdsConnection(
         url: String,
         username: String,
-        password: String,
-    ): Result<String> =
-        opdsClient.testConnection(url, username, password)
+        password: String
+    ): Result<String> = opdsClient.testConnection(url, username, password)
 
     suspend fun testKosyncConnection(
         url: String,
         username: String,
-        password: String,
-    ): Result<Unit> =
-        kosyncClient.authenticate(url, username, password)
+        password: String
+    ): Result<Unit> = kosyncClient.authenticate(url, username, password)
 
     suspend fun testGrimmoryConnection(
         url: String,
         username: String,
-        password: String,
+        password: String
     ): Result<String> {
         val tokens = grimmoryClient.login(url, username, password).getOrElse {
             return Result.failure(it)
@@ -148,8 +143,7 @@ class ServerRepository @Inject constructor(
         return Result.success("Logged in as $username")
     }
 
-    suspend fun detectGrimmory(url: String): Boolean =
-        grimmoryClient.checkHealth(url)
+    suspend fun detectGrimmory(url: String): Boolean = grimmoryClient.checkHealth(url)
 
     suspend fun updateLastConnected(serverId: Long) {
         serverDao.updateLastConnected(serverId, Instant.now())
@@ -158,7 +152,7 @@ class ServerRepository @Inject constructor(
     private fun ServerEntity.withPasswords(): Server = toDomain(
         opdsPassword = credentialEncryption.getPassword(CredentialEncryption.opdsPasswordKey(id)) ?: "",
         kosyncPassword = credentialEncryption.getPassword(CredentialEncryption.kosyncPasswordKey(id)) ?: "",
-        grimmoryPassword = credentialEncryption.getPassword(grimmoryPasswordKey(id)) ?: "",
+        grimmoryPassword = credentialEncryption.getPassword(grimmoryPasswordKey(id)) ?: ""
     )
 
     companion object {

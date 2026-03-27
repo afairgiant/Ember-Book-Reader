@@ -15,17 +15,17 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 @Singleton
 class GrimmoryClient @Inject constructor(
     private val httpClient: HttpClient,
-    private val tokenManager: GrimmoryTokenManager,
+    private val tokenManager: GrimmoryTokenManager
 ) {
 
     suspend fun checkHealth(baseUrl: String): Boolean = runCatching {
@@ -33,39 +33,34 @@ class GrimmoryClient @Inject constructor(
         response.status.isSuccess()
     }.getOrDefault(false)
 
-    suspend fun login(
-        baseUrl: String,
-        username: String,
-        password: String,
-    ): Result<GrimmoryTokens> = runCatching {
-        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/login") {
-            contentType(ContentType.Application.Json)
-            setBody(GrimmoryLoginRequest(username, password))
+    suspend fun login(baseUrl: String, username: String, password: String): Result<GrimmoryTokens> =
+        runCatching {
+            val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/login") {
+                contentType(ContentType.Application.Json)
+                setBody(GrimmoryLoginRequest(username, password))
+            }
+            if (!response.status.isSuccess()) {
+                error("Login failed: ${response.status}")
+            }
+            response.body<GrimmoryTokens>()
         }
-        if (!response.status.isSuccess()) {
-            error("Login failed: ${response.status}")
-        }
-        response.body<GrimmoryTokens>()
-    }
 
-    suspend fun refreshToken(
-        baseUrl: String,
-        refreshToken: String,
-    ): Result<GrimmoryTokens> = runCatching {
-        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/refresh") {
-            contentType(ContentType.Application.Json)
-            setBody(GrimmoryRefreshRequest(refreshToken))
+    suspend fun refreshToken(baseUrl: String, refreshToken: String): Result<GrimmoryTokens> =
+        runCatching {
+            val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/refresh") {
+                contentType(ContentType.Application.Json)
+                setBody(GrimmoryRefreshRequest(refreshToken))
+            }
+            if (!response.status.isSuccess()) {
+                error("Token refresh failed: ${response.status}")
+            }
+            response.body<GrimmoryTokens>()
         }
-        if (!response.status.isSuccess()) {
-            error("Token refresh failed: ${response.status}")
-        }
-        response.body<GrimmoryTokens>()
-    }
 
     suspend fun getContinueReading(
         baseUrl: String,
         serverId: Long,
-        limit: Int = 10,
+        limit: Int = 10
     ): Result<List<GrimmoryBookSummary>> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/continue-reading") {
             header("Authorization", "Bearer $token")
@@ -80,7 +75,7 @@ class GrimmoryClient @Inject constructor(
     suspend fun getBookDetail(
         baseUrl: String,
         serverId: Long,
-        bookId: Long,
+        bookId: Long
     ): Result<GrimmoryBookDetail> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/$bookId") {
             header("Authorization", "Bearer $token")
@@ -94,7 +89,7 @@ class GrimmoryClient @Inject constructor(
     suspend fun pushProgress(
         baseUrl: String,
         serverId: Long,
-        request: GrimmoryProgressRequest,
+        request: GrimmoryProgressRequest
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/progress") {
             header("Authorization", "Bearer $token")
@@ -110,7 +105,7 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-        status: ReadStatus,
+        status: ReadStatus
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/app/books/$bookId/status") {
             header("Authorization", "Bearer $token")
@@ -126,7 +121,7 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long,
-        destination: File,
+        destination: File
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
             header("Authorization", "Bearer $token")
@@ -152,7 +147,7 @@ class GrimmoryClient @Inject constructor(
     suspend fun recordReadingSession(
         baseUrl: String,
         serverId: Long,
-        request: GrimmoryReadingSessionRequest,
+        request: GrimmoryReadingSessionRequest
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/reading-sessions") {
             header("Authorization", "Bearer $token")
@@ -171,7 +166,7 @@ class GrimmoryClient @Inject constructor(
     private suspend fun <T> withAuth(
         baseUrl: String,
         serverId: Long,
-        block: suspend (token: String) -> T,
+        block: suspend (token: String) -> T
     ): Result<T> = runCatching {
         val token = tokenManager.getAccessToken(serverId)
             ?: error("Not logged in to Grimmory")

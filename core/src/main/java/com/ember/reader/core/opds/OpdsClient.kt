@@ -1,7 +1,6 @@
 package com.ember.reader.core.opds
 
 import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.network.basicAuthHeader
 import com.ember.reader.core.network.normalizeUrl
 import com.ember.reader.core.network.resolveUrl
@@ -16,24 +15,22 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.File
-import java.time.Instant
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class OpdsClient @Inject constructor(
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient
 ) {
 
     suspend fun testConnection(
         baseUrl: String,
         username: String,
-        password: String,
+        password: String
     ): Result<String> = runCatching {
         val response = httpClient.get(normalizeUrl(baseUrl)) {
             header("Accept", "application/atom+xml")
@@ -52,7 +49,7 @@ class OpdsClient @Inject constructor(
         baseUrl: String,
         username: String,
         password: String,
-        path: String? = null,
+        path: String? = null
     ): Result<OpdsFeed> = runCatching {
         val url = if (path != null) resolveUrl(baseUrl, path) else normalizeUrl(baseUrl)
         val response = httpClient.get(url) {
@@ -71,7 +68,7 @@ class OpdsClient @Inject constructor(
         password: String,
         serverId: Long,
         path: String,
-        page: Int = 1,
+        page: Int = 1
     ): Result<OpdsBookPage> = runCatching {
         val separator = if ("?" in path) "&" else "?"
         val resolvedPath = "${path}${separator}page=$page"
@@ -92,7 +89,7 @@ class OpdsClient @Inject constructor(
         password: String,
         serverId: Long,
         query: String,
-        page: Int = 1,
+        page: Int = 1
     ): Result<OpdsBookPage> = runCatching {
         val searchPath = "${normalizeUrl(baseUrl)}/catalog?q=$query&page=$page"
         val response = httpClient.get(searchPath) {
@@ -110,7 +107,7 @@ class OpdsClient @Inject constructor(
         username: String,
         password: String,
         downloadPath: String,
-        destination: File,
+        destination: File
     ): Result<Unit> = runCatching {
         val url = resolveUrl(baseUrl, downloadPath)
         httpClient.prepareGet(url) {
@@ -149,19 +146,19 @@ class OpdsClient @Inject constructor(
 
 data class OpdsFeed(
     val title: String,
-    val entries: List<OpdsFeedEntry>,
+    val entries: List<OpdsFeedEntry>
 )
 
 data class OpdsFeedEntry(
     val id: String,
     val title: String,
     val href: String,
-    val content: String? = null,
+    val content: String? = null
 )
 
 data class OpdsBookPage(
     val books: List<Book>,
     val nextPagePath: String? = null,
     val totalResults: Int? = null,
-    val resolvedBookIds: List<String> = emptyList(),
+    val resolvedBookIds: List<String> = emptyList()
 )

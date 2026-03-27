@@ -6,5 +6,5 @@ enum class HighlightColor(val argb: Long) {
     BLUE(0xFF2196F3),
     PINK(0xFFE91E63),
     ORANGE(0xFFFF9800),
-    PURPLE(0xFF9C27B0),
+    PURPLE(0xFF9C27B0)
 }

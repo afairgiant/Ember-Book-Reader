@@ -6,7 +6,6 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
@@ -50,11 +49,11 @@ class KosyncClientTest {
             capturedHeaders = mapOf(
                 "x-auth-user" to (request.headers["x-auth-user"] ?: ""),
                 "x-auth-key" to (request.headers["x-auth-key"] ?: ""),
-                "Accept" to (request.headers["Accept"] ?: ""),
+                "Accept" to (request.headers["Accept"] ?: "")
             )
             respond(
                 content = ByteReadChannel(""),
-                status = HttpStatusCode.OK,
+                status = HttpStatusCode.OK
             )
         }
 
@@ -104,7 +103,7 @@ class KosyncClientTest {
             progress = "{\"locator\":\"data\"}",
             percentage = 0.42f,
             device = "Ember",
-            deviceId = "device-uuid-123",
+            deviceId = "device-uuid-123"
         )
 
         val client = createClient(engine)
@@ -136,7 +135,7 @@ class KosyncClientTest {
             respond(
                 content = ByteReadChannel(responseJson),
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
 

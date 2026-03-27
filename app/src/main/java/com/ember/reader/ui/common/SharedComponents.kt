@@ -1,6 +1,5 @@
 package com.ember.reader.ui.common
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +24,7 @@ fun LoadingScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ErrorScreen(
-    message: String,
-    modifier: Modifier = Modifier,
-    onRetry: (() -> Unit)? = null,
-) {
+fun ErrorScreen(message: String, modifier: Modifier = Modifier, onRetry: (() -> Unit)? = null) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(message, color = MaterialTheme.colorScheme.error)
@@ -62,7 +57,7 @@ fun friendlyErrorMessage(error: Throwable): String = when {
 
 val BookCoverPlaceholderColors = listOf(
     Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
-    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
+    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8)
 )
 
 fun bookCoverColorIndex(title: String): Int {
@@ -76,6 +71,6 @@ fun SectionLabel(text: String) {
         text = text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 8.dp),
+        modifier = Modifier.padding(bottom = 8.dp)
     )
 }

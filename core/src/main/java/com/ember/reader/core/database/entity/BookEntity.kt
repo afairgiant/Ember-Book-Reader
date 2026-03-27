@@ -14,13 +14,13 @@ import java.time.Instant
             entity = ServerEntity::class,
             parentColumns = ["id"],
             childColumns = ["serverId"],
-            onDelete = ForeignKey.SET_NULL,
-        ),
+            onDelete = ForeignKey.SET_NULL
+        )
     ],
     indices = [
         Index("serverId"),
-        Index("opdsEntryId"),
-    ],
+        Index("opdsEntryId")
+    ]
 )
 data class BookEntity(
     @PrimaryKey
@@ -43,5 +43,5 @@ data class BookEntity(
     val language: String? = null,
     val subjects: String? = null,
     val pageCount: Int? = null,
-    val publishedDate: String? = null,
+    val publishedDate: String? = null
 )

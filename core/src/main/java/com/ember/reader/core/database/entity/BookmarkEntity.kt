@@ -13,10 +13,10 @@ import java.time.Instant
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
+            onDelete = ForeignKey.CASCADE
+        )
     ],
-    indices = [Index("bookId")],
+    indices = [Index("bookId")]
 )
 data class BookmarkEntity(
     @PrimaryKey(autoGenerate = true)
@@ -24,5 +24,5 @@ data class BookmarkEntity(
     val bookId: String,
     val locatorJson: String,
     val title: String? = null,
-    val createdAt: Instant,
+    val createdAt: Instant
 )

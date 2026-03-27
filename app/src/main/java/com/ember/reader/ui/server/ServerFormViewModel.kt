@@ -6,17 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ServerFormViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val serverRepository: ServerRepository,
+    private val serverRepository: ServerRepository
 ) : ViewModel() {
 
     private val serverId: Long? = savedStateHandle.get<Long>("serverId")?.takeIf { it != -1L }
@@ -39,7 +39,7 @@ class ServerFormViewModel @Inject constructor(
                             grimmoryUsername = server.grimmoryUsername,
                             grimmoryPassword = server.grimmoryPassword,
                             isGrimmory = server.isGrimmory,
-                            isEditing = true,
+                            isEditing = true
                         )
                     }
                 }
@@ -53,8 +53,10 @@ class ServerFormViewModel @Inject constructor(
     fun updateOpdsPassword(value: String) = _uiState.update { it.copy(opdsPassword = value) }
     fun updateKosyncUsername(value: String) = _uiState.update { it.copy(kosyncUsername = value) }
     fun updateKosyncPassword(value: String) = _uiState.update { it.copy(kosyncPassword = value) }
-    fun updateGrimmoryUsername(value: String) = _uiState.update { it.copy(grimmoryUsername = value) }
-    fun updateGrimmoryPassword(value: String) = _uiState.update { it.copy(grimmoryPassword = value) }
+    fun updateGrimmoryUsername(value: String) =
+        _uiState.update { it.copy(grimmoryUsername = value) }
+    fun updateGrimmoryPassword(value: String) =
+        _uiState.update { it.copy(grimmoryPassword = value) }
 
     fun testOpdsConnection() {
         val state = _uiState.value
@@ -67,15 +69,15 @@ class ServerFormViewModel @Inject constructor(
             val result = serverRepository.testOpdsConnection(
                 url = state.url,
                 username = state.opdsUsername,
-                password = state.opdsPassword,
+                password = state.opdsPassword
             )
             _uiState.update {
                 it.copy(
                     isGrimmory = isGrimmory,
                     opdsTestResult = result.fold(
                         onSuccess = { msg -> TestResult.Success(msg) },
-                        onFailure = { err -> TestResult.Error(err.message ?: "Connection failed") },
-                    ),
+                        onFailure = { err -> TestResult.Error(err.message ?: "Connection failed") }
+                    )
                 )
             }
         }
@@ -90,14 +92,14 @@ class ServerFormViewModel @Inject constructor(
             val result = serverRepository.testKosyncConnection(
                 url = state.url,
                 username = state.kosyncUsername,
-                password = state.kosyncPassword,
+                password = state.kosyncPassword
             )
             _uiState.update {
                 it.copy(
                     kosyncTestResult = result.fold(
                         onSuccess = { TestResult.Success("Connected") },
-                        onFailure = { err -> TestResult.Error(err.message ?: "Auth failed") },
-                    ),
+                        onFailure = { err -> TestResult.Error(err.message ?: "Auth failed") }
+                    )
                 )
             }
         }
@@ -112,15 +114,15 @@ class ServerFormViewModel @Inject constructor(
             val result = serverRepository.testGrimmoryConnection(
                 url = state.url,
                 username = state.grimmoryUsername,
-                password = state.grimmoryPassword,
+                password = state.grimmoryPassword
             )
             _uiState.update {
                 it.copy(
                     isGrimmory = result.isSuccess || it.isGrimmory,
                     grimmoryTestResult = result.fold(
                         onSuccess = { msg -> TestResult.Success(msg) },
-                        onFailure = { err -> TestResult.Error(err.message ?: "Login failed") },
-                    ),
+                        onFailure = { err -> TestResult.Error(err.message ?: "Login failed") }
+                    )
                 )
             }
         }
@@ -145,7 +147,7 @@ class ServerFormViewModel @Inject constructor(
                 kosyncPassword = state.kosyncPassword,
                 grimmoryUsername = state.grimmoryUsername.trim(),
                 grimmoryPassword = state.grimmoryPassword,
-                isGrimmory = state.isGrimmory,
+                isGrimmory = state.isGrimmory
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -169,7 +171,7 @@ data class ServerFormUiState(
     val validationError: String? = null,
     val opdsTestResult: TestResult = TestResult.Idle,
     val kosyncTestResult: TestResult = TestResult.Idle,
-    val grimmoryTestResult: TestResult = TestResult.Idle,
+    val grimmoryTestResult: TestResult = TestResult.Idle
 )
 
 sealed interface TestResult {

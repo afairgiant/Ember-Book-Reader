@@ -9,5 +9,5 @@ data class ReadingSession(
     val endTime: Instant,
     val durationSeconds: Long,
     val startProgress: Float,
-    val endProgress: Float,
+    val endProgress: Float
 )

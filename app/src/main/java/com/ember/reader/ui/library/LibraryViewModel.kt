@@ -1,31 +1,31 @@
 package com.ember.reader.ui.library
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.BookFormat
-import android.content.Context
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
-import com.ember.reader.ui.common.NotificationHelper
-import dagger.hilt.android.qualifiers.ApplicationContext
-import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.ui.common.NotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -35,7 +35,7 @@ class LibraryViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -88,15 +88,17 @@ class LibraryViewModel @Inject constructor(
         _downloadingBooks,
         _searchQuery,
         combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
-        combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded },
+        combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded }
     ) { books, downloading, query, (sort, fetchedIds), (formatFilter, downloadedOnly) ->
         timber.log.Timber.d("LibraryVM combine: totalBooks=${books.size} fetchedIds=${fetchedIds?.size} query='$query'")
         val filtered = books
             .filter { book ->
                 // In subcategory view, only show books from the current fetch
                 (fetchedIds == null || book.id in fetchedIds) &&
-                    (query.isBlank() || book.title.contains(query, ignoreCase = true) ||
-                        book.author?.contains(query, ignoreCase = true) == true) &&
+                    (
+                        query.isBlank() || book.title.contains(query, ignoreCase = true) ||
+                            book.author?.contains(query, ignoreCase = true) == true
+                        ) &&
                     (formatFilter == null || book.format == formatFilter) &&
                     (!downloadedOnly || book.isDownloaded)
             }
@@ -104,7 +106,7 @@ class LibraryViewModel @Inject constructor(
 
         LibraryUiState.Success(
             books = filtered,
-            downloadingBookIds = downloading,
+            downloadingBookIds = downloading
         )
     }
         .flowOn(Dispatchers.Default)
@@ -186,7 +188,7 @@ class LibraryViewModel @Inject constructor(
 
     private suspend fun refreshFromGrimmoryPage(
         server: com.ember.reader.core.model.Server,
-        page: Int,
+        page: Int
     ): Result<com.ember.reader.core.opds.OpdsBookPage> {
         val paramString = catalogPath.removePrefix("grimmory:")
         val params = paramString.split("&")
@@ -202,11 +204,13 @@ class LibraryViewModel @Inject constructor(
             shelfId = params["shelfId"]?.toLongOrNull(),
             seriesName = params["seriesName"],
             status = params["status"],
-            search = params["search"],
+            search = params["search"]
         )
     }
 
-    private suspend fun refreshFromGrimmory(server: com.ember.reader.core.model.Server): Result<com.ember.reader.core.opds.OpdsBookPage> {
+    private suspend fun refreshFromGrimmory(
+        server: com.ember.reader.core.model.Server
+    ): Result<com.ember.reader.core.opds.OpdsBookPage> {
         val paramString = catalogPath.removePrefix("grimmory:")
         val params = paramString.split("&")
             .filter { "=" in it }
@@ -221,7 +225,7 @@ class LibraryViewModel @Inject constructor(
             shelfId = params["shelfId"]?.toLongOrNull(),
             seriesName = params["seriesName"],
             status = params["status"],
-            search = params["search"],
+            search = params["search"]
         )
     }
 
@@ -244,7 +248,7 @@ class LibraryViewModel @Inject constructor(
                 _isRefreshing.value = true
                 val result = bookRepository.refreshFromGrimmory(
                     server = currentServer,
-                    search = query,
+                    search = query
                 )
                 result.onSuccess { page ->
                     _fetchedBookIds.value = page.resolvedBookIds.toSet()
@@ -254,10 +258,18 @@ class LibraryViewModel @Inject constructor(
         }
     }
     private var searchServerDebounceJob: kotlinx.coroutines.Job? = null
-    fun toggleViewMode() { _viewMode.update { if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID } }
-    fun updateSortOrder(order: SortOrder) { _sortOrder.value = order }
-    fun updateFormatFilter(format: BookFormat?) { _formatFilter.value = format }
-    fun toggleDownloadedOnly() { _downloadedOnly.update { !it } }
+    fun toggleViewMode() {
+        _viewMode.update { if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID }
+    }
+    fun updateSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+    }
+    fun updateFormatFilter(format: BookFormat?) {
+        _formatFilter.value = format
+    }
+    fun toggleDownloadedOnly() {
+        _downloadedOnly.update { !it }
+    }
 
     fun downloadBook(book: Book) {
         val currentServer = server ?: return
@@ -287,8 +299,8 @@ class LibraryViewModel @Inject constructor(
                             percentage = pct,
                             lastReadAt = java.time.Instant.now(),
                             syncedAt = java.time.Instant.now(),
-                            needsSync = false,
-                        ),
+                            needsSync = false
+                        )
                     )
                     return
                 }
@@ -310,7 +322,7 @@ sealed interface LibraryUiState {
     data object Loading : LibraryUiState
     data class Success(
         val books: List<Book>,
-        val downloadingBookIds: Set<String> = emptySet(),
+        val downloadingBookIds: Set<String> = emptySet()
     ) : LibraryUiState
     data class Error(val message: String) : LibraryUiState
 }
@@ -321,5 +333,5 @@ enum class SortOrder(val displayName: String, val comparator: Comparator<Book>) 
     TITLE("Title", compareBy { it.title.lowercase() }),
     AUTHOR("Author", compareBy { it.author?.lowercase() ?: "" }),
     RECENT("Recently Added", compareByDescending { it.addedAt }),
-    SERIES("Series", compareBy<Book> { it.series?.lowercase() ?: "" }.thenBy { it.seriesIndex ?: 0f }),
+    SERIES("Series", compareBy<Book> { it.series?.lowercase() ?: "" }.thenBy { it.seriesIndex ?: 0f })
 }

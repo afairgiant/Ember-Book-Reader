@@ -2,11 +2,11 @@ package com.ember.reader.core.database.converter
 
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.HighlightColor
+import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Instant
 
 class ConvertersTest {
 

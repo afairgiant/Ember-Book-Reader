@@ -16,17 +16,17 @@ import com.ember.reader.core.model.ReaderTheme
 import com.ember.reader.core.model.TapZoneBehavior
 import com.ember.reader.core.model.TextAlign
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private val Context.readerPreferencesDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "reader_preferences")
 
 @Singleton
 class ReaderPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) {
 
     private object Keys {
@@ -92,7 +92,7 @@ class ReaderPreferencesRepository @Inject constructor(
                 } ?: TapZoneBehavior.NEXT_PAGE,
                 topZoneHeight = prefs[Keys.TOP_ZONE_HEIGHT] ?: 0.15f,
                 leftZoneWidth = prefs[Keys.LEFT_ZONE_WIDTH] ?: 0.33f,
-                rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f,
+                rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f
             )
         }
 

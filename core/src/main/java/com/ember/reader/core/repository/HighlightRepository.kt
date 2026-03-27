@@ -5,15 +5,15 @@ import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class HighlightRepository @Inject constructor(
-    private val highlightDao: HighlightDao,
+    private val highlightDao: HighlightDao
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Highlight>> =
@@ -23,15 +23,15 @@ class HighlightRepository @Inject constructor(
         bookId: String,
         locatorJson: String,
         color: HighlightColor,
-        annotation: String? = null,
+        annotation: String? = null
     ): Long = highlightDao.insert(
         HighlightEntity(
             bookId = bookId,
             locatorJson = locatorJson,
             color = color,
             annotation = annotation,
-            createdAt = Instant.now(),
-        ),
+            createdAt = Instant.now()
+        )
     )
 
     suspend fun updateAnnotation(highlight: Highlight, annotation: String?) {
@@ -43,9 +43,9 @@ class HighlightRepository @Inject constructor(
                     locatorJson = it.locatorJson,
                     color = it.color,
                     annotation = it.annotation,
-                    createdAt = it.createdAt,
+                    createdAt = it.createdAt
                 )
-            },
+            }
         )
     }
 

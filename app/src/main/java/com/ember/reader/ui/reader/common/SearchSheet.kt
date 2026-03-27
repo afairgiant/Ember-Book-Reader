@@ -35,15 +35,10 @@ import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.search.search
-import org.readium.r2.shared.util.Try
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchSheet(
-    publication: Publication,
-    onNavigate: (Locator) -> Unit,
-    onDismiss: () -> Unit,
-) {
+fun SearchSheet(publication: Publication, onNavigate: (Locator) -> Unit, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
@@ -53,13 +48,13 @@ fun SearchSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
                 text = "Search in Book",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             OutlinedTextField(
@@ -94,18 +89,18 @@ fun SearchSheet(
                                 isSearching = false
                             }
                         }
-                    },
+                    }
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             if (isSearching) {
                 CircularProgressIndicator(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(16.dp),
+                        .padding(16.dp)
                 )
             }
 
@@ -114,7 +109,7 @@ fun SearchSheet(
                     text = "No results found",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
                 )
             }
 
@@ -123,7 +118,7 @@ fun SearchSheet(
                     SearchResultItem(
                         locator = locator,
                         query = query,
-                        onClick = { onNavigate(locator) },
+                        onClick = { onNavigate(locator) }
                     )
                 }
             }
@@ -132,11 +127,7 @@ fun SearchSheet(
 }
 
 @Composable
-private fun SearchResultItem(
-    locator: Locator,
-    query: String,
-    onClick: () -> Unit,
-) {
+private fun SearchResultItem(locator: Locator, query: String, onClick: () -> Unit) {
     val text = locator.text
     val highlight = text.highlight ?: ""
     val before = text.before ?: ""
@@ -146,13 +137,13 @@ private fun SearchResultItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         locator.title?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary
             )
         }
         Text(
@@ -165,7 +156,7 @@ private fun SearchResultItem(
             },
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

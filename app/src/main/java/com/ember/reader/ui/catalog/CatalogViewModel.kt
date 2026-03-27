@@ -6,17 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
-import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
@@ -24,7 +24,7 @@ class CatalogViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -88,7 +88,7 @@ class CatalogViewModel @Inject constructor(
 
     private suspend fun fetchGrimmoryCatalog(server: Server) {
         try {
-        fetchGrimmoryCatalogInner(server)
+            fetchGrimmoryCatalogInner(server)
         } catch (e: Exception) {
             _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
         }
@@ -103,8 +103,8 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:continue-reading",
                 title = "Continue Reading",
                 href = "grimmory:status=READING",
-                content = "Books you're currently reading",
-            ),
+                content = "Books you're currently reading"
+            )
         )
 
         // Recently Added
@@ -113,8 +113,8 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:recent",
                 title = "Recently Added",
                 href = "grimmory:sort=addedOn&dir=desc",
-                content = "Latest additions to your library",
-            ),
+                content = "Latest additions to your library"
+            )
         )
 
         // Libraries
@@ -125,8 +125,8 @@ class CatalogViewModel @Inject constructor(
                         id = "grimmory:library:${lib.id}",
                         title = lib.name,
                         href = "grimmory:libraryId=${lib.id}",
-                        content = "${lib.bookCount} books",
-                    ),
+                        content = "${lib.bookCount} books"
+                    )
                 )
             }
         }
@@ -140,8 +140,8 @@ class CatalogViewModel @Inject constructor(
                             id = "grimmory:shelf:${shelf.id}",
                             title = shelf.name,
                             href = "grimmory:shelfId=${shelf.id}",
-                            content = "${shelf.bookCount} books",
-                        ),
+                            content = "${shelf.bookCount} books"
+                        )
                     )
                 }
             }
@@ -153,8 +153,8 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:series",
                 title = "Series",
                 href = "grimmory:series",
-                content = "Browse books by series",
-            ),
+                content = "Browse books by series"
+            )
         )
 
         // Authors
@@ -163,8 +163,8 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:authors",
                 title = "Authors",
                 href = "grimmory:authors",
-                content = "Browse books by author",
-            ),
+                content = "Browse books by author"
+            )
         )
 
         // All Books
@@ -173,15 +173,15 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:all",
                 title = "All Books",
                 href = "grimmory:all",
-                content = "Browse the full catalog",
-            ),
+                content = "Browse the full catalog"
+            )
         )
 
         _uiState.value = CatalogUiState.Success(
             feed = OpdsFeed(
                 title = "${server.name} Catalog",
-                entries = entries,
-            ),
+                entries = entries
+            )
         )
     }
 
@@ -198,19 +198,19 @@ class CatalogViewModel @Inject constructor(
                         id = "grimmory:series:${series.seriesName}",
                         title = series.seriesName,
                         href = "grimmory:seriesName=${java.net.URLEncoder.encode(series.seriesName, "UTF-8")}",
-                        content = subtitle,
+                        content = subtitle
                     )
                 }
                 _uiState.value = CatalogUiState.Success(
                     feed = OpdsFeed(
                         title = "Series",
-                        entries = entries,
-                    ),
+                        entries = entries
+                    )
                 )
             },
             onFailure = { error ->
                 _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
-            },
+            }
         )
     }
 
@@ -222,19 +222,19 @@ class CatalogViewModel @Inject constructor(
                         id = "grimmory:author:${author.id}",
                         title = author.name,
                         href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
-                        content = "${author.bookCount} books",
+                        content = "${author.bookCount} books"
                     )
                 }
                 _uiState.value = CatalogUiState.Success(
                     feed = OpdsFeed(
                         title = "Authors",
-                        entries = entries,
-                    ),
+                        entries = entries
+                    )
                 )
             },
             onFailure = { error ->
                 _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
-            },
+            }
         )
     }
 
@@ -243,7 +243,7 @@ class CatalogViewModel @Inject constructor(
             baseUrl = server.url,
             username = server.opdsUsername,
             password = server.opdsPassword,
-            path = path.ifEmpty { null },
+            path = path.ifEmpty { null }
         )
         result.fold(
             onSuccess = { feed ->
@@ -251,7 +251,7 @@ class CatalogViewModel @Inject constructor(
             },
             onFailure = { error ->
                 _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
-            },
+            }
         )
     }
 }

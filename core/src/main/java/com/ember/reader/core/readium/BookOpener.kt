@@ -2,6 +2,9 @@ package com.ember.reader.core.readium
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.Try
@@ -10,13 +13,10 @@ import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
 import timber.log.Timber
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class BookOpener @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) {
 
     private val httpClient = DefaultHttpClient()
@@ -26,7 +26,8 @@ class BookOpener @Inject constructor(
     }
 
     private val publicationOpener by lazy {
-        val parser = DefaultPublicationParser(context, httpClient, assetRetriever, PdfiumDocumentFactory(context))
+        val parser =
+            DefaultPublicationParser(context, httpClient, assetRetriever, PdfiumDocumentFactory(context))
         PublicationOpener(parser)
     }
 

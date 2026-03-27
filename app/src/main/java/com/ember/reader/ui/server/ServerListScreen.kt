@@ -1,6 +1,4 @@
 package com.ember.reader.ui.server
-import kotlin.math.roundToInt
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,12 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,7 +34,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,13 +50,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +68,7 @@ fun ServerListScreen(
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenStats: () -> Unit = {},
-    viewModel: ServerListViewModel = hiltViewModel(),
+    viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
@@ -85,7 +82,7 @@ fun ServerListScreen(
                     Text(
                         "Ember",
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 actions = {
@@ -94,15 +91,15 @@ fun ServerListScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             com.ember.reader.ui.common.OfflineBanner(isOffline = !networkAvailable)
             when (val state = uiState) {
@@ -115,7 +112,7 @@ fun ServerListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(16.dp)
                     ) {
                         // Continue Reading section
                         if (recentlyReading.isNotEmpty()) {
@@ -123,19 +120,19 @@ fun ServerListScreen(
                                 Text(
                                     text = "Continue Reading",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             item {
                                 LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     items(recentlyReading, key = { it.book.id }) { recent ->
                                         ContinueReadingCard(
                                             book = recent.book,
                                             percentage = recent.percentage,
                                             coverAuthHeader = recent.book.serverId?.let { coverAuthHeaders[it] },
-                                            onClick = { onOpenReader(recent.book.id, recent.book.format) },
+                                            onClick = { onOpenReader(recent.book.id, recent.book.format) }
                                         )
                                     }
                                 }
@@ -150,19 +147,19 @@ fun ServerListScreen(
                                     .fillMaxWidth()
                                     .padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = "Connected Servers",
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                                 if (state.servers.isNotEmpty()) {
                                     Text(
                                         text = "${state.servers.size} ACTIVE",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -174,7 +171,7 @@ fun ServerListScreen(
                                 server = server,
                                 onOpenLibrary = { onOpenLibrary(server.id) },
                                 onEdit = { onEditServer(server.id) },
-                                onDelete = { viewModel.deleteServer(server.id) },
+                                onDelete = { viewModel.deleteServer(server.id) }
                             )
                         }
 
@@ -183,12 +180,12 @@ fun ServerListScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             TextButton(
                                 onClick = onAddServer,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
                                     Icons.Default.Add,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Add Server")
@@ -200,12 +197,12 @@ fun ServerListScreen(
                             OutlinedButton(
                                 onClick = onOpenStats,
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Schedule,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Reading Statistics")
@@ -221,7 +218,7 @@ fun ServerListScreen(
 
 private val placeholderColors = listOf(
     Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
-    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8),
+    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8)
 )
 
 @Composable
@@ -229,7 +226,7 @@ private fun ContinueReadingCard(
     book: Book,
     percentage: Float,
     coverAuthHeader: String? = null,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     val colorIndex = book.title.hashCode().mod(placeholderColors.size).let {
         if (it < 0) it + placeholderColors.size else it
@@ -240,22 +237,24 @@ private fun ContinueReadingCard(
             .width(130.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column {
             // Cover image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp),
+                    .height(160.dp)
             ) {
                 if (book.coverUrl != null) {
                     val coverUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
                         val token = coverAuthHeader.removePrefix("jwt:")
                         "${book.coverUrl}?token=$token"
-                    } else book.coverUrl
+                    } else {
+                        book.coverUrl
+                    }
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(coverUrl)
@@ -270,19 +269,19 @@ private fun ContinueReadingCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     )
                 } else {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(placeholderColors[colorIndex]),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = book.title.take(2).uppercase(),
                             style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFF5D4037),
+                            color = Color(0xFF5D4037)
                         )
                     }
                 }
@@ -295,7 +294,7 @@ private fun ContinueReadingCard(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(
@@ -304,13 +303,13 @@ private fun ContinueReadingCard(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
                 Text(
                     text = "${(percentage * 100).roundToInt()}%",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }
@@ -322,56 +321,56 @@ private fun ServerCard(
     server: Server,
     onOpenLibrary: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpenLibrary),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.CloudQueue,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp)
             ) {
                 Text(
                     text = server.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF4CAF50))
-                            .align(Alignment.CenterVertically),
+                            .align(Alignment.CenterVertically)
                     )
                     Text(
                         text = buildString {
@@ -380,7 +379,7 @@ private fun ServerCard(
                             if (server.isGrimmory) append(" · Grimmory")
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -389,7 +388,7 @@ private fun ServerCard(
                     Icons.Default.Edit,
                     contentDescription = "Edit",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = onDelete) {
@@ -397,7 +396,7 @@ private fun ServerCard(
                     Icons.Default.Delete,
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

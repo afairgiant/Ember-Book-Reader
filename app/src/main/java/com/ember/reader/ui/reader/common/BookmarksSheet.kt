@@ -34,26 +34,26 @@ fun BookmarksSheet(
     bookmarks: List<Bookmark>,
     onNavigate: (Bookmark) -> Unit,
     onDelete: (Long) -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
                 text = "Bookmarks",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             if (bookmarks.isEmpty()) {
                 Text(
                     text = "No bookmarks yet",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
                 )
             } else {
                 LazyColumn {
@@ -61,7 +61,7 @@ fun BookmarksSheet(
                         BookmarkItem(
                             bookmark = bookmark,
                             onClick = { onNavigate(bookmark) },
-                            onDelete = { onDelete(bookmark.id) },
+                            onDelete = { onDelete(bookmark.id) }
                         )
                     }
                 }
@@ -71,37 +71,33 @@ fun BookmarksSheet(
 }
 
 @Composable
-private fun BookmarkItem(
-    bookmark: Bookmark,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-) {
+private fun BookmarkItem(bookmark: Bookmark, onClick: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = bookmark.title ?: "Untitled",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = bookmark.createdAt
                     .atZone(ZoneId.systemDefault())
                     .format(bookmarkDateFormatter),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
                 contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.error
             )
         }
     }

@@ -8,6 +8,8 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,19 +19,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
-import javax.inject.Inject
 
 enum class StorageSortMode(val displayName: String) {
     LATEST_FIRST("Latest"),
     LARGEST_FIRST("Largest"),
-    ALPHABETICAL("A-Z"),
+    ALPHABETICAL("A-Z")
 }
 
 @HiltViewModel
 class StorageViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bookRepository: BookRepository,
+    private val bookRepository: BookRepository
 ) : ViewModel() {
 
     private val _sortMode = MutableStateFlow(StorageSortMode.LATEST_FIRST)
@@ -45,7 +45,7 @@ class StorageViewModel @Inject constructor(
                 DownloadedBookItem(book = book, fileSize = fileSize)
             }
         },
-        _sortMode,
+        _sortMode
     ) { items, sort ->
         val sorted = when (sort) {
             StorageSortMode.LATEST_FIRST -> items.sortedByDescending { it.book.downloadedAt }
@@ -57,14 +57,16 @@ class StorageViewModel @Inject constructor(
             downloadedBooks = sorted,
             totalSize = sorted.sumOf { it.fileSize },
             deviceTotalBytes = stat.totalBytes,
-            deviceAvailableBytes = stat.availableBytes,
+            deviceAvailableBytes = stat.availableBytes
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StorageUiState())
 
     private val _recoveryResult = MutableStateFlow<String?>(null)
     val recoveryResult: StateFlow<String?> = _recoveryResult.asStateFlow()
 
-    fun updateSortMode(mode: StorageSortMode) { _sortMode.value = mode }
+    fun updateSortMode(mode: StorageSortMode) {
+        _sortMode.value = mode
+    }
 
     fun toggleSelection(bookId: String) {
         _selectedIds.update { ids ->
@@ -110,12 +112,12 @@ data class StorageUiState(
     val downloadedBooks: List<DownloadedBookItem> = emptyList(),
     val totalSize: Long = 0L,
     val deviceTotalBytes: Long = 0L,
-    val deviceAvailableBytes: Long = 0L,
+    val deviceAvailableBytes: Long = 0L
 )
 
 data class DownloadedBookItem(
     val book: Book,
-    val fileSize: Long,
+    val fileSize: Long
 )
 
 fun Long.toReadableSize(): String = when {

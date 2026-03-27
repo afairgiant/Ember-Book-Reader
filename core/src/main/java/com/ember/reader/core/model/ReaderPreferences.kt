@@ -22,26 +22,26 @@ data class ReaderPreferences(
     val rightTapZone: TapZoneBehavior = TapZoneBehavior.NEXT_PAGE,
     val topZoneHeight: Float = 0.15f,
     val leftZoneWidth: Float = 0.33f,
-    val rightZoneWidth: Float = 0.33f,
+    val rightZoneWidth: Float = 0.33f
 )
 
 enum class TapZoneBehavior(val displayName: String) {
     PREVIOUS_PAGE("Previous Page"),
     NEXT_PAGE("Next Page"),
     TOGGLE_CHROME("Toggle Menu"),
-    NOTHING("Nothing"),
+    NOTHING("Nothing")
 }
 
 enum class TextAlign(val displayName: String) {
     START("Left"),
     JUSTIFY("Justify"),
-    CENTER("Center"),
+    CENTER("Center")
 }
 
 enum class OrientationLock(val displayName: String) {
     AUTO("Auto"),
     PORTRAIT("Portrait"),
-    LANDSCAPE("Landscape"),
+    LANDSCAPE("Landscape")
 }
 
 enum class FontFamily(val displayName: String, val cssValue: String?) {
@@ -49,7 +49,7 @@ enum class FontFamily(val displayName: String, val cssValue: String?) {
     SERIF("Serif", "serif"),
     SANS_SERIF("Sans Serif", "sans-serif"),
     MONOSPACE("Monospace", "monospace"),
-    OPEN_DYSLEXIC("OpenDyslexic", "OpenDyslexic"),
+    OPEN_DYSLEXIC("OpenDyslexic", "OpenDyslexic")
 }
 
 /**
@@ -63,7 +63,7 @@ enum class ReaderTheme(
     val displayName: String,
     val foregroundColor: Long,
     val backgroundColor: Long,
-    val isBuiltIn: Boolean = false,
+    val isBuiltIn: Boolean = false
 ) {
     // Built-in Readium themes (colors here are for UI preview only)
     SYSTEM("System", 0xFF000000, 0xFFFFFFFF, isBuiltIn = true),
@@ -80,5 +80,5 @@ enum class ReaderTheme(
     DAWNLIGHT("Dawnlight", 0xFF93A1A1, 0xFF002B36),
     ROSEWOOD("Rosewood", 0xFFE5C4C8, 0xFF462F32),
     MEADOW("Meadow", 0xFFD8DEBA, 0xFF333627),
-    CRIMSON("Crimson", 0xFFDEE2E6, 0xFF343A40),
+    CRIMSON("Crimson", 0xFFDEE2E6, 0xFF343A40)
 }

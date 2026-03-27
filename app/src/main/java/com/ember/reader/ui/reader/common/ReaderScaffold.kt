@@ -1,6 +1,4 @@
 package com.ember.reader.ui.reader.common
-import kotlin.math.roundToInt
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -39,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import org.readium.r2.shared.publication.Locator
 
 @Composable
@@ -53,13 +52,13 @@ fun ReaderScaffold(
     onOpenPreferences: () -> Unit,
     onOpenSearch: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { -it },
-            exit = slideOutVertically { -it },
+            exit = slideOutVertically { -it }
         ) {
             ReaderTopBar(
                 title = title,
@@ -68,7 +67,7 @@ fun ReaderScaffold(
                 onToggleBookmark = onToggleBookmark,
                 onOpenTableOfContents = onOpenTableOfContents,
                 onOpenPreferences = onOpenPreferences,
-                onOpenSearch = onOpenSearch,
+                onOpenSearch = onOpenSearch
             )
         }
 
@@ -79,11 +78,11 @@ fun ReaderScaffold(
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { it },
-            exit = slideOutVertically { it },
+            exit = slideOutVertically { it }
         ) {
             ReaderBottomBar(
                 currentLocator = currentLocator,
-                onSeekToProgression = onSeekToProgression,
+                onSeekToProgression = onSeekToProgression
             )
         }
     }
@@ -97,7 +96,7 @@ private fun ReaderTopBar(
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit,
+    onOpenSearch: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -105,7 +104,7 @@ private fun ReaderTopBar(
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 4.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onNavigateBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -115,7 +114,7 @@ private fun ReaderTopBar(
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onOpenSearch) {
             Icon(Icons.Default.Search, contentDescription = "Search")
@@ -126,7 +125,7 @@ private fun ReaderTopBar(
         IconButton(onClick = onToggleBookmark) {
             Icon(
                 if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                contentDescription = "Bookmark",
+                contentDescription = "Bookmark"
             )
         }
         IconButton(onClick = onOpenPreferences) {
@@ -136,10 +135,7 @@ private fun ReaderTopBar(
 }
 
 @Composable
-private fun ReaderBottomBar(
-    currentLocator: Locator?,
-    onSeekToProgression: (Float) -> Unit = {},
-) {
+private fun ReaderBottomBar(currentLocator: Locator?, onSeekToProgression: (Float) -> Unit = {}) {
     val progression = currentLocator?.locations?.totalProgression?.toFloat() ?: 0f
     val chapterTitle = currentLocator?.title
     var dragging by remember { mutableStateOf(false) }
@@ -150,7 +146,7 @@ private fun ReaderBottomBar(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         if (chapterTitle != null) {
             Text(
@@ -158,7 +154,7 @@ private fun ReaderBottomBar(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,13 +168,13 @@ private fun ReaderBottomBar(
                     onSeekToProgression(dragValue)
                     dragging = false
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "${((if (dragging) dragValue else progression) * 100).roundToInt()}%",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

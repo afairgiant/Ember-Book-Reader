@@ -12,7 +12,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ReadingSessionRepository @Inject constructor(
-    private val readingSessionDao: ReadingSessionDao,
+    private val readingSessionDao: ReadingSessionDao
 ) {
 
     suspend fun saveSession(session: ReadingSession) {
@@ -40,8 +40,7 @@ class ReadingSessionRepository @Inject constructor(
         return readingSessionDao.getTotalDurationInRange(start, end)
     }
 
-    suspend fun getTotalDurationAllTime(): Long =
-        readingSessionDao.getTotalDurationAllTime()
+    suspend fun getTotalDurationAllTime(): Long = readingSessionDao.getTotalDurationAllTime()
 
     suspend fun getRecentSessions(limit: Int = 20): List<ReadingSession> =
         readingSessionDao.getRecentSessions(limit).map { it.toDomain() }

@@ -4,15 +4,15 @@ import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.model.Bookmark
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class BookmarkRepository @Inject constructor(
-    private val bookmarkDao: BookmarkDao,
+    private val bookmarkDao: BookmarkDao
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Bookmark>> =
@@ -24,8 +24,8 @@ class BookmarkRepository @Inject constructor(
                 bookId = bookId,
                 locatorJson = locatorJson,
                 title = title,
-                createdAt = Instant.now(),
-            ),
+                createdAt = Instant.now()
+            )
         )
 
     suspend fun deleteBookmark(id: Long) {

@@ -18,13 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,7 +61,7 @@ fun CatalogScreen(
     onNavigateBack: () -> Unit,
     onNavigateToFeed: (path: String) -> Unit,
     onNavigateToBooks: (path: String) -> Unit,
-    viewModel: CatalogViewModel = hiltViewModel(),
+    viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -76,7 +76,7 @@ fun CatalogScreen(
                             is CatalogUiState.Success -> state.feed.title
                             else -> "Catalog"
                         },
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -90,17 +90,17 @@ fun CatalogScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         when (val state = uiState) {
             CatalogUiState.Loading -> LoadingScreen(Modifier.padding(padding))
             is CatalogUiState.Error -> ErrorScreen(
                 message = state.message,
                 modifier = Modifier.padding(padding),
-                onRetry = viewModel::refresh,
+                onRetry = viewModel::refresh
             )
             is CatalogUiState.Success -> {
                 PullToRefreshBox(
@@ -108,7 +108,7 @@ fun CatalogScreen(
                     onRefresh = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (searchActive) {
@@ -128,48 +128,48 @@ fun CatalogScreen(
                                             searchActive = false
                                             searchQuery = ""
                                         }
-                                    },
+                                    }
                                 ),
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    imeAction = androidx.compose.ui.text.input.ImeAction.Search,
-                                ),
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                                )
                             )
                         }
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(16.dp),
-                    ) {
-                        items(state.feed.entries, key = { it.id }) { entry ->
-                            CatalogEntryCard(
-                                entry = entry,
-                                onClick = {
-                                    when {
-                                        // Grimmory list entries — navigate as sub-feeds
-                                        entry.href == "grimmory:series" ||
-                                            entry.href == "grimmory:authors" -> {
-                                            onNavigateToFeed(entry.href)
-                                        }
-                                        // Grimmory book entries — go to books view
-                                        entry.href.startsWith("grimmory:") -> {
-                                            onNavigateToBooks(entry.href)
-                                        }
-                                        // OPDS acquisition feeds
-                                        entry.href.contains("catalog") ||
-                                            entry.href.contains("?page=") ||
-                                            entry.href.contains("recent") ||
-                                            entry.href.contains("surprise") -> {
-                                            onNavigateToBooks(entry.href)
-                                        }
-                                        // OPDS navigation feeds
-                                        else -> {
-                                            onNavigateToFeed(entry.href)
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(16.dp)
+                        ) {
+                            items(state.feed.entries, key = { it.id }) { entry ->
+                                CatalogEntryCard(
+                                    entry = entry,
+                                    onClick = {
+                                        when {
+                                            // Grimmory list entries — navigate as sub-feeds
+                                            entry.href == "grimmory:series" ||
+                                                entry.href == "grimmory:authors" -> {
+                                                onNavigateToFeed(entry.href)
+                                            }
+                                            // Grimmory book entries — go to books view
+                                            entry.href.startsWith("grimmory:") -> {
+                                                onNavigateToBooks(entry.href)
+                                            }
+                                            // OPDS acquisition feeds
+                                            entry.href.contains("catalog") ||
+                                                entry.href.contains("?page=") ||
+                                                entry.href.contains("recent") ||
+                                                entry.href.contains("surprise") -> {
+                                                onNavigateToBooks(entry.href)
+                                            }
+                                            // OPDS navigation feeds
+                                            else -> {
+                                                onNavigateToFeed(entry.href)
+                                            }
                                         }
                                     }
-                                },
-                            )
+                                )
+                            }
                         }
-                    }
                     } // Column
                 }
             }
@@ -190,50 +190,47 @@ private fun iconForEntry(title: String): ImageVector = when {
 }
 
 @Composable
-private fun CatalogEntryCard(
-    entry: OpdsFeedEntry,
-    onClick: () -> Unit,
-) {
+private fun CatalogEntryCard(entry: OpdsFeedEntry, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     iconForEntry(entry.title),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp)
             ) {
                 Text(
                     text = entry.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 entry.content?.let {
                     Text(
@@ -241,14 +238,14 @@ private fun CatalogEntryCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
             Icon(
                 Icons.AutoMirrored.Filled.NavigateNext,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -44,8 +44,12 @@ fun rememberNetworkAvailable(): State<Boolean> {
         isAvailable.value = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { isAvailable.value = true }
-            override fun onLost(network: Network) { isAvailable.value = false }
+            override fun onAvailable(network: Network) {
+                isAvailable.value = true
+            }
+            override fun onLost(network: Network) {
+                isAvailable.value = false
+            }
         }
 
         val request = NetworkRequest.Builder()
@@ -66,26 +70,26 @@ fun OfflineBanner(isOffline: Boolean) {
     AnimatedVisibility(
         visible = isOffline,
         enter = slideInVertically { -it },
-        exit = slideOutVertically { -it },
+        exit = slideOutVertically { -it }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.errorContainer)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.WifiOff,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "You're offline — downloaded books are still available",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = MaterialTheme.colorScheme.onErrorContainer
             )
         }
     }

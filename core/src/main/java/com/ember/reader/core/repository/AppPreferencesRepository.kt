@@ -8,10 +8,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private val Context.appPreferencesDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "app_preferences")
@@ -19,12 +19,12 @@ private val Context.appPreferencesDataStore: DataStore<Preferences>
 enum class ThemeMode(val displayName: String) {
     SYSTEM("System"),
     LIGHT("Light"),
-    DARK("Dark"),
+    DARK("Dark")
 }
 
 @Singleton
 class AppPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) {
 
     private object Keys {

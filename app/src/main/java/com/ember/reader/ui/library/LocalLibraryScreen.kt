@@ -1,12 +1,9 @@
 package com.ember.reader.ui.library
-import kotlin.math.roundToInt
-
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,20 +22,17 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,11 +49,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +79,7 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
 import com.ember.reader.ui.common.bookCoverColorIndex
+import kotlin.math.roundToInt
 
 enum class LibraryFilter { ALL, SERVER, LOCAL }
 
@@ -91,7 +89,7 @@ fun LocalLibraryScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
     onOpenBookDetail: (bookId: String) -> Unit = {},
-    viewModel: LocalLibraryViewModel = hiltViewModel(),
+    viewModel: LocalLibraryViewModel = hiltViewModel()
 ) {
     val allBooks by viewModel.allDownloadedBooks.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
@@ -118,29 +116,32 @@ fun LocalLibraryScreen(
 
     val isSelecting = selectedIds.isNotEmpty()
 
-    val filteredBooks = remember(allBooks, filter, sortMode, sortReversed, progressMap, searchQuery) {
-        val sourceFiltered = when (filter) {
-            LibraryFilter.ALL -> allBooks
-            LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
-            LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
-        }
-        val filtered = if (searchQuery.isBlank()) sourceFiltered else {
-            sourceFiltered.filter { book ->
-                book.title.contains(searchQuery, ignoreCase = true) ||
-                    book.author?.contains(searchQuery, ignoreCase = true) == true
+    val filteredBooks =
+        remember(allBooks, filter, sortMode, sortReversed, progressMap, searchQuery) {
+            val sourceFiltered = when (filter) {
+                LibraryFilter.ALL -> allBooks
+                LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
+                LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
             }
+            val filtered = if (searchQuery.isBlank()) {
+                sourceFiltered
+            } else {
+                sourceFiltered.filter { book ->
+                    book.title.contains(searchQuery, ignoreCase = true) ||
+                        book.author?.contains(searchQuery, ignoreCase = true) == true
+                }
+            }
+            val sorted = when (sortMode) {
+                LibrarySortMode.RECENT -> filtered.sortedByDescending { it.downloadedAt ?: it.addedAt }
+                LibrarySortMode.TITLE -> filtered.sortedBy { it.title.lowercase() }
+                LibrarySortMode.AUTHOR -> filtered.sortedBy { it.author?.lowercase() ?: "" }
+                LibrarySortMode.PROGRESS -> filtered.sortedByDescending { progressMap[it.id] ?: 0f }
+            }
+            if (sortReversed) sorted.reversed() else sorted
         }
-        val sorted = when (sortMode) {
-            LibrarySortMode.RECENT -> filtered.sortedByDescending { it.downloadedAt ?: it.addedAt }
-            LibrarySortMode.TITLE -> filtered.sortedBy { it.title.lowercase() }
-            LibrarySortMode.AUTHOR -> filtered.sortedBy { it.author?.lowercase() ?: "" }
-            LibrarySortMode.PROGRESS -> filtered.sortedByDescending { progressMap[it.id] ?: 0f }
-        }
-        if (sortReversed) sorted.reversed() else sorted
-    }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.importBook(it) }
     }
@@ -151,16 +152,19 @@ fun LocalLibraryScreen(
             TopAppBar(
                 title = { Text("Library", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { searchActive = !searchActive; if (!searchActive) searchQuery = "" }) {
+                    IconButton(onClick = {
+                        searchActive = !searchActive
+                        if (!searchActive) searchQuery = ""
+                    }) {
                         Icon(
                             if (searchActive) Icons.Default.Clear else Icons.Default.Search,
-                            contentDescription = if (searchActive) "Close search" else "Search",
+                            contentDescription = if (searchActive) "Close search" else "Search"
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         floatingActionButton = {
@@ -168,13 +172,13 @@ fun LocalLibraryScreen(
                 FloatingActionButton(
                     onClick = {
                         filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
-                    },
+                    }
                 ) {
                     if (importing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     } else {
                         Icon(Icons.Default.Add, contentDescription = "Import Book")
@@ -188,14 +192,14 @@ fun LocalLibraryScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = { viewModel.selectAll(filteredBooks) }) {
                             Text("All")
@@ -206,7 +210,7 @@ fun LocalLibraryScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         OutlinedButton(
                             onClick = viewModel::syncSelectedProgress,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -215,7 +219,7 @@ fun LocalLibraryScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = viewModel::deleteSelected,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -224,12 +228,12 @@ fun LocalLibraryScreen(
                     }
                 }
             }
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             // Search bar
             if (searchActive) {
@@ -241,7 +245,7 @@ fun LocalLibraryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                 )
             }
 
@@ -250,22 +254,22 @@ fun LocalLibraryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
                     selected = filter == LibraryFilter.ALL,
                     onClick = { filter = LibraryFilter.ALL },
-                    label = { Text("All") },
+                    label = { Text("All") }
                 )
                 FilterChip(
                     selected = filter == LibraryFilter.SERVER,
                     onClick = { filter = LibraryFilter.SERVER },
-                    label = { Text("Server") },
+                    label = { Text("Server") }
                 )
                 FilterChip(
                     selected = filter == LibraryFilter.LOCAL,
                     onClick = { filter = LibraryFilter.LOCAL },
-                    label = { Text("Local") },
+                    label = { Text("Local") }
                 )
             }
 
@@ -274,7 +278,7 @@ fun LocalLibraryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 LibrarySortMode.entries.forEach { mode ->
                     FilterChip(
@@ -287,11 +291,11 @@ fun LocalLibraryScreen(
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text(
                                         text = "\u2191",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall
                                     )
                                 }
                             }
-                        },
+                        }
                     )
                 }
             }
@@ -299,18 +303,18 @@ fun LocalLibraryScreen(
             if (filteredBooks.isEmpty()) {
                 Box(
                     modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "No books yet",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = "Download from a server or tap + to import",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -325,7 +329,7 @@ fun LocalLibraryScreen(
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 ) {
                     items(filteredBooks, key = { it.id }) { book ->
                         UnifiedBookCard(
@@ -345,13 +349,19 @@ fun LocalLibraryScreen(
                             onDelete = { viewModel.deleteBook(book.id) },
                             onRelink = if (book.serverId == null && servers.isNotEmpty()) {
                                 { relinkBookId = book.id }
-                            } else null,
+                            } else {
+                                null
+                            },
                             onPullProgress = if (book.serverId != null) {
                                 { viewModel.pullBookProgress(book) }
-                            } else null,
+                            } else {
+                                null
+                            },
                             onPushProgress = if (book.serverId != null) {
                                 { viewModel.pushBookProgress(book) }
-                            } else null,
+                            } else {
+                                null
+                            }
                         )
                     }
                 }
@@ -373,7 +383,7 @@ fun LocalLibraryScreen(
                                     viewModel.relinkBook(bookId, server.id)
                                     relinkBookId = null
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(server.name)
                             }
@@ -385,10 +395,9 @@ fun LocalLibraryScreen(
                     TextButton(onClick = { relinkBookId = null }) {
                         Text("Cancel")
                     }
-                },
+                }
             )
         }
-
     }
 }
 
@@ -405,7 +414,7 @@ private fun UnifiedBookCard(
     onDelete: () -> Unit = {},
     onRelink: (() -> Unit)? = null,
     onPullProgress: (() -> Unit)? = null,
-    onPushProgress: (() -> Unit)? = null,
+    onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val colorIndex = bookCoverColorIndex(book.title)
@@ -416,22 +425,22 @@ private fun UnifiedBookCard(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick,
+                onLongClick = onLongClick
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
-            },
+            }
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.67f),
+                    .aspectRatio(0.67f)
             ) {
                 if (book.coverUrl != null) {
                     val context = LocalContext.current
@@ -439,7 +448,9 @@ private fun UnifiedBookCard(
                         val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
                             val token = coverAuthHeader.removePrefix("jwt:")
                             "${book.coverUrl}?token=$token"
-                        } else book.coverUrl
+                        } else {
+                            book.coverUrl
+                        }
                         ImageRequest.Builder(context)
                             .data(url)
                             .apply {
@@ -456,19 +467,19 @@ private fun UnifiedBookCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     )
                 } else {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(BookCoverPlaceholderColors[colorIndex]),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = book.title.take(2).uppercase(),
                             style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFF5D4037),
+                            color = Color(0xFF5D4037)
                         )
                     }
                 }
@@ -480,29 +491,29 @@ private fun UnifiedBookCard(
                         onCheckedChange = { onClick() },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp),
+                            .padding(2.dp)
                     )
                 } else {
                     // 3-dot menu
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp),
+                            .padding(2.dp)
                     ) {
                         IconButton(
                             onClick = { showMenu = true },
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
                                 contentDescription = "More",
                                 tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         DropdownMenu(
                             expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
+                            onDismissRequest = { showMenu = false }
                         ) {
                             if (onRelink != null) {
                                 DropdownMenuItem(
@@ -510,7 +521,7 @@ private fun UnifiedBookCard(
                                     onClick = {
                                         showMenu = false
                                         onRelink()
-                                    },
+                                    }
                                 )
                             }
                             if (onPullProgress != null) {
@@ -519,7 +530,7 @@ private fun UnifiedBookCard(
                                     onClick = {
                                         showMenu = false
                                         onPullProgress()
-                                    },
+                                    }
                                 )
                             }
                             if (onPushProgress != null) {
@@ -528,7 +539,7 @@ private fun UnifiedBookCard(
                                     onClick = {
                                         showMenu = false
                                         onPushProgress()
-                                    },
+                                    }
                                 )
                             }
                             DropdownMenuItem(
@@ -536,7 +547,7 @@ private fun UnifiedBookCard(
                                 onClick = {
                                     showMenu = false
                                     onDelete()
-                                },
+                                }
                             )
                         }
                     }
@@ -549,26 +560,29 @@ private fun UnifiedBookCard(
                         .padding(6.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(
-                            if (isFromServer) MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                            else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
-                        ),
+                            if (isFromServer) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                            } else {
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f)
+                            }
+                        )
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             if (isFromServer) Icons.Default.CloudDone else Icons.Default.PhoneAndroid,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(12.dp),
+                            modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = if (isFromServer) "Server" else "Local",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = Color.White
                         )
                     }
                 }
@@ -580,7 +594,7 @@ private fun UnifiedBookCard(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 book.author?.let {
                     Text(
@@ -588,7 +602,7 @@ private fun UnifiedBookCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 if (progress != null && progress > 0f) {
@@ -599,13 +613,13 @@ private fun UnifiedBookCard(
                             .fillMaxWidth()
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp)),
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                     Text(
                         text = "${(progress * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }

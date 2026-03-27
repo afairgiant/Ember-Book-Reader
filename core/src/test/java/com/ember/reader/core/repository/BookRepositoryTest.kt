@@ -3,12 +3,12 @@ package com.ember.reader.core.repository
 import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.entity.BookEntity
-import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.model.Server
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
@@ -17,14 +17,14 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import java.io.File
+import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
-import java.io.File
-import java.time.Instant
 
 @ExtendWith(MockKExtension::class)
 class BookRepositoryTest {
@@ -65,7 +65,7 @@ class BookRepositoryTest {
         opdsUsername = "user",
         opdsPassword = "pass",
         kosyncUsername = "kuser",
-        kosyncPassword = "kpass",
+        kosyncPassword = "kpass"
     )
 
     private val catalogPath = "/api/v1/opds/catalog"
@@ -85,7 +85,7 @@ class BookRepositoryTest {
             title = "New Book",
             author = "Author",
             format = BookFormat.EPUB,
-            addedAt = Instant.now(),
+            addedAt = Instant.now()
         )
         val bookPage = OpdsBookPage(books = listOf(newBook))
 
@@ -96,7 +96,7 @@ class BookRepositoryTest {
                 password = testServer.opdsPassword,
                 serverId = testServer.id,
                 path = catalogPath,
-                page = 1,
+                page = 1
             )
         } returns Result.success(bookPage)
         coEvery { bookDao.getByOpdsEntryId("opds-entry-1", 1L) } returns null
@@ -118,7 +118,7 @@ class BookRepositoryTest {
             title = "Old Title",
             author = "Old Author",
             format = BookFormat.EPUB,
-            addedAt = Instant.now(),
+            addedAt = Instant.now()
         )
         val updatedBook = Book(
             id = "some-new-id",
@@ -127,7 +127,7 @@ class BookRepositoryTest {
             title = "Updated Title",
             author = "Updated Author",
             format = BookFormat.EPUB,
-            addedAt = Instant.now(),
+            addedAt = Instant.now()
         )
         val bookPage = OpdsBookPage(books = listOf(updatedBook))
 
@@ -138,7 +138,7 @@ class BookRepositoryTest {
                 password = testServer.opdsPassword,
                 serverId = testServer.id,
                 path = catalogPath,
-                page = 1,
+                page = 1
             )
         } returns Result.success(bookPage)
         coEvery { bookDao.getByOpdsEntryId("opds-entry-1", 1L) } returns existingEntity
@@ -148,11 +148,13 @@ class BookRepositoryTest {
 
         assertTrue(result.isSuccess)
         coVerify {
-            bookDao.update(match { entity ->
-                entity.id == "existing-book-1" &&
-                    entity.title == "Updated Title" &&
-                    entity.author == "Updated Author"
-            })
+            bookDao.update(
+                match { entity ->
+                    entity.id == "existing-book-1" &&
+                        entity.title == "Updated Title" &&
+                        entity.author == "Updated Author"
+                }
+            )
         }
         coVerify(exactly = 0) { bookDao.insert(any()) }
     }
@@ -168,7 +170,7 @@ class BookRepositoryTest {
             title = "Local Book",
             format = BookFormat.EPUB,
             localPath = bookFile.absolutePath,
-            addedAt = Instant.now(),
+            addedAt = Instant.now()
         )
 
         coEvery { bookDao.insert(any()) } returns Unit

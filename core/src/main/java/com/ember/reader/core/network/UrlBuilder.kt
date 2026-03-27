@@ -34,4 +34,3 @@ fun resolveUrl(baseUrl: String, href: String): String = when {
     href.startsWith("/") -> "${serverOrigin(baseUrl)}$href"
     else -> "${normalizeUrl(baseUrl).trimEnd('/')}/$href"
 }
-

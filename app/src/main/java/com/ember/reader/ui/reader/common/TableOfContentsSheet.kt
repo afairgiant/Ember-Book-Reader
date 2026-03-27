@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.remember
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,20 +26,20 @@ fun TableOfContentsSheet(
     publication: Publication,
     currentLocator: Locator?,
     onNavigate: (Locator) -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tocEntries = remember(publication) { flattenToc(publication.tableOfContents) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
                 text = "Table of Contents",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             LazyColumn {
                 items(tocEntries) { entry ->
@@ -49,7 +49,7 @@ fun TableOfContentsSheet(
                         onClick = {
                             val locator = publication.locatorFromLink(entry.link)
                             if (locator != null) onNavigate(locator)
-                        },
+                        }
                     )
                 }
             }
@@ -58,11 +58,7 @@ fun TableOfContentsSheet(
 }
 
 @Composable
-private fun TocItem(
-    entry: TocEntry,
-    isCurrent: Boolean,
-    onClick: () -> Unit,
-) {
+private fun TocItem(entry: TocEntry, isCurrent: Boolean, onClick: () -> Unit) {
     Text(
         text = entry.link.title ?: entry.link.href?.toString() ?: "",
         style = MaterialTheme.typography.bodyMedium,
@@ -79,17 +75,16 @@ private fun TocItem(
                 start = (16 + entry.depth * 16).dp,
                 end = 16.dp,
                 top = 12.dp,
-                bottom = 12.dp,
-            ),
+                bottom = 12.dp
+            )
     )
 }
 
 private data class TocEntry(
     val link: Link,
-    val depth: Int,
+    val depth: Int
 )
 
-private fun flattenToc(links: List<Link>, depth: Int = 0): List<TocEntry> =
-    links.flatMap { link ->
-        listOf(TocEntry(link, depth)) + flattenToc(link.children, depth + 1)
-    }
+private fun flattenToc(links: List<Link>, depth: Int = 0): List<TocEntry> = links.flatMap { link ->
+    listOf(TocEntry(link, depth)) + flattenToc(link.children, depth + 1)
+}

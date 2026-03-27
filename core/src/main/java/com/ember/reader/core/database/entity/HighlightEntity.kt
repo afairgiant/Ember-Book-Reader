@@ -14,10 +14,10 @@ import java.time.Instant
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
+            onDelete = ForeignKey.CASCADE
+        )
     ],
-    indices = [Index("bookId")],
+    indices = [Index("bookId")]
 )
 data class HighlightEntity(
     @PrimaryKey(autoGenerate = true)
@@ -26,5 +26,5 @@ data class HighlightEntity(
     val locatorJson: String,
     val color: HighlightColor = HighlightColor.YELLOW,
     val annotation: String? = null,
-    val createdAt: Instant,
+    val createdAt: Instant
 )

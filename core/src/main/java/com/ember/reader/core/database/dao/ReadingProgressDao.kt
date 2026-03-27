@@ -30,7 +30,7 @@ interface ReadingProgressDao {
         UPDATE reading_progress
         SET syncedAt = :syncedAt, needsSync = 0
         WHERE bookId = :bookId
-        """,
+        """
     )
     suspend fun markSynced(bookId: String, syncedAt: java.time.Instant)
 

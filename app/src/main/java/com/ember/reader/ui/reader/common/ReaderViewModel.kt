@@ -1,27 +1,24 @@
 package com.ember.reader.ui.reader.common
-import kotlin.math.roundToInt
-
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.Bookmark
-import com.ember.reader.core.model.Highlight
-import com.ember.reader.core.model.HighlightColor
-import com.ember.reader.core.model.ReaderPreferences
-import com.ember.reader.core.model.ReadingProgress
-import com.ember.reader.core.model.SyncFrequency
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
-import com.ember.reader.core.repository.AppPreferencesRepository
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.Bookmark
+import com.ember.reader.core.model.Highlight
+import com.ember.reader.core.model.HighlightColor
+import com.ember.reader.core.model.ReaderPreferences
+import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.HighlightRepository
@@ -30,6 +27,9 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
+import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,8 +43,6 @@ import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import timber.log.Timber
-import java.io.File
-import javax.inject.Inject
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -60,7 +58,7 @@ class ReaderViewModel @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
-    appPreferencesRepository: AppPreferencesRepository,
+    appPreferencesRepository: AppPreferencesRepository
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -143,7 +141,7 @@ class ReaderViewModel @Inject constructor(
         _uiState.value = ReaderUiState.Ready(
             publication = pub,
             initialLocator = initialLocator,
-            book = loadedBook,
+            book = loadedBook
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
@@ -152,7 +150,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun pullGrimmoryProgressOnOpen(
         loadedBook: Book,
-        localProgress: ReadingProgress?,
+        localProgress: ReadingProgress?
     ) {
         val serverId = loadedBook.serverId ?: return
         val server = serverRepository.getById(serverId) ?: return
@@ -180,8 +178,8 @@ class ReaderViewModel @Inject constructor(
                         percentage = remotePercentage,
                         lastReadAt = java.time.Instant.now(),
                         syncedAt = java.time.Instant.now(),
-                        needsSync = false,
-                    ),
+                        needsSync = false
+                    )
                 )
             }
         }.onFailure {
@@ -191,7 +189,7 @@ class ReaderViewModel @Inject constructor(
 
     private data class SyncContext(
         val server: com.ember.reader.core.model.Server,
-        val fileHash: String,
+        val fileHash: String
     )
 
     private suspend fun getSyncContext(): SyncContext? {
@@ -202,7 +200,11 @@ class ReaderViewModel @Inject constructor(
         val fileHash = loadedBook.fileHash
             ?: return null.also { Timber.d("Sync: no fileHash") }
         val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
-        if (!syncFrequency.syncOnOpenClose) return null.also { Timber.d("Sync: open/close sync disabled (${syncFrequency.name})") }
+        if (!syncFrequency.syncOnOpenClose) {
+            return null.also {
+                Timber.d("Sync: open/close sync disabled (${syncFrequency.name})")
+            }
+        }
         val server = serverRepository.getById(serverId)
             ?: return null.also { Timber.d("Sync: server $serverId not found") }
         if (server.kosyncUsername.isBlank()) return null.also { Timber.d("Sync: kosync username blank") }
@@ -212,7 +214,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun pullRemoteProgressOnOpen(
         loadedBook: Book,
-        localProgress: ReadingProgress?,
+        localProgress: ReadingProgress?
     ) {
         val (server, fileHash) = getSyncContext() ?: return
 
@@ -233,7 +235,7 @@ class ReaderViewModel @Inject constructor(
                 localPercentage = localPercentage,
                 remoteLocatorJson = remote.locatorJson,
                 remoteDevice = remoteResult.deviceName,
-                remoteProgress = remote,
+                remoteProgress = remote
             )
         } else {
             Timber.d("Sync: remote not ahead enough to show conflict (threshold=$CONFLICT_THRESHOLD)")
@@ -269,7 +271,7 @@ class ReaderViewModel @Inject constructor(
             bookmarkRepository.addBookmark(
                 bookId = bookId,
                 locatorJson = locator.toJsonString(),
-                title = locator.title,
+                title = locator.title
             )
         }
     }
@@ -311,7 +313,7 @@ class ReaderViewModel @Inject constructor(
             bookId = bookId,
             serverId = book?.serverId,
             percentage = locator.toPercentage(),
-            locatorJson = locator.toJsonString(),
+            locatorJson = locator.toJsonString()
         )
     }
 
@@ -327,36 +329,45 @@ class ReaderViewModel @Inject constructor(
         val loadedBook = book
         Timber.d("Grimmory push check: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} opdsEntryId=${loadedBook?.opdsEntryId} grimmoryBookId=${loadedBook?.grimmoryBookId}")
         if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-            if (loadedBook == null) { Timber.d("Grimmory push: no book loaded"); return }
+            if (loadedBook == null) {
+                Timber.d("Grimmory push: no book loaded")
+                return
+            }
             val grimmoryBookId = loadedBook.grimmoryBookId
-            if (grimmoryBookId == null) { Timber.d("Grimmory push: no grimmoryBookId from opdsEntryId='${loadedBook.opdsEntryId}'"); return }
-            val progress = readingProgressRepository.getByBookId(bookId) ?: run { Timber.d("Grimmory push: no local progress"); return }
+            if (grimmoryBookId == null) {
+                Timber.d("Grimmory push: no grimmoryBookId from opdsEntryId='${loadedBook.opdsEntryId}'")
+                return
+            }
+            val progress = readingProgressRepository.getByBookId(bookId) ?: run {
+                Timber.d("Grimmory push: no local progress")
+                return
+            }
             runCatching {
                 // Get book detail to find the primary file ID
                 val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
                 val fileId = detail?.files?.firstOrNull()?.id
 
                 // Grimmory stores percentages as 0-100, not 0-1
-                val pct = kotlin.math.round(progress.percentage * 1000f) / 10f  // e.g. 0.2393 → 23.9
+                val pct = kotlin.math.round(progress.percentage * 1000f) / 10f // e.g. 0.2393 → 23.9
 
                 val request = GrimmoryProgressRequest(
                     bookId = grimmoryBookId,
                     fileProgress = fileId?.let {
                         GrimmoryFileProgress(
                             bookFileId = it,
-                            progressPercent = pct,
+                            progressPercent = pct
                         )
                     },
                     epubProgress = GrimmoryEpubProgress(
                         cfi = "epubcfi(/6/2)",
-                        percentage = pct,
-                    ),
+                        percentage = pct
+                    )
                 )
                 Timber.d("Grimmory push: bookId=$grimmoryBookId fileId=$fileId percentage=${progress.percentage}")
                 grimmoryClient.pushProgress(
                     baseUrl = server.url,
                     serverId = server.id,
-                    request = request,
+                    request = request
                 ).getOrThrow()
                 Timber.d("Pushed Grimmory progress: ${(progress.percentage * 100).roundToInt()}%")
             }.onFailure {
@@ -397,8 +408,8 @@ class ReaderViewModel @Inject constructor(
                 endTime = endTime,
                 durationSeconds = durationSeconds,
                 startProgress = sessionStartProgress,
-                endProgress = endProgress,
-            ),
+                endProgress = endProgress
+            )
         )
         Timber.d("Saved local session: ${durationSeconds}s, ${(sessionStartProgress * 100).roundToInt()}% → ${(endProgress * 100).roundToInt()}%")
 
@@ -427,8 +438,8 @@ class ReaderViewModel @Inject constructor(
                     durationSeconds = durationSeconds,
                     startProgress = startPct,
                     endProgress = endPct,
-                    progressDelta = endPct - startPct,
-                ),
+                    progressDelta = endPct - startPct
+                )
             ).getOrThrow()
         }.onFailure {
             Timber.w(it, "Failed to push reading session to Grimmory")
@@ -446,7 +457,7 @@ sealed interface ReaderUiState {
     data class Ready(
         val publication: Publication,
         val initialLocator: Locator?,
-        val book: Book,
+        val book: Book
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
@@ -456,5 +467,5 @@ data class SyncConflict(
     val localPercentage: Float,
     val remoteLocatorJson: String?,
     val remoteDevice: String?,
-    val remoteProgress: com.ember.reader.core.model.ReadingProgress? = null,
+    val remoteProgress: com.ember.reader.core.model.ReadingProgress? = null
 )

@@ -8,18 +8,18 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.sync.DeviceIdentity
 import com.ember.reader.core.sync.KosyncClient
 import com.ember.reader.core.sync.KosyncProgressRequest
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import timber.log.Timber
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import timber.log.Timber
 
 @Singleton
 class ReadingProgressRepository @Inject constructor(
     private val readingProgressDao: ReadingProgressDao,
     private val kosyncClient: KosyncClient,
-    private val deviceIdentity: DeviceIdentity,
+    private val deviceIdentity: DeviceIdentity
 ) {
 
     fun observeAll(): Flow<List<ReadingProgress>> =
@@ -35,7 +35,7 @@ class ReadingProgressRepository @Inject constructor(
         bookId: String,
         serverId: Long?,
         percentage: Float,
-        locatorJson: String?,
+        locatorJson: String?
     ) {
         val progress = ReadingProgress(
             bookId = bookId,
@@ -44,29 +44,25 @@ class ReadingProgressRepository @Inject constructor(
             locatorJson = locatorJson,
             kosyncProgress = locatorJson,
             lastReadAt = Instant.now(),
-            needsSync = serverId != null,
+            needsSync = serverId != null
         )
         readingProgressDao.upsert(progress.toEntity())
     }
 
-    suspend fun pushProgress(
-        server: Server,
-        bookId: String,
-        documentHash: String,
-    ): Result<Unit> {
+    suspend fun pushProgress(server: Server, bookId: String, documentHash: String): Result<Unit> {
         val progress = getByBookId(bookId) ?: return Result.success(Unit)
         val request = KosyncProgressRequest(
             document = documentHash,
             progress = progress.locatorJson ?: "",
             percentage = progress.percentage,
             device = deviceIdentity.deviceName,
-            deviceId = deviceIdentity.deviceId,
+            deviceId = deviceIdentity.deviceId
         )
         return kosyncClient.pushProgress(
             baseUrl = server.url,
             username = server.kosyncUsername,
             password = server.kosyncPassword,
-            request = request,
+            request = request
         ).onSuccess {
             readingProgressDao.markSynced(bookId, Instant.now())
         }
@@ -74,19 +70,19 @@ class ReadingProgressRepository @Inject constructor(
 
     data class RemoteProgressResult(
         val progress: ReadingProgress,
-        val deviceName: String?,
+        val deviceName: String?
     )
 
     suspend fun pullProgress(
         server: Server,
         bookId: String,
-        documentHash: String,
+        documentHash: String
     ): Result<RemoteProgressResult?> = runCatching {
         val remote = kosyncClient.pullProgress(
             baseUrl = server.url,
             username = server.kosyncUsername,
             password = server.kosyncPassword,
-            documentHash = documentHash,
+            documentHash = documentHash
         ).getOrNull() ?: return@runCatching null
 
         val remotePercentage = remote.percentage ?: return@runCatching null
@@ -100,9 +96,9 @@ class ReadingProgressRepository @Inject constructor(
                 kosyncProgress = remote.progress,
                 lastReadAt = Instant.now(),
                 syncedAt = Instant.now(),
-                needsSync = false,
+                needsSync = false
             ),
-            deviceName = remote.device,
+            deviceName = remote.device
         )
     }
 
@@ -114,10 +110,7 @@ class ReadingProgressRepository @Inject constructor(
      * Pulls remote progress for all downloaded books on a server.
      * Only updates local progress if the remote is newer (higher percentage).
      */
-    suspend fun pullProgressForAllBooks(
-        server: Server,
-        books: List<Pair<String, String>>,
-    ) {
+    suspend fun pullProgressForAllBooks(server: Server, books: List<Pair<String, String>>) {
         for ((bookId, fileHash) in books) {
             runCatching {
                 val result = pullProgress(server, bookId, fileHash)

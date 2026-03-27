@@ -33,7 +33,7 @@ interface BookDao {
         WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 1
         ORDER BY rp.lastReadAt DESC
         LIMIT 10
-        """,
+        """
     )
     fun observeRecentlyReading(): Flow<List<BookEntity>>
 
@@ -79,7 +79,7 @@ interface BookDao {
         WHERE (serverId = :serverId OR serverId IS NULL)
         AND (title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%')
         ORDER BY title ASC
-        """,
+        """
     )
     fun search(serverId: Long?, query: String): Flow<List<BookEntity>>
 }

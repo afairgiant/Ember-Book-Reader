@@ -22,14 +22,13 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): EmberDatabase =
-        Room.databaseBuilder(
-            context,
-            EmberDatabase::class.java,
-            "ember.db",
-        )
-            .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5)
-            .build()
+    fun provideDatabase(@ApplicationContext context: Context): EmberDatabase = Room.databaseBuilder(
+        context,
+        EmberDatabase::class.java,
+        "ember.db"
+    )
+        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5)
+        .build()
 
     @Provides
     fun provideServerDao(database: EmberDatabase): ServerDao = database.serverDao()

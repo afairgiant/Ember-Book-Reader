@@ -32,13 +32,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -64,7 +64,7 @@ fun SettingsScreen(
     onOpenStorage: () -> Unit = {},
     onOpenStats: () -> Unit = {},
     onOpenDevLog: () -> Unit = {},
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
@@ -78,37 +78,37 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Profile", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
         ) {
             // Profile header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Person,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(14.dp))
@@ -116,12 +116,12 @@ fun SettingsScreen(
                     Text(
                         text = "Ember Reader",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "${servers.size} server(s) connected",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -132,14 +132,14 @@ fun SettingsScreen(
                 Text(
                     text = "Connected Accounts",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 servers.forEach { server ->
                     ServerStatusCard(
                         server = server,
-                        isGrimmoryLoggedIn = viewModel.isGrimmoryLoggedIn(server.id),
+                        isGrimmoryLoggedIn = viewModel.isGrimmoryLoggedIn(server.id)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -150,31 +150,31 @@ fun SettingsScreen(
             Text(
                 text = "Reading Stats",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatCard(
                     icon = Icons.Default.Book,
                     label = "Downloaded",
                     value = "${readingStats.downloaded}",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon = Icons.Default.MenuBook,
                     label = "Reading",
                     value = "${readingStats.reading}",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon = Icons.Default.CheckCircle,
                     label = "Completed",
                     value = "${readingStats.completed}",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -183,7 +183,7 @@ fun SettingsScreen(
             Text(
                 text = "Appearance",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -192,7 +192,7 @@ fun SettingsScreen(
                     FilterChip(
                         selected = themeMode == mode,
                         onClick = { viewModel.updateThemeMode(mode) },
-                        label = { Text(mode.displayName) },
+                        label = { Text(mode.displayName) }
                     )
                 }
             }
@@ -206,12 +206,12 @@ fun SettingsScreen(
                     .clickable { viewModel.updateKeepScreenOn(!keepScreenOn) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Keep screen on while reading", style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = keepScreenOn,
-                    onCheckedChange = { viewModel.updateKeepScreenOn(it) },
+                    onCheckedChange = { viewModel.updateKeepScreenOn(it) }
                 )
             }
 
@@ -222,19 +222,19 @@ fun SettingsScreen(
                     .clickable { viewModel.updateAutoCleanup(!autoCleanup) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Auto-cleanup old downloads", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "Remove server downloads older than 90 days",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(
                     checked = autoCleanup,
-                    onCheckedChange = { viewModel.updateAutoCleanup(it) },
+                    onCheckedChange = { viewModel.updateAutoCleanup(it) }
                 )
             }
 
@@ -243,7 +243,7 @@ fun SettingsScreen(
             Text(
                 text = "Synchronization",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -254,16 +254,16 @@ fun SettingsScreen(
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { viewModel.updateSyncFrequency(frequency) }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
                         selected = syncFrequency == frequency,
-                        onClick = { viewModel.updateSyncFrequency(frequency) },
+                        onClick = { viewModel.updateSyncFrequency(frequency) }
                     )
                     Text(
                         text = frequency.displayName,
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(start = 4.dp)
                     )
                 }
             }
@@ -273,7 +273,7 @@ fun SettingsScreen(
             Button(
                 onClick = viewModel::syncNow,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -285,7 +285,7 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = onOpenStorage,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -297,7 +297,7 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = onOpenStats,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -314,44 +314,41 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .combinedClickable(
                         onClick = {},
-                        onLongClick = onOpenDevLog,
+                        onLongClick = onOpenDevLog
                     )
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
             )
         }
     }
 }
 
 @Composable
-private fun ServerStatusCard(
-    server: Server,
-    isGrimmoryLoggedIn: Boolean,
-) {
+private fun ServerStatusCard(server: Server, isGrimmoryLoggedIn: Boolean) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.CloudQueue,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -361,7 +358,7 @@ private fun ServerStatusCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -372,7 +369,7 @@ private fun ServerStatusCard(
                     if (server.isGrimmory) {
                         StatusDot(
                             label = "Grimmory",
-                            active = isGrimmoryLoggedIn,
+                            active = isGrimmoryLoggedIn
                         )
                     }
                 }
@@ -382,25 +379,25 @@ private fun ServerStatusCard(
 }
 
 @Composable
-private fun StatusDot(
-    label: String,
-    active: Boolean,
-) {
+private fun StatusDot(label: String, active: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
                 .background(
-                    if (active) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                ),
+                    if (active) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                )
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (active) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (active) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }
@@ -410,37 +407,37 @@ private fun StatCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

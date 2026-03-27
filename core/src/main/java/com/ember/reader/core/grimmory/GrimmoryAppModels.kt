@@ -10,7 +10,7 @@ data class GrimmoryAppPage<T>(
     val totalElements: Long = 0,
     val totalPages: Int = 0,
     val hasNext: Boolean = false,
-    val hasPrevious: Boolean = false,
+    val hasPrevious: Boolean = false
 )
 
 @Serializable
@@ -24,7 +24,7 @@ data class GrimmoryAppBook(
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
     val coverUpdatedOn: String? = null,
-    val addedOn: String? = null,
+    val addedOn: String? = null
 )
 
 @Serializable
@@ -32,7 +32,7 @@ data class GrimmoryAppLibrary(
     val id: Long,
     val name: String,
     val icon: String? = null,
-    val bookCount: Int = 0,
+    val bookCount: Int = 0
 )
 
 @Serializable
@@ -41,7 +41,7 @@ data class GrimmoryAppShelf(
     val name: String,
     val icon: String? = null,
     val bookCount: Int = 0,
-    val publicShelf: Boolean = false,
+    val publicShelf: Boolean = false
 )
 
 @Serializable
@@ -50,7 +50,7 @@ data class GrimmoryAppMagicShelf(
     val name: String,
     val icon: String? = null,
     val iconType: String? = null,
-    val publicShelf: Boolean = false,
+    val publicShelf: Boolean = false
 )
 
 @Serializable
@@ -61,7 +61,7 @@ data class GrimmoryAppSeries(
     val authors: List<String> = emptyList(),
     val booksRead: Int = 0,
     val latestAddedOn: String? = null,
-    val coverBooks: List<SeriesCoverBook> = emptyList(),
+    val coverBooks: List<SeriesCoverBook> = emptyList()
 )
 
 @Serializable
@@ -69,7 +69,7 @@ data class SeriesCoverBook(
     val bookId: Long? = null,
     val coverUpdatedOn: String? = null,
     val seriesNumber: Float? = null,
-    val primaryFileType: String? = null,
+    val primaryFileType: String? = null
 )
 
 @Serializable
@@ -77,7 +77,7 @@ data class GrimmoryAppAuthor(
     val id: Long,
     val name: String,
     val bookCount: Int = 0,
-    val hasPhoto: Boolean = false,
+    val hasPhoto: Boolean = false
 )
 
 @Serializable
@@ -85,18 +85,18 @@ data class GrimmoryAppFilterOptions(
     val authors: List<GrimmoryFilterItem> = emptyList(),
     val languages: List<GrimmoryLanguageItem> = emptyList(),
     val readStatuses: List<String> = emptyList(),
-    val fileTypes: List<String> = emptyList(),
+    val fileTypes: List<String> = emptyList()
 )
 
 @Serializable
 data class GrimmoryFilterItem(
     val name: String,
-    val count: Int = 0,
+    val count: Int = 0
 )
 
 @Serializable
 data class GrimmoryLanguageItem(
     val code: String,
     val label: String? = null,
-    val count: Int = 0,
+    val count: Int = 0
 )

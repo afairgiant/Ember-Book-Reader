@@ -2,8 +2,8 @@ package com.ember.reader.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,13 +61,17 @@ object Routes {
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
 
-    fun catalog(serverId: Long, path: String? = null): String =
-        if (path != null) "catalog/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
-        else "catalog/$serverId"
+    fun catalog(serverId: Long, path: String? = null): String = if (path != null) {
+        "catalog/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
+    } else {
+        "catalog/$serverId"
+    }
 
-    fun library(serverId: Long, path: String? = null): String =
-        if (path != null) "library/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
-        else "library/$serverId"
+    fun library(serverId: Long, path: String? = null): String = if (path != null) {
+        "library/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
+    } else {
+        "library/$serverId"
+    }
 
     fun epubReader(bookId: String): String = "reader/epub/$bookId"
     fun pdfReader(bookId: String): String = "reader/pdf/$bookId"
@@ -76,11 +80,11 @@ object Routes {
 private enum class BottomNavTab(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    val icon: ImageVector
 ) {
     HOME(Routes.HOME, "Home", Icons.Default.Home),
     LIBRARY(Routes.LOCAL_LIBRARY, "Library", Icons.AutoMirrored.Filled.LibraryBooks),
-    SETTINGS(Routes.SETTINGS, "Profile", Icons.Default.Person),
+    SETTINGS(Routes.SETTINGS, "Profile", Icons.Default.Person)
 }
 
 // Routes where the bottom nav should be visible
@@ -89,7 +93,7 @@ private val bottomNavRoutes = setOf(Routes.HOME, Routes.LOCAL_LIBRARY, Routes.SE
 @Composable
 fun EmberNavHost(
     modifier: Modifier = Modifier,
-    navController: NavHostController = rememberNavController(),
+    navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -99,7 +103,7 @@ fun EmberNavHost(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     BottomNavTab.entries.forEach { tab ->
                         val selected = navBackStackEntry?.destination?.hierarchy?.any {
@@ -117,18 +121,18 @@ fun EmberNavHost(
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
+                            label = { Text(tab.label) }
                         )
                     }
                 }
             }
         },
-        modifier = modifier,
+        modifier = modifier
     ) { padding ->
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.padding(padding)
         ) {
             // Top-level: Home
             composable(Routes.HOME) {
@@ -146,7 +150,7 @@ fun EmberNavHost(
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
                     },
-                    onOpenStats = { navController.navigate(Routes.STATS) },
+                    onOpenStats = { navController.navigate(Routes.STATS) }
                 )
             }
 
@@ -159,7 +163,7 @@ fun EmberNavHost(
                     },
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
-                    },
+                    }
                 )
             }
 
@@ -169,7 +173,7 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenStorage = { navController.navigate(Routes.STORAGE) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
-                    onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
+                    onOpenDevLog = { navController.navigate(Routes.DEV_LOG) }
                 )
             }
 
@@ -180,13 +184,13 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_SERVER_ID) {
                         type = NavType.LongType
                         defaultValue = -1L
-                    },
-                ),
+                    }
+                )
             ) { backStackEntry ->
                 val serverId = backStackEntry.arguments?.getLong("serverId")?.takeIf { it != -1L }
                 ServerFormScreen(
                     serverId = serverId,
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -198,8 +202,8 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
                         defaultValue = ""
-                    },
-                ),
+                    }
+                )
             ) { backStackEntry ->
                 val serverId = backStackEntry.arguments?.getLong(Routes.ARG_SERVER_ID) ?: return@composable
                 CatalogScreen(
@@ -209,7 +213,7 @@ fun EmberNavHost(
                     },
                     onNavigateToBooks = { path ->
                         navController.navigate(Routes.library(serverId, path))
-                    },
+                    }
                 )
             }
 
@@ -221,8 +225,8 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
                         defaultValue = ""
-                    },
-                ),
+                    }
+                )
             ) { backStackEntry ->
                 val serverId = backStackEntry.arguments?.getLong(Routes.ARG_SERVER_ID) ?: return@composable
                 LibraryScreen(
@@ -230,21 +234,21 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
-                    },
+                    }
                 )
             }
 
             // Detail: Readers
             composable(
                 route = Routes.EPUB_READER,
-                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType }),
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
             ) {
                 EpubReaderScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable(
                 route = Routes.PDF_READER,
-                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType }),
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
             ) {
                 PdfReaderScreen(onNavigateBack = { navController.popBackStack() })
             }
@@ -252,13 +256,13 @@ fun EmberNavHost(
             // Detail: Book Detail
             composable(
                 route = Routes.BOOK_DETAIL,
-                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType }),
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
             ) {
                 BookDetailScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
-                    },
+                    }
                 )
             }
 
@@ -273,7 +277,7 @@ fun EmberNavHost(
 
             composable(Routes.STATS) {
                 com.ember.reader.ui.settings.StatsScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
@@ -283,7 +287,7 @@ fun EmberNavHost(
 private fun navigateToReader(
     navController: NavHostController,
     bookId: String,
-    format: com.ember.reader.core.model.BookFormat,
+    format: com.ember.reader.core.model.BookFormat
 ) {
     when (format) {
         com.ember.reader.core.model.BookFormat.EPUB ->

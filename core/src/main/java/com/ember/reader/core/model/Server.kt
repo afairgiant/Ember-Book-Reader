@@ -13,5 +13,5 @@ data class Server(
     val grimmoryUsername: String = "",
     val grimmoryPassword: String = "",
     val isGrimmory: Boolean = false,
-    val lastConnected: Instant? = null,
+    val lastConnected: Instant? = null
 )

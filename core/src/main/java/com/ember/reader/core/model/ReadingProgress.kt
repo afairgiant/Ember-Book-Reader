@@ -10,5 +10,5 @@ data class ReadingProgress(
     val kosyncProgress: String? = null,
     val lastReadAt: Instant = Instant.now(),
     val syncedAt: Instant? = null,
-    val needsSync: Boolean = false,
+    val needsSync: Boolean = false
 )

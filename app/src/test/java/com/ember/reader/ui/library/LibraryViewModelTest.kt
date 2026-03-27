@@ -1,7 +1,7 @@
 package com.ember.reader.ui.library
 
-import androidx.lifecycle.SavedStateHandle
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
@@ -61,7 +61,7 @@ class LibraryViewModelTest {
         opdsUsername = "user",
         opdsPassword = "pass",
         kosyncUsername = "kuser",
-        kosyncPassword = "kpass",
+        kosyncPassword = "kpass"
     )
 
     @BeforeEach
@@ -72,7 +72,7 @@ class LibraryViewModelTest {
         every { bookRepository.observeByServer(1L) } returns flowOf(emptyList())
         coEvery { serverRepository.getById(1L) } returns testServer
         coEvery { bookRepository.refreshFromServer(any(), any(), any()) } returns Result.success(
-            OpdsBookPage(books = emptyList()),
+            OpdsBookPage(books = emptyList())
         )
     }
 
@@ -83,7 +83,7 @@ class LibraryViewModelTest {
 
     private fun createViewModel(): LibraryViewModel {
         val savedStateHandle = SavedStateHandle(
-            mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog"),
+            mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog")
         )
         return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryTokenManager)
     }

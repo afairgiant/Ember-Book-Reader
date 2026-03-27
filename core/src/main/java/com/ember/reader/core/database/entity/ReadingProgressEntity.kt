@@ -13,10 +13,10 @@ import java.time.Instant
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
+            onDelete = ForeignKey.CASCADE
+        )
     ],
-    indices = [Index("bookId")],
+    indices = [Index("bookId")]
 )
 data class ReadingProgressEntity(
     @PrimaryKey
@@ -27,5 +27,5 @@ data class ReadingProgressEntity(
     val kosyncProgress: String? = null,
     val lastReadAt: Instant,
     val syncedAt: Instant? = null,
-    val needsSync: Boolean = false,
+    val needsSync: Boolean = false
 )

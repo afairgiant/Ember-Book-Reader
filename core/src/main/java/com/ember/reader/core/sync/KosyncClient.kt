@@ -11,37 +11,34 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class KosyncClient @Inject constructor(
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient
 ) {
 
-    suspend fun authenticate(
-        baseUrl: String,
-        username: String,
-        password: String,
-    ): Result<Unit> = runCatching {
-        val response = httpClient.get(serverOrigin(baseUrl) + "/api/koreader/users/auth") {
-            header("x-auth-user", username)
-            header("x-auth-key", md5Hash(password))
-            header("Accept", ACCEPT_HEADER)
+    suspend fun authenticate(baseUrl: String, username: String, password: String): Result<Unit> =
+        runCatching {
+            val response = httpClient.get(serverOrigin(baseUrl) + "/api/koreader/users/auth") {
+                header("x-auth-user", username)
+                header("x-auth-key", md5Hash(password))
+                header("Accept", ACCEPT_HEADER)
+            }
+            if (!response.status.isSuccess()) {
+                error("Authentication failed: ${response.status}")
+            }
         }
-        if (!response.status.isSuccess()) {
-            error("Authentication failed: ${response.status}")
-        }
-    }
 
     suspend fun pushProgress(
         baseUrl: String,
         username: String,
         password: String,
-        request: KosyncProgressRequest,
+        request: KosyncProgressRequest
     ): Result<Unit> = runCatching {
         val response = httpClient.put(serverOrigin(baseUrl) + "/api/koreader/syncs/progress") {
             header("x-auth-user", username)
@@ -59,10 +56,10 @@ class KosyncClient @Inject constructor(
         baseUrl: String,
         username: String,
         password: String,
-        documentHash: String,
+        documentHash: String
     ): Result<KosyncProgressResponse?> = runCatching {
         val response = httpClient.get(
-            serverOrigin(baseUrl) + "/api/koreader/syncs/progress/$documentHash",
+            serverOrigin(baseUrl) + "/api/koreader/syncs/progress/$documentHash"
         ) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
@@ -88,7 +85,7 @@ data class KosyncProgressRequest(
     val percentage: Float,
     val device: String,
     @SerialName("device_id")
-    val deviceId: String,
+    val deviceId: String
 )
 
 @Serializable
@@ -99,5 +96,5 @@ data class KosyncProgressResponse(
     val device: String? = null,
     @SerialName("device_id")
     val deviceId: String? = null,
-    val timestamp: Long? = null,
+    val timestamp: Long? = null
 )

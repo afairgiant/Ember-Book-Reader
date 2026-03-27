@@ -13,13 +13,12 @@ import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.repository.ThemeMode
 import com.ember.reader.core.sync.worker.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -29,7 +28,7 @@ class SettingsViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val bookRepository: BookRepository,
     private val readingProgressRepository: ReadingProgressRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     val syncFrequency: StateFlow<SyncFrequency> =
@@ -50,7 +49,7 @@ class SettingsViewModel @Inject constructor(
 
     val readingStats: StateFlow<ReadingStats> = combine(
         bookRepository.observeDownloadedBooks(),
-        readingProgressRepository.observeAll(),
+        readingProgressRepository.observeAll()
     ) { books, progressList ->
         val progressMap = progressList.associate { it.bookId to it.percentage }
         val downloaded = books.size
@@ -65,8 +64,7 @@ class SettingsViewModel @Inject constructor(
         ReadingStats(downloaded = downloaded, reading = reading, completed = completed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReadingStats())
 
-    fun isGrimmoryLoggedIn(serverId: Long): Boolean =
-        grimmoryTokenManager.isLoggedIn(serverId)
+    fun isGrimmoryLoggedIn(serverId: Long): Boolean = grimmoryTokenManager.isLoggedIn(serverId)
 
     fun updateSyncFrequency(frequency: SyncFrequency) {
         viewModelScope.launch {
@@ -95,5 +93,5 @@ class SettingsViewModel @Inject constructor(
 data class ReadingStats(
     val downloaded: Int = 0,
     val reading: Int = 0,
-    val completed: Int = 0,
+    val completed: Int = 0
 )

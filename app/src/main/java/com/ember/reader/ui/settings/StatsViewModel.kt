@@ -7,19 +7,18 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingSessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import javax.inject.Inject
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val readingSessionRepository: ReadingSessionRepository,
     private val bookRepository: BookRepository,
-    private val readingProgressRepository: ReadingProgressRepository,
+    private val readingProgressRepository: ReadingProgressRepository
 ) : ViewModel() {
 
     private val _stats = MutableStateFlow(StatsData())
@@ -62,7 +61,7 @@ class StatsViewModel @Inject constructor(
             recentSessions = recentSessions,
             bookTitles = bookTitles,
             readingDays = readingDays,
-            estimatedMinutesToFinish = estimatedCompletion,
+            estimatedMinutesToFinish = estimatedCompletion
         )
     }
 
@@ -78,7 +77,9 @@ class StatsViewModel @Inject constructor(
         if (bookSessions.isEmpty()) return null
 
         val totalSessionTime = bookSessions.sumOf { it.durationSeconds }
-        val totalProgressMade = bookSessions.sumOf { (it.endProgress - it.startProgress).toDouble() }.toFloat()
+        val totalProgressMade = bookSessions.sumOf {
+            (it.endProgress - it.startProgress).toDouble()
+        }.toFloat()
         if (totalProgressMade <= 0) return null
 
         val remainingProgress = 1f - currentBook.percentage
@@ -96,7 +97,7 @@ data class StatsData(
     val recentSessions: List<ReadingSession> = emptyList(),
     val bookTitles: Map<String, String> = emptyMap(),
     val readingDays: Set<Long> = emptySet(),
-    val estimatedMinutesToFinish: Long? = null,
+    val estimatedMinutesToFinish: Long? = null
 )
 
 fun Long.formatDuration(): String {
