@@ -10,7 +10,18 @@ data class ReaderPreferences(
     val isPaginated: Boolean = true,
     val brightness: Float = -1f,
     val orientationLock: OrientationLock = OrientationLock.AUTO,
+    val textAlign: TextAlign = TextAlign.START,
+    val publisherStyles: Boolean = true,
+    val pageMargins: Float = 1.0f,
+    val wordSpacing: Float = 0f,
+    val letterSpacing: Float = 0f,
 )
+
+enum class TextAlign(val displayName: String) {
+    START("Left"),
+    JUSTIFY("Justify"),
+    CENTER("Center"),
+}
 
 enum class OrientationLock(val displayName: String) {
     AUTO("Auto"),

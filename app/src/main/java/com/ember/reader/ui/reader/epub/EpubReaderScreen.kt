@@ -234,7 +234,7 @@ fun EpubReaderScreen(
 
 private fun ReaderPreferences.toEpubPreferences(): EpubPreferences = EpubPreferences(
     fontFamily = fontFamily.cssValue?.let { ReadiumFontFamily(it) },
-    fontSize = fontSize.toDouble() / 16.0, // Readium uses a scale factor (1.0 = default)
+    fontSize = fontSize.toDouble() / 16.0,
     lineHeight = lineHeight.toDouble(),
     scroll = !isPaginated,
     theme = when (theme) {
@@ -243,4 +243,13 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences = EpubPrefere
         ReaderTheme.SEPIA -> Theme.SEPIA
         ReaderTheme.SYSTEM -> null
     },
+    textAlign = when (textAlign) {
+        com.ember.reader.core.model.TextAlign.START -> org.readium.r2.navigator.preferences.TextAlign.START
+        com.ember.reader.core.model.TextAlign.JUSTIFY -> org.readium.r2.navigator.preferences.TextAlign.JUSTIFY
+        com.ember.reader.core.model.TextAlign.CENTER -> org.readium.r2.navigator.preferences.TextAlign.CENTER
+    },
+    publisherStyles = publisherStyles,
+    pageMargins = pageMargins.toDouble(),
+    wordSpacing = wordSpacing.toDouble(),
+    letterSpacing = letterSpacing.toDouble(),
 )

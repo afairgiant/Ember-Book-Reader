@@ -4,10 +4,10 @@
 
 ### Reader Customization (Reference: Grimmory's web reader)
 - [ ] Configurable tap zones (left/center/right tap behavior)
-- [ ] Margins / padding control (horizontal and vertical)
-- [ ] Word spacing, letter spacing, paragraph spacing
-- [ ] Text alignment options (left, justify, etc.)
-- [ ] Publisher styles toggle (respect or override EPUB CSS)
+- [x] Page margins control (0.5x to 2.5x)
+- [x] Word spacing and letter spacing controls
+- [x] Text alignment options (Left, Justify, Center)
+- [x] Publisher styles toggle (respect or override EPUB CSS)
 - [ ] Custom font loading (user-provided fonts)
 - [ ] Reading progress persistence per-preference (remember font/theme per book vs global)
 - [x] Brightness control that adjusts system screen brightness via WindowManager

@@ -13,6 +13,7 @@ import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.OrientationLock
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.core.model.TextAlign
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -37,6 +38,11 @@ class ReaderPreferencesRepository @Inject constructor(
         val IS_PAGINATED = booleanPreferencesKey("is_paginated")
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val ORIENTATION_LOCK = stringPreferencesKey("orientation_lock")
+        val TEXT_ALIGN = stringPreferencesKey("text_align")
+        val PUBLISHER_STYLES = booleanPreferencesKey("publisher_styles")
+        val PAGE_MARGINS = floatPreferencesKey("page_margins")
+        val WORD_SPACING = floatPreferencesKey("word_spacing")
+        val LETTER_SPACING = floatPreferencesKey("letter_spacing")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -55,6 +61,13 @@ class ReaderPreferencesRepository @Inject constructor(
                 orientationLock = prefs[Keys.ORIENTATION_LOCK]?.let {
                     runCatching { OrientationLock.valueOf(it) }.getOrNull()
                 } ?: OrientationLock.AUTO,
+                textAlign = prefs[Keys.TEXT_ALIGN]?.let {
+                    runCatching { TextAlign.valueOf(it) }.getOrNull()
+                } ?: TextAlign.START,
+                publisherStyles = prefs[Keys.PUBLISHER_STYLES] ?: true,
+                pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
+                wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
+                letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
             )
         }
 
@@ -69,6 +82,11 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.IS_PAGINATED] = preferences.isPaginated
             prefs[Keys.BRIGHTNESS] = preferences.brightness
             prefs[Keys.ORIENTATION_LOCK] = preferences.orientationLock.name
+            prefs[Keys.TEXT_ALIGN] = preferences.textAlign.name
+            prefs[Keys.PUBLISHER_STYLES] = preferences.publisherStyles
+            prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
+            prefs[Keys.WORD_SPACING] = preferences.wordSpacing
+            prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
         }
     }
 }

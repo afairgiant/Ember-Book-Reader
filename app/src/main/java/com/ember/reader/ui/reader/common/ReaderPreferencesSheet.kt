@@ -129,6 +129,55 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            SectionLabel("Text Align")
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                com.ember.reader.core.model.TextAlign.entries.forEach { align ->
+                    FilterChip(
+                        selected = preferences.textAlign == align,
+                        onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
+                        label = { Text(align.displayName) },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionLabel("Page Margins")
+            Slider(
+                value = preferences.pageMargins,
+                onValueChange = {
+                    onPreferencesChanged(preferences.copy(pageMargins = it))
+                },
+                valueRange = 0.5f..2.5f,
+                steps = 7,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "%.1f".format(preferences.pageMargins),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Publisher Styles", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = preferences.publisherStyles,
+                    onCheckedChange = {
+                        onPreferencesChanged(preferences.copy(publisherStyles = it))
+                    },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             SectionLabel("Theme")
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
