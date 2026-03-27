@@ -92,7 +92,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Batch selection / multi-delete + batch sync
 
 ### Catalog Browser
-- [ ] OPDS search integration (Grimmory has `/api/v1/opds/search.opds`)
+- [x] Catalog search (search icon in top bar, navigates to book results)
 - [ ] Pagination support (load more books on scroll — `nextPagePath` exists but UI doesn't paginate)
 - [ ] "Featured Publication" card at bottom of catalog (shown in designs)
 
