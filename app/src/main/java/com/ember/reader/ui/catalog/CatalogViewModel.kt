@@ -56,8 +56,21 @@ class CatalogViewModel @Inject constructor(
     private suspend fun fetchFeed() {
         val currentServer = server ?: return
 
-        if (currentServer.isGrimmory && grimmoryTokenManager.isLoggedIn(currentServer.id) && path.isEmpty()) {
-            fetchGrimmoryCatalog(currentServer)
+        if (path.isNotEmpty()) {
+            // Sub-navigation — always OPDS (grimmory: paths go through LibraryViewModel)
+            fetchOpdsFeed(currentServer)
+            return
+        }
+
+        if (currentServer.isGrimmory) {
+            if (grimmoryTokenManager.isLoggedIn(currentServer.id)) {
+                fetchGrimmoryCatalog(currentServer)
+            } else if (currentServer.opdsUsername.isNotBlank()) {
+                // Grimmory detected but not logged in — fall back to OPDS
+                fetchOpdsFeed(currentServer)
+            } else {
+                _uiState.value = CatalogUiState.Error("Grimmory login required — edit server to add credentials")
+            }
         } else {
             fetchOpdsFeed(currentServer)
         }

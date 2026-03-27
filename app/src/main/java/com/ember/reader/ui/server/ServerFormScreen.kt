@@ -206,11 +206,10 @@ fun ServerFormScreen(
                 label = "Test Kosync",
             )
 
-            // Grimmory Native section (shown when detected or credentials exist)
-            if (uiState.isGrimmory || uiState.grimmoryUsername.isNotBlank()) {
-                Spacer(modifier = Modifier.height(28.dp))
+            // Grimmory Native section (always shown — optional for enhanced sync)
+            Spacer(modifier = Modifier.height(28.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionHeader(
                         icon = Icons.Default.Public,
                         title = "Grimmory Login",
@@ -262,7 +261,6 @@ fun ServerFormScreen(
                     onClick = viewModel::testGrimmoryConnection,
                     label = "Test Grimmory",
                 )
-            }
 
             uiState.validationError?.let { error ->
                 Spacer(modifier = Modifier.height(16.dp))

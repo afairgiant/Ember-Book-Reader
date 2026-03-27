@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -42,6 +44,8 @@ class LocalLibraryViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
+    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
 ) : ViewModel() {
 
     val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
@@ -76,7 +80,10 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
                 _coverAuthHeaders.value = servers.associate { server ->
-                    server.id to com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword)
+                    val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                        grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
+                    } else null
+                    server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
                 }
             }
         }
@@ -154,25 +161,68 @@ class LocalLibraryViewModel @Inject constructor(
 
     fun syncBookProgress(book: Book) {
         val serverId = book.serverId ?: return
-        val fileHash = book.fileHash ?: return
         viewModelScope.launch {
-            val server = serverRepository.getById(serverId) ?: run {
-                _operationResult.value = "Server not found"
-                return@launch
-            }
-            if (server.kosyncUsername.isBlank()) {
-                _operationResult.value = "Kosync credentials not configured"
-                return@launch
-            }
-            val result = readingProgressRepository.pullProgress(server, book.id, fileHash)
-            val remote = result.getOrNull()
-            if (remote != null) {
-                readingProgressRepository.applyRemoteProgress(remote.progress)
-                _operationResult.value = "Synced: ${(remote.progress.percentage * 100).roundToInt()}% from ${remote.deviceName ?: "server"}"
+            val result = pullProgressForBook(book.id, serverId)
+            _operationResult.value = if (result.isNotBlank()) {
+                "Synced$result"
             } else {
-                _operationResult.value = "No remote progress found"
+                "No remote progress found"
             }
         }
+    }
+
+    /**
+     * Pulls progress from Grimmory API and/or kosync, whichever is available.
+     * Returns a display string like " (42%)" or "" if no progress found.
+     */
+    private suspend fun pullProgressForBook(bookId: String, serverId: Long): String {
+        val book = bookRepository.getById(bookId) ?: return ""
+        val server = serverRepository.getById(serverId) ?: return ""
+        var bestPercentage: Float? = null
+        var source: String? = null
+
+        // Try Grimmory API
+        val grimmoryBookId = book.grimmoryBookId
+        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
+            runCatching {
+                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+                val rawPct = detail.readProgress
+                if (rawPct != null && rawPct > 0f) {
+                    val pct = if (rawPct > 1f) rawPct / 100f else rawPct
+                    bestPercentage = pct
+                    source = "Grimmory"
+                }
+            }
+        }
+
+        // Try kosync
+        val fileHash = book.fileHash
+        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
+            val remote = readingProgressRepository.pullProgress(server, bookId, fileHash).getOrNull()
+            if (remote != null && remote.progress.percentage > (bestPercentage ?: 0f)) {
+                bestPercentage = remote.progress.percentage
+                source = remote.deviceName ?: "kosync"
+                readingProgressRepository.applyRemoteProgress(remote.progress)
+            }
+        }
+
+        // Apply Grimmory progress if it was higher than kosync
+        if (bestPercentage != null && source == "Grimmory") {
+            readingProgressRepository.applyRemoteProgress(
+                com.ember.reader.core.model.ReadingProgress(
+                    bookId = bookId,
+                    serverId = serverId,
+                    percentage = bestPercentage!!,
+                    lastReadAt = java.time.Instant.now(),
+                    syncedAt = java.time.Instant.now(),
+                    needsSync = false,
+                ),
+            )
+        }
+
+        return if (bestPercentage != null) {
+            " (${(bestPercentage!! * 100).roundToInt()}% from $source)"
+        } else ""
     }
 
     fun relinkBook(bookId: String, serverId: Long) {
@@ -181,7 +231,8 @@ class LocalLibraryViewModel @Inject constructor(
             val match = bookRepository.findRelinkMatches(bookId, serverId)
             if (match != null) {
                 bookRepository.relinkToServerBook(bookId, match.serverBookId)
-                _operationResult.value = "Linked to ${match.serverName}"
+                val progressMsg = pullProgressForBook(match.serverBookId, match.serverId)
+                _operationResult.value = "Linked to ${match.serverName}$progressMsg"
             } else {
                 _operationResult.value = "No matching book found on this server"
             }

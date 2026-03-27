@@ -289,11 +289,17 @@ private fun ContinueReadingCard(
                     .height(160.dp),
             ) {
                 if (book.coverUrl != null) {
+                    val coverUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
+                        val token = coverAuthHeader.removePrefix("jwt:")
+                        "${book.coverUrl}?token=$token"
+                    } else book.coverUrl
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(book.coverUrl)
+                            .data(coverUrl)
                             .apply {
-                                coverAuthHeader?.let { addHeader("Authorization", it) }
+                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                                    addHeader("Authorization", coverAuthHeader)
+                                }
                             }
                             .crossfade(true)
                             .build(),
