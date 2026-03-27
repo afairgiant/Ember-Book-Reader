@@ -2,6 +2,7 @@ package com.ember.reader.core.readium
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.Try
 import org.readium.r2.shared.util.asset.AssetRetriever
@@ -25,7 +26,7 @@ class BookOpener @Inject constructor(
     }
 
     private val publicationOpener by lazy {
-        val parser = DefaultPublicationParser(context, httpClient, assetRetriever, null)
+        val parser = DefaultPublicationParser(context, httpClient, assetRetriever, PdfiumDocumentFactory(context))
         PublicationOpener(parser)
     }
 
