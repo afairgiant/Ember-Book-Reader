@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.locateProgression
 import timber.log.Timber
 
 @HiltViewModel
@@ -133,7 +134,13 @@ class ReaderViewModel @Inject constructor(
         publication = pub
 
         val localProgress = readingProgressRepository.getByBookId(bookId)
-        val initialLocator = localProgress?.locatorJson?.toLocator()
+        // Try to restore position from saved Readium locator first,
+        // fall back to converting percentage → locator if no locator saved
+        // (happens when progress was pulled from server without locator data)
+        var initialLocator = localProgress?.locatorJson?.toLocator()
+        if (initialLocator == null && localProgress != null && localProgress.percentage > 0f) {
+            initialLocator = pub.locateProgression(localProgress.percentage.toDouble())
+        }
 
         sessionStartTime = java.time.Instant.now()
         sessionStartProgress = localProgress?.percentage ?: 0f
