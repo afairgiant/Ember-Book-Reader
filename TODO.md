@@ -225,7 +225,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Notifications
 - [x] Download complete notification
-- [ ] Sync complete notification
+- [x] Sync complete notification (shown after SyncWorker completes)
 - [ ] Daily reading reminder (configurable time)
 - [ ] New books available on server notification
 
