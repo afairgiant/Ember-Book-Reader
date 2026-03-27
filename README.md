@@ -76,6 +76,10 @@ Debug APK: `app/build/outputs/apk/debug/`
 
 See [CLAUDE.md](CLAUDE.md) for detailed architecture docs.
 
+## Built with AI
+
+This app was developed with the assistance of [Claude Code](https://claude.ai/code) (Anthropic).
+
 ## License
 
 [Apache License 2.0](LICENSE)
