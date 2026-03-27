@@ -55,14 +55,19 @@ class GrimmoryAppClient @Inject constructor(
         page: Int = 0,
         size: Int = 20,
     ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
-        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/search") {
+        val url = "${serverOrigin(baseUrl)}/api/v1/app/books/search"
+        Timber.d("GrimmorySearch: url=$url q='$query' page=$page size=$size")
+        val response = httpClient.get(url) {
             header("Authorization", "Bearer $token")
             parameter("q", query)
             parameter("page", page)
             parameter("size", size)
         }
+        Timber.d("GrimmorySearch: response status=${response.status}")
         if (!response.status.isSuccess()) error("Search failed: ${response.status}")
-        response.body<GrimmoryAppPage<GrimmoryAppBook>>()
+        val result = response.body<GrimmoryAppPage<GrimmoryAppBook>>()
+        Timber.d("GrimmorySearch: got ${result.content.size} results for '$query'")
+        result
     }
 
     suspend fun getLibraries(

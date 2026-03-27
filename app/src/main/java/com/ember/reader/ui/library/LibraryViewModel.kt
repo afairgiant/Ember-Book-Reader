@@ -77,6 +77,7 @@ class LibraryViewModel @Inject constructor(
         combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
         combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded },
     ) { books, downloading, query, (sort, fetchedIds), (formatFilter, downloadedOnly) ->
+        timber.log.Timber.d("LibraryVM combine: totalBooks=${books.size} fetchedIds=${fetchedIds?.size} query='$query'")
         val filtered = books
             .filter { book ->
                 // In subcategory view, only show books from the current fetch
@@ -126,7 +127,9 @@ class LibraryViewModel @Inject constructor(
             }
             if (isSubcategory || catalogPath.startsWith("grimmory:")) {
                 result.onSuccess { page ->
-                    _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                    val ids = page.resolvedBookIds.toSet()
+                    timber.log.Timber.d("LibraryVM: setting fetchedBookIds count=${ids.size}")
+                    _fetchedBookIds.value = ids
                 }
             }
             _isRefreshing.value = false
@@ -141,6 +144,7 @@ class LibraryViewModel @Inject constructor(
                 val (key, value) = it.split("=", limit = 2)
                 key to value
             }
+        timber.log.Timber.d("GrimmoryRefresh: catalogPath='$catalogPath' paramString='$paramString' params=$params")
         return bookRepository.refreshFromGrimmory(
             server = server,
             libraryId = params["libraryId"]?.toLongOrNull(),
@@ -151,7 +155,35 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        // For Grimmory servers, trigger server-side search
+        if (catalogPath.startsWith("grimmory:")) {
+            searchServerDebounceJob?.cancel()
+            if (query.isBlank()) {
+                // Reload original catalog page
+                refresh()
+                return
+            }
+        }
+        if (catalogPath.startsWith("grimmory:") && query.length >= 3) {
+            searchServerDebounceJob?.cancel()
+            searchServerDebounceJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(500)
+                val currentServer = server ?: return@launch
+                _isRefreshing.value = true
+                val result = bookRepository.refreshFromGrimmory(
+                    server = currentServer,
+                    search = query,
+                )
+                result.onSuccess { page ->
+                    _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                }
+                _isRefreshing.value = false
+            }
+        }
+    }
+    private var searchServerDebounceJob: kotlinx.coroutines.Job? = null
     fun toggleViewMode() { _viewMode.update { if (it == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID } }
     fun updateSortOrder(order: SortOrder) { _sortOrder.value = order }
     fun updateFormatFilter(format: BookFormat?) { _formatFilter.value = format }

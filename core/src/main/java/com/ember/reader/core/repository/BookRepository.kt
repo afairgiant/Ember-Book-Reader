@@ -131,6 +131,7 @@ class BookRepository @Inject constructor(
         status: String? = null,
         search: String? = null,
     ): Result<OpdsBookPage> {
+        Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId status='$status'")
         val appPage = when {
             seriesName != null -> grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
             search != null -> grimmoryAppClient.searchBooks(server.url, server.id, search, page, size)
@@ -145,7 +146,12 @@ class BookRepository @Inject constructor(
             )
         }
 
-        val result = appPage.getOrElse { return Result.failure(it) }
+        val result = appPage.getOrElse {
+            Timber.e(it, "GrimmoryRefresh: API call failed")
+            return Result.failure(it)
+        }
+        Timber.d("GrimmoryRefresh: got ${result.content.size} books (total=${result.totalElements}, hasNext=${result.hasNext})")
+        result.content.take(5).forEach { Timber.d("  - '${it.title}' by ${it.authors}") }
         val origin = serverOrigin(server.url)
         val resolvedIds = mutableListOf<String>()
 
@@ -197,6 +203,8 @@ class BookRepository @Inject constructor(
                 addedAt = Instant.now(),
             )
         }
+
+        Timber.d("GrimmoryRefresh: resolvedIds count=${resolvedIds.size}")
 
         return Result.success(
             OpdsBookPage(
