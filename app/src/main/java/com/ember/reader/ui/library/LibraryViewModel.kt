@@ -118,6 +118,7 @@ class LibraryViewModel @Inject constructor(
     fun refresh() {
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
+        _fetchedBookIds.value = null // Reset for fresh load
         _isRefreshing.value = true
         viewModelScope.launch {
             val result = if (catalogPath.startsWith("grimmory:")) {
@@ -127,9 +128,12 @@ class LibraryViewModel @Inject constructor(
             }
             if (isSubcategory || catalogPath.startsWith("grimmory:")) {
                 result.onSuccess { page ->
-                    val ids = page.resolvedBookIds.toSet()
-                    timber.log.Timber.d("LibraryVM: setting fetchedBookIds count=${ids.size}")
-                    _fetchedBookIds.value = ids
+                    val newIds = page.resolvedBookIds.toSet()
+                    // Accumulate IDs (for pagination) rather than replacing
+                    val existing = _fetchedBookIds.value ?: emptySet()
+                    val combined = existing + newIds
+                    timber.log.Timber.d("LibraryVM: fetchedBookIds count=${combined.size} (was ${existing.size}, new ${newIds.size})")
+                    _fetchedBookIds.value = combined
                 }
             }
             _isRefreshing.value = false
