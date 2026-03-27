@@ -57,7 +57,16 @@ class CatalogViewModel @Inject constructor(
         val currentServer = server ?: return
 
         if (path.isNotEmpty()) {
-            // Sub-navigation — always OPDS (grimmory: paths go through LibraryViewModel)
+            // Grimmory sub-navigation for series/authors lists
+            if (path == "grimmory:series") {
+                fetchGrimmorySeries(currentServer)
+                return
+            }
+            if (path == "grimmory:authors") {
+                fetchGrimmoryAuthors(currentServer)
+                return
+            }
+            // Regular OPDS sub-navigation
             fetchOpdsFeed(currentServer)
             return
         }
@@ -164,6 +173,59 @@ class CatalogViewModel @Inject constructor(
                 title = "${server.name} Catalog",
                 entries = entries,
             ),
+        )
+    }
+
+    private suspend fun fetchGrimmorySeries(server: Server) {
+        grimmoryAppClient.getSeries(server.url, server.id, size = 100).fold(
+            onSuccess = { page ->
+                val entries = page.content.map { series ->
+                    val subtitle = buildString {
+                        append("${series.bookCount} books")
+                        if (series.booksRead > 0) append(" · ${series.booksRead} read")
+                        if (series.authors.isNotEmpty()) append(" · ${series.authors.first()}")
+                    }
+                    OpdsFeedEntry(
+                        id = "grimmory:series:${series.seriesName}",
+                        title = series.seriesName,
+                        href = "grimmory:seriesName=${java.net.URLEncoder.encode(series.seriesName, "UTF-8")}",
+                        content = subtitle,
+                    )
+                }
+                _uiState.value = CatalogUiState.Success(
+                    feed = OpdsFeed(
+                        title = "Series",
+                        entries = entries,
+                    ),
+                )
+            },
+            onFailure = { error ->
+                _uiState.value = CatalogUiState.Error(error.message ?: "Failed to load series")
+            },
+        )
+    }
+
+    private suspend fun fetchGrimmoryAuthors(server: Server) {
+        grimmoryAppClient.getAuthors(server.url, server.id, size = 100).fold(
+            onSuccess = { page ->
+                val entries = page.content.map { author ->
+                    OpdsFeedEntry(
+                        id = "grimmory:author:${author.id}",
+                        title = author.name,
+                        href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
+                        content = "${author.bookCount} books",
+                    )
+                }
+                _uiState.value = CatalogUiState.Success(
+                    feed = OpdsFeed(
+                        title = "Authors",
+                        entries = entries,
+                    ),
+                )
+            },
+            onFailure = { error ->
+                _uiState.value = CatalogUiState.Error(error.message ?: "Failed to load authors")
+            },
         )
     }
 

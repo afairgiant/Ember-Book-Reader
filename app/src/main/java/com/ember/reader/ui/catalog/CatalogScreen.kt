@@ -145,7 +145,12 @@ fun CatalogScreen(
                                 entry = entry,
                                 onClick = {
                                     when {
-                                        // Grimmory App API entries — all go to books view
+                                        // Grimmory list entries — navigate as sub-feeds
+                                        entry.href == "grimmory:series" ||
+                                            entry.href == "grimmory:authors" -> {
+                                            onNavigateToFeed(entry.href)
+                                        }
+                                        // Grimmory book entries — go to books view
                                         entry.href.startsWith("grimmory:") -> {
                                             onNavigateToBooks(entry.href)
                                         }
