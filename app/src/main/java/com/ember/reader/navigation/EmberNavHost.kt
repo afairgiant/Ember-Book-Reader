@@ -50,6 +50,7 @@ object Routes {
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
+    const val STATS = "stats"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
@@ -164,6 +165,7 @@ fun EmberNavHost(
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenStorage = { navController.navigate(Routes.STORAGE) },
+                    onOpenStats = { navController.navigate(Routes.STATS) },
                 )
             }
 
@@ -246,6 +248,12 @@ fun EmberNavHost(
             // Detail: Storage
             composable(Routes.STORAGE) {
                 StorageScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.STATS) {
+                com.ember.reader.ui.settings.StatsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                )
             }
         }
     }

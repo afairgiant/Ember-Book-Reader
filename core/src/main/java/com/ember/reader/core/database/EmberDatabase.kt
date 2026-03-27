@@ -7,6 +7,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ember.reader.core.database.converter.Converters
 import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
@@ -15,6 +16,7 @@ import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
+import com.ember.reader.core.database.entity.ReadingSessionEntity
 import com.ember.reader.core.database.entity.ServerEntity
 
 @Database(
@@ -24,8 +26,9 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingProgressEntity::class,
         BookmarkEntity::class,
         HighlightEntity::class,
+        ReadingSessionEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -36,6 +39,27 @@ abstract class EmberDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE servers ADD COLUMN grimmoryUsername TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE servers ADD COLUMN isGrimmory INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE reading_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        bookId TEXT NOT NULL,
+                        startTime INTEGER NOT NULL,
+                        endTime INTEGER NOT NULL,
+                        durationSeconds INTEGER NOT NULL,
+                        startProgress REAL NOT NULL,
+                        endProgress REAL NOT NULL,
+                        FOREIGN KEY (bookId) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX index_reading_sessions_bookId ON reading_sessions(bookId)")
+                db.execSQL("CREATE INDEX index_reading_sessions_startTime ON reading_sessions(startTime)")
             }
         }
 
@@ -81,4 +105,5 @@ abstract class EmberDatabase : RoomDatabase() {
     abstract fun readingProgressDao(): ReadingProgressDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun highlightDao(): HighlightDao
+    abstract fun readingSessionDao(): ReadingSessionDao
 }

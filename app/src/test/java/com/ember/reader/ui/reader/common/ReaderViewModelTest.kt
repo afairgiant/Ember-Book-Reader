@@ -74,6 +74,9 @@ class ReaderViewModelTest {
     private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
     @MockK
+    private lateinit var readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository
+
+    @MockK
     private lateinit var appPreferencesRepository: AppPreferencesRepository
 
     private val testDispatcher = StandardTestDispatcher()
@@ -106,6 +109,7 @@ class ReaderViewModelTest {
             syncPreferencesRepository = syncPreferencesRepository,
             grimmoryClient = grimmoryClient,
             grimmoryTokenManager = grimmoryTokenManager,
+            readingSessionRepository = readingSessionRepository,
             appPreferencesRepository = appPreferencesRepository,
         )
     }

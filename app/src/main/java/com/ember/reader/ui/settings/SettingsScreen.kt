@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
@@ -59,6 +60,7 @@ import com.ember.reader.core.repository.ThemeMode
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onOpenStorage: () -> Unit = {},
+    onOpenStats: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
@@ -285,6 +287,18 @@ fun SettingsScreen(
                 Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Manage Downloads")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onOpenStats,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reading Statistics")
             }
 
             // About

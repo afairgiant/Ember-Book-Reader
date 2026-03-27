@@ -59,6 +59,7 @@ class ReaderViewModel @Inject constructor(
     private val syncPreferencesRepository: SyncPreferencesRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
     appPreferencesRepository: AppPreferencesRepository,
 ) : ViewModel() {
 
@@ -381,19 +382,34 @@ class ReaderViewModel @Inject constructor(
     private suspend fun recordReadingSession() {
         val startTime = sessionStartTime ?: return
         val loadedBook = book ?: return
-        val serverId = loadedBook.serverId ?: return
-        val server = serverRepository.getById(serverId) ?: return
-        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return
-        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
 
         val endTime = java.time.Instant.now()
         val durationSeconds = java.time.Duration.between(startTime, endTime).seconds
         if (durationSeconds < 30) return // Skip accidental opens
 
         val endProgress = readingProgressRepository.getByBookId(bookId)?.percentage ?: 0f
+
+        // Save locally (always)
+        readingSessionRepository.saveSession(
+            com.ember.reader.core.model.ReadingSession(
+                bookId = bookId,
+                startTime = startTime,
+                endTime = endTime,
+                durationSeconds = durationSeconds,
+                startProgress = sessionStartProgress,
+                endProgress = endProgress,
+            ),
+        )
+        Timber.d("Saved local session: ${durationSeconds}s, ${(sessionStartProgress * 100).roundToInt()}% → ${(endProgress * 100).roundToInt()}%")
+
+        // Push to Grimmory (if available)
+        val serverId = loadedBook.serverId ?: return
+        val server = serverRepository.getById(serverId) ?: return
+        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return
+        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+
         val startPct = kotlin.math.round(sessionStartProgress * 1000f) / 10f
         val endPct = kotlin.math.round(endProgress * 1000f) / 10f
-
         val bookType = when (loadedBook.format) {
             com.ember.reader.core.model.BookFormat.PDF -> "PDF"
             else -> "EPUB"
@@ -414,9 +430,8 @@ class ReaderViewModel @Inject constructor(
                     progressDelta = endPct - startPct,
                 ),
             ).getOrThrow()
-            Timber.d("Recorded reading session: ${durationSeconds}s, $startPct% → $endPct%")
         }.onFailure {
-            Timber.w(it, "Failed to record reading session")
+            Timber.w(it, "Failed to push reading session to Grimmory")
         }
     }
 

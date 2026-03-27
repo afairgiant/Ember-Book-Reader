@@ -7,6 +7,7 @@ import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
+import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.ServerDao
 import dagger.Module
 import dagger.Provides
@@ -27,7 +28,7 @@ object DatabaseModule {
             EmberDatabase::class.java,
             "ember.db",
         )
-            .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3)
+            .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4)
             .build()
 
     @Provides
@@ -45,4 +46,8 @@ object DatabaseModule {
 
     @Provides
     fun provideHighlightDao(database: EmberDatabase): HighlightDao = database.highlightDao()
+
+    @Provides
+    fun provideReadingSessionDao(database: EmberDatabase): ReadingSessionDao =
+        database.readingSessionDao()
 }

@@ -4,11 +4,13 @@ import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
+import com.ember.reader.core.database.entity.ReadingSessionEntity
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.ReadingSession
 import com.ember.reader.core.model.Server
 
 fun ServerEntity.toDomain(
@@ -130,4 +132,24 @@ fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
     color = color,
     annotation = annotation,
     createdAt = createdAt,
+)
+
+fun ReadingSessionEntity.toDomain(): ReadingSession = ReadingSession(
+    id = id,
+    bookId = bookId,
+    startTime = startTime,
+    endTime = endTime,
+    durationSeconds = durationSeconds,
+    startProgress = startProgress,
+    endProgress = endProgress,
+)
+
+fun ReadingSession.toEntity(): ReadingSessionEntity = ReadingSessionEntity(
+    id = id,
+    bookId = bookId,
+    startTime = startTime,
+    endTime = endTime,
+    durationSeconds = durationSeconds,
+    startProgress = startProgress,
+    endProgress = endProgress,
 )

@@ -169,11 +169,12 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Readium `DecorableNavigator` supports decorations for highlights
 
 ### Reading Statistics
-- [ ] Time spent reading today/week/month
-- [ ] Pages/percentage per session
-- [ ] Estimated time to finish book
-- [ ] Daily reading goal tracker
-- [ ] Reading streak calendar (similar to GitHub contribution graph)
+- [x] Time spent reading today/week/month (StatsScreen with time cards)
+- [x] Pages/percentage per session (recent sessions list with +N% delta)
+- [x] Estimated time to finish book (calculated from avg reading speed)
+- [x] Reading streak calendar (GitHub-style 12-week activity grid)
+- [x] Local reading session storage (ReadingSessionEntity table)
+- [x] Current reading streak counter (consecutive days)
 
 ### Book Details Screen
 - [ ] Dedicated book detail page (cover, description, metadata, series info)
