@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ember.reader.ui.book.BookDetailScreen
 import com.ember.reader.ui.catalog.CatalogScreen
 import com.ember.reader.ui.library.LibraryScreen
 import com.ember.reader.ui.library.LocalLibraryScreen
@@ -49,8 +50,11 @@ object Routes {
     const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
+    const val BOOK_DETAIL = "book_detail/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
     const val STATS = "stats"
+
+    fun bookDetail(bookId: String): String = "book_detail/$bookId"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
@@ -151,6 +155,9 @@ fun EmberNavHost(
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
                     },
+                    onOpenBookDetail = { bookId ->
+                        navController.navigate(Routes.bookDetail(bookId))
+                    },
                 )
             }
 
@@ -237,6 +244,19 @@ fun EmberNavHost(
                 arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType }),
             ) {
                 PdfReaderScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            // Detail: Book Detail
+            composable(
+                route = Routes.BOOK_DETAIL,
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType }),
+            ) {
+                BookDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenReader = { bookId, format ->
+                        navigateToReader(navController, bookId, format)
+                    },
+                )
             }
 
             // Detail: Storage

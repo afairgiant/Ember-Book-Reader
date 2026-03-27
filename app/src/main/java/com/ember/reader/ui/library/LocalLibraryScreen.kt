@@ -88,6 +88,7 @@ enum class LibraryFilter { ALL, SERVER, LOCAL }
 fun LocalLibraryScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
+    onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: LocalLibraryViewModel = hiltViewModel(),
 ) {
     val allBooks by viewModel.allDownloadedBooks.collectAsStateWithLifecycle()
@@ -325,7 +326,7 @@ fun LocalLibraryScreen(
                                 if (isSelecting) {
                                     viewModel.toggleSelection(book.id)
                                 } else {
-                                    onOpenReader(book.id, book.format)
+                                    onOpenBookDetail(book.id)
                                 }
                             },
                             onLongClick = { viewModel.toggleSelection(book.id) },
@@ -333,8 +334,11 @@ fun LocalLibraryScreen(
                             onRelink = if (book.serverId == null && servers.isNotEmpty()) {
                                 { relinkBookId = book.id }
                             } else null,
-                            onSyncProgress = if (book.serverId != null && book.fileHash != null) {
-                                { viewModel.syncBookProgress(book) }
+                            onPullProgress = if (book.serverId != null) {
+                                { viewModel.pullBookProgress(book) }
+                            } else null,
+                            onPushProgress = if (book.serverId != null) {
+                                { viewModel.pushBookProgress(book) }
                             } else null,
                         )
                     }
@@ -400,7 +404,8 @@ private fun UnifiedBookCard(
     onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
     onRelink: (() -> Unit)? = null,
-    onSyncProgress: (() -> Unit)? = null,
+    onPullProgress: (() -> Unit)? = null,
+    onPushProgress: (() -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val colorIndex = bookCoverColorIndex(book.title)
@@ -508,12 +513,21 @@ private fun UnifiedBookCard(
                                     },
                                 )
                             }
-                            if (onSyncProgress != null) {
+                            if (onPullProgress != null) {
                                 DropdownMenuItem(
-                                    text = { Text("Sync Progress") },
+                                    text = { Text("Pull Progress") },
                                     onClick = {
                                         showMenu = false
-                                        onSyncProgress()
+                                        onPullProgress()
+                                    },
+                                )
+                            }
+                            if (onPushProgress != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Push Progress") },
+                                    onClick = {
+                                        showMenu = false
+                                        onPushProgress()
                                     },
                                 )
                             }

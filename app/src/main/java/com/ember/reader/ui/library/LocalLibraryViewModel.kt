@@ -9,6 +9,9 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryEpubProgress
+import com.ember.reader.core.grimmory.GrimmoryFileProgress
+import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -159,14 +162,68 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch { bookRepository.deleteBook(bookId) }
     }
 
-    fun syncBookProgress(book: Book) {
+    fun pullBookProgress(book: Book) {
         val serverId = book.serverId ?: return
         viewModelScope.launch {
             val result = pullProgressForBook(book.id, serverId)
             _operationResult.value = if (result.isNotBlank()) {
-                "Synced$result"
+                "Pulled$result"
             } else {
                 "No remote progress found"
+            }
+        }
+    }
+
+    fun pushBookProgress(book: Book) {
+        val serverId = book.serverId ?: return
+        viewModelScope.launch {
+            val server = serverRepository.getById(serverId) ?: return@launch
+            val progress = readingProgressRepository.getByBookId(book.id)
+            if (progress == null || progress.percentage <= 0f) {
+                _operationResult.value = "No local progress to push"
+                return@launch
+            }
+
+            var pushed = false
+
+            // Push to kosync
+            val fileHash = book.fileHash
+            if (fileHash != null && server.kosyncUsername.isNotBlank()) {
+                readingProgressRepository.pushProgress(server, book.id, fileHash).onSuccess {
+                    pushed = true
+                }.onFailure {
+                    Timber.w(it, "Failed to push kosync progress")
+                }
+            }
+
+            // Push to Grimmory API
+            val grimmoryBookId = book.grimmoryBookId
+            if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
+                runCatching {
+                    val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
+                    val fileId = detail?.files?.firstOrNull()?.id
+                    val pct = kotlin.math.round(progress.percentage * 1000f) / 10f
+                    val request = GrimmoryProgressRequest(
+                        bookId = grimmoryBookId,
+                        fileProgress = fileId?.let {
+                            GrimmoryFileProgress(bookFileId = it, progressPercent = pct)
+                        },
+                        epubProgress = GrimmoryEpubProgress(
+                            cfi = "epubcfi(/6/2)",
+                            percentage = pct,
+                        ),
+                    )
+                    grimmoryClient.pushProgress(server.url, server.id, request).getOrThrow()
+                    pushed = true
+                }.onFailure {
+                    Timber.w(it, "Failed to push Grimmory progress")
+                }
+            }
+
+            _operationResult.value = if (pushed) {
+                "Pushed ${(progress.percentage * 100).roundToInt()}% to server"
+            } else {
+                "Failed to push progress"
             }
         }
     }
