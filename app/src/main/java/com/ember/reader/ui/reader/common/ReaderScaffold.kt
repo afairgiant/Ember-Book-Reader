@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +51,7 @@ fun ReaderScaffold(
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
     onOpenPreferences: () -> Unit,
+    onOpenSearch: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -66,6 +68,7 @@ fun ReaderScaffold(
                 onToggleBookmark = onToggleBookmark,
                 onOpenTableOfContents = onOpenTableOfContents,
                 onOpenPreferences = onOpenPreferences,
+                onOpenSearch = onOpenSearch,
             )
         }
 
@@ -94,6 +97,7 @@ private fun ReaderTopBar(
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
     onOpenPreferences: () -> Unit,
+    onOpenSearch: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -113,6 +117,9 @@ private fun ReaderTopBar(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onOpenSearch) {
+            Icon(Icons.Default.Search, contentDescription = "Search")
+        }
         IconButton(onClick = onOpenTableOfContents) {
             Icon(Icons.Default.FormatListBulleted, contentDescription = "Table of Contents")
         }

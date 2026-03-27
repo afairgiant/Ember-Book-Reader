@@ -22,6 +22,7 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
+import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
@@ -103,6 +104,7 @@ fun EpubReaderScreen(
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
     val scope = rememberCoroutineScope()
@@ -124,6 +126,7 @@ fun EpubReaderScreen(
                 onToggleBookmark = viewModel::addBookmark,
                 onOpenTableOfContents = { showToc = true },
                 onOpenPreferences = { showPreferences = true },
+                onOpenSearch = { showSearch = true },
                 onSeekToProgression = { progression ->
                     scope.launch {
                         state.publication.locateProgression(progression.toDouble())?.let {
@@ -228,6 +231,17 @@ fun EpubReaderScreen(
                     },
                     onDelete = viewModel::deleteBookmark,
                     onDismiss = { showBookmarks = false },
+                )
+            }
+
+            if (showSearch) {
+                SearchSheet(
+                    publication = state.publication,
+                    onNavigate = { locator ->
+                        scope.launch { navigator?.go(locator) }
+                        showSearch = false
+                    },
+                    onDismiss = { showSearch = false },
                 )
             }
 

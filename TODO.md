@@ -150,10 +150,10 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Readium has TTS support via `readium-navigator-media`
 
 ### Search in Book
-- [ ] Full-text search within the current book
-- [ ] Search results list with context snippets
-- [ ] Navigate to search result
-- [ ] Readium provides `SearchService` for EPUB search
+- [x] Full-text search within the current book (via Readium SearchService)
+- [x] Search results list with context snippets (highlighted match text)
+- [x] Navigate to search result (taps locator)
+- [x] Search icon in reader top bar → SearchSheet bottom sheet
 
 ### Dictionary / Lookup
 - [ ] Long-press word to select
