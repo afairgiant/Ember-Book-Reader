@@ -327,7 +327,10 @@ class LocalLibraryViewModel @Inject constructor(
                     } ?: error("Cannot open file")
                 }
 
-                val title = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                // Extract metadata from the file (title, author, cover, etc.)
+                val metadata = bookRepository.extractMetadata(destFile)
+
+                val fallbackTitle = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                     val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                     if (cursor.moveToFirst() && nameIndex >= 0) {
                         cursor.getString(nameIndex)?.substringBeforeLast('.')
@@ -336,9 +339,17 @@ class LocalLibraryViewModel @Inject constructor(
 
                 val book = Book(
                     id = id,
-                    title = title,
+                    title = metadata.title.takeIf { it != destFile.nameWithoutExtension } ?: fallbackTitle,
+                    author = metadata.author,
+                    description = metadata.description,
+                    coverUrl = metadata.coverUrl,
                     format = format,
                     localPath = destFile.absolutePath,
+                    publisher = metadata.publisher,
+                    language = metadata.language,
+                    subjects = metadata.subjects,
+                    pageCount = metadata.pageCount,
+                    publishedDate = metadata.publishedDate,
                     addedAt = Instant.now(),
                     downloadedAt = Instant.now(),
                 )
