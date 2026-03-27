@@ -404,13 +404,26 @@ private fun ServerCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Text(
-                    text = server.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                            .align(Alignment.CenterVertically),
+                    )
+                    Text(
+                        text = buildString {
+                            append("OPDS")
+                            if (server.kosyncUsername.isNotBlank()) append(" · Kosync")
+                            if (server.isGrimmory) append(" · Grimmory")
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(

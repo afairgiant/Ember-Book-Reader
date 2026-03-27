@@ -97,7 +97,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] "Featured Publication" card at bottom of catalog (shown in designs)
 
 ### Server Form
-- [ ] Show connection status indicator on saved servers
+- [x] Show connection status indicator on saved servers (OPDS · Kosync · Grimmory)
 - [ ] Auto-detect server capabilities (OPDS version, kosync availability)
 
 ### Settings / Profile
