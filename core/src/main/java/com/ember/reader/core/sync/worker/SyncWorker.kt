@@ -188,8 +188,25 @@ class SyncWorker @AssistedInject constructor(
                     newBook
                 }
 
-                bookRepository.downloadBook(book, server).onSuccess {
+                bookRepository.downloadBook(book, server).onSuccess { downloadedBook ->
                     Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
+
+                    // Pull reading progress for the newly downloaded book
+                    val rawPct = summary.readProgress
+                    if (rawPct != null && rawPct > 0f) {
+                        val percentage = if (rawPct > 1f) rawPct / 100f else rawPct
+                        readingProgressRepository.applyRemoteProgress(
+                            com.ember.reader.core.model.ReadingProgress(
+                                bookId = downloadedBook.id,
+                                serverId = server.id,
+                                percentage = percentage,
+                                lastReadAt = java.time.Instant.now(),
+                                syncedAt = java.time.Instant.now(),
+                                needsSync = false
+                            )
+                        )
+                        Timber.d("SyncWorker: applied progress ${(percentage * 100).toInt()}% for '${summary.title}'")
+                    }
                 }.onFailure {
                     Timber.w(it, "SyncWorker: failed to auto-download '${summary.title}'")
                 }
