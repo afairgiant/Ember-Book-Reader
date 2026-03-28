@@ -212,7 +212,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### File Management
 - [ ] Import from file manager / Downloads folder
-- [ ] Share book file (export)
+- [x] Share book file (export via Android share sheet from Book Details)
 - [ ] Bulk import from folder
 - [ ] Support for more formats (FB2, MOBI, CBZ/CBR via Readium)
 

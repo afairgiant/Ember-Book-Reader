@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -266,6 +267,48 @@ fun BookDetailScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(if (downloading) stringResource(R.string.downloading) else stringResource(R.string.download))
                         }
+                    }
+                }
+
+                // Share button (downloaded books only)
+                if (currentBook.isDownloaded && currentBook.localPath != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val context = LocalContext.current
+                    OutlinedButton(
+                        onClick = {
+                            val file = java.io.File(currentBook.localPath)
+                            if (file.exists()) {
+                                val uri = androidx.core.content.FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    file
+                                )
+                                val mimeType = when (currentBook.format) {
+                                    BookFormat.PDF -> "application/pdf"
+                                    BookFormat.EPUB -> "application/epub+zip"
+                                    else -> "*/*"
+                                }
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = mimeType
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, currentBook.title)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, null))
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.share_book))
                     }
                 }
 
