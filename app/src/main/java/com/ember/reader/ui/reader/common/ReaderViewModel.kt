@@ -85,7 +85,6 @@ class ReaderViewModel @Inject constructor(
 
     fun dismissTapZoneHint() {
         _showTapZoneHint.value = false
-        viewModelScope.launch { appPreferencesRepository.markTapZoneHintSeen() }
     }
 
     private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
@@ -162,8 +161,8 @@ class ReaderViewModel @Inject constructor(
         pullRemoteProgressOnOpen(loadedBook, localProgress)
         pullGrimmoryProgressOnOpen(loadedBook, localProgress)
 
-        // Show tap zone hint on first book open
-        if (!appPreferencesRepository.hasSeenTapZoneHint()) {
+        // Show tap zone hint on first open of each book
+        if (localProgress == null) {
             _showTapZoneHint.value = true
         }
     }
