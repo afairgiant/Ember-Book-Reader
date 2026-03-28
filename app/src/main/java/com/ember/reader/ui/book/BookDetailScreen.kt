@@ -80,6 +80,7 @@ fun BookDetailScreen(
     val readStatus by viewModel.readStatus.collectAsStateWithLifecycle()
     val downloading by viewModel.downloading.collectAsStateWithLifecycle()
     val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
+    val grimmoryDetail by viewModel.grimmoryDetail.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -376,37 +377,37 @@ fun BookDetailScreen(
                     }
                 }
 
-                // Description
-                currentBook.description?.let { description ->
-                    if (description.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.description_label),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = cleanHtml(description),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                // Description — prefer local, fall back to Grimmory API
+                val bookDescription = currentBook.description?.takeIf { it.isNotBlank() }
+                    ?: grimmoryDetail?.description?.takeIf { it.isNotBlank() }
+                bookDescription?.let { description ->
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(R.string.description_label),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = cleanHtml(description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
 
-                // Book info card
+                // Book info card (merged from local + Grimmory API)
                 Spacer(modifier = Modifier.height(20.dp))
                 Card(
                     modifier = Modifier
@@ -425,18 +426,69 @@ fun BookDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Merge local book data with Grimmory API detail
+                        val gd = grimmoryDetail
+
                         InfoRow(stringResource(R.string.info_format), currentBook.format.name)
-                        currentBook.author?.let { InfoRow(stringResource(R.string.info_author), it) }
-                        currentBook.publisher?.let { InfoRow(stringResource(R.string.info_publisher), it) }
-                        currentBook.series?.let { InfoRow(stringResource(R.string.info_series), it) }
-                        currentBook.seriesIndex?.let {
+                        val authors = gd?.authors?.takeIf { it.isNotEmpty() }?.joinToString(", ")
+                            ?: currentBook.author
+                        authors?.let { InfoRow(stringResource(R.string.info_author), it) }
+
+                        gd?.subtitle?.let { InfoRow(stringResource(R.string.info_subtitle), it) }
+
+                        val publisher = currentBook.publisher ?: gd?.publisher
+                        publisher?.let { InfoRow(stringResource(R.string.info_publisher), it) }
+
+                        val series = currentBook.series ?: gd?.seriesName
+                        series?.let { InfoRow(stringResource(R.string.info_series), it) }
+                        val seriesIdx = currentBook.seriesIndex ?: gd?.seriesNumber
+                        seriesIdx?.let {
                             val idx = if (it == it.toLong().toFloat()) "${it.toLong()}" else "$it"
                             InfoRow(stringResource(R.string.info_volume), idx)
                         }
-                        currentBook.language?.let { InfoRow(stringResource(R.string.info_language), it.uppercase()) }
-                        currentBook.pageCount?.let { InfoRow(stringResource(R.string.info_pages), "$it") }
-                        currentBook.publishedDate?.let { InfoRow(stringResource(R.string.info_published), it) }
-                        currentBook.subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
+
+                        val language = currentBook.language ?: gd?.language
+                        language?.let { InfoRow(stringResource(R.string.info_language), it.uppercase()) }
+
+                        val pageCount = currentBook.pageCount ?: gd?.pageCount
+                        pageCount?.let { InfoRow(stringResource(R.string.info_pages), "$it") }
+
+                        val published = currentBook.publishedDate ?: gd?.publishedDate
+                        published?.let { InfoRow(stringResource(R.string.info_published), it) }
+
+                        gd?.isbn13?.let { InfoRow(stringResource(R.string.info_isbn), it) }
+
+                        val subjects = currentBook.subjects
+                            ?: gd?.categories?.joinToString(", ")
+                        subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
+
+                        gd?.personalRating?.let {
+                            if (it > 0) InfoRow(stringResource(R.string.info_rating), "$it / 5")
+                        }
+
+                        gd?.goodreadsRating?.let { rating ->
+                            val reviews = gd.goodreadsReviewCount?.let { " ($it reviews)" } ?: ""
+                            InfoRow(stringResource(R.string.info_goodreads), "%.1f$reviews".format(rating))
+                        }
+
+                        gd?.libraryName?.let { InfoRow(stringResource(R.string.info_library), it) }
+
+                        gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
+                            InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
+                        }
+
+                        gd?.fileTypes?.takeIf { it.isNotEmpty() }?.let {
+                            InfoRow(stringResource(R.string.info_file_types), it.joinToString(", "))
+                        }
+
+                        gd?.addedOn?.let {
+                            InfoRow(stringResource(R.string.info_added), it.substringBefore("T"))
+                        }
+
+                        gd?.lastReadTime?.let {
+                            InfoRow(stringResource(R.string.info_last_read), it.substringBefore("T"))
+                        }
+
                         if (currentBook.isDownloaded) {
                             InfoRow(stringResource(R.string.info_status), stringResource(R.string.status_downloaded))
                         } else if (currentBook.downloadUrl != null) {

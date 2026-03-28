@@ -117,6 +117,15 @@
     <string name="info_pages">Pages</string>
     <string name="info_published">Published</string>
     <string name="info_subjects">Subjects</string>
+    <string name="info_subtitle">Subtitle</string>
+    <string name="info_isbn">ISBN</string>
+    <string name="info_goodreads">Goodreads</string>
+    <string name="info_library">Library</string>
+    <string name="info_shelves">Shelves</string>
+    <string name="info_file_types">File Types</string>
+    <string name="info_added">Added</string>
+    <string name="info_last_read">Last Read</string>
+    <string name="info_rating">Rating</string>
     <string name="info_status">Status</string>
     <string name="info_server">Server</string>
     <string name="status_downloaded">Downloaded</string>

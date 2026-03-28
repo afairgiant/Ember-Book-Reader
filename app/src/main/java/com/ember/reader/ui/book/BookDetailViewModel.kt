@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.ReadStatus
@@ -45,6 +46,9 @@ class BookDetailViewModel @Inject constructor(
 
     private val _readStatus = MutableStateFlow<ReadStatus?>(null)
     val readStatus: StateFlow<ReadStatus?> = _readStatus.asStateFlow()
+
+    private val _grimmoryDetail = MutableStateFlow<GrimmoryBookDetail?>(null)
+    val grimmoryDetail: StateFlow<GrimmoryBookDetail?> = _grimmoryDetail.asStateFlow()
 
     private val _downloading = MutableStateFlow(false)
     val downloading: StateFlow<Boolean> = _downloading.asStateFlow()
@@ -95,11 +99,12 @@ class BookDetailViewModel @Inject constructor(
             _coverAuthHeader.value = "Basic $credentials"
         }
 
-        // Fetch read status from Grimmory if available
+        // Fetch full detail from Grimmory if available
         val grimmoryBookId = _book.value?.grimmoryBookId
         if (srv.isGrimmory && grimmoryTokenManager.isLoggedIn(srv.id) && grimmoryBookId != null) {
             grimmoryClient.getBookDetail(srv.url, srv.id, grimmoryBookId).onSuccess { detail ->
                 _readStatus.value = detail.readStatus
+                _grimmoryDetail.value = detail
             }
         }
     }

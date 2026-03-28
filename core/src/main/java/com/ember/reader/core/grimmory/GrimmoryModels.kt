@@ -66,12 +66,36 @@ data class GrimmoryBookFile(
 data class GrimmoryBookDetail(
     val id: Long,
     val title: String,
+    val subtitle: String? = null,
+    val description: String? = null,
     val readStatus: ReadStatus? = null,
     val readProgress: Float? = null,
-    val epubProgress: GrimmoryEpubProgress? = null,
+    val personalRating: Int? = null,
     val authors: List<String> = emptyList(),
+    val categories: Set<String>? = null,
+    val publisher: String? = null,
+    val publishedDate: String? = null,
+    val pageCount: Int? = null,
+    val isbn13: String? = null,
+    val language: String? = null,
+    val goodreadsRating: Double? = null,
+    val goodreadsReviewCount: Int? = null,
+    val seriesName: String? = null,
+    val seriesNumber: Float? = null,
+    val libraryName: String? = null,
     val primaryFileType: String? = null,
-    val files: List<GrimmoryBookFile> = emptyList()
+    val fileTypes: List<String>? = null,
+    val addedOn: String? = null,
+    val lastReadTime: String? = null,
+    val epubProgress: GrimmoryEpubProgress? = null,
+    val files: List<GrimmoryBookFile> = emptyList(),
+    val shelves: List<GrimmoryShelfSummary>? = null
+)
+
+@Serializable
+data class GrimmoryShelfSummary(
+    val id: Long? = null,
+    val name: String? = null
 )
 
 @Serializable
