@@ -85,6 +85,7 @@ class SyncWorker @AssistedInject constructor(
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .setContentTitle("Sync Complete")
             .setContentText("Reading progress synced")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(applicationContext).notify("sync".hashCode(), notification)
@@ -155,6 +156,7 @@ class SyncWorker @AssistedInject constructor(
     }
 
     private suspend fun autoDownloadReadingBooks(server: com.ember.reader.core.model.Server) {
+        val downloadedTitles = mutableListOf<String>()
         runCatching {
             val continueReading = grimmoryClient.getContinueReading(
                 baseUrl = server.url,
@@ -189,6 +191,7 @@ class SyncWorker @AssistedInject constructor(
                 }
 
                 bookRepository.downloadBook(book, server).onSuccess { downloadedBook ->
+                    downloadedTitles.add(summary.title)
                     Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
 
                     // Pull reading progress for the newly downloaded book
@@ -214,6 +217,37 @@ class SyncWorker @AssistedInject constructor(
         }.onFailure {
             Timber.w(it, "SyncWorker: auto-download reading books failed")
         }
+
+        // Notify about auto-downloaded books
+        if (downloadedTitles.isNotEmpty()) {
+            showAutoDownloadNotification(downloadedTitles)
+        }
+    }
+
+    private fun showAutoDownloadNotification(titles: List<String>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        val title = if (titles.size == 1) "Book Auto-Downloaded" else "${titles.size} Books Auto-Downloaded"
+        val text = titles.joinToString(", ")
+
+        val builder = NotificationCompat.Builder(applicationContext, "ember_downloads")
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+
+        if (titles.size > 1) {
+            val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
+            titles.forEach { style.addLine(it) }
+            builder.setStyle(style)
+        }
+
+        NotificationManagerCompat.from(applicationContext).notify("auto_dl".hashCode(), builder.build())
     }
 
     companion object {
