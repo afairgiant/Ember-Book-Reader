@@ -154,6 +154,42 @@ class ServerFormViewModel @Inject constructor(
             onSuccess()
         }
     }
+
+    fun saveGrimmory(sameCredentials: Boolean, onSuccess: () -> Unit) {
+        val state = _uiState.value
+        if (state.name.isBlank() || state.url.isBlank()) {
+            _uiState.update { it.copy(validationError = "Name and URL are required") }
+            return
+        }
+        if (state.grimmoryUsername.isBlank()) {
+            _uiState.update { it.copy(validationError = "Grimmory username is required") }
+            return
+        }
+
+        _uiState.update { it.copy(isSaving = true, validationError = null) }
+        viewModelScope.launch {
+            val opdsUser = if (sameCredentials) state.grimmoryUsername.trim() else state.opdsUsername.trim()
+            val opdsPass = if (sameCredentials) state.grimmoryPassword else state.opdsPassword
+            val kosyncUser = if (sameCredentials) state.grimmoryUsername.trim() else state.kosyncUsername.trim()
+            val kosyncPass = if (sameCredentials) state.grimmoryPassword else state.kosyncPassword
+
+            val server = Server(
+                id = serverId ?: 0,
+                name = state.name.trim(),
+                url = state.url.trim().trimEnd('/'),
+                opdsUsername = opdsUser,
+                opdsPassword = opdsPass,
+                kosyncUsername = kosyncUser,
+                kosyncPassword = kosyncPass,
+                grimmoryUsername = state.grimmoryUsername.trim(),
+                grimmoryPassword = state.grimmoryPassword,
+                isGrimmory = true
+            )
+            serverRepository.save(server)
+            _uiState.update { it.copy(isSaving = false) }
+            onSuccess()
+        }
+    }
 }
 
 data class ServerFormUiState(
