@@ -14,6 +14,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -29,7 +30,8 @@ class SyncWorker @AssistedInject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val bookRepository: BookRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager
+    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val appPreferencesRepository: AppPreferencesRepository
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -59,6 +61,11 @@ class SyncWorker @AssistedInject constructor(
             // Grimmory native push/pull
             if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
                 syncGrimmoryProgress(server)
+
+                // Auto-download books marked as Reading
+                if (appPreferencesRepository.getAutoDownloadReading()) {
+                    autoDownloadReadingBooks(server)
+                }
             }
         }
 
@@ -144,6 +151,51 @@ class SyncWorker @AssistedInject constructor(
             }
         }.onFailure {
             Timber.w(it, "SyncWorker: failed to pull Grimmory continue-reading")
+        }
+    }
+
+    private suspend fun autoDownloadReadingBooks(server: com.ember.reader.core.model.Server) {
+        runCatching {
+            val continueReading = grimmoryClient.getContinueReading(
+                baseUrl = server.url,
+                serverId = server.id
+            ).getOrThrow()
+
+            for (summary in continueReading) {
+                val opdsEntryId = "urn:booklore:book:${summary.id}"
+                val existing = bookRepository.getByOpdsEntryId(opdsEntryId, server.id)
+
+                // Skip if already downloaded
+                if (existing?.isDownloaded == true) continue
+
+                // Find or create the book entry, then download
+                val book = existing ?: run {
+                    // Book not in DB yet — create a minimal entry for download
+                    val newBook = com.ember.reader.core.model.Book(
+                        id = java.util.UUID.randomUUID().toString(),
+                        serverId = server.id,
+                        opdsEntryId = opdsEntryId,
+                        title = summary.title,
+                        author = summary.authors.firstOrNull(),
+                        downloadUrl = "/api/v1/opds/${summary.id}/download",
+                        format = when (summary.primaryFileType?.uppercase()) {
+                            "PDF" -> com.ember.reader.core.model.BookFormat.PDF
+                            else -> com.ember.reader.core.model.BookFormat.EPUB
+                        },
+                        coverUrl = "${com.ember.reader.core.network.serverOrigin(server.url)}/api/v1/media/book/${summary.id}/cover"
+                    )
+                    bookRepository.addLocalBook(newBook)
+                    newBook
+                }
+
+                bookRepository.downloadBook(book, server).onSuccess {
+                    Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
+                }.onFailure {
+                    Timber.w(it, "SyncWorker: failed to auto-download '${summary.title}'")
+                }
+            }
+        }.onFailure {
+            Timber.w(it, "SyncWorker: auto-download reading books failed")
         }
     }
 

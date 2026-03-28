@@ -73,6 +73,9 @@ class BookRepository @Inject constructor(
     fun search(serverId: Long?, query: String): Flow<List<Book>> =
         bookDao.search(serverId, query).map { entities -> entities.map { it.toDomain() } }
 
+    suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): Book? =
+        bookDao.getByOpdsEntryId(opdsEntryId, serverId)?.toDomain()
+
     suspend fun refreshFromServer(
         server: Server,
         page: Int = 1,

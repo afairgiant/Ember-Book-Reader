@@ -72,6 +72,7 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
+    val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -235,6 +236,29 @@ fun SettingsScreen(
                 Switch(
                     checked = autoCleanup,
                     onCheckedChange = { viewModel.updateAutoCleanup(it) }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { viewModel.updateAutoDownloadReading(!autoDownloadReading) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Auto-download reading books", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Download books marked as Reading on Grimmory during sync",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = autoDownloadReading,
+                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) }
                 )
             }
 

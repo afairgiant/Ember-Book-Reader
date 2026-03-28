@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.appPreferencesDataStore: DataStore<Preferences>
@@ -31,6 +32,7 @@ class AppPreferencesRepository @Inject constructor(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
+        val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -45,6 +47,13 @@ class AppPreferencesRepository @Inject constructor(
 
     val autoCleanupFlow: Flow<Boolean> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_CLEANUP] ?: false }
+
+    val autoDownloadReadingFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUTO_DOWNLOAD_READING] ?: false }
+
+    suspend fun getAutoDownloadReading(): Boolean =
+        context.appPreferencesDataStore.data.map { it[Keys.AUTO_DOWNLOAD_READING] ?: false }
+            .first()
 
     suspend fun updateThemeMode(mode: ThemeMode) {
         context.appPreferencesDataStore.edit { prefs ->
@@ -61,6 +70,12 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateAutoCleanup(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.AUTO_CLEANUP] = enabled
+        }
+    }
+
+    suspend fun updateAutoDownloadReading(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUTO_DOWNLOAD_READING] = enabled
         }
     }
 }
