@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -265,8 +267,36 @@ fun BookDetailScreen(
                     }
                 }
 
-                // Read status (Grimmory servers only)
+                // View on Grimmory button
                 val currentServer = server
+                val grimmoryBookId = currentBook.grimmoryBookId
+                if (currentServer?.isGrimmory == true && grimmoryBookId != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val context = LocalContext.current
+                    val serverOrigin = com.ember.reader.core.network.serverOrigin(currentServer.url)
+                    OutlinedButton(
+                        onClick = {
+                            val url = "$serverOrigin/book/$grimmoryBookId"
+                            context.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.OpenInBrowser,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("View on Grimmory")
+                    }
+                }
+
+                // Read status (Grimmory servers only)
                 if (currentServer?.isGrimmory == true && currentBook.grimmoryBookId != null) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Card(
