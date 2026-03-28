@@ -155,7 +155,7 @@ class ServerFormViewModel @Inject constructor(
         }
     }
 
-    fun saveGrimmory(sameCredentials: Boolean, onSuccess: () -> Unit) {
+    fun saveGrimmory(showOpdsKosync: Boolean, onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.name.isBlank() || state.url.isBlank()) {
             _uiState.update { it.copy(validationError = "Name and URL are required") }
@@ -168,10 +168,11 @@ class ServerFormViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSaving = true, validationError = null) }
         viewModelScope.launch {
-            val opdsUser = if (sameCredentials) state.grimmoryUsername.trim() else state.opdsUsername.trim()
-            val opdsPass = if (sameCredentials) state.grimmoryPassword else state.opdsPassword
-            val kosyncUser = if (sameCredentials) state.grimmoryUsername.trim() else state.kosyncUsername.trim()
-            val kosyncPass = if (sameCredentials) state.grimmoryPassword else state.kosyncPassword
+            // If OPDS/Kosync fields were shown, use what user entered; otherwise leave empty
+            val opdsUser = if (showOpdsKosync) state.opdsUsername.trim() else ""
+            val opdsPass = if (showOpdsKosync) state.opdsPassword else ""
+            val kosyncUser = if (showOpdsKosync) state.kosyncUsername.trim() else ""
+            val kosyncPass = if (showOpdsKosync) state.kosyncPassword else ""
 
             val server = Server(
                 id = serverId ?: 0,

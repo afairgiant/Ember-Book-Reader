@@ -84,8 +84,8 @@
     <string name="kosync_credentials">Kosync Credentials</string>
     <string name="encrypted_badge">ENCRYPTED</string>
     <string name="optional_badge">OPTIONAL</string>
-    <string name="same_credentials_label">Use same credentials for OPDS &amp; Kosync</string>
-    <string name="same_credentials_hint">Grimmory manages these separately in settings</string>
+    <string name="same_credentials_label">Also configure OPDS &amp; Kosync</string>
+    <string name="same_credentials_hint">Optional — only needed if you have separate OPDS/Kosync users in Grimmory</string>
     <string name="kosync_hint">For reading progress sync across devices</string>
     <string name="opds_username">OPDS Username</string>
     <string name="opds_password">OPDS Password</string>

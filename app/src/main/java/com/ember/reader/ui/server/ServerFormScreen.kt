@@ -69,19 +69,15 @@ fun ServerFormScreen(
     var serverTypeChosen by rememberSaveable { mutableStateOf(uiState.isEditing) }
     var isGrimmoryType by rememberSaveable { mutableStateOf(uiState.isGrimmory) }
 
-    // For Grimmory: are all credentials the same?
-    var sameCredentials by rememberSaveable { mutableStateOf(true) }
+    // For Grimmory: show OPDS/Kosync fields? Default OFF (Grimmory-only is sufficient)
+    var showOpdsKosync by rememberSaveable { mutableStateOf(false) }
 
     // Update when editing state loads
     if (uiState.isEditing && !serverTypeChosen) {
         serverTypeChosen = true
         isGrimmoryType = uiState.isGrimmory
-        // Detect if creds differ
-        sameCredentials = uiState.isGrimmory &&
-            uiState.opdsUsername == uiState.grimmoryUsername &&
-            uiState.opdsPassword == uiState.grimmoryPassword &&
-            uiState.kosyncUsername == uiState.grimmoryUsername &&
-            uiState.kosyncPassword == uiState.grimmoryPassword
+        // Show OPDS/Kosync fields if they were previously configured
+        showOpdsKosync = uiState.opdsUsername.isNotBlank() || uiState.kosyncUsername.isNotBlank()
     }
 
     Scaffold(
@@ -140,10 +136,10 @@ fun ServerFormScreen(
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
                 uiState = uiState,
-                sameCredentials = sameCredentials,
-                onSameCredentialsChanged = { sameCredentials = it },
+                showOpdsKosync = showOpdsKosync,
+                onSameCredentialsChanged = { showOpdsKosync = it },
                 viewModel = viewModel,
-                onSave = { viewModel.saveGrimmory(sameCredentials, onNavigateBack) }
+                onSave = { viewModel.saveGrimmory(showOpdsKosync, onNavigateBack) }
             )
         } else {
             // Step 2b: Generic OPDS form
@@ -257,7 +253,7 @@ private fun ServerTypePicker(
 private fun GrimmoryForm(
     modifier: Modifier = Modifier,
     uiState: ServerFormUiState,
-    sameCredentials: Boolean,
+    showOpdsKosync: Boolean,
     onSameCredentialsChanged: (Boolean) -> Unit,
     viewModel: ServerFormViewModel,
     onSave: () -> Unit
@@ -346,13 +342,13 @@ private fun GrimmoryForm(
                 )
             }
             Switch(
-                checked = sameCredentials,
+                checked = showOpdsKosync,
                 onCheckedChange = onSameCredentialsChanged
             )
         }
 
-        // Show separate OPDS/Kosync fields if credentials differ
-        AnimatedVisibility(visible = !sameCredentials) {
+        // Show separate OPDS/Kosync fields when toggled on
+        AnimatedVisibility(visible = showOpdsKosync) {
             Column {
                 Spacer(modifier = Modifier.height(20.dp))
 
