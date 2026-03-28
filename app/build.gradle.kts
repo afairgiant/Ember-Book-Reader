@@ -7,6 +7,28 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+fun gitVersionName(): String {
+    return try {
+        val process = ProcessBuilder("git", "describe", "--tags", "--always", "--dirty")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().readText().trim().removePrefix("v")
+    } catch (e: Exception) {
+        "dev"
+    }
+}
+
+fun gitVersionCode(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().readText().trim().toIntOrNull() ?: 1
+    } catch (e: Exception) {
+        1
+    }
+}
+
 android {
     namespace = "com.ember.reader"
     compileSdk = 35
@@ -15,8 +37,8 @@ android {
         applicationId = "com.ember.reader"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = gitVersionCode()
+        versionName = gitVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
