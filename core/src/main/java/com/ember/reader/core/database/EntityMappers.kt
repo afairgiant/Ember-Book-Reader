@@ -132,6 +132,7 @@ fun HighlightEntity.toDomain(): Highlight = Highlight(
     locatorJson = locatorJson,
     color = color,
     annotation = annotation,
+    selectedText = selectedText,
     createdAt = createdAt
 )
 
@@ -141,6 +142,7 @@ fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
     locatorJson = locatorJson,
     color = color,
     annotation = annotation,
+    selectedText = selectedText,
     createdAt = createdAt
 )
 

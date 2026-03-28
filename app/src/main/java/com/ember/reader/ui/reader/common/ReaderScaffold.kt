@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -53,6 +54,7 @@ fun ReaderScaffold(
     onOpenTableOfContents: () -> Unit,
     onOpenPreferences: () -> Unit,
     onOpenSearch: () -> Unit = {},
+    onOpenHighlights: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
     content: @Composable () -> Unit
 ) {
@@ -68,6 +70,7 @@ fun ReaderScaffold(
                 onNavigateBack = onNavigateBack,
                 onToggleBookmark = onToggleBookmark,
                 onOpenTableOfContents = onOpenTableOfContents,
+                onOpenHighlights = onOpenHighlights,
                 onOpenPreferences = onOpenPreferences,
                 onOpenSearch = onOpenSearch
             )
@@ -97,6 +100,7 @@ private fun ReaderTopBar(
     onNavigateBack: () -> Unit,
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
+    onOpenHighlights: () -> Unit,
     onOpenPreferences: () -> Unit,
     onOpenSearch: () -> Unit
 ) {
@@ -129,6 +133,9 @@ private fun ReaderTopBar(
                 if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                 contentDescription = stringResource(R.string.bookmark_cd)
             )
+        }
+        IconButton(onClick = onOpenHighlights) {
+            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.highlights_cd))
         }
         IconButton(onClick = onOpenPreferences) {
             Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.reader_settings_cd))

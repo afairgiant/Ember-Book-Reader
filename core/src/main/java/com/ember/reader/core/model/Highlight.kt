@@ -8,5 +8,6 @@ data class Highlight(
     val locatorJson: String,
     val color: HighlightColor = HighlightColor.YELLOW,
     val annotation: String? = null,
+    val selectedText: String? = null,
     val createdAt: Instant = Instant.now()
 )

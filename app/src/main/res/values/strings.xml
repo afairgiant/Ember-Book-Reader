@@ -153,6 +153,12 @@
     <!-- Reader: Highlights -->
     <string name="highlights_title">Highlights</string>
     <string name="no_highlights">No highlights yet</string>
+    <string name="highlight_action">Highlight</string>
+    <string name="add_note">Add Note</string>
+    <string name="edit_highlight">Edit Highlight</string>
+    <string name="annotation_hint">Add a note&#8230;</string>
+    <string name="copy">Copy</string>
+    <string name="highlights_cd">Highlights</string>
 
     <!-- Reader: Search -->
     <string name="search_in_book">Search in Book</string>

@@ -287,15 +287,20 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
     }
 
-    fun addHighlight(locatorJson: String, color: HighlightColor, annotation: String? = null) {
+    fun addHighlight(
+        locatorJson: String,
+        color: HighlightColor,
+        annotation: String? = null,
+        selectedText: String? = null
+    ) {
         viewModelScope.launch {
-            highlightRepository.addHighlight(bookId, locatorJson, color, annotation)
+            highlightRepository.addHighlight(bookId, locatorJson, color, annotation, selectedText)
         }
     }
 
-    fun updateHighlightAnnotation(highlight: Highlight, annotation: String?) {
+    fun updateHighlight(highlight: Highlight, annotation: String?, color: HighlightColor) {
         viewModelScope.launch {
-            highlightRepository.updateAnnotation(highlight, annotation)
+            highlightRepository.updateHighlight(highlight, annotation, color)
         }
     }
 

@@ -14,12 +14,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
+import com.ember.reader.R
+import com.ember.reader.core.model.Highlight
+import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
+import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
+import com.ember.reader.ui.reader.common.AnnotationDialog
 import com.ember.reader.ui.reader.common.BookmarksSheet
+import com.ember.reader.ui.reader.common.HighlightColorPicker
+import com.ember.reader.ui.reader.common.HighlightsSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
@@ -28,6 +41,7 @@ import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
+import org.readium.r2.navigator.Selection
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
@@ -52,6 +66,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val highlights by viewModel.highlights.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
@@ -102,11 +117,40 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarks by remember { mutableStateOf(false) }
+    var showHighlights by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
     var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
+    var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
+    var pendingSelection by remember { mutableStateOf<Selection?>(null) }
+    var showColorPicker by remember { mutableStateOf(false) }
+    var showAnnotationDialog by remember { mutableStateOf(false) }
+    var editingHighlight by remember { mutableStateOf<Highlight?>(null) }
     val scope = rememberCoroutineScope()
+
+    // Selection action handler — called from ActionMode.Callback
+    val selectionActionHandler = remember { mutableStateOf<((Int) -> Unit)?>(null) }
+
+    // Custom text selection menu: Highlight, Add Note, Copy
+    val selectionCallback = remember {
+        object : ActionMode.Callback {
+            override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+                menu.clear()
+                menu.add(0, R.id.action_highlight, 0, R.string.highlight_action)
+                menu.add(0, R.id.action_add_note, 1, R.string.add_note)
+                menu.add(0, R.id.action_copy, 2, R.string.copy)
+                return true
+            }
+            override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+            override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+                selectionActionHandler.value?.invoke(item.itemId)
+                mode.finish()
+                return true
+            }
+            override fun onDestroyActionMode(mode: ActionMode) {}
+        }
+    }
 
     when (val state = uiState) {
         ReaderUiState.Loading -> LoadingScreen()
@@ -125,6 +169,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 onToggleBookmark = viewModel::addBookmark,
                 onOpenTableOfContents = { showToc = true },
                 onOpenPreferences = { showPreferences = true },
+                onOpenHighlights = { showHighlights = true },
                 onOpenSearch = { showSearch = true },
                 onSeekToProgression = { progression ->
                     scope.launch {
@@ -143,7 +188,10 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         publication = state.publication
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = preferences.toEpubPreferences()
+                        initialPreferences = preferences.toEpubPreferences(),
+                        configuration = EpubNavigatorFragment.Configuration(
+                            selectionActionModeCallback = selectionCallback
+                        )
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? EpubNavigatorFragment)?.currentLocator
@@ -152,6 +200,37 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     onNavigatorReady = { fragment ->
                         val nav = fragment as? EpubNavigatorFragment ?: return@NavigatorContainer
                         navigator = nav
+                        val manager = HighlightDecorationManager(nav)
+                        highlightManager = manager
+
+                        // Set up selection action handler
+                        selectionActionHandler.value = { actionId ->
+                            scope.launch {
+                                val selection = manager.currentSelection() ?: return@launch
+                                when (actionId) {
+                                    R.id.action_highlight -> {
+                                        pendingSelection = selection
+                                        showColorPicker = true
+                                    }
+                                    R.id.action_add_note -> {
+                                        pendingSelection = selection
+                                        showAnnotationDialog = true
+                                    }
+                                    R.id.action_copy -> {
+                                        val text = selection.locator.text.highlight ?: ""
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+                                        manager.clearSelection()
+                                    }
+                                }
+                            }
+                        }
+
+                        // Set up decoration tap listener
+                        manager.addActivationListener { decorationId, _ ->
+                            val highlightId = decorationId.toLongOrNull() ?: return@addActivationListener
+                            editingHighlight = highlights.find { it.id == highlightId }
+                        }
                     }
                 )
             }
@@ -214,6 +293,81 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 viewModel.onNavigationHandled()
             }
 
+            // Apply highlight decorations when navigator ready or highlights change
+            LaunchedEffect(highlightManager, highlights) {
+                highlightManager?.applyHighlights(highlights)
+            }
+
+            // Color picker dialog (after selecting text and tapping Highlight)
+            if (showColorPicker && pendingSelection != null) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = {
+                        showColorPicker = false
+                        pendingSelection = null
+                    },
+                    title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.highlight_action)) },
+                    text = {
+                        HighlightColorPicker(
+                            selectedColor = HighlightColor.YELLOW,
+                            onColorSelected = { color ->
+                                val selection = pendingSelection ?: return@HighlightColorPicker
+                                val locatorJson = selection.locator.toJsonString()
+                                val selectedText = selection.locator.text.highlight
+                                viewModel.addHighlight(locatorJson, color, selectedText = selectedText)
+                                highlightManager?.clearSelection()
+                                showColorPicker = false
+                                pendingSelection = null
+                            }
+                        )
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            showColorPicker = false
+                            pendingSelection = null
+                        }) {
+                            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
+
+            // Annotation dialog (after selecting text and tapping Add Note)
+            if (showAnnotationDialog && pendingSelection != null) {
+                AnnotationDialog(
+                    onSave = { annotation, color ->
+                        val selection = pendingSelection ?: return@AnnotationDialog
+                        val locatorJson = selection.locator.toJsonString()
+                        val selectedText = selection.locator.text.highlight
+                        viewModel.addHighlight(locatorJson, color, annotation, selectedText)
+                        highlightManager?.clearSelection()
+                        showAnnotationDialog = false
+                        pendingSelection = null
+                    },
+                    onDismiss = {
+                        showAnnotationDialog = false
+                        pendingSelection = null
+                    }
+                )
+            }
+
+            // Edit highlight dialog (after tapping an existing highlight)
+            editingHighlight?.let { highlight ->
+                AnnotationDialog(
+                    initialAnnotation = highlight.annotation ?: "",
+                    initialColor = highlight.color,
+                    onSave = { annotation, color ->
+                        viewModel.updateHighlight(highlight, annotation, color)
+                        editingHighlight = null
+                    },
+                    onDelete = {
+                        viewModel.deleteHighlight(highlight.id)
+                        editingHighlight = null
+                    },
+                    onDismiss = { editingHighlight = null }
+                )
+            }
+
             if (showToc) {
                 TableOfContentsSheet(
                     publication = state.publication,
@@ -256,6 +410,21 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
                     onDismiss = { showPreferences = false }
+                )
+            }
+
+            if (showHighlights) {
+                HighlightsSheet(
+                    highlights = highlights,
+                    onNavigate = { highlight ->
+                        highlight.locatorJson.toLocator()?.let { locator ->
+                            scope.launch { navigator?.go(locator) }
+                        }
+                        showHighlights = false
+                    },
+                    onEdit = { editingHighlight = it },
+                    onDelete = viewModel::deleteHighlight,
+                    onDismiss = { showHighlights = false }
                 )
             }
 

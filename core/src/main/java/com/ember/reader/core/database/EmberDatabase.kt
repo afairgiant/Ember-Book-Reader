@@ -28,7 +28,7 @@ import com.ember.reader.core.database.entity.ServerEntity
         HighlightEntity::class,
         ReadingSessionEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -70,6 +70,12 @@ abstract class EmberDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE books ADD COLUMN subjects TEXT")
                 db.execSQL("ALTER TABLE books ADD COLUMN pageCount INTEGER")
                 db.execSQL("ALTER TABLE books ADD COLUMN publishedDate TEXT")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE highlights ADD COLUMN selectedText TEXT")
             }
         }
 

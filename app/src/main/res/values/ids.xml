@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="action_highlight" type="id" />
+    <item name="action_add_note" type="id" />
+    <item name="action_copy" type="id" />
+</resources>

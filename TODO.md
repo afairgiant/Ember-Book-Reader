@@ -165,11 +165,15 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Translate selected text (via Android translation intent)
 
 ### Highlights & Annotations
-- [ ] Select text → highlight with color picker
-- [ ] Add notes to highlights
-- [ ] Highlights list/export
+- [x] Select text → highlight with color picker (custom ActionMode.Callback with Highlight/Note/Copy)
+- [x] Add notes to highlights (AnnotationDialog with text input + color picker)
+- [x] Highlights list with text previews (HighlightsSheet shows selectedText in quotes)
+- [x] Visual decorations rendered in book via Readium DecorableNavigator
+- [x] Tap existing highlight to edit note, change color, or delete
+- [x] Highlights button in reader top bar
 - [ ] Underline, strikethrough styles
-- [ ] Readium `DecorableNavigator` supports decorations for highlights
+- [ ] Highlights export
+- [ ] Sync highlights to Grimmory API (Phase 3)
 
 ### Reading Statistics
 - [x] Time spent reading today/week/month (StatsScreen with time cards)
