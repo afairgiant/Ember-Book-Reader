@@ -68,13 +68,8 @@ fun SettingsScreen(
     onOpenDevLog: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     val readingStats by viewModel.readingStats.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
-    val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
-    val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -181,144 +176,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Appearance
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.appearance),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = themeMode == mode,
-                        onClick = { viewModel.updateThemeMode(mode) },
-                        label = { Text(mode.displayName) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable { viewModel.updateKeepScreenOn(!keepScreenOn) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.keep_screen_on), style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = keepScreenOn,
-                    onCheckedChange = { viewModel.updateKeepScreenOn(it) }
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable { viewModel.updateAutoCleanup(!autoCleanup) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.auto_cleanup), style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        stringResource(R.string.auto_cleanup_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = autoCleanup,
-                    onCheckedChange = { viewModel.updateAutoCleanup(it) }
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable { viewModel.updateAutoDownloadReading(!autoDownloadReading) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.auto_download_reading), style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        stringResource(R.string.auto_download_reading_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = autoDownloadReading,
-                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) }
-                )
-            }
-
-            // Synchronization
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.synchronization),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SyncFrequency.entries.forEach { frequency ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { viewModel.updateSyncFrequency(frequency) }
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = syncFrequency == frequency,
-                        onClick = { viewModel.updateSyncFrequency(frequency) }
-                    )
-                    Text(
-                        text = frequency.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = viewModel::syncNow,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.sync_now))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedButton(
-                onClick = onOpenStorage,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.manage_downloads))
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = onOpenStats,

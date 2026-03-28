@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -43,7 +44,11 @@ object Routes {
     // Top-level (bottom nav)
     const val HOME = "home"
     const val LOCAL_LIBRARY = "local_library"
-    const val SETTINGS = "settings"
+    const val PROFILE = "profile"
+    const val APP_SETTINGS = "app_settings"
+
+    @Deprecated("Use PROFILE instead")
+    const val SETTINGS = "profile"
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
@@ -84,11 +89,12 @@ private enum class BottomNavTab(
 ) {
     HOME(Routes.HOME, "Home", Icons.Default.Home),
     LIBRARY(Routes.LOCAL_LIBRARY, "Library", Icons.AutoMirrored.Filled.LibraryBooks),
-    SETTINGS(Routes.SETTINGS, "Profile", Icons.Default.Person)
+    PROFILE(Routes.PROFILE, "Profile", Icons.Default.Person),
+    SETTINGS(Routes.APP_SETTINGS, "Settings", Icons.Default.Settings)
 }
 
 // Routes where the bottom nav should be visible
-private val bottomNavRoutes = setOf(Routes.HOME, Routes.LOCAL_LIBRARY, Routes.SETTINGS)
+private val bottomNavRoutes = setOf(Routes.HOME, Routes.LOCAL_LIBRARY, Routes.PROFILE, Routes.APP_SETTINGS)
 
 @Composable
 fun EmberNavHost(
@@ -141,7 +147,7 @@ fun EmberNavHost(
                     onEditServer = { serverId -> navController.navigate(Routes.serverForm(serverId)) },
                     onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
                     onOpenSettings = {
-                        navController.navigate(Routes.SETTINGS) {
+                        navController.navigate(Routes.PROFILE) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
@@ -167,13 +173,21 @@ fun EmberNavHost(
                 )
             }
 
-            // Top-level: Settings/Profile
-            composable(Routes.SETTINGS) {
+            // Top-level: Profile
+            composable(Routes.PROFILE) {
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenStorage = { navController.navigate(Routes.STORAGE) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) }
+                )
+            }
+
+            // Top-level: Settings
+            composable(Routes.APP_SETTINGS) {
+                com.ember.reader.ui.settings.AppSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenStorage = { navController.navigate(Routes.STORAGE) }
                 )
             }
 

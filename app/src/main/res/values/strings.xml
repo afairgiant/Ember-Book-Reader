@@ -180,6 +180,7 @@
 
     <!-- Settings / Profile -->
     <string name="profile_title">Profile</string>
+    <string name="settings_title">Settings</string>
     <string name="ember_reader">Ember Reader</string>
     <string name="servers_connected">%d server(s) connected</string>
     <string name="connected_accounts">Connected Accounts</string>
