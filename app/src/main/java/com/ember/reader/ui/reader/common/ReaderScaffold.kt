@@ -58,11 +58,16 @@ fun ReaderScaffold(
     onSeekToProgression: (Float) -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Content fills the entire screen — bars overlay on top
+        content()
+
+        // Top bar overlaid at the top
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { -it },
-            exit = slideOutVertically { -it }
+            exit = slideOutVertically { -it },
+            modifier = Modifier.align(Alignment.TopCenter)
         ) {
             ReaderTopBar(
                 title = title,
@@ -76,14 +81,12 @@ fun ReaderScaffold(
             )
         }
 
-        Box(modifier = Modifier.weight(1f)) {
-            content()
-        }
-
+        // Bottom bar overlaid at the bottom
         AnimatedVisibility(
             visible = chromeVisible,
             enter = slideInVertically { it },
-            exit = slideOutVertically { it }
+            exit = slideOutVertically { it },
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             ReaderBottomBar(
                 currentLocator = currentLocator,
