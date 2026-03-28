@@ -8,68 +8,37 @@
     <!-- Open book - left page -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,34 L30,76 Q30,78 32,77 L52,70 L52,32 L32,38 Q30,39 30,34 Z" />
+        android:pathData="M28,32 L28,78 Q28,80 30,79 L52,72 L52,28 L30,34 Q28,35 28,32 Z" />
 
     <!-- Open book - right page -->
     <path
         android:fillColor="#F5F0EB"
-        android:pathData="M78,34 L78,76 Q78,78 76,77 L56,70 L56,32 L76,38 Q78,39 78,34 Z" />
+        android:pathData="M80,32 L80,78 Q80,80 78,79 L56,72 L56,28 L78,34 Q80,35 80,32 Z" />
 
     <!-- Book spine -->
     <path
         android:fillColor="#E0D5C8"
-        android:pathData="M52,32 L54,30 L56,32 L56,70 L54,72 L52,70 Z" />
+        android:pathData="M52,28 L54,26 L56,28 L56,72 L54,74 L52,72 Z" />
 
-    <!-- Page lines left -->
-    <path
-        android:strokeColor="#E8DDD0"
-        android:strokeWidth="0.7"
-        android:pathData="M35,44 L49,39" />
-    <path
-        android:strokeColor="#E8DDD0"
-        android:strokeWidth="0.7"
-        android:pathData="M35,49 L49,44" />
-    <path
-        android:strokeColor="#E8DDD0"
-        android:strokeWidth="0.7"
-        android:pathData="M35,54 L49,49" />
-    <path
-        android:strokeColor="#E8DDD0"
-        android:strokeWidth="0.7"
-        android:pathData="M35,59 L49,54" />
-
-    <!-- Page lines right -->
-    <path
-        android:strokeColor="#E0D8CC"
-        android:strokeWidth="0.7"
-        android:pathData="M59,39 L73,44" />
-    <path
-        android:strokeColor="#E0D8CC"
-        android:strokeWidth="0.7"
-        android:pathData="M59,44 L73,49" />
-    <path
-        android:strokeColor="#E0D8CC"
-        android:strokeWidth="0.7"
-        android:pathData="M59,49 L73,54" />
-    <path
-        android:strokeColor="#E0D8CC"
-        android:strokeWidth="0.7"
-        android:pathData="M59,54 L73,59" />
-
-    <!-- Flame/ember - outer glow -->
+    <!-- Flame - outer glow -->
     <path
         android:fillColor="#FF6D00"
-        android:fillAlpha="0.4"
-        android:pathData="M54,18 C50,24 47,28 49,32 C50,29 52,26 54,24 C56,26 58,29 59,32 C61,28 58,24 54,18 Z" />
+        android:fillAlpha="0.35"
+        android:pathData="M54,38 C48,46 44,52 47,59 C48.5,54 51,49 54,45 C57,49 59.5,54 61,59 C64,52 60,46 54,38 Z" />
 
-    <!-- Flame/ember - main flame -->
+    <!-- Flame - main body -->
     <path
         android:fillColor="#FF8F00"
-        android:pathData="M54,20 C51,25 49.5,28 51,31 C51.5,29 53,27 54,25.5 C55,27 56.5,29 57,31 C58.5,28 57,25 54,20 Z" />
+        android:pathData="M54,41 C49.5,48 47.5,52 50,58 C51,55 52.5,51 54,48 C55.5,51 57,55 58,58 C60.5,52 58.5,48 54,41 Z" />
 
-    <!-- Flame/ember - inner bright -->
+    <!-- Flame - inner bright core -->
     <path
         android:fillColor="#FFB300"
-        android:pathData="M54,24 C52.5,26.5 52,28 53,30 C53.3,29 53.8,28 54,27 C54.2,28 54.7,29 55,30 C56,28 55.5,26.5 54,24 Z" />
+        android:pathData="M54,47 C52,50.5 51,53 52.5,57 C53,55 53.5,53 54,51 C54.5,53 55,55 55.5,57 C57,53 56,50.5 54,47 Z" />
+
+    <!-- Flame - hottest center -->
+    <path
+        android:fillColor="#FFE082"
+        android:pathData="M54,51 C53.2,53 53,54.5 53.5,56 C53.7,55 54,54 54,53 C54,54 54.3,55 54.5,56 C55,54.5 54.8,53 54,51 Z" />
 
 </vector>
