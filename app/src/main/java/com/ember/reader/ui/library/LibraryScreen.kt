@@ -74,6 +74,7 @@ fun LibraryScreen(
     serverId: Long,
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
+    onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -162,7 +163,7 @@ fun LibraryScreen(
                                 downloadingIds = state.downloadingBookIds,
                                 coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
-                                    if (book.isDownloaded) onOpenReader(book.id, book.format)
+                                    onOpenBookDetail(book.id)
                                 },
                                 onDownloadClick = viewModel::downloadBook,
                                 loadingMore = loadingMore,
@@ -174,7 +175,7 @@ fun LibraryScreen(
                                 downloadingIds = state.downloadingBookIds,
                                 coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
-                                    if (book.isDownloaded) onOpenReader(book.id, book.format)
+                                    onOpenBookDetail(book.id)
                                 },
                                 onDownloadClick = viewModel::downloadBook,
                                 loadingMore = loadingMore,
