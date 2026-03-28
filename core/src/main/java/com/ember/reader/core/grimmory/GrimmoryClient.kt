@@ -159,6 +159,42 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
+    suspend fun getAudiobookInfo(
+        baseUrl: String,
+        serverId: Long,
+        bookId: Long
+    ): Result<AudiobookInfo> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/audiobooks/$bookId/info") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) {
+            error("Audiobook info failed: ${response.status}")
+        }
+        response.body<AudiobookInfo>()
+    }
+
+    /**
+     * Builds a streaming URL for an audiobook with JWT auth query param.
+     * ExoPlayer will use this URL directly for HTTP streaming with Range support.
+     */
+    suspend fun audiobookStreamUrl(
+        baseUrl: String,
+        serverId: Long,
+        bookId: Long,
+        trackIndex: Int? = null
+    ): String? {
+        val token = tokenManager.getAccessToken(serverId) ?: return null
+        val origin = serverOrigin(baseUrl)
+        return if (trackIndex != null) {
+            "$origin/api/v1/audiobooks/$bookId/track/$trackIndex/stream?token=$token"
+        } else {
+            "$origin/api/v1/audiobooks/$bookId/stream?token=$token"
+        }
+    }
+
+    fun audiobookCoverUrl(baseUrl: String, bookId: Long): String =
+        "${serverOrigin(baseUrl)}/api/v1/audiobooks/$bookId/cover"
+
     /**
      * Executes a block with a valid access token.
      * If the token is expired (401), refreshes and retries once.

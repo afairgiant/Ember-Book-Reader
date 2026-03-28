@@ -143,6 +143,11 @@ dependencies {
     // Compose ViewBinding
     implementation(libs.compose.ui.viewbinding)
 
+    // Media3 (ExoPlayer for audiobooks)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.session)
+    implementation(libs.media3.ui)
+
     // DataStore
     implementation(libs.datastore.preferences)
 
