@@ -33,6 +33,7 @@ class AppPreferencesRepository @Inject constructor(
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
+        val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -76,6 +77,16 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateAutoDownloadReading(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.AUTO_DOWNLOAD_READING] = enabled
+        }
+    }
+
+    suspend fun hasSeenTapZoneHint(): Boolean =
+        context.appPreferencesDataStore.data.map { it[Keys.HAS_SEEN_TAP_ZONE_HINT] ?: false }
+            .first()
+
+    suspend fun markTapZoneHintSeen() {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.HAS_SEEN_TAP_ZONE_HINT] = true
         }
     }
 }

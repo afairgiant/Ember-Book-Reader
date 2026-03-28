@@ -2,6 +2,12 @@ package com.ember.reader.ui.reader.epub
 
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +76,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+    val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
 
     // Keep screen on while reading
     val view = LocalView.current
@@ -435,6 +442,99 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     onKeepLocal = viewModel::dismissSyncConflict
                 )
             }
+
+            // Tap zone hint overlay (shown on first book open)
+            if (showTapZoneHint) {
+                TapZoneHintOverlay(
+                    preferences = preferences,
+                    onDismiss = viewModel::dismissTapZoneHint
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TapZoneHintOverlay(
+    preferences: ReaderPreferences,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.foundation.layout.Box(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxSize()
+            .clickable(onClick = onDismiss)
+    ) {
+        Canvas(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val topH = h * preferences.topZoneHeight
+            val leftW = w * preferences.leftZoneWidth
+            val rightW = w * preferences.rightZoneWidth
+
+            drawRect(
+                color = androidx.compose.ui.graphics.Color(0x44FF9800),
+                topLeft = androidx.compose.ui.geometry.Offset.Zero,
+                size = androidx.compose.ui.geometry.Size(w, topH)
+            )
+            drawRect(
+                color = androidx.compose.ui.graphics.Color(0x442196F3),
+                topLeft = androidx.compose.ui.geometry.Offset(0f, topH),
+                size = androidx.compose.ui.geometry.Size(leftW, h - topH)
+            )
+            drawRect(
+                color = androidx.compose.ui.graphics.Color(0x444CAF50),
+                topLeft = androidx.compose.ui.geometry.Offset(w - rightW, topH),
+                size = androidx.compose.ui.geometry.Size(rightW, h - topH)
+            )
+            drawRect(
+                color = androidx.compose.ui.graphics.Color(0x229C27B0),
+                topLeft = androidx.compose.ui.geometry.Offset(leftW, topH),
+                size = androidx.compose.ui.geometry.Size(w - leftW - rightW, h - topH)
+            )
+        }
+
+        val labelStyle = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
+            color = androidx.compose.ui.graphics.Color.White,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+        )
+        androidx.compose.material3.Text(
+            text = preferences.topTapZone.displayName,
+            style = labelStyle,
+            modifier = androidx.compose.ui.Modifier
+                .align(androidx.compose.ui.Alignment.TopCenter)
+                .padding(top = 24.dp)
+        )
+        androidx.compose.material3.Text(
+            text = preferences.leftTapZone.displayName,
+            style = labelStyle,
+            modifier = androidx.compose.ui.Modifier
+                .align(androidx.compose.ui.Alignment.CenterStart)
+                .padding(start = 16.dp)
+        )
+        androidx.compose.material3.Text(
+            text = preferences.rightTapZone.displayName,
+            style = labelStyle,
+            modifier = androidx.compose.ui.Modifier
+                .align(androidx.compose.ui.Alignment.CenterEnd)
+                .padding(end = 16.dp)
+        )
+        androidx.compose.foundation.layout.Column(
+            modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.Center),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            androidx.compose.material3.Text(
+                text = preferences.centerTapZone.displayName,
+                style = labelStyle
+            )
+            androidx.compose.foundation.layout.Spacer(
+                modifier = androidx.compose.ui.Modifier.height(8.dp)
+            )
+            androidx.compose.material3.Text(
+                text = "Tap anywhere to dismiss",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
+                )
+            )
         }
     }
 }

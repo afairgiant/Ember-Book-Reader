@@ -59,7 +59,7 @@ class ReaderViewModel @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
-    appPreferencesRepository: AppPreferencesRepository
+    private val appPreferencesRepository: AppPreferencesRepository
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -79,6 +79,14 @@ class ReaderViewModel @Inject constructor(
 
     val keepScreenOn: StateFlow<Boolean> = appPreferencesRepository.keepScreenOnFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val _showTapZoneHint = MutableStateFlow(false)
+    val showTapZoneHint: StateFlow<Boolean> = _showTapZoneHint.asStateFlow()
+
+    fun dismissTapZoneHint() {
+        _showTapZoneHint.value = false
+        viewModelScope.launch { appPreferencesRepository.markTapZoneHintSeen() }
+    }
 
     private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
     val bookmarks: StateFlow<List<Bookmark>> = _bookmarks.asStateFlow()
@@ -153,6 +161,11 @@ class ReaderViewModel @Inject constructor(
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
         pullGrimmoryProgressOnOpen(loadedBook, localProgress)
+
+        // Show tap zone hint on first book open
+        if (!appPreferencesRepository.hasSeenTapZoneHint()) {
+            _showTapZoneHint.value = true
+        }
     }
 
     private suspend fun pullGrimmoryProgressOnOpen(
