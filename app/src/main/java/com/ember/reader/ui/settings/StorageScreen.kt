@@ -44,11 +44,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.R
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -68,10 +70,10 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Storage", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.manage_storage), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -97,10 +99,10 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = viewModel::selectAll) {
-                                Text("All")
+                                Text(stringResource(R.string.select_all))
                             }
                             TextButton(onClick = viewModel::clearSelection) {
-                                Text("Clear")
+                                Text(stringResource(R.string.clear_selection))
                             }
                         }
                         Button(
@@ -113,7 +115,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Delete ${selectedIds.size}")
+                            Text(stringResource(R.string.delete_count, selectedIds.size))
                         }
                     }
                 }

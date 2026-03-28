@@ -46,10 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ember.reader.R
 import com.ember.reader.ui.common.DevLog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -107,7 +109,7 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Developer Logs", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.dev_logs_title), fontWeight = FontWeight.Bold)
                         Text(
                             "${entries.size} entries",
                             style = MaterialTheme.typography.bodySmall,
@@ -117,7 +119,7 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -128,20 +130,20 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
                             }
                         }
                     }) {
-                        Icon(Icons.Default.VerticalAlignBottom, contentDescription = "Scroll to bottom")
+                        Icon(Icons.Default.VerticalAlignBottom, contentDescription = stringResource(R.string.scroll_to_bottom))
                     }
                     IconButton(onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("Ember Logs", DevLog.allText()))
-                        Toast.makeText(context, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
                     }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy all")
+                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy_all))
                     }
                     IconButton(onClick = {
                         DevLog.clear()
                         refreshKey++
                     }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Clear logs")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.clear_logs))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -160,12 +162,12 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "No log entries yet",
+                    stringResource(R.string.no_log_entries),
                     color = timeColor,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    "Logs will appear as the app runs",
+                    stringResource(R.string.logs_appear_hint),
                     color = timeColor.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodySmall
                 )

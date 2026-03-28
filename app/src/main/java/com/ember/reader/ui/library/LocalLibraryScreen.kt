@@ -75,6 +75,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
@@ -152,7 +154,7 @@ fun LocalLibraryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Library", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.library_title), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = {
                         searchActive = !searchActive
@@ -160,7 +162,7 @@ fun LocalLibraryScreen(
                     }) {
                         Icon(
                             if (searchActive) Icons.Default.Clear else Icons.Default.Search,
-                            contentDescription = if (searchActive) "Close search" else "Search"
+                            contentDescription = if (searchActive) stringResource(R.string.close_search) else stringResource(R.string.search)
                         )
                     }
                 },
@@ -183,7 +185,7 @@ fun LocalLibraryScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     } else {
-                        Icon(Icons.Default.Add, contentDescription = "Import Book")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.import_book))
                     }
                 }
             }
@@ -204,10 +206,10 @@ fun LocalLibraryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = { viewModel.selectAll(filteredBooks) }) {
-                            Text("All")
+                            Text(stringResource(R.string.select_all))
                         }
                         TextButton(onClick = viewModel::clearSelection) {
-                            Text("Clear")
+                            Text(stringResource(R.string.clear_selection))
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         OutlinedButton(
@@ -216,7 +218,7 @@ fun LocalLibraryScreen(
                         ) {
                             Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Sync ${selectedIds.size}")
+                            Text(stringResource(R.string.sync_count, selectedIds.size))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
@@ -225,7 +227,7 @@ fun LocalLibraryScreen(
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Delete ${selectedIds.size}")
+                            Text(stringResource(R.string.delete_count, selectedIds.size))
                         }
                     }
                 }
@@ -242,7 +244,7 @@ fun LocalLibraryScreen(
                 androidx.compose.material3.OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search books...") },
+                    placeholder = { Text(stringResource(R.string.search_books)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -261,17 +263,17 @@ fun LocalLibraryScreen(
                 FilterChip(
                     selected = filter == LibraryFilter.ALL,
                     onClick = { filter = LibraryFilter.ALL },
-                    label = { Text("All") }
+                    label = { Text(stringResource(R.string.filter_all)) }
                 )
                 FilterChip(
                     selected = filter == LibraryFilter.SERVER,
                     onClick = { filter = LibraryFilter.SERVER },
-                    label = { Text("Server") }
+                    label = { Text(stringResource(R.string.filter_server)) }
                 )
                 FilterChip(
                     selected = filter == LibraryFilter.LOCAL,
                     onClick = { filter = LibraryFilter.LOCAL },
-                    label = { Text("Local") }
+                    label = { Text(stringResource(R.string.filter_local)) }
                 )
             }
 
@@ -309,12 +311,12 @@ fun LocalLibraryScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No books yet",
+                            text = stringResource(R.string.no_books_yet),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Download from a server or tap + to import",
+                            text = stringResource(R.string.no_books_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -374,10 +376,10 @@ fun LocalLibraryScreen(
         relinkBookId?.let { bookId ->
             AlertDialog(
                 onDismissRequest = { relinkBookId = null },
-                title = { Text("Relink to Server") },
+                title = { Text(stringResource(R.string.relink_title)) },
                 text = {
                     Column {
-                        Text("Choose a server to search for this book:")
+                        Text(stringResource(R.string.relink_prompt))
                         Spacer(modifier = Modifier.height(12.dp))
                         servers.forEach { server ->
                             TextButton(
@@ -395,7 +397,7 @@ fun LocalLibraryScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { relinkBookId = null }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )
@@ -406,19 +408,19 @@ fun LocalLibraryScreen(
             val bookTitle = allBooks.find { it.id == bookId }?.title ?: "this book"
             AlertDialog(
                 onDismissRequest = { deleteBookId = null },
-                title = { Text("Delete Book") },
-                text = { Text("Remove \"$bookTitle\" from your library? The file will be deleted from your device.") },
+                title = { Text(stringResource(R.string.delete_book_title)) },
+                text = { Text(stringResource(R.string.delete_book_message, bookTitle)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.deleteBook(bookId)
                         deleteBookId = null
                     }) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteBookId = null }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )
@@ -428,19 +430,19 @@ fun LocalLibraryScreen(
         if (showBatchDeleteConfirm) {
             AlertDialog(
                 onDismissRequest = { showBatchDeleteConfirm = false },
-                title = { Text("Delete ${selectedIds.size} Books") },
-                text = { Text("Remove ${selectedIds.size} book(s) from your library? The files will be deleted from your device.") },
+                title = { Text(stringResource(R.string.delete_books_title, selectedIds.size)) },
+                text = { Text(stringResource(R.string.delete_books_message, selectedIds.size)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.deleteSelected()
                         showBatchDeleteConfirm = false
                     }) {
-                        Text("Delete All", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.delete_all), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showBatchDeleteConfirm = false }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             )
@@ -553,7 +555,7 @@ private fun UnifiedBookCard(
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
-                                contentDescription = "More",
+                                contentDescription = stringResource(R.string.more_options),
                                 tint = Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -564,7 +566,7 @@ private fun UnifiedBookCard(
                         ) {
                             if (onRelink != null) {
                                 DropdownMenuItem(
-                                    text = { Text("Relink to Server") },
+                                    text = { Text(stringResource(R.string.relink_to_server)) },
                                     onClick = {
                                         showMenu = false
                                         onRelink()
@@ -573,7 +575,7 @@ private fun UnifiedBookCard(
                             }
                             if (onPullProgress != null) {
                                 DropdownMenuItem(
-                                    text = { Text("Pull Progress") },
+                                    text = { Text(stringResource(R.string.pull_progress)) },
                                     onClick = {
                                         showMenu = false
                                         onPullProgress()
@@ -582,7 +584,7 @@ private fun UnifiedBookCard(
                             }
                             if (onPushProgress != null) {
                                 DropdownMenuItem(
-                                    text = { Text("Push Progress") },
+                                    text = { Text(stringResource(R.string.push_progress)) },
                                     onClick = {
                                         showMenu = false
                                         onPushProgress()
@@ -590,7 +592,7 @@ private fun UnifiedBookCard(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Delete") },
+                                text = { Text(stringResource(R.string.delete)) },
                                 onClick = {
                                     showMenu = false
                                     onDelete()
@@ -626,7 +628,7 @@ private fun UnifiedBookCard(
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = if (isFromServer) "Server" else "Local",
+                            text = if (isFromServer) stringResource(R.string.source_server) else stringResource(R.string.source_local),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = Color.White

@@ -45,6 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
@@ -70,12 +72,12 @@ fun ReaderPreferencesSheet(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Reader Settings",
+                text = stringResource(R.string.reader_settings),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            SectionLabel("Font")
+            SectionLabel(stringResource(R.string.font_section))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -90,7 +92,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Font Size")
+            SectionLabel(stringResource(R.string.font_size_section))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -101,7 +103,7 @@ fun ReaderPreferencesSheet(
                         onPreferencesChanged(preferences.copy(fontSize = newSize))
                     }
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                 }
                 Text(
                     text = "${preferences.fontSize.toInt()}",
@@ -114,13 +116,13 @@ fun ReaderPreferencesSheet(
                         onPreferencesChanged(preferences.copy(fontSize = newSize))
                     }
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Increase")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Line Height")
+            SectionLabel(stringResource(R.string.line_height_section))
             Slider(
                 value = preferences.lineHeight,
                 onValueChange = {
@@ -138,7 +140,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Text Align")
+            SectionLabel(stringResource(R.string.text_align_section))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -153,7 +155,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Page Margins")
+            SectionLabel(stringResource(R.string.page_margins_section))
             Slider(
                 value = preferences.pageMargins,
                 onValueChange = {
@@ -176,7 +178,7 @@ fun ReaderPreferencesSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Publisher Styles", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.publisherStyles,
                     onCheckedChange = {
@@ -192,7 +194,7 @@ fun ReaderPreferencesSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Hyphenation", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.hyphenate,
                     onCheckedChange = {
@@ -203,7 +205,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Theme")
+            SectionLabel(stringResource(R.string.theme_section))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -266,7 +268,7 @@ fun ReaderPreferencesSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Paginated Mode", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.paginated_mode), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.isPaginated,
                     onCheckedChange = {
@@ -277,7 +279,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Orientation")
+            SectionLabel(stringResource(R.string.orientation_section))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -292,7 +294,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Tap Zones")
+            SectionLabel(stringResource(R.string.tap_zones_section))
             TapZoneSelector("Top tap", preferences.topTapZone) {
                 onPreferencesChanged(preferences.copy(topTapZone = it))
             }
@@ -334,7 +336,7 @@ fun ReaderPreferencesSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Brightness")
+            SectionLabel(stringResource(R.string.brightness_section))
             Slider(
                 value = if (preferences.brightness < 0) 0.5f else preferences.brightness,
                 onValueChange = {

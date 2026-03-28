@@ -20,7 +20,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ember.reader.R
 import com.ember.reader.core.model.Bookmark
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -44,13 +46,13 @@ fun BookmarksSheet(
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
-                text = "Bookmarks",
+                text = stringResource(R.string.bookmarks_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             if (bookmarks.isEmpty()) {
                 Text(
-                    text = "No bookmarks yet",
+                    text = stringResource(R.string.no_bookmarks),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
@@ -82,7 +84,7 @@ private fun BookmarkItem(bookmark: Bookmark, onClick: () -> Unit, onDelete: () -
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = bookmark.title ?: "Untitled",
+                text = bookmark.title ?: stringResource(R.string.untitled),
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
@@ -96,7 +98,7 @@ private fun BookmarkItem(bookmark: Bookmark, onClick: () -> Unit, onDelete: () -
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
-                contentDescription = "Delete",
+                contentDescription = stringResource(R.string.delete),
                 tint = MaterialTheme.colorScheme.error
             )
         }

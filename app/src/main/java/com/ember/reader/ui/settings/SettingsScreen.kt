@@ -55,7 +55,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.SyncFrequency
+import com.ember.reader.R
 import com.ember.reader.core.repository.ThemeMode
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -77,7 +79,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.profile_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -115,12 +117,12 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "Ember Reader",
+                        text = stringResource(R.string.ember_reader),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "${servers.size} server(s) connected",
+                        text = stringResource(R.string.servers_connected, servers.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -131,7 +133,7 @@ fun SettingsScreen(
             if (servers.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Connected Accounts",
+                    text = stringResource(R.string.connected_accounts),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -149,7 +151,7 @@ fun SettingsScreen(
             // Reading Stats
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Reading Stats",
+                text = stringResource(R.string.reading_stats),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -161,19 +163,19 @@ fun SettingsScreen(
             ) {
                 StatCard(
                     icon = Icons.Default.Book,
-                    label = "Downloaded",
+                    label = stringResource(R.string.stat_downloaded),
                     value = "${readingStats.downloaded}",
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon = Icons.Default.MenuBook,
-                    label = "Reading",
+                    label = stringResource(R.string.stat_reading),
                     value = "${readingStats.reading}",
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon = Icons.Default.CheckCircle,
-                    label = "Completed",
+                    label = stringResource(R.string.stat_completed),
                     value = "${readingStats.completed}",
                     modifier = Modifier.weight(1f)
                 )
@@ -182,7 +184,7 @@ fun SettingsScreen(
             // Appearance
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Appearance",
+                text = stringResource(R.string.appearance),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -209,7 +211,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Keep screen on while reading", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.keep_screen_on), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = keepScreenOn,
                     onCheckedChange = { viewModel.updateKeepScreenOn(it) }
@@ -226,9 +228,9 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Auto-cleanup old downloads", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.auto_cleanup), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "Remove server downloads older than 90 days",
+                        stringResource(R.string.auto_cleanup_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -249,9 +251,9 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Auto-download reading books", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.auto_download_reading), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "Download books marked as Reading on Grimmory during sync",
+                        stringResource(R.string.auto_download_reading_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -265,7 +267,7 @@ fun SettingsScreen(
             // Synchronization
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Synchronization",
+                text = stringResource(R.string.synchronization),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -301,7 +303,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sync Now")
+                Text(stringResource(R.string.sync_now))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -313,7 +315,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Manage Downloads")
+                Text(stringResource(R.string.manage_downloads))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -325,7 +327,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Reading Statistics")
+                Text(stringResource(R.string.reading_statistics))
             }
 
             // About — long-press version to open developer logs
@@ -386,13 +388,13 @@ private fun ServerStatusCard(server: Server, isGrimmoryLoggedIn: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatusDot(label = "OPDS", active = true)
+                    StatusDot(label = stringResource(R.string.label_opds), active = true)
                     if (server.kosyncUsername.isNotBlank()) {
-                        StatusDot(label = "Kosync", active = true)
+                        StatusDot(label = stringResource(R.string.label_kosync), active = true)
                     }
                     if (server.isGrimmory) {
                         StatusDot(
-                            label = "Grimmory",
+                            label = stringResource(R.string.label_grimmory),
                             active = isGrimmoryLoggedIn
                         )
                     }

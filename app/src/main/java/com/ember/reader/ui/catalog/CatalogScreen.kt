@@ -51,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import com.ember.reader.core.opds.OpdsFeedEntry
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
@@ -74,19 +76,19 @@ fun CatalogScreen(
                     Text(
                         when (val state = uiState) {
                             is CatalogUiState.Success -> state.feed.title
-                            else -> "Catalog"
+                            else -> stringResource(R.string.catalog_title)
                         },
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { searchActive = !searchActive }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -115,7 +117,7 @@ fun CatalogScreen(
                             androidx.compose.material3.OutlinedTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
-                                placeholder = { Text("Search catalog...") },
+                                placeholder = { Text(stringResource(R.string.search_catalog)) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()

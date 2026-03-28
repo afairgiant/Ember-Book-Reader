@@ -29,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ember.reader.R
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
 
@@ -49,13 +51,13 @@ fun HighlightsSheet(
     ) {
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             Text(
-                text = "Highlights",
+                text = stringResource(R.string.highlights_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             if (highlights.isEmpty()) {
                 Text(
-                    text = "No highlights yet",
+                    text = stringResource(R.string.no_highlights),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
@@ -110,7 +112,7 @@ private fun HighlightItem(highlight: Highlight, onClick: () -> Unit, onDelete: (
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
-                contentDescription = "Delete",
+                contentDescription = stringResource(R.string.delete),
                 tint = MaterialTheme.colorScheme.error
             )
         }

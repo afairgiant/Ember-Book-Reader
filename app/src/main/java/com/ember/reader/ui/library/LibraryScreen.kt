@@ -61,6 +61,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
@@ -86,15 +88,15 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Library") },
+                title = { Text(stringResource(R.string.library_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { searchActive = !searchActive }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                     }
                     IconButton(onClick = viewModel::toggleViewMode) {
                         Icon(
@@ -103,7 +105,7 @@ fun LibraryScreen(
                             } else {
                                 Icons.Default.GridView
                             },
-                            contentDescription = "Toggle view"
+                            contentDescription = stringResource(R.string.toggle_view)
                         )
                     }
                 }
@@ -125,7 +127,7 @@ fun LibraryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search books...") }
+                    placeholder = { Text(stringResource(R.string.search_books)) }
                 ) {}
             }
 
@@ -149,7 +151,7 @@ fun LibraryScreen(
                         if (state.books.isEmpty()) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "No books found",
+                                    stringResource(R.string.no_books_found),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -320,7 +322,7 @@ private fun BookGridItem(
                         } else {
                             Icon(
                                 Icons.Default.CloudDownload,
-                                contentDescription = "Download",
+                                contentDescription = stringResource(R.string.download),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

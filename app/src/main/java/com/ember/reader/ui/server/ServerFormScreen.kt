@@ -51,8 +51,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,10 +90,10 @@ fun ServerFormScreen(
                 title = {
                     Text(
                         when {
-                            uiState.isEditing -> "Edit Server"
-                            !serverTypeChosen -> "Add Server"
-                            isGrimmoryType -> "Add Grimmory Server"
-                            else -> "Add OPDS Server"
+                            uiState.isEditing -> stringResource(R.string.edit_server)
+                            !serverTypeChosen -> stringResource(R.string.add_server)
+                            isGrimmoryType -> stringResource(R.string.add_grimmory_server)
+                            else -> stringResource(R.string.add_opds_server)
                         },
                         fontWeight = FontWeight.Bold
                     )
@@ -104,7 +106,7 @@ fun ServerFormScreen(
                             onNavigateBack()
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -172,7 +174,7 @@ private fun ServerTypePicker(
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "What type of server?",
+            text = stringResource(R.string.what_type_of_server),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -200,12 +202,12 @@ private fun ServerTypePicker(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        "Grimmory",
+                        stringResource(R.string.grimmory),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Connect to a Grimmory (Booklore) server with full sync support",
+                        stringResource(R.string.grimmory_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -236,12 +238,12 @@ private fun ServerTypePicker(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        "Other OPDS Server",
+                        stringResource(R.string.other_opds_server),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Connect to any OPDS 1.2 compatible catalog with optional kosync",
+                        stringResource(R.string.opds_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -262,14 +264,14 @@ private fun GrimmoryForm(
 ) {
     Column(modifier = modifier) {
         // Server info
-        SectionHeader(icon = Icons.Default.Public, title = "Server")
+        SectionHeader(icon = Icons.Default.Public, title = stringResource(R.string.server_section))
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = uiState.name,
             onValueChange = viewModel::updateName,
-            label = { Text("Name") },
-            placeholder = { Text("My Grimmory") },
+            label = { Text(stringResource(R.string.server_name)) },
+            placeholder = { Text(stringResource(R.string.placeholder_grimmory_name)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -278,8 +280,8 @@ private fun GrimmoryForm(
         OutlinedTextField(
             value = uiState.url,
             onValueChange = viewModel::updateUrl,
-            label = { Text("Server URL") },
-            placeholder = { Text("https://your-server.com/api/v1/opds") },
+            label = { Text(stringResource(R.string.server_url)) },
+            placeholder = { Text(stringResource(R.string.placeholder_grimmory_url)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             shape = RoundedCornerShape(12.dp),
@@ -290,7 +292,7 @@ private fun GrimmoryForm(
 
         // Grimmory login (primary)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionHeader(icon = Icons.Default.Lock, title = "Grimmory Login")
+            SectionHeader(icon = Icons.Default.Lock, title = stringResource(R.string.grimmory_login))
             Spacer(modifier = Modifier.width(8.dp))
             EncryptedBadge()
         }
@@ -299,7 +301,7 @@ private fun GrimmoryForm(
         OutlinedTextField(
             value = uiState.grimmoryUsername,
             onValueChange = viewModel::updateGrimmoryUsername,
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.username)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -308,7 +310,7 @@ private fun GrimmoryForm(
         OutlinedTextField(
             value = uiState.grimmoryPassword,
             onValueChange = viewModel::updateGrimmoryPassword,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -319,7 +321,7 @@ private fun GrimmoryForm(
         TestConnectionButton(
             result = uiState.grimmoryTestResult,
             onClick = viewModel::testGrimmoryConnection,
-            label = "Test Login"
+            label = stringResource(R.string.test_login)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -334,11 +336,11 @@ private fun GrimmoryForm(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Use same credentials for OPDS & Kosync",
+                    stringResource(R.string.same_credentials_label),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    "Grimmory manages these separately in settings",
+                    stringResource(R.string.same_credentials_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -354,13 +356,13 @@ private fun GrimmoryForm(
             Column {
                 Spacer(modifier = Modifier.height(20.dp))
 
-                SectionHeader(icon = Icons.Default.CloudQueue, title = "OPDS Credentials")
+                SectionHeader(icon = Icons.Default.CloudQueue, title = stringResource(R.string.opds_credentials))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = uiState.opdsUsername,
                     onValueChange = viewModel::updateOpdsUsername,
-                    label = { Text("OPDS Username") },
+                    label = { Text(stringResource(R.string.opds_username)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -369,7 +371,7 @@ private fun GrimmoryForm(
                 OutlinedTextField(
                     value = uiState.opdsPassword,
                     onValueChange = viewModel::updateOpdsPassword,
-                    label = { Text("OPDS Password") },
+                    label = { Text(stringResource(R.string.opds_password)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -380,18 +382,18 @@ private fun GrimmoryForm(
                 TestConnectionButton(
                     result = uiState.opdsTestResult,
                     onClick = viewModel::testOpdsConnection,
-                    label = "Test OPDS"
+                    label = stringResource(R.string.test_opds)
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                SectionHeader(icon = Icons.Default.Sync, title = "Kosync Credentials")
+                SectionHeader(icon = Icons.Default.Sync, title = stringResource(R.string.kosync_credentials))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = uiState.kosyncUsername,
                     onValueChange = viewModel::updateKosyncUsername,
-                    label = { Text("Kosync Username") },
+                    label = { Text(stringResource(R.string.kosync_username)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -400,7 +402,7 @@ private fun GrimmoryForm(
                 OutlinedTextField(
                     value = uiState.kosyncPassword,
                     onValueChange = viewModel::updateKosyncPassword,
-                    label = { Text("Kosync Password") },
+                    label = { Text(stringResource(R.string.kosync_password)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -411,7 +413,7 @@ private fun GrimmoryForm(
                 TestConnectionButton(
                     result = uiState.kosyncTestResult,
                     onClick = viewModel::testKosyncConnection,
-                    label = "Test Kosync"
+                    label = stringResource(R.string.test_kosync)
                 )
             }
         }
@@ -443,7 +445,7 @@ private fun GrimmoryForm(
                 )
             } else {
                 Text(
-                    text = if (uiState.isEditing) "UPDATE SERVER" else "SAVE SERVER",
+                    text = if (uiState.isEditing) stringResource(R.string.update_server) else stringResource(R.string.save_server),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -460,14 +462,14 @@ private fun OpdsForm(
     onSave: () -> Unit
 ) {
     Column(modifier = modifier) {
-        SectionHeader(icon = Icons.Default.CloudQueue, title = "Server")
+        SectionHeader(icon = Icons.Default.CloudQueue, title = stringResource(R.string.server_section))
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = uiState.name,
             onValueChange = viewModel::updateName,
-            label = { Text("Name") },
-            placeholder = { Text("My Library") },
+            label = { Text(stringResource(R.string.server_name)) },
+            placeholder = { Text(stringResource(R.string.placeholder_opds_name)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -476,8 +478,8 @@ private fun OpdsForm(
         OutlinedTextField(
             value = uiState.url,
             onValueChange = viewModel::updateUrl,
-            label = { Text("OPDS URL") },
-            placeholder = { Text("https://your-server.com/opds") },
+            label = { Text(stringResource(R.string.opds_url)) },
+            placeholder = { Text(stringResource(R.string.placeholder_opds_url)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             shape = RoundedCornerShape(12.dp),
@@ -488,7 +490,7 @@ private fun OpdsForm(
 
         // OPDS Credentials
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionHeader(icon = Icons.Default.Lock, title = "OPDS Credentials")
+            SectionHeader(icon = Icons.Default.Lock, title = stringResource(R.string.opds_credentials))
             Spacer(modifier = Modifier.width(8.dp))
             EncryptedBadge()
         }
@@ -497,7 +499,7 @@ private fun OpdsForm(
         OutlinedTextField(
             value = uiState.opdsUsername,
             onValueChange = viewModel::updateOpdsUsername,
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.username)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -506,7 +508,7 @@ private fun OpdsForm(
         OutlinedTextField(
             value = uiState.opdsPassword,
             onValueChange = viewModel::updateOpdsPassword,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -517,14 +519,14 @@ private fun OpdsForm(
         TestConnectionButton(
             result = uiState.opdsTestResult,
             onClick = viewModel::testOpdsConnection,
-            label = "Test OPDS"
+            label = stringResource(R.string.test_opds)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         // Kosync (optional)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionHeader(icon = Icons.Default.Sync, title = "Kosync Credentials")
+            SectionHeader(icon = Icons.Default.Sync, title = stringResource(R.string.kosync_credentials))
             Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
@@ -532,7 +534,7 @@ private fun OpdsForm(
                     .background(MaterialTheme.colorScheme.tertiaryContainer)
             ) {
                 Text(
-                    text = "OPTIONAL",
+                    text = stringResource(R.string.optional_badge),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary,
@@ -541,7 +543,7 @@ private fun OpdsForm(
             }
         }
         Text(
-            text = "For reading progress sync across devices",
+            text = stringResource(R.string.kosync_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -550,7 +552,7 @@ private fun OpdsForm(
         OutlinedTextField(
             value = uiState.kosyncUsername,
             onValueChange = viewModel::updateKosyncUsername,
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.username)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -559,7 +561,7 @@ private fun OpdsForm(
         OutlinedTextField(
             value = uiState.kosyncPassword,
             onValueChange = viewModel::updateKosyncPassword,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -570,7 +572,7 @@ private fun OpdsForm(
         TestConnectionButton(
             result = uiState.kosyncTestResult,
             onClick = viewModel::testKosyncConnection,
-            label = "Test Kosync"
+            label = stringResource(R.string.test_kosync)
         )
 
         uiState.validationError?.let { error ->
@@ -600,7 +602,7 @@ private fun OpdsForm(
                 )
             } else {
                 Text(
-                    text = if (uiState.isEditing) "UPDATE SERVER" else "SAVE SERVER",
+                    text = if (uiState.isEditing) stringResource(R.string.update_server) else stringResource(R.string.save_server),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -617,7 +619,7 @@ private fun EncryptedBadge() {
             .background(MaterialTheme.colorScheme.primaryContainer)
     ) {
         Text(
-            text = "ENCRYPTED",
+            text = stringResource(R.string.encrypted_badge),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,

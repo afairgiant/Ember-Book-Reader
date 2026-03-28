@@ -36,11 +36,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.R
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,10 +56,10 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reading Statistics", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.stats_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -101,7 +103,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Day Streak",
+                                text = stringResource(R.string.day_streak),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -129,7 +131,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "All Time",
+                                text = stringResource(R.string.all_time),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -144,9 +146,9 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TimeCard("Today", stats.todaySeconds, Modifier.weight(1f))
-                    TimeCard("This Week", stats.weekSeconds, Modifier.weight(1f))
-                    TimeCard("This Month", stats.monthSeconds, Modifier.weight(1f))
+                    TimeCard(stringResource(R.string.today), stats.todaySeconds, Modifier.weight(1f))
+                    TimeCard(stringResource(R.string.this_week), stats.weekSeconds, Modifier.weight(1f))
+                    TimeCard(stringResource(R.string.this_month), stats.monthSeconds, Modifier.weight(1f))
                 }
             }
 

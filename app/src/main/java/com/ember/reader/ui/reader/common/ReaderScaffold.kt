@@ -35,8 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.ember.reader.R
 import kotlin.math.roundToInt
 import org.readium.r2.shared.publication.Locator
 
@@ -107,7 +109,7 @@ private fun ReaderTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onNavigateBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
         }
         Text(
             text = title,
@@ -117,19 +119,19 @@ private fun ReaderTopBar(
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onOpenSearch) {
-            Icon(Icons.Default.Search, contentDescription = "Search")
+            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_cd))
         }
         IconButton(onClick = onOpenTableOfContents) {
-            Icon(Icons.Default.FormatListBulleted, contentDescription = "Table of Contents")
+            Icon(Icons.Default.FormatListBulleted, contentDescription = stringResource(R.string.table_of_contents_cd))
         }
         IconButton(onClick = onToggleBookmark) {
             Icon(
                 if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                contentDescription = "Bookmark"
+                contentDescription = stringResource(R.string.bookmark_cd)
             )
         }
         IconButton(onClick = onOpenPreferences) {
-            Icon(Icons.Default.Settings, contentDescription = "Reader Settings")
+            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.reader_settings_cd))
         }
     }
 }

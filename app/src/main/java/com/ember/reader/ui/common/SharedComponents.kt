@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ember.reader.R
 
 @Composable
 fun LoadingScreen(modifier: Modifier = Modifier) {
@@ -31,7 +33,7 @@ fun ErrorScreen(message: String, modifier: Modifier = Modifier, onRetry: (() -> 
             if (onRetry != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.retry))
                 }
             }
         }

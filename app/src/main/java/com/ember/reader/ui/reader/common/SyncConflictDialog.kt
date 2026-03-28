@@ -3,6 +3,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import kotlin.math.roundToInt
 
 @Composable
@@ -13,7 +15,7 @@ fun SyncConflictDialog(
 ) {
     AlertDialog(
         onDismissRequest = onKeepLocal,
-        title = { Text("Sync Conflict") },
+        title = { Text(stringResource(R.string.sync_conflict_title)) },
         text = {
             val deviceInfo = conflict.remoteDevice?.let { " from $it" } ?: ""
             Text(
@@ -25,12 +27,12 @@ fun SyncConflictDialog(
         },
         confirmButton = {
             TextButton(onClick = onAcceptRemote) {
-                Text("Jump to server position")
+                Text(stringResource(R.string.jump_to_server))
             }
         },
         dismissButton = {
             TextButton(onClick = onKeepLocal) {
-                Text("Keep local position")
+                Text(stringResource(R.string.keep_local))
             }
         }
     )

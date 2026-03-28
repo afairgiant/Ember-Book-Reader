@@ -57,6 +57,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.ember.reader.R
 import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -94,7 +96,7 @@ fun BookDetailScreen(
                 title = { },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -204,7 +206,7 @@ fun BookDetailScreen(
                                 trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                             )
                             Text(
-                                text = "${(pct * 100).roundToInt()}% complete",
+                                text = stringResource(R.string.percent_complete, (pct * 100).roundToInt()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
@@ -235,9 +237,9 @@ fun BookDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             val buttonText = if (progress?.percentage?.let { it > 0f } == true) {
-                                "Continue Reading"
+                                stringResource(R.string.continue_reading_button)
                             } else {
-                                "Start Reading"
+                                stringResource(R.string.start_reading)
                             }
                             Text(buttonText)
                         }
@@ -262,7 +264,7 @@ fun BookDetailScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (downloading) "Downloading..." else "Download")
+                            Text(if (downloading) stringResource(R.string.downloading) else stringResource(R.string.download))
                         }
                     }
                 }
@@ -292,7 +294,7 @@ fun BookDetailScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("View on Grimmory")
+                        Text(stringResource(R.string.view_on_grimmory))
                     }
                 }
 
@@ -310,7 +312,7 @@ fun BookDetailScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Read Status",
+                                text = stringResource(R.string.read_status),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -346,7 +348,7 @@ fun BookDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Description",
+                                    text = stringResource(R.string.description_label),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -374,32 +376,32 @@ fun BookDetailScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Details",
+                            text = stringResource(R.string.details_label),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        InfoRow("Format", currentBook.format.name)
-                        currentBook.author?.let { InfoRow("Author", it) }
-                        currentBook.publisher?.let { InfoRow("Publisher", it) }
-                        currentBook.series?.let { InfoRow("Series", it) }
+                        InfoRow(stringResource(R.string.info_format), currentBook.format.name)
+                        currentBook.author?.let { InfoRow(stringResource(R.string.info_author), it) }
+                        currentBook.publisher?.let { InfoRow(stringResource(R.string.info_publisher), it) }
+                        currentBook.series?.let { InfoRow(stringResource(R.string.info_series), it) }
                         currentBook.seriesIndex?.let {
                             val idx = if (it == it.toLong().toFloat()) "${it.toLong()}" else "$it"
-                            InfoRow("Volume", idx)
+                            InfoRow(stringResource(R.string.info_volume), idx)
                         }
-                        currentBook.language?.let { InfoRow("Language", it.uppercase()) }
-                        currentBook.pageCount?.let { InfoRow("Pages", "$it") }
-                        currentBook.publishedDate?.let { InfoRow("Published", it) }
-                        currentBook.subjects?.let { InfoRow("Subjects", it) }
+                        currentBook.language?.let { InfoRow(stringResource(R.string.info_language), it.uppercase()) }
+                        currentBook.pageCount?.let { InfoRow(stringResource(R.string.info_pages), "$it") }
+                        currentBook.publishedDate?.let { InfoRow(stringResource(R.string.info_published), it) }
+                        currentBook.subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
                         if (currentBook.isDownloaded) {
-                            InfoRow("Status", "Downloaded")
+                            InfoRow(stringResource(R.string.info_status), stringResource(R.string.status_downloaded))
                         } else if (currentBook.downloadUrl != null) {
-                            InfoRow("Status", "Available on server")
+                            InfoRow(stringResource(R.string.info_status), stringResource(R.string.status_available))
                         } else {
-                            InfoRow("Status", "Local file")
+                            InfoRow(stringResource(R.string.info_status), stringResource(R.string.status_local))
                         }
-                        currentServer?.let { InfoRow("Server", it.name) }
+                        currentServer?.let { InfoRow(stringResource(R.string.info_server), it.name) }
                     }
                 }
 
