@@ -125,7 +125,8 @@ class GrimmoryAppClient @Inject constructor(
         page: Int = 0,
         size: Int = 50
     ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
-        val encodedName = java.net.URLEncoder.encode(seriesName, "UTF-8")
+        // URLEncoder uses + for spaces (query string convention), but path segments need %20
+        val encodedName = java.net.URLEncoder.encode(seriesName, "UTF-8").replace("+", "%20")
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/series/$encodedName/books") {
             header("Authorization", "Bearer $token")
             parameter("page", page)
