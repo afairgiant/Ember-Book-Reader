@@ -1,4 +1,207 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ember</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Retry</string>
+    <string name="search">Search</string>
+    <string name="delete">Delete</string>
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+
+    <!-- Navigation tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_library">Library</string>
+    <string name="tab_profile">Profile</string>
+
+    <!-- Home / Server List -->
+    <string name="home_title">Ember</string>
+    <string name="continue_reading">Continue Reading</string>
+    <string name="add_server">Add Server</string>
+    <string name="settings">Settings</string>
+
+    <!-- Library -->
+    <string name="library_title">Library</string>
+    <string name="search_books">Search books&#8230;</string>
+    <string name="close_search">Close search</string>
+    <string name="no_books_yet">No books yet</string>
+    <string name="no_books_hint">Download from a server or tap + to import</string>
+    <string name="import_book">Import Book</string>
+    <string name="filter_all">All</string>
+    <string name="filter_server">Server</string>
+    <string name="filter_local">Local</string>
+    <string name="select_all">All</string>
+    <string name="clear_selection">Clear</string>
+    <string name="sync_count">Sync %d</string>
+    <string name="delete_count">Delete %d</string>
+    <string name="source_server">Server</string>
+    <string name="source_local">Local</string>
+    <string name="pull_progress">Pull Progress</string>
+    <string name="push_progress">Push Progress</string>
+    <string name="relink_to_server">Relink to Server</string>
+    <string name="more_options">More</string>
+    <string name="no_books_found">No books found</string>
+    <string name="toggle_view">Toggle view</string>
+
+    <!-- Delete confirmation -->
+    <string name="delete_book_title">Delete Book</string>
+    <string name="delete_book_message">Remove \"%1$s\" from your library? The file will be deleted from your device.</string>
+    <string name="delete_books_title">Delete %d Books</string>
+    <string name="delete_books_message">Remove %d book(s) from your library? The files will be deleted from your device.</string>
+    <string name="delete_all">Delete All</string>
+
+    <!-- Relink dialog -->
+    <string name="relink_title">Relink to Server</string>
+    <string name="relink_prompt">Choose a server to search for this book:</string>
+
+    <!-- Catalog -->
+    <string name="catalog_title">Catalog</string>
+    <string name="search_catalog">Search catalog&#8230;</string>
+
+    <!-- Server Form -->
+    <string name="edit_server">Edit Server</string>
+    <string name="add_grimmory_server">Add Grimmory Server</string>
+    <string name="add_opds_server">Add OPDS Server</string>
+    <string name="what_type_of_server">What type of server?</string>
+    <string name="grimmory">Grimmory</string>
+    <string name="grimmory_description">Connect to a Grimmory (Booklore) server with full sync support</string>
+    <string name="other_opds_server">Other OPDS Server</string>
+    <string name="opds_description">Connect to any OPDS 1.2 compatible catalog with optional kosync</string>
+    <string name="server_section">Server</string>
+    <string name="server_name">Name</string>
+    <string name="server_url">Server URL</string>
+    <string name="opds_url">OPDS URL</string>
+    <string name="placeholder_grimmory_name">My Grimmory</string>
+    <string name="placeholder_opds_name">My Library</string>
+    <string name="placeholder_grimmory_url">https://your-server.com/api/v1/opds</string>
+    <string name="placeholder_opds_url">https://your-server.com/opds</string>
+    <string name="grimmory_login">Grimmory Login</string>
+    <string name="opds_credentials">OPDS Credentials</string>
+    <string name="kosync_credentials">Kosync Credentials</string>
+    <string name="encrypted_badge">ENCRYPTED</string>
+    <string name="optional_badge">OPTIONAL</string>
+    <string name="same_credentials_label">Use same credentials for OPDS &amp; Kosync</string>
+    <string name="same_credentials_hint">Grimmory manages these separately in settings</string>
+    <string name="kosync_hint">For reading progress sync across devices</string>
+    <string name="opds_username">OPDS Username</string>
+    <string name="opds_password">OPDS Password</string>
+    <string name="kosync_username">Kosync Username</string>
+    <string name="kosync_password">Kosync Password</string>
+    <string name="test_login">Test Login</string>
+    <string name="test_opds">Test OPDS</string>
+    <string name="test_kosync">Test Kosync</string>
+    <string name="update_server">UPDATE SERVER</string>
+    <string name="save_server">SAVE SERVER</string>
+
+    <!-- Book Detail -->
+    <string name="continue_reading_button">Continue Reading</string>
+    <string name="start_reading">Start Reading</string>
+    <string name="download">Download</string>
+    <string name="downloading">Downloading&#8230;</string>
+    <string name="view_on_grimmory">View on Grimmory</string>
+    <string name="read_status">Read Status</string>
+    <string name="description_label">Description</string>
+    <string name="details_label">Details</string>
+    <string name="percent_complete">%d%% complete</string>
+    <string name="info_format">Format</string>
+    <string name="info_author">Author</string>
+    <string name="info_publisher">Publisher</string>
+    <string name="info_series">Series</string>
+    <string name="info_volume">Volume</string>
+    <string name="info_language">Language</string>
+    <string name="info_pages">Pages</string>
+    <string name="info_published">Published</string>
+    <string name="info_subjects">Subjects</string>
+    <string name="info_status">Status</string>
+    <string name="info_server">Server</string>
+    <string name="status_downloaded">Downloaded</string>
+    <string name="status_available">Available on server</string>
+    <string name="status_local">Local file</string>
+
+    <!-- Reader -->
+    <string name="reader_settings">Reader Settings</string>
+    <string name="reader_settings_cd">Reader Settings</string>
+    <string name="table_of_contents">Table of Contents</string>
+    <string name="table_of_contents_cd">Table of Contents</string>
+    <string name="bookmark_cd">Bookmark</string>
+    <string name="search_cd">Search</string>
+    <string name="font_section">Font</string>
+    <string name="font_size_section">Font Size</string>
+    <string name="line_height_section">Line Height</string>
+    <string name="text_align_section">Text Align</string>
+    <string name="page_margins_section">Page Margins</string>
+    <string name="publisher_styles">Publisher Styles</string>
+    <string name="hyphenation">Hyphenation</string>
+    <string name="theme_section">Theme</string>
+    <string name="paginated_mode">Paginated Mode</string>
+    <string name="orientation_section">Orientation</string>
+    <string name="tap_zones_section">Tap Zones</string>
+    <string name="brightness_section">Brightness</string>
+    <string name="decrease">Decrease</string>
+    <string name="increase">Increase</string>
+
+    <!-- Reader: Bookmarks -->
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="no_bookmarks">No bookmarks yet</string>
+    <string name="untitled">Untitled</string>
+
+    <!-- Reader: Highlights -->
+    <string name="highlights_title">Highlights</string>
+    <string name="no_highlights">No highlights yet</string>
+
+    <!-- Reader: Search -->
+    <string name="search_in_book">Search in Book</string>
+    <string name="search_placeholder">Search&#8230;</string>
+
+    <!-- Reader: Sync Conflict -->
+    <string name="sync_conflict_title">Sync Conflict</string>
+    <string name="jump_to_server">Jump to server position</string>
+    <string name="keep_local">Keep local position</string>
+
+    <!-- Settings / Profile -->
+    <string name="profile_title">Profile</string>
+    <string name="ember_reader">Ember Reader</string>
+    <string name="servers_connected">%d server(s) connected</string>
+    <string name="connected_accounts">Connected Accounts</string>
+    <string name="reading_stats">Reading Stats</string>
+    <string name="stat_downloaded">Downloaded</string>
+    <string name="stat_reading">Reading</string>
+    <string name="stat_completed">Completed</string>
+    <string name="appearance">Appearance</string>
+    <string name="keep_screen_on">Keep screen on while reading</string>
+    <string name="auto_cleanup">Auto-cleanup old downloads</string>
+    <string name="auto_cleanup_hint">Remove server downloads older than 90 days</string>
+    <string name="auto_download_reading">Auto-download reading books</string>
+    <string name="auto_download_reading_hint">Download books marked as Reading on Grimmory during sync</string>
+    <string name="synchronization">Synchronization</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="manage_downloads">Manage Downloads</string>
+    <string name="reading_statistics">Reading Statistics</string>
+    <string name="label_opds">OPDS</string>
+    <string name="label_kosync">Kosync</string>
+    <string name="label_grimmory">Grimmory</string>
+
+    <!-- Stats -->
+    <string name="stats_title">Reading Statistics</string>
+    <string name="day_streak">Day Streak</string>
+    <string name="all_time">All Time</string>
+    <string name="today">Today</string>
+    <string name="this_week">This Week</string>
+    <string name="this_month">This Month</string>
+
+    <!-- Storage -->
+    <string name="manage_storage">Manage Storage</string>
+
+    <!-- Dev Log -->
+    <string name="dev_logs_title">Developer Logs</string>
+    <string name="scroll_to_bottom">Scroll to bottom</string>
+    <string name="copy_all">Copy all</string>
+    <string name="clear_logs">Clear logs</string>
+    <string name="no_log_entries">No log entries yet</string>
+    <string name="logs_appear_hint">Logs will appear as the app runs</string>
+    <string name="logs_copied">Logs copied to clipboard</string>
 </resources>
