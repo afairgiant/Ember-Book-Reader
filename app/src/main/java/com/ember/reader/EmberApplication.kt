@@ -52,8 +52,8 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         super.onCreate()
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
+            Timber.plant(DevLog.tree)
         }
-        Timber.plant(DevLog.tree)
         NotificationHelper.createChannels(this)
         initializeSync()
         runAutoCleanup()

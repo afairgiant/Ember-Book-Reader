@@ -46,10 +46,12 @@ object HttpClientFactory {
         install(Logging) {
             logger = object : Logger {
                 override fun log(message: String) {
+                    // Filter out Authorization headers to prevent credential leakage
+                    if (message.contains("Authorization", ignoreCase = true)) return
                     Timber.tag("HttpClient").d(message)
                 }
             }
-            level = LogLevel.HEADERS
+            level = LogLevel.INFO
         }
 
         defaultRequest {

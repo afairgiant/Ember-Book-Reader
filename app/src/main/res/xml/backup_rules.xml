@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Allow backup of books and reading progress, but exclude
+    credentials and encrypted token storage.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="ember_credentials.xml" />
+    <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__.xml" />
+    <exclude domain="database" path="ember.db-journal" />
+</full-backup-content>

@@ -62,7 +62,7 @@ class ServerRepository @Inject constructor(
 
         // Auto-login to Grimmory if credentials are provided (regardless of isGrimmory flag)
         if (server.grimmoryUsername.isNotBlank() && server.grimmoryPassword.isNotBlank()) {
-            Timber.d("Grimmory auto-login: attempting for server $id (${server.grimmoryUsername})")
+            Timber.d("Grimmory auto-login: attempting for server $id")
             grimmoryClient.login(server.url, server.grimmoryUsername, server.grimmoryPassword)
                 .onSuccess { tokens ->
                     grimmoryTokenManager.storeTokens(id, tokens)

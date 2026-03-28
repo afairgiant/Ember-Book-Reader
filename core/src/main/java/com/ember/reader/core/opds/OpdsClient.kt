@@ -91,7 +91,8 @@ class OpdsClient @Inject constructor(
         query: String,
         page: Int = 1
     ): Result<OpdsBookPage> = runCatching {
-        val searchPath = "${normalizeUrl(baseUrl)}/catalog?q=$query&page=$page"
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+        val searchPath = "${normalizeUrl(baseUrl)}/catalog?q=$encodedQuery&page=$page"
         val response = httpClient.get(searchPath) {
             header("Accept", "application/atom+xml")
             header("Authorization", basicAuth(username, password))
