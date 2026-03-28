@@ -50,7 +50,9 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
-    private val _sortOrder = MutableStateFlow(SortOrder.TITLE)
+    private val _sortOrder = MutableStateFlow(
+        if (catalogPath.contains("seriesName")) SortOrder.SERIES else SortOrder.TITLE
+    )
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
 
     private val _formatFilter = MutableStateFlow<BookFormat?>(null)
