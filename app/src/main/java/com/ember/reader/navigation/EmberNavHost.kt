@@ -25,6 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ember.reader.ui.book.BookDetailScreen
+import com.ember.reader.ui.reader.audiobook.AudiobookPlayerScreen
 import com.ember.reader.ui.catalog.CatalogScreen
 import com.ember.reader.ui.library.LibraryScreen
 import com.ember.reader.ui.library.LocalLibraryScreen
@@ -56,11 +57,13 @@ object Routes {
     const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
+    const val AUDIOBOOK_READER = "reader/audiobook/{$ARG_BOOK_ID}"
     const val BOOK_DETAIL = "book_detail/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
     const val STATS = "stats"
     const val DEV_LOG = "dev_log"
 
+    fun audiobookReader(bookId: String): String = "reader/audiobook/$bookId"
     fun bookDetail(bookId: String): String = "book_detail/$bookId"
 
     fun serverForm(serverId: Long? = null): String =
@@ -270,6 +273,13 @@ fun EmberNavHost(
                 PdfReaderScreen(onNavigateBack = { navController.popBackStack() })
             }
 
+            composable(
+                route = Routes.AUDIOBOOK_READER,
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
+            ) {
+                AudiobookPlayerScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
             // Detail: Book Detail
             composable(
                 route = Routes.BOOK_DETAIL,
@@ -311,6 +321,7 @@ private fun navigateToReader(
             navController.navigate(Routes.epubReader(bookId))
         com.ember.reader.core.model.BookFormat.PDF ->
             navController.navigate(Routes.pdfReader(bookId))
-        com.ember.reader.core.model.BookFormat.AUDIOBOOK -> {}
+        com.ember.reader.core.model.BookFormat.AUDIOBOOK ->
+            navController.navigate(Routes.audiobookReader(bookId))
     }
 }
