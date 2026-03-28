@@ -161,8 +161,9 @@ class ReaderViewModel @Inject constructor(
         pullRemoteProgressOnOpen(loadedBook, localProgress)
         pullGrimmoryProgressOnOpen(loadedBook, localProgress)
 
-        // Show tap zone hint on first open of each book
-        if (localProgress == null) {
+        // Show tap zone hint on first open of each book in Ember
+        // locatorJson is null when progress came from server sync only (never opened locally)
+        if (localProgress == null || localProgress.locatorJson == null) {
             _showTapZoneHint.value = true
         }
     }
