@@ -67,7 +67,7 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    private val _chromeVisible = MutableStateFlow(true)
+    private val _chromeVisible = MutableStateFlow(false)
     val chromeVisible: StateFlow<Boolean> = _chromeVisible.asStateFlow()
 
     private val _syncConflict = MutableStateFlow<SyncConflict?>(null)
