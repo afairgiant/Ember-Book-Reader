@@ -102,8 +102,16 @@ private val bottomNavRoutes = setOf(Routes.HOME, Routes.LOCAL_LIBRARY, Routes.PR
 @Composable
 fun EmberNavHost(
     modifier: Modifier = Modifier,
+    initialRoute: String? = null,
     navController: NavHostController = rememberNavController()
 ) {
+    // Navigate to deep link route from notification
+    androidx.compose.runtime.LaunchedEffect(initialRoute) {
+        if (initialRoute != null) {
+            navController.navigate(initialRoute)
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomNavRoutes

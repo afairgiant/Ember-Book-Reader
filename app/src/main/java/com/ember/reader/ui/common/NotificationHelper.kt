@@ -63,12 +63,23 @@ object NotificationHelper {
     fun showDownloadComplete(context: Context, bookTitle: String, bookId: String) {
         if (!hasPermission(context)) return
 
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("navigate_to", "book_detail/$bookId")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            bookId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("Download Complete")
             .setContentText(bookTitle)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(openAppIntent(context))
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
