@@ -104,6 +104,8 @@ fun LocalLibraryScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
+    var deleteBookId by remember { mutableStateOf<String?>(null) }
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Show snackbar when operation result changes
@@ -218,7 +220,7 @@ fun LocalLibraryScreen(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
-                            onClick = viewModel::deleteSelected,
+                            onClick = { showBatchDeleteConfirm = true },
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -346,7 +348,7 @@ fun LocalLibraryScreen(
                                 }
                             },
                             onLongClick = { viewModel.toggleSelection(book.id) },
-                            onDelete = { viewModel.deleteBook(book.id) },
+                            onDelete = { deleteBookId = book.id },
                             onRelink = if (book.serverId == null && servers.isNotEmpty()) {
                                 { relinkBookId = book.id }
                             } else {
@@ -393,6 +395,51 @@ fun LocalLibraryScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { relinkBookId = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Single book delete confirmation
+        deleteBookId?.let { bookId ->
+            val bookTitle = allBooks.find { it.id == bookId }?.title ?: "this book"
+            AlertDialog(
+                onDismissRequest = { deleteBookId = null },
+                title = { Text("Delete Book") },
+                text = { Text("Remove \"$bookTitle\" from your library? The file will be deleted from your device.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.deleteBook(bookId)
+                        deleteBookId = null
+                    }) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteBookId = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Batch delete confirmation
+        if (showBatchDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showBatchDeleteConfirm = false },
+                title = { Text("Delete ${selectedIds.size} Books") },
+                text = { Text("Remove ${selectedIds.size} book(s) from your library? The files will be deleted from your device.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.deleteSelected()
+                        showBatchDeleteConfirm = false
+                    }) {
+                        Text("Delete All", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBatchDeleteConfirm = false }) {
                         Text("Cancel")
                     }
                 }
