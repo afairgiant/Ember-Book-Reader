@@ -195,7 +195,7 @@ class LibraryViewModel @Inject constructor(
             .filter { "=" in it }
             .associate {
                 val (key, value) = it.split("=", limit = 2)
-                key to value
+                key to java.net.URLDecoder.decode(value, "UTF-8")
             }
         return bookRepository.refreshFromGrimmory(
             server = server,
@@ -216,7 +216,7 @@ class LibraryViewModel @Inject constructor(
             .filter { "=" in it }
             .associate {
                 val (key, value) = it.split("=", limit = 2)
-                key to value
+                key to java.net.URLDecoder.decode(value, "UTF-8")
             }
         timber.log.Timber.d("GrimmoryRefresh: catalogPath='$catalogPath' paramString='$paramString' params=$params")
         return bookRepository.refreshFromGrimmory(
