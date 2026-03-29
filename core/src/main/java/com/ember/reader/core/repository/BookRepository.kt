@@ -215,6 +215,16 @@ class BookRepository @Inject constructor(
     }
 
     suspend fun downloadBook(book: Book, server: Server): Result<Book> = runCatching {
+        val grimmoryBookId = book.grimmoryBookId
+        Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId format=${book.format}")
+
+        // For audiobooks from Grimmory, check if folder-based and handle accordingly
+        if (book.format == com.ember.reader.core.model.BookFormat.AUDIOBOOK &&
+            server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null
+        ) {
+            return@runCatching downloadAudiobook(book, server, grimmoryBookId)
+        }
+
         val downloadUrl = book.downloadUrl
             ?: error("No download URL for book: ${book.title}")
 
@@ -226,8 +236,6 @@ class BookRepository @Inject constructor(
         val fileName = "${book.id}.$extension"
         val file = File(booksDir, fileName)
 
-        val grimmoryBookId = book.grimmoryBookId
-        Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId opdsEntryId=${book.opdsEntryId} downloadUrl=$downloadUrl")
         if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
             grimmoryClient.downloadBook(
                 baseUrl = server.url,
@@ -274,6 +282,58 @@ class BookRepository @Inject constructor(
             coverUrl = metadata.coverUrl ?: book.coverUrl,
             downloadedAt = Instant.now()
         )
+    }
+
+    /**
+     * Downloads an audiobook from Grimmory. Checks if folder-based (multiple tracks)
+     * and downloads each track individually to a subfolder if so.
+     */
+    private suspend fun downloadAudiobook(book: Book, server: Server, grimmoryBookId: Long): Book {
+        val info = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId).getOrNull()
+
+        if (info != null && info.folderBased && info.tracks.isNotEmpty()) {
+            // Folder-based: download each track to a subfolder
+            val audiobookDir = File(booksDir, "audiobook_${book.id}").also { it.mkdirs() }
+            Timber.d("Downloading folder-based audiobook: ${info.tracks.size} tracks")
+
+            for (track in info.tracks) {
+                val trackFile = File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
+                if (trackFile.exists() && trackFile.length() > 0) {
+                    Timber.d("Track ${track.index} already downloaded, skipping")
+                    continue
+                }
+                val streamUrl = grimmoryClient.audiobookStreamUrl(server.url, server.id, grimmoryBookId, track.index)
+                    ?: error("Cannot build stream URL for track ${track.index}")
+                Timber.d("Downloading track ${track.index}: ${track.title ?: track.fileName}")
+                grimmoryClient.downloadFromUrl(streamUrl, trackFile).getOrThrow()
+            }
+
+            bookDao.updateLocalPath(book.id, audiobookDir.absolutePath, Instant.now())
+            return book.copy(
+                localPath = audiobookDir.absolutePath,
+                downloadedAt = Instant.now()
+            )
+        } else {
+            // Single file: download directly
+            val file = File(booksDir, "${book.id}.m4b")
+            grimmoryClient.downloadBook(server.url, server.id, grimmoryBookId, file).getOrThrow()
+
+            Timber.d("Download complete: file=${file.name} size=${file.length()}")
+            if (file.length() < 100) {
+                file.delete()
+                error("Downloaded file is too small — server may have returned an error")
+            }
+
+            val fileHash = PartialMd5.compute(file)
+            bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
+            bookDao.updateFileHash(book.id, fileHash)
+
+            return book.copy(
+                localPath = file.absolutePath,
+                fileHash = fileHash,
+                downloadedAt = Instant.now()
+            )
+        }
     }
 
     suspend fun addLocalBook(book: Book) {

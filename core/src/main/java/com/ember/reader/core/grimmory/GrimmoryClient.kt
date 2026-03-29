@@ -197,6 +197,31 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
+    suspend fun downloadFromUrl(url: String, destination: File): Result<Unit> = runCatching {
+        httpClient.prepareGet(url) {
+            timeout {
+                requestTimeoutMillis = 600_000
+                socketTimeoutMillis = 120_000
+            }
+        }.execute { response ->
+            if (!response.status.isSuccess()) {
+                error("Download failed: ${response.status}")
+            }
+            val channel = response.bodyAsChannel()
+            withContext(Dispatchers.IO) {
+                destination.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val bytesRead = channel.readAvailable(buffer)
+                        if (bytesRead > 0) {
+                            output.write(buffer, 0, bytesRead)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun audiobookCoverUrl(baseUrl: String, bookId: Long): String =
         "${serverOrigin(baseUrl)}/api/v1/audiobooks/$bookId/cover"
 

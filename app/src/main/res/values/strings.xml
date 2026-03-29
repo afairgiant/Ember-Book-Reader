@@ -102,6 +102,8 @@
     <!-- Book Detail -->
     <string name="continue_reading_button">Continue Reading</string>
     <string name="start_reading">Start Reading</string>
+    <string name="listen">Listen</string>
+    <string name="continue_listening">Continue Listening</string>
     <string name="download">Download</string>
     <string name="downloading">Downloading&#8230;</string>
     <string name="view_on_grimmory">View on Grimmory</string>
