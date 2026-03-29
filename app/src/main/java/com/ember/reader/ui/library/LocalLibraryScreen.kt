@@ -84,6 +84,7 @@ import com.ember.reader.ui.common.bookCoverColorIndex
 import kotlin.math.roundToInt
 
 enum class LibraryFilter { ALL, SERVER, LOCAL }
+enum class FormatFilter { ALL, BOOKS, AUDIOBOOKS }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -103,6 +104,7 @@ fun LocalLibraryScreen(
     val sortReversed by viewModel.sortReversed.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
+    var formatFilter by rememberSaveable { mutableStateOf(FormatFilter.ALL) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
@@ -121,16 +123,26 @@ fun LocalLibraryScreen(
     val isSelecting = selectedIds.isNotEmpty()
 
     val filteredBooks =
-        remember(allBooks, filter, sortMode, sortReversed, progressMap, searchQuery) {
+        remember(allBooks, filter, formatFilter, sortMode, sortReversed, progressMap, searchQuery) {
             val sourceFiltered = when (filter) {
                 LibraryFilter.ALL -> allBooks
                 LibraryFilter.SERVER -> allBooks.filter { it.serverId != null }
                 LibraryFilter.LOCAL -> allBooks.filter { it.serverId == null }
             }
+            val formatFiltered = when (formatFilter) {
+                FormatFilter.ALL -> sourceFiltered
+                FormatFilter.BOOKS -> sourceFiltered.filter {
+                    it.format == com.ember.reader.core.model.BookFormat.EPUB ||
+                        it.format == com.ember.reader.core.model.BookFormat.PDF
+                }
+                FormatFilter.AUDIOBOOKS -> sourceFiltered.filter {
+                    it.format == com.ember.reader.core.model.BookFormat.AUDIOBOOK
+                }
+            }
             val filtered = if (searchQuery.isBlank()) {
-                sourceFiltered
+                formatFiltered
             } else {
-                sourceFiltered.filter { book ->
+                formatFiltered.filter { book ->
                     book.title.contains(searchQuery, ignoreCase = true) ||
                         book.author?.contains(searchQuery, ignoreCase = true) == true
                 }
@@ -253,7 +265,7 @@ fun LocalLibraryScreen(
                 )
             }
 
-            // Source filter chips
+            // Format tabs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -261,18 +273,34 @@ fun LocalLibraryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
-                    selected = filter == LibraryFilter.ALL,
-                    onClick = { filter = LibraryFilter.ALL },
+                    selected = formatFilter == FormatFilter.ALL,
+                    onClick = { formatFilter = FormatFilter.ALL },
                     label = { Text(stringResource(R.string.filter_all)) }
                 )
                 FilterChip(
+                    selected = formatFilter == FormatFilter.BOOKS,
+                    onClick = { formatFilter = FormatFilter.BOOKS },
+                    label = { Text(stringResource(R.string.filter_books)) }
+                )
+                FilterChip(
+                    selected = formatFilter == FormatFilter.AUDIOBOOKS,
+                    onClick = { formatFilter = FormatFilter.AUDIOBOOKS },
+                    label = { Text(stringResource(R.string.filter_audiobooks)) }
+                )
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+                // Source filter
+                FilterChip(
                     selected = filter == LibraryFilter.SERVER,
-                    onClick = { filter = LibraryFilter.SERVER },
+                    onClick = {
+                        filter = if (filter == LibraryFilter.SERVER) LibraryFilter.ALL else LibraryFilter.SERVER
+                    },
                     label = { Text(stringResource(R.string.filter_server)) }
                 )
                 FilterChip(
                     selected = filter == LibraryFilter.LOCAL,
-                    onClick = { filter = LibraryFilter.LOCAL },
+                    onClick = {
+                        filter = if (filter == LibraryFilter.LOCAL) LibraryFilter.ALL else LibraryFilter.LOCAL
+                    },
                     label = { Text(stringResource(R.string.filter_local)) }
                 )
             }

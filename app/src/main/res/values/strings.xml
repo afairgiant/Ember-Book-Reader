@@ -34,6 +34,8 @@
     <string name="filter_all">All</string>
     <string name="filter_server">Server</string>
     <string name="filter_local">Local</string>
+    <string name="filter_books">Books</string>
+    <string name="filter_audiobooks">Audiobooks</string>
     <string name="select_all">All</string>
     <string name="clear_selection">Clear</string>
     <string name="sync_count">Sync %d</string>
