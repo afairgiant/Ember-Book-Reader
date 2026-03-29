@@ -7,6 +7,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -125,6 +126,10 @@ class GrimmoryClient @Inject constructor(
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
             header("Authorization", "Bearer $token")
+            timeout {
+                requestTimeoutMillis = 600_000 // 10 minutes for large files
+                socketTimeoutMillis = 120_000  // 2 minutes between data chunks
+            }
         }.execute { response ->
             if (!response.status.isSuccess()) {
                 error("Download failed: ${response.status}")
