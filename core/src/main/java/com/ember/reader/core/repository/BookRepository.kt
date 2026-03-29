@@ -164,12 +164,18 @@ class BookRepository @Inject constructor(
                 else -> BookFormat.EPUB
             }
 
+            val coverUrl = if (format == BookFormat.AUDIOBOOK) {
+                "$origin/api/v1/audiobooks/${appBook.id}/cover"
+            } else {
+                "$origin/api/v1/media/book/${appBook.id}/cover"
+            }
+
             if (existing != null) {
                 bookDao.update(
                     existing.copy(
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
-                        coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                        coverUrl = coverUrl,
                         downloadUrl = "/api/v1/opds/${appBook.id}/download"
                     )
                 )
@@ -181,7 +187,7 @@ class BookRepository @Inject constructor(
                     opdsEntryId = opdsEntryId,
                     title = appBook.title,
                     author = appBook.authors.firstOrNull(),
-                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                    coverUrl = coverUrl,
                     downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     format = format,
                     addedAt = Instant.now()

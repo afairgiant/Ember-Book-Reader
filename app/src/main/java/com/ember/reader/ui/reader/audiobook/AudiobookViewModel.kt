@@ -180,6 +180,7 @@ class AudiobookViewModel @Inject constructor(
         server: com.ember.reader.core.model.Server?,
         info: AudiobookInfo?,
     ): List<MediaItem> {
+        val artworkUri = book.coverUrl?.let { Uri.parse(it) }
         // Downloaded folder-based audiobook: play from local track files
         val localPath = book.localPath
         if (book.isDownloaded && localPath != null) {
@@ -198,6 +199,7 @@ class AudiobookViewModel @Inject constructor(
                                 MediaMetadata.Builder()
                                     .setTitle(file.nameWithoutExtension)
                                     .setArtist(book.author)
+                                    .setArtworkUri(artworkUri)
                                     .build()
                             )
                             .build()
@@ -213,6 +215,7 @@ class AudiobookViewModel @Inject constructor(
                         MediaMetadata.Builder()
                             .setTitle(book.title)
                             .setArtist(book.author)
+                            .setArtworkUri(artworkUri)
                             .build()
                     )
                     .build()
@@ -234,6 +237,7 @@ class AudiobookViewModel @Inject constructor(
                         MediaMetadata.Builder()
                             .setTitle(track.title ?: track.fileName)
                             .setArtist(book.author)
+                            .setArtworkUri(artworkUri)
                             .build()
                     )
                     .build()
