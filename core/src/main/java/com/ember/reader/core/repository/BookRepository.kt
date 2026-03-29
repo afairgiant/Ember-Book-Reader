@@ -10,6 +10,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.model.DownloadProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.opds.OpdsBookPage
@@ -214,7 +215,11 @@ class BookRepository @Inject constructor(
         )
     }
 
-    suspend fun downloadBook(book: Book, server: Server): Result<Book> = runCatching {
+    suspend fun downloadBook(
+        book: Book,
+        server: Server,
+        onProgress: ((DownloadProgress) -> Unit)? = null,
+    ): Result<Book> = runCatching {
         val grimmoryBookId = book.grimmoryBookId
         Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId format=${book.format}")
 
@@ -222,7 +227,7 @@ class BookRepository @Inject constructor(
         if (book.format == com.ember.reader.core.model.BookFormat.AUDIOBOOK &&
             server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null
         ) {
-            return@runCatching downloadAudiobook(book, server, grimmoryBookId)
+            return@runCatching downloadAudiobook(book, server, grimmoryBookId, onProgress)
         }
 
         val downloadUrl = book.downloadUrl
@@ -241,7 +246,12 @@ class BookRepository @Inject constructor(
                 baseUrl = server.url,
                 serverId = server.id,
                 grimmoryBookId = grimmoryBookId,
-                destination = file
+                destination = file,
+                onProgress = onProgress?.let { callback ->
+                    { bytesRead, totalBytes ->
+                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
+                    }
+                },
             ).getOrThrow()
         } else {
             opdsClient.downloadBookToFile(
@@ -249,7 +259,12 @@ class BookRepository @Inject constructor(
                 username = server.opdsUsername,
                 password = server.opdsPassword,
                 downloadPath = downloadUrl,
-                destination = file
+                destination = file,
+                onProgress = onProgress?.let { callback ->
+                    { bytesRead, totalBytes ->
+                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
+                    }
+                },
             ).getOrThrow()
         }
 
@@ -288,7 +303,12 @@ class BookRepository @Inject constructor(
      * Downloads an audiobook from Grimmory. Checks if folder-based (multiple tracks)
      * and downloads each track individually to a subfolder if so.
      */
-    private suspend fun downloadAudiobook(book: Book, server: Server, grimmoryBookId: Long): Book {
+    private suspend fun downloadAudiobook(
+        book: Book,
+        server: Server,
+        grimmoryBookId: Long,
+        onProgress: ((DownloadProgress) -> Unit)? = null,
+    ): Book {
         val infoResult = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
         infoResult.onFailure { error ->
             Timber.e(error, "Audiobook download: failed to fetch audiobook info for grimmoryBookId=%d", grimmoryBookId)
@@ -302,16 +322,33 @@ class BookRepository @Inject constructor(
             val audiobookDir = File(booksDir, "audiobook_${book.id}").also { it.mkdirs() }
             Timber.d("Downloading folder-based audiobook: ${tracks.size} tracks to ${audiobookDir.name}")
 
+            val totalBytes = tracks.sumOf { it.fileSizeBytes }
+            var completedBytes = 0L
+
             for (track in tracks) {
                 val trackFile = File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
                 if (trackFile.exists() && trackFile.length() > 0) {
                     Timber.d("Track ${track.index} already downloaded, skipping")
+                    completedBytes += trackFile.length()
                     continue
                 }
                 val streamUrl = grimmoryClient.audiobookStreamUrl(server.url, server.id, grimmoryBookId, track.index)
                     ?: error("Cannot build stream URL for track ${track.index}")
                 Timber.d("Downloading track ${track.index}: ${track.title ?: track.fileName}")
-                grimmoryClient.downloadFromUrl(streamUrl, trackFile).getOrThrow()
+                val trackCompletedBytes = completedBytes
+                grimmoryClient.downloadFromUrl(streamUrl, trackFile) { bytesRead, trackTotalBytes ->
+                    onProgress?.invoke(
+                        DownloadProgress(
+                            bytesDownloaded = trackCompletedBytes + bytesRead,
+                            totalBytes = if (totalBytes > 0) totalBytes else null,
+                            trackIndex = track.index,
+                            trackCount = tracks.size,
+                            trackBytesDownloaded = bytesRead,
+                            trackTotalBytes = trackTotalBytes,
+                        )
+                    )
+                }.getOrThrow()
+                completedBytes += trackFile.length()
             }
 
             bookDao.updateLocalPath(book.id, audiobookDir.absolutePath, Instant.now())
@@ -322,7 +359,14 @@ class BookRepository @Inject constructor(
         } else {
             // Single file: download directly
             val file = File(booksDir, "${book.id}.m4b")
-            grimmoryClient.downloadBook(server.url, server.id, grimmoryBookId, file).getOrThrow()
+            grimmoryClient.downloadBook(
+                server.url, server.id, grimmoryBookId, file,
+                onProgress = onProgress?.let { callback ->
+                    { bytesRead, totalBytes ->
+                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
+                    }
+                },
+            ).getOrThrow()
 
             Timber.d("Download complete: file=${file.name} size=${file.length()}")
             if (file.length() < 100) {
