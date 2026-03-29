@@ -14,7 +14,7 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
-import com.ember.reader.ui.common.NotificationHelper
+import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -81,6 +81,18 @@ class BookDetailViewModel @Inject constructor(
                 book?.serverId?.let { loadServer(it) }
             }
         }
+        viewModelScope.launch {
+            DownloadService.downloadingBookIds.collect { ids ->
+                val bookVal = _book.value
+                _downloading.value = bookVal != null && bookVal.id in ids
+                // Refresh book state when download finishes
+                if (bookVal != null && bookVal.id !in ids && !bookVal.isDownloaded) {
+                    bookRepository.getById(bookVal.id)?.let { refreshed ->
+                        if (refreshed.isDownloaded) _book.value = refreshed
+                    }
+                }
+            }
+        }
     }
 
     private suspend fun loadServer(serverId: Long) {
@@ -112,20 +124,9 @@ class BookDetailViewModel @Inject constructor(
     fun downloadBook() {
         val book = _book.value ?: return
         val server = _server.value ?: return
-        if (book.isDownloaded || _downloading.value) return
+        if (book.isDownloaded) return
 
-        _downloading.value = true
-        viewModelScope.launch {
-            bookRepository.downloadBook(book, server).onSuccess { downloadedBook ->
-                _book.value = downloadedBook
-                pullProgressAfterDownload(downloadedBook, server)
-                NotificationHelper.showDownloadComplete(context, book.title, book.id)
-                _message.value = "Downloaded successfully"
-            }.onFailure {
-                _message.value = "Download failed: ${it.message}"
-            }
-            _downloading.value = false
-        }
+        DownloadService.start(context, book.id, server.id)
     }
 
     private suspend fun pullProgressAfterDownload(book: Book, server: Server) {

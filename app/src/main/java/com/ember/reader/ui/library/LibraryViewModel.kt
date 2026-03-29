@@ -12,7 +12,7 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
-import com.ember.reader.ui.common.NotificationHelper
+import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -61,7 +61,7 @@ class LibraryViewModel @Inject constructor(
     private val _downloadedOnly = MutableStateFlow(false)
     val downloadedOnly: StateFlow<Boolean> = _downloadedOnly.asStateFlow()
 
-    private val _downloadingBooks = MutableStateFlow<Set<String>>(emptySet())
+    val downloadingBooks: StateFlow<Set<String>> = DownloadService.downloadingBookIds
 
     // When viewing a subcategory (series, shelf, etc.), only show books from that fetch
     private val isSubcategory = catalogPath.contains("?") || catalogPath.contains("recent") || catalogPath.contains("surprise")
@@ -87,7 +87,7 @@ class LibraryViewModel @Inject constructor(
 
     val uiState: StateFlow<LibraryUiState> = combine(
         bookRepository.observeByServer(serverId),
-        _downloadingBooks,
+        downloadingBooks,
         _searchQuery,
         combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
         combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded }
@@ -275,49 +275,9 @@ class LibraryViewModel @Inject constructor(
 
     fun downloadBook(book: Book) {
         val currentServer = server ?: return
-        _downloadingBooks.update { it + book.id }
-        viewModelScope.launch {
-            bookRepository.downloadBook(book, currentServer).onSuccess { downloadedBook ->
-                pullProgressAfterDownload(downloadedBook, currentServer)
-                NotificationHelper.showDownloadComplete(context, book.title, book.id)
-            }
-            _downloadingBooks.update { it - book.id }
-        }
+        DownloadService.start(context, book.id, currentServer.id)
     }
 
-    private suspend fun pullProgressAfterDownload(book: Book, server: Server) {
-        // Try Grimmory API
-        val grimmoryBookId = book.grimmoryBookId
-        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            runCatching {
-                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-                val rawPct = detail.readProgress
-                if (rawPct != null && rawPct > 0f) {
-                    val pct = if (rawPct > 1f) rawPct / 100f else rawPct
-                    readingProgressRepository.applyRemoteProgress(
-                        com.ember.reader.core.model.ReadingProgress(
-                            bookId = book.id,
-                            serverId = server.id,
-                            percentage = pct,
-                            lastReadAt = java.time.Instant.now(),
-                            syncedAt = java.time.Instant.now(),
-                            needsSync = false
-                        )
-                    )
-                    return
-                }
-            }
-        }
-
-        // Fall back to kosync
-        val fileHash = book.fileHash
-        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
-            val remote = readingProgressRepository.pullProgress(server, book.id, fileHash).getOrNull()
-            if (remote != null) {
-                readingProgressRepository.applyRemoteProgress(remote.progress)
-            }
-        }
-    }
 }
 
 sealed interface LibraryUiState {
