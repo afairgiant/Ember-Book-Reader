@@ -128,11 +128,13 @@ class SyncWorker @AssistedInject constructor(
                 val percentage = if (rawPct > 1f) rawPct / 100f else rawPct
                 serverProgress[summary.id] = percentage
 
-                // Pull if server is ahead of local
+                // Pull if server is meaningfully ahead of local
                 val localBook = downloadedBooks.find { it.grimmoryBookId == summary.id }
                 if (localBook != null) {
                     val localProgress = readingProgressRepository.getByBookId(localBook.id)
-                    if (localProgress == null || percentage > localProgress.percentage + 0.005f) {
+                    val localPct = localProgress?.percentage ?: 0f
+                    // Only pull if server is at least 1% ahead — avoids counting rounding diffs
+                    if (percentage > localPct + 0.01f) {
                         readingProgressRepository.applyRemoteProgress(
                             com.ember.reader.core.model.ReadingProgress(
                                 bookId = localBook.id,
@@ -144,7 +146,7 @@ class SyncWorker @AssistedInject constructor(
                             )
                         )
                         syncPulled++
-                        Timber.d("SyncWorker: pulled Grimmory progress for ${localBook.title}: ${(percentage * 100).toInt()}%")
+                        Timber.d("SyncWorker: pulled Grimmory progress for ${localBook.title}: ${(percentage * 100).toInt()}% (local was ${(localPct * 100).toInt()}%)")
                     }
                 }
             }
@@ -160,7 +162,8 @@ class SyncWorker @AssistedInject constructor(
 
             val serverPct = serverProgress[grimmoryBookId] ?: 0f
             // Only push if local is meaningfully ahead (>0.5% difference)
-            if (progress.percentage <= serverPct + 0.005f) continue
+            // Only push if local is at least 1% ahead of server
+            if (progress.percentage <= serverPct + 0.01f) continue
 
             runCatching {
                 val pct = kotlin.math.round(progress.percentage * 1000f) / 10f
