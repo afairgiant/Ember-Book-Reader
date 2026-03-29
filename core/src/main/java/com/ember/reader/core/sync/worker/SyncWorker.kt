@@ -87,7 +87,8 @@ class SyncWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    private fun showSyncNotification() {
+    private suspend fun showSyncNotification() {
+        if (!appPreferencesRepository.getSyncNotifications()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {

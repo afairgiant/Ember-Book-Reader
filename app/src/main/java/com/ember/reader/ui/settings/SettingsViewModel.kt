@@ -47,6 +47,9 @@ class SettingsViewModel @Inject constructor(
     val autoDownloadReading: StateFlow<Boolean> = appPreferencesRepository.autoDownloadReadingFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val syncNotifications: StateFlow<Boolean> = appPreferencesRepository.syncNotificationsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -90,6 +93,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateAutoDownloadReading(enabled: Boolean) {
         viewModelScope.launch { appPreferencesRepository.updateAutoDownloadReading(enabled) }
+    }
+
+    fun updateSyncNotifications(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateSyncNotifications(enabled) }
     }
 
     fun syncNow() {

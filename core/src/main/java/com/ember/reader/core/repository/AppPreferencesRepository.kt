@@ -34,6 +34,7 @@ class AppPreferencesRepository @Inject constructor(
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
+        val SYNC_NOTIFICATIONS = booleanPreferencesKey("sync_notifications")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -77,6 +78,18 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateAutoDownloadReading(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.AUTO_DOWNLOAD_READING] = enabled
+        }
+    }
+
+    val syncNotificationsFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.SYNC_NOTIFICATIONS] ?: true }
+
+    suspend fun getSyncNotifications(): Boolean =
+        context.appPreferencesDataStore.data.map { it[Keys.SYNC_NOTIFICATIONS] ?: true }.first()
+
+    suspend fun updateSyncNotifications(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.SYNC_NOTIFICATIONS] = enabled
         }
     }
 

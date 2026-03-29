@@ -199,6 +199,9 @@
     <string name="auto_download_reading">Auto-download reading books</string>
     <string name="auto_download_reading_hint">Download books marked as Reading on Grimmory during sync</string>
     <string name="synchronization">Synchronization</string>
+    <string name="notifications_section">Notifications</string>
+    <string name="sync_notifications_label">Sync notifications</string>
+    <string name="sync_notifications_hint">Show a notification when reading progress is synced</string>
     <string name="sync_now">Sync Now</string>
     <string name="manage_downloads">Manage Downloads</string>
     <string name="reading_statistics">Reading Statistics</string>

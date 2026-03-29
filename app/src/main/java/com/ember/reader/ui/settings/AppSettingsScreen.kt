@@ -55,6 +55,7 @@ fun AppSettingsScreen(
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
+    val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -166,6 +167,22 @@ fun AppSettingsScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.manage_downloads))
             }
+
+            // Notifications
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = stringResource(R.string.notifications_section),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingToggle(
+                label = stringResource(R.string.sync_notifications_label),
+                description = stringResource(R.string.sync_notifications_hint),
+                checked = syncNotifications,
+                onCheckedChange = { viewModel.updateSyncNotifications(it) }
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
         }
