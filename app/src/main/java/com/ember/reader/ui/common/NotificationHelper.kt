@@ -20,6 +20,8 @@ object NotificationHelper {
     private const val CHANNEL_SYNC = "ember_sync"
     private const val CHANNEL_ACTIVITY = "ember_activity"
 
+    const val NOTIFICATION_ID_DOWNLOAD_PROGRESS = 9001
+
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -165,6 +167,63 @@ object NotificationHelper {
             .build()
 
         NotificationManagerCompat.from(context).notify("sync_error_$serverName".hashCode(), notification)
+    }
+
+    fun buildDownloadProgressNotification(
+        context: Context,
+        bookTitle: String,
+        cancelIntent: PendingIntent,
+    ): android.app.Notification {
+        return NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Downloading \"$bookTitle\"")
+            .setContentText("Starting download...")
+            .setProgress(100, 0, true)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
+            .build()
+    }
+
+    fun updateDownloadProgress(
+        context: Context,
+        bookTitle: String,
+        progress: Int,
+        progressText: String,
+        cancelIntent: PendingIntent,
+    ) {
+        if (!hasPermission(context)) return
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Downloading \"$bookTitle\"")
+            .setContentText(progressText)
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_DOWNLOAD_PROGRESS, notification)
+    }
+
+    fun showDownloadFailed(context: Context, bookTitle: String) {
+        if (!hasPermission(context)) return
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle("Download Failed")
+            .setContentText(bookTitle)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(openAppIntent(context))
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(context).notify("download_error".hashCode(), notification)
+    }
+
+    fun dismissDownloadProgress(context: Context) {
+        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID_DOWNLOAD_PROGRESS)
     }
 
     private fun hasPermission(context: Context): Boolean {
