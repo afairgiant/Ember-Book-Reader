@@ -13,6 +13,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
+import io.ktor.http.contentLength
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
@@ -122,26 +123,31 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long,
-        destination: File
+        destination: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
         httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
             header("Authorization", "Bearer $token")
             timeout {
-                requestTimeoutMillis = 600_000 // 10 minutes for large files
-                socketTimeoutMillis = 120_000  // 2 minutes between data chunks
+                requestTimeoutMillis = 600_000
+                socketTimeoutMillis = 120_000
             }
         }.execute { response ->
             if (!response.status.isSuccess()) {
                 error("Download failed: ${response.status}")
             }
+            val totalBytes = response.contentLength()
             val channel = response.bodyAsChannel()
             withContext(Dispatchers.IO) {
                 destination.outputStream().use { output ->
                     val buffer = ByteArray(8192)
+                    var downloaded = 0L
                     while (!channel.isClosedForRead) {
-                        val bytesRead = channel.readAvailable(buffer)
-                        if (bytesRead > 0) {
-                            output.write(buffer, 0, bytesRead)
+                        val bytes = channel.readAvailable(buffer)
+                        if (bytes > 0) {
+                            output.write(buffer, 0, bytes)
+                            downloaded += bytes
+                            onProgress?.invoke(downloaded, totalBytes)
                         }
                     }
                 }
@@ -197,7 +203,11 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
-    suspend fun downloadFromUrl(url: String, destination: File): Result<Unit> = runCatching {
+    suspend fun downloadFromUrl(
+        url: String,
+        destination: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
+    ): Result<Unit> = runCatching {
         httpClient.prepareGet(url) {
             timeout {
                 requestTimeoutMillis = 600_000
@@ -207,14 +217,18 @@ class GrimmoryClient @Inject constructor(
             if (!response.status.isSuccess()) {
                 error("Download failed: ${response.status}")
             }
+            val totalBytes = response.contentLength()
             val channel = response.bodyAsChannel()
             withContext(Dispatchers.IO) {
                 destination.outputStream().use { output ->
                     val buffer = ByteArray(8192)
+                    var downloaded = 0L
                     while (!channel.isClosedForRead) {
-                        val bytesRead = channel.readAvailable(buffer)
-                        if (bytesRead > 0) {
-                            output.write(buffer, 0, bytesRead)
+                        val bytes = channel.readAvailable(buffer)
+                        if (bytes > 0) {
+                            output.write(buffer, 0, bytes)
+                            downloaded += bytes
+                            onProgress?.invoke(downloaded, totalBytes)
                         }
                     }
                 }
