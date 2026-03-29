@@ -24,6 +24,7 @@ import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
+import org.readium.adapter.pdfium.navigator.PdfiumPreferences
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
@@ -87,6 +88,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
 
     var showBookmarks by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
+    var navigator by remember { mutableStateOf<PdfNavigatorFragment<*, *>?>(null) }
     val scope = rememberCoroutineScope()
 
     when (val state = uiState) {
@@ -116,12 +118,16 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         publication = state.publication,
                         pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
-                        initialLocator = state.initialLocator
+                        initialLocator = state.initialLocator,
+                        initialPreferences = PdfiumPreferences(pageSpacing = 16.0)
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
                     },
-                    onLocatorChanged = viewModel::onLocatorChanged
+                    onLocatorChanged = viewModel::onLocatorChanged,
+                    onNavigatorReady = { fragment ->
+                        navigator = fragment as? PdfNavigatorFragment<*, *>
+                    }
                 )
             }
 
