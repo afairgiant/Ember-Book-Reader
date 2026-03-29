@@ -334,19 +334,15 @@ class ReaderViewModel @Inject constructor(
     }
 
     private suspend fun saveProgress(locator: Locator) {
-        // For PDFs, calculate page-based progress: (currentPage + 1) / totalPages
-        // Readium's totalProgression for PDF gives start-of-page position which
-        // means the last page of a 2-page PDF shows 50% instead of 100%
+        // For PDFs, use page-based progress since totalProgression reports
+        // the start of the current page (last page of 2 = 50% instead of 100%)
         val percentage = if (book?.format == com.ember.reader.core.model.BookFormat.PDF) {
             val position = locator.locations.position
-            val totalPages = publication?.readingOrder?.size ?: 1
-            val totalProg = locator.locations.totalProgression
-            Timber.d("PDF progress: position=$position totalPages=$totalPages totalProgression=$totalProg href=${locator.href}")
-            if (position != null && totalPages > 0) {
+            val totalPages = publication?.metadata?.numberOfPages
+            if (position != null && totalPages != null && totalPages > 0) {
                 ((position + 1).toFloat() / totalPages).coerceIn(0f, 1f)
             } else {
-                // Fallback to totalProgression if position not available
-                totalProg?.toFloat() ?: 0f
+                locator.toPercentage()
             }
         } else {
             locator.toPercentage()

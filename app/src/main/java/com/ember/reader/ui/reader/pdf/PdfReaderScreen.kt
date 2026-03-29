@@ -111,12 +111,6 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 onOpenTableOfContents = {},
                 onOpenPreferences = { showPreferences = true }
             ) {
-                // Dark background so page spacing gap is visible as a divider
-                androidx.compose.foundation.layout.Box(
-                    modifier = androidx.compose.ui.Modifier
-                        .fillMaxSize()
-                        .background(androidx.compose.ui.graphics.Color(0xFF333333))
-                ) {
                 NavigatorContainer(
                     key = state.publication,
                     containerId = CONTAINER_ID,
@@ -135,9 +129,10 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onNavigatorReady = { fragment ->
                         navigator = fragment as? PdfNavigatorFragment<*, *>
+                        // Set dark background on the fragment's view so page gaps are visible
+                        fragment.view?.setBackgroundColor(android.graphics.Color.DKGRAY)
                     }
                 )
-                } // Box
             }
 
             if (showBookmarks) {
