@@ -5,6 +5,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -265,10 +267,11 @@ fun LocalLibraryScreen(
                 )
             }
 
-            // Format tabs
+            // Format + source filters (scrollable)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -287,8 +290,7 @@ fun LocalLibraryScreen(
                     onClick = { formatFilter = FormatFilter.AUDIOBOOKS },
                     label = { Text(stringResource(R.string.filter_audiobooks)) }
                 )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
-                // Source filter
+                Spacer(modifier = Modifier.width(4.dp))
                 FilterChip(
                     selected = filter == LibraryFilter.SERVER,
                     onClick = {
