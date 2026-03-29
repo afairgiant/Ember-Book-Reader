@@ -186,56 +186,62 @@ class CatalogViewModel @Inject constructor(
     }
 
     private suspend fun fetchGrimmorySeries(server: Server) {
-        grimmoryAppClient.getSeries(server.url, server.id, size = 100).fold(
-            onSuccess = { page ->
-                val entries = page.content.map { series ->
+        try {
+            val allEntries = mutableListOf<OpdsFeedEntry>()
+            var page = 0
+            do {
+                val result = grimmoryAppClient.getSeries(server.url, server.id, page = page, size = 100).getOrThrow()
+                result.content.forEach { series ->
                     val subtitle = buildString {
                         append("${series.bookCount} books")
                         if (series.booksRead > 0) append(" · ${series.booksRead} read")
                         if (series.authors.isNotEmpty()) append(" · ${series.authors.first()}")
                     }
-                    OpdsFeedEntry(
-                        id = "grimmory:series:${series.seriesName}",
-                        title = series.seriesName,
-                        href = "grimmory:seriesName=${java.net.URLEncoder.encode(series.seriesName, "UTF-8")}",
-                        content = subtitle
+                    allEntries.add(
+                        OpdsFeedEntry(
+                            id = "grimmory:series:${series.seriesName}",
+                            title = series.seriesName,
+                            href = "grimmory:seriesName=${java.net.URLEncoder.encode(series.seriesName, "UTF-8")}",
+                            content = subtitle
+                        )
                     )
                 }
-                _uiState.value = CatalogUiState.Success(
-                    feed = OpdsFeed(
-                        title = "Series",
-                        entries = entries
-                    )
-                )
-            },
-            onFailure = { error ->
-                _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
-            }
-        )
+                page++
+            } while (result.hasNext)
+
+            _uiState.value = CatalogUiState.Success(
+                feed = OpdsFeed(title = "Series", entries = allEntries)
+            )
+        } catch (e: Exception) {
+            _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
+        }
     }
 
     private suspend fun fetchGrimmoryAuthors(server: Server) {
-        grimmoryAppClient.getAuthors(server.url, server.id, size = 100).fold(
-            onSuccess = { page ->
-                val entries = page.content.map { author ->
-                    OpdsFeedEntry(
-                        id = "grimmory:author:${author.id}",
-                        title = author.name,
-                        href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
-                        content = "${author.bookCount} books"
+        try {
+            val allEntries = mutableListOf<OpdsFeedEntry>()
+            var page = 0
+            do {
+                val result = grimmoryAppClient.getAuthors(server.url, server.id, page = page, size = 100).getOrThrow()
+                result.content.forEach { author ->
+                    allEntries.add(
+                        OpdsFeedEntry(
+                            id = "grimmory:author:${author.id}",
+                            title = author.name,
+                            href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
+                            content = "${author.bookCount} books"
+                        )
                     )
                 }
-                _uiState.value = CatalogUiState.Success(
-                    feed = OpdsFeed(
-                        title = "Authors",
-                        entries = entries
-                    )
-                )
-            },
-            onFailure = { error ->
-                _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
-            }
-        )
+                page++
+            } while (result.hasNext)
+
+            _uiState.value = CatalogUiState.Success(
+                feed = OpdsFeed(title = "Authors", entries = allEntries)
+            )
+        } catch (e: Exception) {
+            _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
+        }
     }
 
     private suspend fun fetchOpdsFeed(server: Server) {

@@ -122,7 +122,7 @@ class BookRepository @Inject constructor(
     suspend fun refreshFromGrimmory(
         server: Server,
         page: Int = 0,
-        size: Int = 50,
+        size: Int = 100,
         libraryId: Long? = null,
         shelfId: Long? = null,
         seriesName: String? = null,
