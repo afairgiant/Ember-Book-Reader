@@ -34,42 +34,55 @@ class SyncWorker @AssistedInject constructor(
     private val appPreferencesRepository: AppPreferencesRepository
 ) : CoroutineWorker(context, params) {
 
+    private var syncPushed = 0
+    private var syncPulled = 0
+    private var syncErrors = 0
+
     override suspend fun doWork(): Result {
         Timber.d("SyncWorker: starting progress sync")
+        syncPushed = 0
+        syncPulled = 0
+        syncErrors = 0
 
         val servers = serverRepository.getAll()
         if (servers.isEmpty()) return Result.success()
 
         for (server in servers) {
-            // Kosync push/pull
-            if (server.kosyncUsername.isNotBlank()) {
-                readingProgressRepository.syncUnsyncedProgress(server) { bookId ->
-                    bookRepository.getById(bookId)?.fileHash
-                }
-
-                val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
-                if (downloadedBooks.isNotEmpty()) {
-                    val bookHashPairs = downloadedBooks.mapNotNull { book ->
-                        val hash = book.fileHash ?: return@mapNotNull null
-                        book.id to hash
+            runCatching {
+                // Kosync push/pull
+                if (server.kosyncUsername.isNotBlank()) {
+                    readingProgressRepository.syncUnsyncedProgress(server) { bookId ->
+                        bookRepository.getById(bookId)?.fileHash
                     }
-                    readingProgressRepository.pullProgressForAllBooks(server, bookHashPairs)
-                    Timber.d("SyncWorker: kosync pulled for ${bookHashPairs.size} books on ${server.name}")
-                }
-            }
 
-            // Grimmory native push/pull
-            if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-                syncGrimmoryProgress(server)
-
-                // Auto-download books marked as Reading
-                if (appPreferencesRepository.getAutoDownloadReading()) {
-                    autoDownloadReadingBooks(server)
+                    val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
+                    if (downloadedBooks.isNotEmpty()) {
+                        val bookHashPairs = downloadedBooks.mapNotNull { book ->
+                            val hash = book.fileHash ?: return@mapNotNull null
+                            book.id to hash
+                        }
+                        readingProgressRepository.pullProgressForAllBooks(server, bookHashPairs)
+                        syncPulled += bookHashPairs.size
+                        Timber.d("SyncWorker: kosync pulled for ${bookHashPairs.size} books on ${server.name}")
+                    }
                 }
+
+                // Grimmory native push/pull
+                if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                    syncGrimmoryProgress(server)
+
+                    // Auto-download books marked as Reading
+                    if (appPreferencesRepository.getAutoDownloadReading()) {
+                        autoDownloadReadingBooks(server)
+                    }
+                }
+            }.onFailure {
+                syncErrors++
+                Timber.w(it, "SyncWorker: sync failed for ${server.name}")
             }
         }
 
-        Timber.d("SyncWorker: sync complete")
+        Timber.d("SyncWorker: sync complete — pushed=$syncPushed pulled=$syncPulled errors=$syncErrors")
         showSyncNotification()
         return Result.success()
     }
@@ -81,10 +94,16 @@ class SyncWorker @AssistedInject constructor(
             return
         }
 
+        val parts = mutableListOf<String>()
+        if (syncPushed > 0) parts.add("$syncPushed pushed")
+        if (syncPulled > 0) parts.add("$syncPulled checked")
+        if (syncErrors > 0) parts.add("$syncErrors errors")
+        val text = if (parts.isNotEmpty()) parts.joinToString(" · ") else "Up to date"
+
         val notification = NotificationCompat.Builder(applicationContext, "ember_sync")
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .setContentTitle("Sync Complete")
-            .setContentText("Reading progress synced")
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
@@ -114,6 +133,7 @@ class SyncWorker @AssistedInject constructor(
                     )
                 ).getOrThrow()
                 readingProgressRepository.markSynced(book.id)
+                syncPushed++
                 Timber.d("SyncWorker: pushed Grimmory progress for ${book.title}: ${pct}%")
             }.onFailure {
                 Timber.w(it, "SyncWorker: failed to push Grimmory progress for ${book.title}")
