@@ -92,12 +92,13 @@ class SyncWorker @AssistedInject constructor(
     }
 
     private suspend fun syncGrimmoryProgress(server: com.ember.reader.core.model.Server) {
-        // Push unsynced local progress to Grimmory
+        // Push local progress to Grimmory for all books with progress
+        // NOTE: Don't check needsSync — kosync push may have already cleared it
         val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
         for (book in downloadedBooks) {
             val grimmoryBookId = book.grimmoryBookId ?: continue
             val progress = readingProgressRepository.getByBookId(book.id) ?: continue
-            if (!progress.needsSync) continue
+            if (progress.percentage <= 0f) continue
 
             runCatching {
                 val pct = kotlin.math.round(progress.percentage * 1000f) / 10f
@@ -112,7 +113,8 @@ class SyncWorker @AssistedInject constructor(
                         )
                     )
                 ).getOrThrow()
-                Timber.d("SyncWorker: pushed Grimmory progress for ${book.title}")
+                readingProgressRepository.markSynced(book.id)
+                Timber.d("SyncWorker: pushed Grimmory progress for ${book.title}: ${pct}%")
             }.onFailure {
                 Timber.w(it, "SyncWorker: failed to push Grimmory progress for ${book.title}")
             }

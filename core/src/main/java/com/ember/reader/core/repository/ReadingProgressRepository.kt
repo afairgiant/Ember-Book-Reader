@@ -68,6 +68,10 @@ class ReadingProgressRepository @Inject constructor(
         }
     }
 
+    suspend fun markSynced(bookId: String) {
+        readingProgressDao.markSynced(bookId, Instant.now())
+    }
+
     data class RemoteProgressResult(
         val progress: ReadingProgress,
         val deviceName: String?
