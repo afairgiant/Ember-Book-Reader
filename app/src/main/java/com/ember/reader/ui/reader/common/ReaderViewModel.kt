@@ -338,9 +338,16 @@ class ReaderViewModel @Inject constructor(
         // Readium's totalProgression for PDF gives start-of-page position which
         // means the last page of a 2-page PDF shows 50% instead of 100%
         val percentage = if (book?.format == com.ember.reader.core.model.BookFormat.PDF) {
-            val position = locator.locations.position ?: 0
+            val position = locator.locations.position
             val totalPages = publication?.readingOrder?.size ?: 1
-            ((position + 1).toFloat() / totalPages).coerceIn(0f, 1f)
+            val totalProg = locator.locations.totalProgression
+            Timber.d("PDF progress: position=$position totalPages=$totalPages totalProgression=$totalProg href=${locator.href}")
+            if (position != null && totalPages > 0) {
+                ((position + 1).toFloat() / totalPages).coerceIn(0f, 1f)
+            } else {
+                // Fallback to totalProgression if position not available
+                totalProg?.toFloat() ?: 0f
+            }
         } else {
             locator.toPercentage()
         }

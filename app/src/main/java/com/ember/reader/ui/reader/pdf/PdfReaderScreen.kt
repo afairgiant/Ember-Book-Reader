@@ -2,6 +2,8 @@ package com.ember.reader.ui.reader.pdf
 
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -109,6 +111,12 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 onOpenTableOfContents = {},
                 onOpenPreferences = { showPreferences = true }
             ) {
+                // Dark background so page spacing gap is visible as a divider
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxSize()
+                        .background(androidx.compose.ui.graphics.Color(0xFF333333))
+                ) {
                 NavigatorContainer(
                     key = state.publication,
                     containerId = CONTAINER_ID,
@@ -119,7 +127,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = PdfiumPreferences(pageSpacing = 16.0)
+                        initialPreferences = PdfiumPreferences(pageSpacing = 4.0)
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
@@ -129,6 +137,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         navigator = fragment as? PdfNavigatorFragment<*, *>
                     }
                 )
+                } // Box
             }
 
             if (showBookmarks) {
