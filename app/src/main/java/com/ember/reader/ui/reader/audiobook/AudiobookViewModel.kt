@@ -11,12 +11,13 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.media3.common.PlaybackException
 import com.ember.reader.core.grimmory.AudiobookChapter
 import com.ember.reader.core.grimmory.AudiobookInfo
+import com.ember.reader.core.grimmory.AudiobookTrack
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -73,8 +74,15 @@ class AudiobookViewModel @Inject constructor(
     private val _chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
     val chapters: StateFlow<List<AudiobookChapter>> = _chapters.asStateFlow()
 
+    private val _tracks = MutableStateFlow<List<AudiobookTrack>>(emptyList())
+    val tracks: StateFlow<List<AudiobookTrack>> = _tracks.asStateFlow()
+
+    private val _currentTrackIndex = MutableStateFlow(0)
+    val currentTrackIndex: StateFlow<Int> = _currentTrackIndex.asStateFlow()
+
     private var controller: MediaController? = null
     private var book: Book? = null
+    private var audiobookInfo: AudiobookInfo? = null
     private var sessionStartTime: java.time.Instant? = null
     private var sessionStartProgress: Float = 0f
 
@@ -93,14 +101,25 @@ class AudiobookViewModel @Inject constructor(
         val serverId = loadedBook.serverId
         val server = serverId?.let { serverRepository.getById(it) }
         val grimmoryBookId = loadedBook.grimmoryBookId
+        Timber.d("Audiobook: loading book=%s grimmoryId=%s serverId=%s isDownloaded=%s", loadedBook.id, grimmoryBookId, serverId, loadedBook.isDownloaded)
 
         // Fetch audiobook info from Grimmory
         var info: AudiobookInfo? = null
         if (server != null && server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            info = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId).getOrNull()
-            info?.chapters?.let { _chapters.value = it }
+            val result = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
+            result.onSuccess { fetchedInfo ->
+                info = fetchedInfo
+                Timber.d("Audiobook: info fetched folderBased=%s tracks=%d chapters=%d", fetchedInfo.folderBased, fetchedInfo.tracks?.size ?: 0, fetchedInfo.chapters?.size ?: 0)
+                fetchedInfo.chapters?.let { _chapters.value = it }
+                fetchedInfo.tracks?.let { _tracks.value = it }
+            }.onFailure { error ->
+                Timber.e(error, "Audiobook: failed to fetch audiobook info")
+            }
+        } else {
+            Timber.w("Audiobook: skipping info fetch server=%s isGrimmory=%s loggedIn=%s grimmoryBookId=%s", server?.id, server?.isGrimmory, server?.let { grimmoryTokenManager.isLoggedIn(it.id) }, grimmoryBookId)
         }
 
+        audiobookInfo = info
         _uiState.value = AudiobookUiState.Ready(book = loadedBook, info = info)
 
         sessionStartTime = java.time.Instant.now()
@@ -129,13 +148,67 @@ class AudiobookViewModel @Inject constructor(
                         _durationMs.value = ctrl.duration.coerceAtLeast(0)
                     }
                 }
+                override fun onPlayerError(error: PlaybackException) {
+                    Timber.e(error, "Audiobook: ExoPlayer error code=%d mediaItem=%d/%d", error.errorCode, ctrl.currentMediaItemIndex, ctrl.mediaItemCount)
+                }
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    _currentTrackIndex.value = ctrl.currentMediaItemIndex
+                    Timber.d("Audiobook: track transition to %d/%d reason=%d title=%s", ctrl.currentMediaItemIndex, ctrl.mediaItemCount, reason, mediaItem?.mediaMetadata?.title)
+                }
             })
 
-            // Build media source
-            val mediaUri = buildMediaUri(book, server, info)
-            if (mediaUri != null) {
-                val mediaItem = MediaItem.Builder()
-                    .setUri(mediaUri)
+            // Build media items
+            viewModelScope.launch {
+                val mediaItems = buildMediaItems(book, server, info)
+                if (mediaItems.isNotEmpty()) {
+                    Timber.d("Audiobook: setting %d media items", mediaItems.size)
+                    ctrl.setMediaItems(mediaItems)
+                    ctrl.prepare()
+                    restorePosition(ctrl)
+                } else {
+                    Timber.e("Audiobook: no media items could be built")
+                }
+
+                // Start position update loop
+                startPositionUpdates()
+            }
+        }, MoreExecutors.directExecutor())
+    }
+
+    private suspend fun buildMediaItems(
+        book: Book,
+        server: com.ember.reader.core.model.Server?,
+        info: AudiobookInfo?,
+    ): List<MediaItem> {
+        // Downloaded folder-based audiobook: play from local track files
+        val localPath = book.localPath
+        if (book.isDownloaded && localPath != null) {
+            val localDir = File(localPath)
+            if (localDir.isDirectory) {
+                val trackFiles = localDir.listFiles()
+                    ?.filter { it.isFile && it.length() > 0 }
+                    ?.sortedBy { it.name }
+                    ?: emptyList()
+                if (trackFiles.isNotEmpty()) {
+                    Timber.d("Audiobook: playing %d local track files from %s", trackFiles.size, localDir.name)
+                    return trackFiles.map { file ->
+                        MediaItem.Builder()
+                            .setUri(Uri.fromFile(file))
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle(file.nameWithoutExtension)
+                                    .setArtist(book.author)
+                                    .build()
+                            )
+                            .build()
+                    }
+                }
+            }
+            // Single downloaded file
+            Timber.d("Audiobook: playing single local file %s", localPath)
+            return listOf(
+                MediaItem.Builder()
+                    .setUri(Uri.fromFile(localDir))
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(book.title)
@@ -143,54 +216,48 @@ class AudiobookViewModel @Inject constructor(
                             .build()
                     )
                     .build()
-
-                // For folder-based audiobooks with multiple tracks
-                if (info?.folderBased == true && info.tracks.isNotEmpty() && server != null) {
-                    val items = viewModelScope.launch {
-                        val trackItems = info.tracks.map { track ->
-                            val trackUrl = grimmoryClient.audiobookStreamUrl(
-                                server.url, server.id, book.grimmoryBookId!!, track.index
-                            )
-                            MediaItem.Builder()
-                                .setUri(trackUrl ?: "")
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(track.title ?: track.fileName)
-                                        .build()
-                                )
-                                .build()
-                        }
-                        ctrl.setMediaItems(trackItems)
-                        ctrl.prepare()
-                        restorePosition(ctrl)
-                    }
-                } else {
-                    ctrl.setMediaItem(mediaItem)
-                    ctrl.prepare()
-                    viewModelScope.launch { restorePosition(ctrl) }
-                }
-            }
-
-            // Start position update loop
-            startPositionUpdates()
-        }, MoreExecutors.directExecutor())
-    }
-
-    private fun buildMediaUri(
-        book: Book,
-        server: com.ember.reader.core.model.Server?,
-        info: AudiobookInfo?
-    ): Uri? {
-        // Prefer local file if downloaded
-        if (book.isDownloaded && book.localPath != null) {
-            return Uri.fromFile(File(book.localPath))
+            )
         }
-        // Stream from Grimmory
-        val grimmoryBookId = book.grimmoryBookId ?: return null
-        if (server == null || !server.isGrimmory) return null
-        val token = grimmoryTokenManager.getAccessToken(server.id) ?: return null
+
+        // Folder-based streaming: build per-track URLs
+        val tracks = info?.tracks
+        if (info?.folderBased == true && !tracks.isNullOrEmpty() && server != null) {
+            Timber.d("Audiobook: building %d track stream URLs", tracks.size)
+            return tracks.map { track ->
+                val trackUrl = grimmoryClient.audiobookStreamUrl(
+                    server.url, server.id, book.grimmoryBookId!!, track.index,
+                )
+                Timber.d("Audiobook: track %d url=%s", track.index, trackUrl?.take(80))
+                MediaItem.Builder()
+                    .setUri(trackUrl ?: "")
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(track.title ?: track.fileName)
+                            .setArtist(book.author)
+                            .build()
+                    )
+                    .build()
+            }
+        }
+
+        // Single-file streaming
+        val grimmoryBookId = book.grimmoryBookId ?: return emptyList()
+        if (server == null || !server.isGrimmory) return emptyList()
+        val token = grimmoryTokenManager.getAccessToken(server.id) ?: return emptyList()
         val origin = com.ember.reader.core.network.serverOrigin(server.url)
-        return Uri.parse("$origin/api/v1/audiobooks/$grimmoryBookId/stream?token=$token")
+        val streamUrl = "$origin/api/v1/audiobooks/$grimmoryBookId/stream?token=$token"
+        Timber.d("Audiobook: single-stream URL (not folder-based)")
+        return listOf(
+            MediaItem.Builder()
+                .setUri(streamUrl)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(book.title)
+                        .setArtist(book.author)
+                        .build()
+                )
+                .build()
+        )
     }
 
     private suspend fun restorePosition(ctrl: MediaController) {
@@ -255,6 +322,13 @@ class AudiobookViewModel @Inject constructor(
         controller?.seekTo(chapter.startTimeMs)
     }
 
+    fun seekToTrack(trackIndex: Int) {
+        val ctrl = controller ?: return
+        if (trackIndex in 0 until ctrl.mediaItemCount) {
+            ctrl.seekTo(trackIndex, 0)
+        }
+    }
+
     fun nextChapter() {
         val ctrl = controller ?: return
         val pos = ctrl.currentPosition
@@ -294,26 +368,47 @@ class AudiobookViewModel @Inject constructor(
         val duration = ctrl.duration
         if (duration <= 0) return
         val position = ctrl.currentPosition
-        val percentage = (position.toFloat() / duration).coerceIn(0f, 1f)
+        val trackIndex = ctrl.currentMediaItemIndex
+        val trackCount = ctrl.mediaItemCount
+
+        // Calculate overall percentage across all tracks
+        val percentage = if (trackCount > 1) {
+            val info = audiobookInfo
+            val infoTracks = info?.tracks
+            if (info != null && !infoTracks.isNullOrEmpty()) {
+                val totalDurationMs = infoTracks.sumOf { it.durationMs }
+                if (totalDurationMs > 0) {
+                    val cumulativeMs = infoTracks.take(trackIndex).sumOf { it.durationMs } + position
+                    (cumulativeMs.toFloat() / totalDurationMs).coerceIn(0f, 1f)
+                } else {
+                    // Fall back to track-count-based estimate
+                    ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
+                }
+            } else {
+                ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
+            }
+        } else {
+            (position.toFloat() / duration).coerceIn(0f, 1f)
+        }
 
         val locatorJson = org.json.JSONObject().apply {
             put("type", "audiobook")
             put("positionMs", position)
-            put("trackIndex", ctrl.currentMediaItemIndex)
+            put("trackIndex", trackIndex)
         }.toString()
 
         readingProgressRepository.updateProgress(
             bookId = bookId,
             serverId = book?.serverId,
             percentage = percentage,
-            locatorJson = locatorJson
+            locatorJson = locatorJson,
         )
     }
 
     override fun onCleared() {
         super.onCleared()
-        // Save progress synchronously
-        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+        // Save progress on main thread (MediaController requires it)
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main.immediate) {
             saveProgress()
         }
         // Stop the service if not playing

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,7 +28,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.core.grimmory.AudiobookChapter
+import com.ember.reader.core.grimmory.AudiobookTrack
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
@@ -75,6 +78,8 @@ fun AudiobookPlayerScreen(
     val durationMs by viewModel.durationMs.collectAsStateWithLifecycle()
     val playbackSpeed by viewModel.playbackSpeed.collectAsStateWithLifecycle()
     val chapters by viewModel.chapters.collectAsStateWithLifecycle()
+    val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+    val currentTrackIndex by viewModel.currentTrackIndex.collectAsStateWithLifecycle()
 
     var showChapters by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
@@ -309,13 +314,13 @@ fun AudiobookPlayerScreen(
                         )
                     }
 
-                    // Chapters button
-                    if (chapters.isNotEmpty()) {
+                    // Chapters / track list button
+                    if (chapters.isNotEmpty() || tracks.isNotEmpty()) {
                         IconButton(onClick = { showChapters = true }) {
                             Icon(
-                                Icons.Default.Speed,
-                                contentDescription = "Chapters",
-                                modifier = Modifier.size(24.dp)
+                                Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = if (tracks.isNotEmpty()) "Tracks" else "Chapters",
+                                modifier = Modifier.size(24.dp),
                             )
                         }
                     } else {
@@ -326,56 +331,135 @@ fun AudiobookPlayerScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Chapter list bottom sheet
+            // Track / chapter list bottom sheet
             if (showChapters) {
                 ModalBottomSheet(
                     onDismissRequest = { showChapters = false },
-                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 ) {
-                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                        Text(
-                            text = "Chapters",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    if (tracks.isNotEmpty()) {
+                        TrackListSheet(
+                            tracks = tracks,
+                            currentTrackIndex = currentTrackIndex,
+                            onTrackSelected = { index ->
+                                viewModel.seekToTrack(index)
+                                showChapters = false
+                            },
                         )
-                        LazyColumn {
-                            items(chapters) { chapter ->
-                                val isCurrent = chapter.startTimeMs <= currentPositionMs &&
-                                    (chapter.endTimeMs > currentPositionMs || chapter == chapters.last())
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            viewModel.seekToChapter(chapter)
-                                            showChapters = false
-                                        }
-                                        .background(
-                                            if (isCurrent) MaterialTheme.colorScheme.primaryContainer
-                                            else Color.Transparent
-                                        )
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = chapter.title ?: "Chapter ${chapter.index + 1}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = formatTime(chapter.durationMs),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
+                    } else {
+                        ChapterListSheet(
+                            chapters = chapters,
+                            currentPositionMs = currentPositionMs,
+                            onChapterSelected = { chapter ->
+                                viewModel.seekToChapter(chapter)
+                                showChapters = false
+                            },
+                        )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackListSheet(
+    tracks: List<AudiobookTrack>,
+    currentTrackIndex: Int,
+    onTrackSelected: (Int) -> Unit,
+) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Text(
+            text = "Tracks",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = (currentTrackIndex - 2).coerceAtLeast(0),
+        )
+        LazyColumn(state = listState) {
+            itemsIndexed(tracks) { index, track ->
+                val isCurrent = index == currentTrackIndex
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onTrackSelected(index) }
+                        .background(
+                            if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                            else Color.Transparent
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = track.title ?: track.fileName ?: "Track ${index + 1}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = formatTime(track.durationMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChapterListSheet(
+    chapters: List<AudiobookChapter>,
+    currentPositionMs: Long,
+    onChapterSelected: (AudiobookChapter) -> Unit,
+) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Text(
+            text = "Chapters",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        val currentIndex = chapters.indexOfLast { it.startTimeMs <= currentPositionMs }
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = (currentIndex - 2).coerceAtLeast(0),
+        )
+        LazyColumn(state = listState) {
+            items(chapters) { chapter ->
+                val isCurrent = chapter.startTimeMs <= currentPositionMs &&
+                    (chapter.endTimeMs > currentPositionMs || chapter == chapters.last())
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onChapterSelected(chapter) }
+                        .background(
+                            if (isCurrent) MaterialTheme.colorScheme.primaryContainer
+                            else Color.Transparent
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = chapter.title ?: "Chapter ${chapter.index + 1}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = formatTime(chapter.durationMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

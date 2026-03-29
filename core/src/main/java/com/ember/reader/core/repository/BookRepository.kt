@@ -289,14 +289,20 @@ class BookRepository @Inject constructor(
      * and downloads each track individually to a subfolder if so.
      */
     private suspend fun downloadAudiobook(book: Book, server: Server, grimmoryBookId: Long): Book {
-        val info = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId).getOrNull()
+        val infoResult = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
+        infoResult.onFailure { error ->
+            Timber.e(error, "Audiobook download: failed to fetch audiobook info for grimmoryBookId=%d", grimmoryBookId)
+        }
+        val info = infoResult.getOrNull()
+        Timber.d("Audiobook download: info=%s folderBased=%s tracks=%d", info != null, info?.folderBased, info?.tracks?.size ?: 0)
 
-        if (info != null && info.folderBased && info.tracks.isNotEmpty()) {
+        val tracks = info?.tracks
+        if (info != null && info.folderBased && !tracks.isNullOrEmpty()) {
             // Folder-based: download each track to a subfolder
             val audiobookDir = File(booksDir, "audiobook_${book.id}").also { it.mkdirs() }
-            Timber.d("Downloading folder-based audiobook: ${info.tracks.size} tracks")
+            Timber.d("Downloading folder-based audiobook: ${tracks.size} tracks to ${audiobookDir.name}")
 
-            for (track in info.tracks) {
+            for (track in tracks) {
                 val trackFile = File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
                 if (trackFile.exists() && trackFile.length() > 0) {
                     Timber.d("Track ${track.index} already downloaded, skipping")
@@ -311,7 +317,7 @@ class BookRepository @Inject constructor(
             bookDao.updateLocalPath(book.id, audiobookDir.absolutePath, Instant.now())
             return book.copy(
                 localPath = audiobookDir.absolutePath,
-                downloadedAt = Instant.now()
+                downloadedAt = Instant.now(),
             )
         } else {
             // Single file: download directly
@@ -331,7 +337,7 @@ class BookRepository @Inject constructor(
             return book.copy(
                 localPath = file.absolutePath,
                 fileHash = fileHash,
-                downloadedAt = Instant.now()
+                downloadedAt = Instant.now(),
             )
         }
     }

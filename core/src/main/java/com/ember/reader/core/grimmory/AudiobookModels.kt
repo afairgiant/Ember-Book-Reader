@@ -16,8 +16,8 @@ data class AudiobookInfo(
     val channels: Int? = null,
     val totalSizeBytes: Long? = null,
     val folderBased: Boolean = false,
-    val chapters: List<AudiobookChapter> = emptyList(),
-    val tracks: List<AudiobookTrack> = emptyList()
+    val chapters: List<AudiobookChapter>? = null,
+    val tracks: List<AudiobookTrack>? = null
 )
 
 @Serializable
