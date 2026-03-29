@@ -101,10 +101,36 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 bookmarks.any { it.locatorJson.contains(loc.href.toString()) }
             } ?: false
 
+            // Adjust the locator's totalProgression for page-based display
+            val totalPages = state.publication.metadata.numberOfPages ?: 0
+            val loc = currentLocator
+            val displayLocator = if (loc != null && totalPages > 0) {
+                // Derive current page from totalProgression (more reliable than position)
+                val totalProg = loc.locations.totalProgression ?: 0.0
+                // ceil works for most pages, but the last page never reaches 1.0
+                // so check if we're past the start of the last page
+                val lastPageStart = (totalPages - 1).toDouble() / totalPages
+                val currentPage = if (totalProg >= lastPageStart - 0.01) {
+                    totalPages
+                } else {
+                    kotlin.math.ceil(totalProg * totalPages).toInt().coerceIn(1, totalPages)
+                }
+                val pageBasedProgression = if (totalPages <= 1) 1.0
+                    else ((currentPage - 1).toDouble() / (totalPages - 1)).coerceIn(0.0, 1.0)
+                loc.copy(
+                    locations = loc.locations.copy(
+                        totalProgression = pageBasedProgression
+                    ),
+                    title = "Page $currentPage of $totalPages"
+                )
+            } else {
+                loc
+            }
+
             ReaderScaffold(
                 title = state.book.title,
-                chromeVisible = chromeVisible,
-                currentLocator = currentLocator,
+                chromeVisible = true,
+                currentLocator = displayLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
                 onToggleBookmark = viewModel::addBookmark,
@@ -121,7 +147,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = PdfiumPreferences(pageSpacing = 4.0)
+                        initialPreferences = PdfiumPreferences(pageSpacing = 8.0)
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
@@ -129,8 +155,12 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onNavigatorReady = { fragment ->
                         navigator = fragment as? PdfNavigatorFragment<*, *>
-                        // Set dark background on the fragment's view so page gaps are visible
-                        fragment.view?.setBackgroundColor(android.graphics.Color.DKGRAY)
+                        // Find the PDFView inside the fragment and set its background
+                        // so page spacing shows as a visible divider
+                        fragment.view?.let { root ->
+                            findPdfView(root)?.setBackgroundColor(android.graphics.Color.DKGRAY)
+                                ?: root.setBackgroundColor(android.graphics.Color.DKGRAY)
+                        }
                     }
                 )
             }
@@ -166,4 +196,15 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
             }
         }
     }
+}
+
+/** Recursively find the PDFView (com.github.barteksc.pdfviewer.PDFView) in the view tree */
+private fun findPdfView(view: android.view.View): android.view.View? {
+    if (view.javaClass.name.contains("PDFView")) return view
+    if (view is android.view.ViewGroup) {
+        for (i in 0 until view.childCount) {
+            findPdfView(view.getChildAt(i))?.let { return it }
+        }
+    }
+    return null
 }

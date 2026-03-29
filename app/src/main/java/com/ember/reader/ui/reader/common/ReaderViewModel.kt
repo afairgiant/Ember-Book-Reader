@@ -334,15 +334,26 @@ class ReaderViewModel @Inject constructor(
     }
 
     private suspend fun saveProgress(locator: Locator) {
-        // For PDFs, use page-based progress since totalProgression reports
-        // the start of the current page (last page of 2 = 50% instead of 100%)
+        // For PDFs, use page-based progress: (currentPage + 1) / totalPages
+        // totalProgression reports start-of-page which means last page never reaches 100%
         val percentage = if (book?.format == com.ember.reader.core.model.BookFormat.PDF) {
-            val position = locator.locations.position
             val totalPages = publication?.metadata?.numberOfPages
-            if (position != null && totalPages != null && totalPages > 0) {
-                ((position + 1).toFloat() / totalPages).coerceIn(0f, 1f)
-            } else {
-                locator.toPercentage()
+            val totalProg = locator.locations.totalProgression
+            when {
+                totalProg != null && totalPages != null && totalPages > 0 -> {
+                    // Derive page from totalProgression and convert to page-based %
+                    val lastPageStart = (totalPages - 1).toFloat() / totalPages
+                    val currentPage = if (totalProg.toFloat() >= lastPageStart - 0.01f) {
+                        totalPages
+                    } else {
+                        kotlin.math.ceil(totalProg.toFloat() * totalPages)
+                            .toInt().coerceIn(1, totalPages)
+                    }
+                    if (totalPages <= 1) 1f
+                    else ((currentPage - 1).toFloat() / (totalPages - 1)).coerceIn(0f, 1f)
+                }
+                // Last resort
+                else -> locator.toPercentage()
             }
         } else {
             locator.toPercentage()
