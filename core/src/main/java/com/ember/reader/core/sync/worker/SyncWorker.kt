@@ -14,6 +14,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.model.toGrimmoryPercentage
@@ -169,7 +170,7 @@ class SyncWorker @AssistedInject constructor(
                     request = GrimmoryProgressRequest(
                         bookId = grimmoryBookId,
                         epubProgress = GrimmoryEpubProgress(
-                            cfi = "epubcfi(/6/2)",
+                            cfi = ProgressSyncManager.PLACEHOLDER_CFI,
                             percentage = pct
                         )
                     )

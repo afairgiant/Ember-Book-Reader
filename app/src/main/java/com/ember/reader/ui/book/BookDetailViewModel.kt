@@ -14,7 +14,6 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
-import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -35,7 +34,6 @@ class BookDetailViewModel @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     @ApplicationContext private val context: Context,
-    private val progressSyncManager: ProgressSyncManager,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -129,11 +127,6 @@ class BookDetailViewModel @Inject constructor(
         if (book.isDownloaded) return
 
         DownloadService.start(context, book.id, server.id)
-    }
-
-    private suspend fun pullProgressAfterDownload(book: Book, server: Server) {
-        val remote = progressSyncManager.pullBestProgress(server, book) ?: return
-        readingProgressRepository.applyRemoteProgress(remote.progress)
     }
 
     fun updateReadStatus(status: ReadStatus) {
