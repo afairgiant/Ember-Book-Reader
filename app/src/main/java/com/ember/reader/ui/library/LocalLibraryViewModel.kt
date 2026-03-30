@@ -10,7 +10,9 @@ import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -144,10 +146,14 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch {
             var synced = 0
             val books = ids.mapNotNull { bookRepository.getById(it) }
-            for (book in books) {
-                val serverId = book.serverId ?: continue
-                val result = pullProgressForBook(book.id, serverId)
-                if (result.isNotBlank()) synced++
+            val booksByServer = books.groupBy { it.serverId }
+            for ((serverId, serverBooks) in booksByServer) {
+                if (serverId == null) continue
+                val server = serverRepository.getById(serverId) ?: continue
+                for (book in serverBooks) {
+                    val result = pullProgressForBook(book, server)
+                    if (result.isNotBlank()) synced++
+                }
             }
             _operationResult.value = if (synced > 0) "Synced $synced book(s)" else "No remote progress found"
         }
@@ -161,7 +167,8 @@ class LocalLibraryViewModel @Inject constructor(
     fun pullBookProgress(book: Book) {
         val serverId = book.serverId ?: return
         viewModelScope.launch {
-            val result = pullProgressForBook(book.id, serverId)
+            val server = serverRepository.getById(serverId) ?: return@launch
+            val result = pullProgressForBook(book, server)
             _operationResult.value = if (result.isNotBlank()) {
                 "Pulled$result"
             } else {
@@ -228,10 +235,8 @@ class LocalLibraryViewModel @Inject constructor(
      * Pulls progress from Grimmory API and/or kosync, whichever is available.
      * Returns a display string like " (42%)" or "" if no progress found.
      */
-    private suspend fun pullProgressForBook(bookId: String, serverId: Long): String {
-        val book = bookRepository.getById(bookId) ?: return ""
-        val server = serverRepository.getById(serverId) ?: return ""
-        var bestPercentage: Float? = null
+    private suspend fun pullProgressForBook(book: Book, server: Server): String {
+        var bestProgress: ReadingProgress? = null
         var source: String? = null
 
         // Try Grimmory API
@@ -241,8 +246,8 @@ class LocalLibraryViewModel @Inject constructor(
                 val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
                 val rawPct = detail.readProgress
                 if (rawPct != null && rawPct > 0f) {
-                    val pct = if (rawPct > 1f) rawPct / 100f else rawPct
-                    bestPercentage = pct
+                    val pct = rawPct.normalizeGrimmoryPercentage()
+                    bestProgress = ReadingProgress.fromRemote(book.id, server.id, pct)
                     source = "Grimmory"
                 }
             }
@@ -251,33 +256,20 @@ class LocalLibraryViewModel @Inject constructor(
         // Try kosync
         val fileHash = book.fileHash
         if (fileHash != null && server.kosyncUsername.isNotBlank()) {
-            val remote = readingProgressRepository.pullProgress(server, bookId, fileHash).getOrNull()
-            if (remote != null && remote.progress.percentage > (bestPercentage ?: 0f)) {
-                bestPercentage = remote.progress.percentage
+            val remote = readingProgressRepository.pullProgress(server, book.id, fileHash).getOrNull()
+            if (remote != null && remote.progress.percentage > (bestProgress?.percentage ?: 0f)) {
+                bestProgress = remote.progress
                 source = remote.deviceName ?: "kosync"
-                readingProgressRepository.applyRemoteProgress(remote.progress)
             }
         }
 
-        // Apply Grimmory progress if it was higher than kosync
-        if (bestPercentage != null && source == "Grimmory") {
-            readingProgressRepository.applyRemoteProgress(
-                com.ember.reader.core.model.ReadingProgress(
-                    bookId = bookId,
-                    serverId = serverId,
-                    percentage = bestPercentage!!,
-                    lastReadAt = java.time.Instant.now(),
-                    syncedAt = java.time.Instant.now(),
-                    needsSync = false
-                )
-            )
+        // Apply the best remote progress
+        val progress = bestProgress
+        if (progress != null) {
+            readingProgressRepository.applyRemoteProgress(progress)
+            return " (${(progress.percentage * 100).roundToInt()}% from $source)"
         }
-
-        return if (bestPercentage != null) {
-            " (${(bestPercentage!! * 100).roundToInt()}% from $source)"
-        } else {
-            ""
-        }
+        return ""
     }
 
     fun relinkBook(bookId: String, serverId: Long) {
@@ -286,7 +278,11 @@ class LocalLibraryViewModel @Inject constructor(
             val match = bookRepository.findRelinkMatches(bookId, serverId)
             if (match != null) {
                 bookRepository.relinkToServerBook(bookId, match.serverBookId)
-                val progressMsg = pullProgressForBook(match.serverBookId, match.serverId)
+                val book = bookRepository.getById(match.serverBookId)
+                val server = serverRepository.getById(match.serverId)
+                val progressMsg = if (book != null && server != null) {
+                    pullProgressForBook(book, server)
+                } else ""
                 _operationResult.value = "Linked to ${match.serverName}$progressMsg"
             } else {
                 _operationResult.value = "No matching book found on this server"

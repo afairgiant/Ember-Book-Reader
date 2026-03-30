@@ -14,6 +14,7 @@ import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -221,7 +222,7 @@ class ReaderViewModel @Inject constructor(
                 runCatching {
                     val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
                     val rawRemote = detail.readProgress ?: return@runCatching null
-                    val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
+                    val remotePercentage = rawRemote.normalizeGrimmoryPercentage()
                     Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
                     if (remotePercentage > localPercentage + CONFLICT_THRESHOLD) {
                         SyncConflict(
@@ -229,13 +230,10 @@ class ReaderViewModel @Inject constructor(
                             localPercentage = localPercentage,
                             remoteLocatorJson = null,
                             remoteDevice = "Grimmory Web Reader",
-                            remoteProgress = ReadingProgress(
+                            remoteProgress = ReadingProgress.fromRemote(
                                 bookId = bookId,
                                 serverId = server.id,
                                 percentage = remotePercentage,
-                                lastReadAt = java.time.Instant.now(),
-                                syncedAt = java.time.Instant.now(),
-                                needsSync = false
                             )
                         )
                     } else null

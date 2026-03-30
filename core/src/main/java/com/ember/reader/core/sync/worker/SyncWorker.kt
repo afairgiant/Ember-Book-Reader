@@ -14,6 +14,8 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -125,7 +127,7 @@ class SyncWorker @AssistedInject constructor(
             for (summary in continueReading) {
                 val rawPct = summary.readProgress ?: continue
                 if (rawPct <= 0f) continue
-                val percentage = if (rawPct > 1f) rawPct / 100f else rawPct
+                val percentage = rawPct.normalizeGrimmoryPercentage()
                 serverProgress[summary.id] = percentage
 
                 // Pull if server is meaningfully ahead of local
@@ -136,14 +138,7 @@ class SyncWorker @AssistedInject constructor(
                     // Only pull if server is at least 1% ahead — avoids counting rounding diffs
                     if (percentage > localPct + 0.01f) {
                         readingProgressRepository.applyRemoteProgress(
-                            com.ember.reader.core.model.ReadingProgress(
-                                bookId = localBook.id,
-                                serverId = server.id,
-                                percentage = percentage,
-                                lastReadAt = java.time.Instant.now(),
-                                syncedAt = java.time.Instant.now(),
-                                needsSync = false
-                            )
+                            ReadingProgress.fromRemote(localBook.id, server.id, percentage)
                         )
                         syncPulled++
                         Timber.d("SyncWorker: pulled Grimmory progress for ${localBook.title}: ${(percentage * 100).toInt()}% (local was ${(localPct * 100).toInt()}%)")
@@ -229,16 +224,9 @@ class SyncWorker @AssistedInject constructor(
                     // Pull reading progress for the newly downloaded book
                     val rawPct = summary.readProgress
                     if (rawPct != null && rawPct > 0f) {
-                        val percentage = if (rawPct > 1f) rawPct / 100f else rawPct
+                        val percentage = rawPct.normalizeGrimmoryPercentage()
                         readingProgressRepository.applyRemoteProgress(
-                            com.ember.reader.core.model.ReadingProgress(
-                                bookId = downloadedBook.id,
-                                serverId = server.id,
-                                percentage = percentage,
-                                lastReadAt = java.time.Instant.now(),
-                                syncedAt = java.time.Instant.now(),
-                                needsSync = false
-                            )
+                            ReadingProgress.fromRemote(downloadedBook.id, server.id, percentage)
                         )
                         Timber.d("SyncWorker: applied progress ${(percentage * 100).toInt()}% for '${summary.title}'")
                     }

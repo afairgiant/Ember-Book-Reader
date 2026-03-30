@@ -11,6 +11,7 @@ import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
@@ -136,15 +137,11 @@ class BookDetailViewModel @Inject constructor(
                 val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
                 val rawPct = detail.readProgress
                 if (rawPct != null && rawPct > 0f) {
-                    val pct = if (rawPct > 1f) rawPct / 100f else rawPct
                     readingProgressRepository.applyRemoteProgress(
-                        ReadingProgress(
+                        ReadingProgress.fromRemote(
                             bookId = book.id,
                             serverId = server.id,
-                            percentage = pct,
-                            lastReadAt = java.time.Instant.now(),
-                            syncedAt = java.time.Instant.now(),
-                            needsSync = false
+                            percentage = rawPct.normalizeGrimmoryPercentage(),
                         )
                     )
                 }

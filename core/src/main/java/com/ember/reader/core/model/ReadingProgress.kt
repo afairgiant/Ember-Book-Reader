@@ -10,5 +10,25 @@ data class ReadingProgress(
     val kosyncProgress: String? = null,
     val lastReadAt: Instant = Instant.now(),
     val syncedAt: Instant? = null,
-    val needsSync: Boolean = false
-)
+    val needsSync: Boolean = false,
+) {
+    companion object {
+        fun fromRemote(
+            bookId: String,
+            serverId: Long,
+            percentage: Float,
+        ): ReadingProgress = ReadingProgress(
+            bookId = bookId,
+            serverId = serverId,
+            percentage = percentage,
+            lastReadAt = Instant.now(),
+            syncedAt = Instant.now(),
+            needsSync = false,
+        )
+    }
+}
+
+/**
+ * Normalizes a Grimmory percentage (which may be 0-100) to the 0-1 range used internally.
+ */
+fun Float.normalizeGrimmoryPercentage(): Float = if (this > 1f) this / 100f else this
