@@ -11,10 +11,10 @@ import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
-import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,7 +34,8 @@ class BookDetailViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val progressSyncManager: ProgressSyncManager,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -131,22 +132,8 @@ class BookDetailViewModel @Inject constructor(
     }
 
     private suspend fun pullProgressAfterDownload(book: Book, server: Server) {
-        val grimmoryBookId = book.grimmoryBookId
-        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            runCatching {
-                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-                val rawPct = detail.readProgress
-                if (rawPct != null && rawPct > 0f) {
-                    readingProgressRepository.applyRemoteProgress(
-                        ReadingProgress.fromRemote(
-                            bookId = book.id,
-                            serverId = server.id,
-                            percentage = rawPct.normalizeGrimmoryPercentage(),
-                        )
-                    )
-                }
-            }
-        }
+        val remote = progressSyncManager.pullBestProgress(server, book) ?: return
+        readingProgressRepository.applyRemoteProgress(remote.progress)
     }
 
     fun updateReadStatus(status: ReadStatus) {

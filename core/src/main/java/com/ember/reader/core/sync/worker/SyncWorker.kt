@@ -16,6 +16,7 @@ import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.normalizeGrimmoryPercentage
+import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -161,7 +162,7 @@ class SyncWorker @AssistedInject constructor(
             if (progress.percentage <= serverPct + 0.01f) continue
 
             runCatching {
-                val pct = kotlin.math.round(progress.percentage * 1000f) / 10f
+                val pct = progress.percentage.toGrimmoryPercentage()
                 grimmoryClient.pushProgress(
                     baseUrl = server.url,
                     serverId = server.id,
