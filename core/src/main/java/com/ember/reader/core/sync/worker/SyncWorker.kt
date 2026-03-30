@@ -10,18 +10,16 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
 import com.ember.reader.core.grimmory.GrimmoryClient
-import com.ember.reader.core.grimmory.GrimmoryEpubProgress
-import com.ember.reader.core.grimmory.GrimmoryProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
-import com.ember.reader.core.sync.ProgressSyncManager
-import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.normalizeGrimmoryPercentage
-import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.ProgressSyncManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
@@ -35,7 +33,8 @@ class SyncWorker @AssistedInject constructor(
     private val bookRepository: BookRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val appPreferencesRepository: AppPreferencesRepository
+    private val appPreferencesRepository: AppPreferencesRepository,
+    private val progressSyncManager: ProgressSyncManager,
 ) : CoroutineWorker(context, params) {
 
     private var syncPushed = 0
@@ -66,8 +65,7 @@ class SyncWorker @AssistedInject constructor(
                             book.id to hash
                         }
                         readingProgressRepository.pullKosyncProgressForAllBooks(server, bookHashPairs)
-                        syncPulled += bookHashPairs.size
-                        Timber.d("SyncWorker: kosync pulled for ${bookHashPairs.size} books on ${server.name}")
+                        Timber.d("SyncWorker: kosync synced for ${bookHashPairs.size} books on ${server.name}")
                     }
                 }
 
@@ -115,75 +113,47 @@ class SyncWorker @AssistedInject constructor(
         NotificationManagerCompat.from(applicationContext).notify("sync".hashCode(), notification)
     }
 
-    private suspend fun syncGrimmoryProgress(server: com.ember.reader.core.model.Server) {
+    /**
+     * Syncs Grimmory progress for all downloaded books using ProgressSyncManager.
+     * For each book: pulls best remote progress (checking epubProgress first),
+     * and pushes local progress if ahead of server.
+     */
+    private suspend fun syncGrimmoryProgress(server: Server) {
         val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
 
-        // Pull continue-reading from Grimmory first to get server state
-        val serverProgress = mutableMapOf<Long, Float>() // grimmoryBookId -> percentage (0-1)
-        runCatching {
-            val continueReading = grimmoryClient.getContinueReading(
-                baseUrl = server.url,
-                serverId = server.id
-            ).getOrThrow()
-
-            for (summary in continueReading) {
-                val rawPct = summary.readProgress ?: continue
-                if (rawPct <= 0f) continue
-                val percentage = rawPct.normalizeGrimmoryPercentage()
-                serverProgress[summary.id] = percentage
-
-                // Pull if server is meaningfully ahead of local
-                val localBook = downloadedBooks.find { it.grimmoryBookId == summary.id }
-                if (localBook != null) {
-                    val localProgress = readingProgressRepository.getByBookId(localBook.id)
-                    val localPct = localProgress?.percentage ?: 0f
-                    // Only pull if server is at least 1% ahead — avoids counting rounding diffs
-                    if (percentage > localPct + 0.01f) {
-                        readingProgressRepository.applyRemoteProgress(
-                            ReadingProgress.fromRemote(localBook.id, server.id, percentage)
-                        )
-                        syncPulled++
-                        Timber.d("SyncWorker: pulled Grimmory progress for ${localBook.title}: ${(percentage * 100).toInt()}% (local was ${(localPct * 100).toInt()}%)")
-                    }
-                }
-            }
-        }.onFailure {
-            Timber.w(it, "SyncWorker: failed to pull Grimmory continue-reading")
-        }
-
-        // Push local progress to Grimmory — only if local is ahead of server
         for (book in downloadedBooks) {
-            val grimmoryBookId = book.grimmoryBookId ?: continue
-            val progress = readingProgressRepository.getByBookId(book.id) ?: continue
-            if (progress.percentage <= 0f) continue
-
-            val serverPct = serverProgress[grimmoryBookId] ?: 0f
-            // Only push if local is at least 1% ahead of server
-            if (progress.percentage <= serverPct + 0.01f) continue
+            if (book.grimmoryBookId == null) continue
 
             runCatching {
-                val pct = progress.percentage.toGrimmoryPercentage()
-                grimmoryClient.pushProgress(
-                    baseUrl = server.url,
-                    serverId = server.id,
-                    request = GrimmoryProgressRequest(
-                        bookId = grimmoryBookId,
-                        epubProgress = GrimmoryEpubProgress(
-                            cfi = ProgressSyncManager.PLACEHOLDER_CFI,
-                            percentage = pct
-                        )
-                    )
-                ).getOrThrow()
-                readingProgressRepository.markSynced(book.id)
-                syncPushed++
-                Timber.d("SyncWorker: pushed Grimmory progress for ${book.title}: ${pct}% (server was ${(serverPct * 100).toInt()}%)")
+                val localProgress = readingProgressRepository.getByBookId(book.id)
+                val localPct = localProgress?.percentage ?: 0f
+
+                // Pull — uses getBookDetail which reads epubProgress.percentage correctly
+                val remote = progressSyncManager.pullBestProgress(server, book)
+                if (remote != null && remote.progress.percentage > localPct + 0.01f) {
+                    readingProgressRepository.applyRemoteProgress(remote.progress)
+                    syncPulled++
+                    Timber.d("SyncWorker: pulled progress for ${book.title}: ${(remote.progress.percentage * 100).toInt()}% from ${remote.source} (local was ${(localPct * 100).toInt()}%)")
+                }
+
+                // Push — only if local is meaningfully ahead
+                if (localPct > 0f) {
+                    val serverPct = remote?.progress?.percentage ?: 0f
+                    if (localPct > serverPct + 0.01f) {
+                        val pushed = progressSyncManager.pushProgress(server, book)
+                        if (pushed) {
+                            syncPushed++
+                            Timber.d("SyncWorker: pushed progress for ${book.title}: ${(localPct * 100).toInt()}% (server was ${(serverPct * 100).toInt()}%)")
+                        }
+                    }
+                }
             }.onFailure {
-                Timber.w(it, "SyncWorker: failed to push Grimmory progress for ${book.title}")
+                Timber.w(it, "SyncWorker: sync failed for ${book.title}")
             }
         }
     }
 
-    private suspend fun autoDownloadReadingBooks(server: com.ember.reader.core.model.Server) {
+    private suspend fun autoDownloadReadingBooks(server: Server) {
         val downloadedTitles = mutableListOf<String>()
         runCatching {
             val continueReading = grimmoryClient.getContinueReading(
@@ -223,13 +193,10 @@ class SyncWorker @AssistedInject constructor(
                     Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
 
                     // Pull reading progress for the newly downloaded book
-                    val rawPct = summary.readProgress
-                    if (rawPct != null && rawPct > 0f) {
-                        val percentage = rawPct.normalizeGrimmoryPercentage()
-                        readingProgressRepository.applyRemoteProgress(
-                            ReadingProgress.fromRemote(downloadedBook.id, server.id, percentage)
-                        )
-                        Timber.d("SyncWorker: applied progress ${(percentage * 100).toInt()}% for '${summary.title}'")
+                    val remote = progressSyncManager.pullBestProgress(server, downloadedBook)
+                    if (remote != null) {
+                        readingProgressRepository.applyRemoteProgress(remote.progress)
+                        Timber.d("SyncWorker: applied progress ${(remote.progress.percentage * 100).toInt()}% for '${summary.title}'")
                     }
                 }.onFailure {
                     Timber.w(it, "SyncWorker: failed to auto-download '${summary.title}'")
