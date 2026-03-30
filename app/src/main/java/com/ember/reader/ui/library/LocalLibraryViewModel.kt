@@ -146,13 +146,8 @@ class LocalLibraryViewModel @Inject constructor(
             val books = ids.mapNotNull { bookRepository.getById(it) }
             for (book in books) {
                 val serverId = book.serverId ?: continue
-                val fileHash = book.fileHash ?: continue
-                val server = serverRepository.getById(serverId) ?: continue
-                if (server.kosyncUsername.isBlank()) continue
-                val result = readingProgressRepository.pullProgress(server, book.id, fileHash)
-                val remote = result.getOrNull() ?: continue
-                readingProgressRepository.applyRemoteProgress(remote.progress)
-                synced++
+                val result = pullProgressForBook(book.id, serverId)
+                if (result.isNotBlank()) synced++
             }
             _operationResult.value = if (synced > 0) "Synced $synced book(s)" else "No remote progress found"
         }

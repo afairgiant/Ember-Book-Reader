@@ -159,7 +159,6 @@ class ReaderViewModel @Inject constructor(
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
-        pullGrimmoryProgressOnOpen(loadedBook, localProgress)
 
         // Show tap zone hint on first open of each book in Ember
         // locatorJson is null when progress came from server sync only (never opened locally)
@@ -168,48 +167,9 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private suspend fun pullGrimmoryProgressOnOpen(
-        loadedBook: Book,
-        localProgress: ReadingProgress?
-    ) {
-        val serverId = loadedBook.serverId ?: return
-        val server = serverRepository.getById(serverId) ?: return
-        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return
-        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
-
-        runCatching {
-            val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-            val rawRemote = detail.readProgress ?: return
-            // Grimmory returns 0-100, Ember uses 0-1
-            val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
-
-            val localPercentage = localProgress?.percentage ?: 0f
-            Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
-
-            if (remotePercentage > localPercentage + CONFLICT_THRESHOLD) {
-                _syncConflict.value = SyncConflict(
-                    remotePercentage = remotePercentage,
-                    localPercentage = localPercentage,
-                    remoteLocatorJson = null,
-                    remoteDevice = "Grimmory Web Reader",
-                    remoteProgress = ReadingProgress(
-                        bookId = bookId,
-                        serverId = serverId,
-                        percentage = remotePercentage,
-                        lastReadAt = java.time.Instant.now(),
-                        syncedAt = java.time.Instant.now(),
-                        needsSync = false
-                    )
-                )
-            }
-        }.onFailure {
-            Timber.w(it, "Failed to pull Grimmory progress on open")
-        }
-    }
-
     private data class SyncContext(
         val server: com.ember.reader.core.model.Server,
-        val fileHash: String
+        val fileHash: String?
     )
 
     private suspend fun getSyncContext(): SyncContext? {
@@ -217,8 +177,6 @@ class ReaderViewModel @Inject constructor(
             ?: return null.also { Timber.d("Sync: no book loaded") }
         val serverId = loadedBook.serverId
             ?: return null.also { Timber.d("Sync: no serverId") }
-        val fileHash = loadedBook.fileHash
-            ?: return null.also { Timber.d("Sync: no fileHash") }
         val syncFrequency = syncPreferencesRepository.syncFrequencyFlow.first()
         if (!syncFrequency.syncOnOpenClose) {
             return null.also {
@@ -227,9 +185,8 @@ class ReaderViewModel @Inject constructor(
         }
         val server = serverRepository.getById(serverId)
             ?: return null.also { Timber.d("Sync: server $serverId not found") }
-        if (server.kosyncUsername.isBlank()) return null.also { Timber.d("Sync: kosync username blank") }
-        Timber.d("Sync: context ready — server='${server.name}' hash='$fileHash'")
-        return SyncContext(server, fileHash)
+        Timber.d("Sync: context ready — server='${server.name}' hash='${loadedBook.fileHash}'")
+        return SyncContext(server, loadedBook.fileHash)
     }
 
     private suspend fun pullRemoteProgressOnOpen(
@@ -237,28 +194,67 @@ class ReaderViewModel @Inject constructor(
         localProgress: ReadingProgress?
     ) {
         val (server, fileHash) = getSyncContext() ?: return
-
-        Timber.d("Sync: pulling progress for hash=$fileHash")
-        val result = readingProgressRepository.pullProgress(server, bookId, fileHash)
-        val remoteResult = result.getOrNull()
-        if (remoteResult == null) {
-            Timber.d("Sync: no remote progress found (result=${result.exceptionOrNull()?.message})")
-            return
-        }
-        val remote = remoteResult.progress
-
         val localPercentage = localProgress?.percentage ?: 0f
-        Timber.d("Sync: remote=${remote.percentage} local=$localPercentage device=${remoteResult.deviceName}")
-        if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
-            _syncConflict.value = SyncConflict(
-                remotePercentage = remote.percentage,
-                localPercentage = localPercentage,
-                remoteLocatorJson = remote.locatorJson,
-                remoteDevice = remoteResult.deviceName,
-                remoteProgress = remote
-            )
+        var bestConflict: SyncConflict? = null
+
+        // Try kosync pull
+        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
+            Timber.d("Sync: pulling kosync progress for hash=$fileHash")
+            val result = readingProgressRepository.pullProgress(server, bookId, fileHash)
+            val remoteResult = result.getOrNull()
+            if (remoteResult != null) {
+                val remote = remoteResult.progress
+                Timber.d("Sync: kosync remote=${remote.percentage} local=$localPercentage device=${remoteResult.deviceName}")
+                if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
+                    bestConflict = SyncConflict(
+                        remotePercentage = remote.percentage,
+                        localPercentage = localPercentage,
+                        remoteLocatorJson = remote.locatorJson,
+                        remoteDevice = remoteResult.deviceName,
+                        remoteProgress = remote
+                    )
+                }
+            } else {
+                Timber.d("Sync: no kosync progress found (result=${result.exceptionOrNull()?.message})")
+            }
+        }
+
+        // Try Grimmory pull
+        val grimmoryBookId = loadedBook.grimmoryBookId
+        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
+            runCatching {
+                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+                val rawRemote = detail.readProgress ?: return@runCatching
+                val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
+                Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
+
+                if (remotePercentage > localPercentage + CONFLICT_THRESHOLD &&
+                    remotePercentage > (bestConflict?.remotePercentage ?: 0f)
+                ) {
+                    bestConflict = SyncConflict(
+                        remotePercentage = remotePercentage,
+                        localPercentage = localPercentage,
+                        remoteLocatorJson = null,
+                        remoteDevice = "Grimmory Web Reader",
+                        remoteProgress = ReadingProgress(
+                            bookId = bookId,
+                            serverId = server.id,
+                            percentage = remotePercentage,
+                            lastReadAt = java.time.Instant.now(),
+                            syncedAt = java.time.Instant.now(),
+                            needsSync = false
+                        )
+                    )
+                }
+            }.onFailure {
+                Timber.w(it, "Failed to pull Grimmory progress on open")
+            }
+        }
+
+        if (bestConflict != null) {
+            _syncConflict.value = bestConflict
         } else {
-            Timber.d("Sync: remote not ahead enough to show conflict (threshold=$CONFLICT_THRESHOLD)")
+            Timber.d("Sync: no remote progress ahead enough to show conflict (threshold=$CONFLICT_THRESHOLD)")
         }
     }
 
@@ -371,8 +367,10 @@ class ReaderViewModel @Inject constructor(
         val (server, fileHash) = getSyncContext() ?: return
 
         // Kosync push
-        readingProgressRepository.pushProgress(server, bookId, fileHash).onFailure {
-            Timber.w(it, "Failed to push kosync progress on close")
+        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
+            readingProgressRepository.pushProgress(server, bookId, fileHash).onFailure {
+                Timber.w(it, "Failed to push kosync progress on close")
+            }
         }
 
         // Grimmory native push
