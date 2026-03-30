@@ -77,9 +77,9 @@ class GrimmoryClient @Inject constructor(
     suspend fun getBookDetail(
         baseUrl: String,
         serverId: Long,
-        bookId: Long
+        grimmoryBookId: Long
     ): Result<GrimmoryBookDetail> = withAuth(baseUrl, serverId) { token ->
-        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/$bookId") {
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId") {
             header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) {
@@ -106,10 +106,10 @@ class GrimmoryClient @Inject constructor(
     suspend fun updateReadStatus(
         baseUrl: String,
         serverId: Long,
-        bookId: Long,
+        grimmoryBookId: Long,
         status: ReadStatus
     ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
-        val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/app/books/$bookId/status") {
+        val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId/status") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(GrimmoryStatusRequest(status))
@@ -173,9 +173,9 @@ class GrimmoryClient @Inject constructor(
     suspend fun getAudiobookInfo(
         baseUrl: String,
         serverId: Long,
-        bookId: Long
+        grimmoryBookId: Long
     ): Result<AudiobookInfo> = withAuth(baseUrl, serverId) { token ->
-        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/audiobooks/$bookId/info") {
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/info") {
             header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) {
@@ -191,15 +191,15 @@ class GrimmoryClient @Inject constructor(
     suspend fun audiobookStreamUrl(
         baseUrl: String,
         serverId: Long,
-        bookId: Long,
+        grimmoryBookId: Long,
         trackIndex: Int? = null
     ): String? {
         val token = tokenManager.getAccessToken(serverId) ?: return null
         val origin = serverOrigin(baseUrl)
         return if (trackIndex != null) {
-            "$origin/api/v1/audiobooks/$bookId/track/$trackIndex/stream?token=$token"
+            "$origin/api/v1/audiobooks/$grimmoryBookId/track/$trackIndex/stream?token=$token"
         } else {
-            "$origin/api/v1/audiobooks/$bookId/stream?token=$token"
+            "$origin/api/v1/audiobooks/$grimmoryBookId/stream?token=$token"
         }
     }
 
@@ -236,8 +236,8 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
-    fun audiobookCoverUrl(baseUrl: String, bookId: Long): String =
-        "${serverOrigin(baseUrl)}/api/v1/audiobooks/$bookId/cover"
+    fun audiobookCoverUrl(baseUrl: String, grimmoryBookId: Long): String =
+        "${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/cover"
 
     /**
      * Executes a block with a valid access token.

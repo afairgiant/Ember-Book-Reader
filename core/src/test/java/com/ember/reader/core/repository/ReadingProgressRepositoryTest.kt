@@ -85,7 +85,7 @@ class ReadingProgressRepositoryTest {
     }
 
     @Test
-    fun `pushProgress constructs correct KosyncProgressRequest`() = runTest {
+    fun `pushKosyncProgress constructs correct KosyncProgressRequest`() = runTest {
         val progressEntity = ReadingProgressEntity(
             bookId = "book-1",
             serverId = 1L,
@@ -106,18 +106,18 @@ class ReadingProgressRepositoryTest {
         } returns Result.success(Unit)
         coEvery { readingProgressDao.markSynced(any(), any()) } returns Unit
 
-        repository.pushProgress(testServer, "book-1", "doc-hash-123")
+        repository.pushKosyncProgress(testServer, "book-1", "doc-hash-123")
 
         val request = requestSlot.captured
         assertEquals("doc-hash-123", request.document)
-        assertEquals("{\"locator\":\"data\"}", request.progress)
+        assertEquals("{\"locator\":\"data\"}", request.positionData)
         assertEquals(0.42f, request.percentage)
         assertEquals("Ember", request.device)
         assertEquals("test-device-id", request.deviceId)
     }
 
     @Test
-    fun `pushProgress marks synced on success`() = runTest {
+    fun `pushKosyncProgress marks synced on success`() = runTest {
         val progressEntity = ReadingProgressEntity(
             bookId = "book-1",
             serverId = 1L,
@@ -133,17 +133,17 @@ class ReadingProgressRepositoryTest {
         coEvery { kosyncClient.pushProgress(any(), any(), any(), any()) } returns Result.success(Unit)
         coEvery { readingProgressDao.markSynced(any(), any()) } returns Unit
 
-        val result = repository.pushProgress(testServer, "book-1", "hash")
+        val result = repository.pushKosyncProgress(testServer, "book-1", "hash")
 
         assertTrue(result.isSuccess)
         coVerify { readingProgressDao.markSynced("book-1", any()) }
     }
 
     @Test
-    fun `pullProgress returns RemoteProgressResult without writing to DB`() = runTest {
+    fun `pullKosyncProgress returns KosyncProgressResult without writing to DB`() = runTest {
         val response = KosyncProgressResponse(
             document = "doc-hash",
-            progress = "{\"locator\":\"remote\"}",
+            positionData = "{\"locator\":\"remote\"}",
             percentage = 0.8f,
             device = "KOReader",
             deviceId = "remote-device",
@@ -158,7 +158,7 @@ class ReadingProgressRepositoryTest {
             )
         } returns Result.success(response)
 
-        val result = repository.pullProgress(testServer, "book-1", "doc-hash")
+        val result = repository.pullKosyncProgress(testServer, "book-1", "doc-hash")
 
         assertTrue(result.isSuccess)
         val remoteResult = result.getOrNull()
@@ -191,7 +191,7 @@ class ReadingProgressRepositoryTest {
     }
 
     @Test
-    fun `syncUnsyncedProgress filters by serverId`() = runTest {
+    fun `pushUnsyncedKosyncProgress filters by serverId`() = runTest {
         val unsyncedEntity = ReadingProgressEntity(
             bookId = "book-1",
             serverId = 1L,
@@ -208,7 +208,7 @@ class ReadingProgressRepositoryTest {
         coEvery { kosyncClient.pushProgress(any(), any(), any(), any()) } returns Result.success(Unit)
         coEvery { readingProgressDao.markSynced(any(), any()) } returns Unit
 
-        repository.syncUnsyncedProgress(testServer) { bookId ->
+        repository.pushUnsyncedKosyncProgress(testServer) { bookId ->
             if (bookId == "book-1") "hash-1" else null
         }
 

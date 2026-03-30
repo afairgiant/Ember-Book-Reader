@@ -100,7 +100,7 @@ class KosyncClientTest {
 
         val request = KosyncProgressRequest(
             document = "abc123hash",
-            progress = "{\"locator\":\"data\"}",
+            positionData = "{\"locator\":\"data\"}",
             percentage = 0.42f,
             device = "Ember",
             deviceId = "device-uuid-123"
@@ -146,7 +146,7 @@ class KosyncClientTest {
         val response = result.getOrNull()
         assertNotNull(response)
         assertEquals("abc123hash", response!!.document)
-        assertEquals("{\"locator\":\"data\"}", response.progress)
+        assertEquals("{\"locator\":\"data\"}", response.positionData)
         assertEquals(0.75f, response.percentage)
         assertEquals("KOReader", response.device)
         assertEquals("remote-device-id", response.deviceId)

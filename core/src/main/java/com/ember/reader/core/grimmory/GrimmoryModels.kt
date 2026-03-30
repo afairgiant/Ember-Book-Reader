@@ -1,6 +1,5 @@
 package com.ember.reader.core.grimmory
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -35,8 +34,7 @@ data class GrimmoryBookSummary(
     val title: String,
     val readStatus: ReadStatus? = null,
     /** Overall progress from Grimmory — may reflect kosync/KOReader, not native Grimmory progress. */
-    @SerialName("readProgress")
-    val kosyncProgress: Float? = null,
+    val readProgress: Float? = null,
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
     val coverUpdatedOn: String? = null,
@@ -73,8 +71,7 @@ data class GrimmoryBookDetail(
     val description: String? = null,
     val readStatus: ReadStatus? = null,
     /** Overall progress from Grimmory — may reflect kosync/KOReader, not native Grimmory progress. */
-    @SerialName("readProgress")
-    val kosyncProgress: Float? = null,
+    val readProgress: Float? = null,
     val personalRating: Int? = null,
     val authors: List<String> = emptyList(),
     val categories: Set<String>? = null,

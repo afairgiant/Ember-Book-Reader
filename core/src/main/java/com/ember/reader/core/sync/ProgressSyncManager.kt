@@ -69,7 +69,7 @@ class ProgressSyncManager @Inject constructor(
             return null
         }
         Timber.d("Sync pull: trying kosync for '${book.title}' hash=$fileHash")
-        val remote = readingProgressRepository.pullProgress(server, book.id, fileHash)
+        val remote = readingProgressRepository.pullKosyncProgress(server, book.id, fileHash)
             .onFailure { Timber.w(it, "Failed to pull kosync progress for ${book.title}") }
             .getOrNull()
         if (remote == null) {
@@ -77,7 +77,7 @@ class ProgressSyncManager @Inject constructor(
             return null
         }
         Timber.d("Sync pull: kosync returned ${remote.progress.percentage} from ${remote.deviceName}")
-        return RemoteSyncResult(remote.progress, remote.deviceName ?: "kosync")
+        return RemoteSyncResult(remote.progress, remote.deviceName ?: "Another device")
     }
 
     private suspend fun pullGrimmory(server: Server, book: Book): RemoteSyncResult? {
@@ -99,8 +99,8 @@ class ProgressSyncManager @Inject constructor(
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
             // Prefer epubProgress.percentage (native Grimmory progress that Ember pushes to)
             // over readProgress (which may reflect kosync/KOReader progress instead)
-            val rawPct = detail.epubProgress?.percentage ?: detail.kosyncProgress
-            Timber.d("Sync pull: Grimmory returned rawPct=$rawPct (epub=${detail.epubProgress?.percentage}, kosync=${detail.kosyncProgress}) for '${book.title}'")
+            val rawPct = detail.epubProgress?.percentage ?: detail.readProgress
+            Timber.d("Sync pull: Grimmory returned rawPct=$rawPct (epub=${detail.epubProgress?.percentage}, readProgress=${detail.readProgress}) for '${book.title}'")
             if (rawPct == null || rawPct <= 0f) return@runCatching null
             RemoteSyncResult(
                 progress = ReadingProgress.fromRemote(book.id, server.id, rawPct.normalizeGrimmoryPercentage()),
@@ -122,7 +122,7 @@ class ProgressSyncManager @Inject constructor(
             return false
         }
         Timber.d("Sync push: pushing kosync for '${book.title}' hash=$fileHash")
-        return readingProgressRepository.pushProgress(server, book.id, fileHash)
+        return readingProgressRepository.pushKosyncProgress(server, book.id, fileHash)
             .onFailure { Timber.w(it, "Failed to push kosync progress for ${book.title}") }
             .isSuccess
     }

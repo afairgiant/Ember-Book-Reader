@@ -30,6 +30,6 @@ data class Book(
     /** Extracts Grimmory's numeric book ID from opdsEntryId like "urn:booklore:book:123" */
     val grimmoryBookId: Long?
         get() = opdsEntryId
-            ?.substringAfterLast(":")
+            ?.removePrefix("urn:booklore:book:")
             ?.toLongOrNull()
 }

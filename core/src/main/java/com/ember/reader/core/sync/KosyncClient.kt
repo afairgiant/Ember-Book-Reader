@@ -81,7 +81,8 @@ class KosyncClient @Inject constructor(
 @Serializable
 data class KosyncProgressRequest(
     val document: String,
-    val progress: String,
+    @SerialName("progress")
+    val positionData: String,
     val percentage: Float,
     val device: String,
     @SerialName("device_id")
@@ -91,7 +92,8 @@ data class KosyncProgressRequest(
 @Serializable
 data class KosyncProgressResponse(
     val document: String? = null,
-    val progress: String? = null,
+    @SerialName("progress")
+    val positionData: String? = null,
     val percentage: Float? = null,
     val device: String? = null,
     @SerialName("device_id")

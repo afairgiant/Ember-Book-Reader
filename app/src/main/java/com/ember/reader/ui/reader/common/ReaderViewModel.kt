@@ -190,8 +190,7 @@ class ReaderViewModel @Inject constructor(
             _syncConflict.value = SyncConflict(
                 remotePercentage = remote.progress.percentage,
                 localPercentage = localPercentage,
-                remoteLocatorJson = remote.progress.locatorJson,
-                remoteDevice = remote.source,
+                remoteSource = remote.source,
                 remoteProgress = remote.progress,
             )
         } else {
@@ -203,7 +202,7 @@ class ReaderViewModel @Inject constructor(
         val conflict = _syncConflict.value ?: return
         _syncConflict.value = null
         viewModelScope.launch {
-            conflict.remoteProgress?.let { readingProgressRepository.applyRemoteProgress(it) }
+            readingProgressRepository.applyRemoteProgress(conflict.remoteProgress)
         }
         // Navigate by percentage — works regardless of progress format (Locator, XPointer, CFI)
         _pendingNavigation.value = conflict.remotePercentage
@@ -403,7 +402,6 @@ sealed interface ReaderUiState {
 data class SyncConflict(
     val remotePercentage: Float,
     val localPercentage: Float,
-    val remoteLocatorJson: String?,
-    val remoteDevice: String?,
-    val remoteProgress: com.ember.reader.core.model.ReadingProgress? = null
+    val remoteSource: String?,
+    val remoteProgress: com.ember.reader.core.model.ReadingProgress,
 )

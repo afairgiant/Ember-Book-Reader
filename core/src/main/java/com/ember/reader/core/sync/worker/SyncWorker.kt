@@ -55,7 +55,7 @@ class SyncWorker @AssistedInject constructor(
             runCatching {
                 // Kosync push/pull
                 if (server.kosyncUsername.isNotBlank()) {
-                    readingProgressRepository.syncUnsyncedProgress(server) { bookId ->
+                    readingProgressRepository.pushUnsyncedKosyncProgress(server) { bookId ->
                         bookRepository.getById(bookId)?.fileHash
                     }
 
@@ -65,7 +65,7 @@ class SyncWorker @AssistedInject constructor(
                             val hash = book.fileHash ?: return@mapNotNull null
                             book.id to hash
                         }
-                        readingProgressRepository.pullProgressForAllBooks(server, bookHashPairs)
+                        readingProgressRepository.pullKosyncProgressForAllBooks(server, bookHashPairs)
                         syncPulled += bookHashPairs.size
                         Timber.d("SyncWorker: kosync pulled for ${bookHashPairs.size} books on ${server.name}")
                     }
@@ -127,7 +127,7 @@ class SyncWorker @AssistedInject constructor(
             ).getOrThrow()
 
             for (summary in continueReading) {
-                val rawPct = summary.kosyncProgress ?: continue
+                val rawPct = summary.readProgress ?: continue
                 if (rawPct <= 0f) continue
                 val percentage = rawPct.normalizeGrimmoryPercentage()
                 serverProgress[summary.id] = percentage
@@ -158,7 +158,6 @@ class SyncWorker @AssistedInject constructor(
             if (progress.percentage <= 0f) continue
 
             val serverPct = serverProgress[grimmoryBookId] ?: 0f
-            // Only push if local is meaningfully ahead (>0.5% difference)
             // Only push if local is at least 1% ahead of server
             if (progress.percentage <= serverPct + 0.01f) continue
 
@@ -224,7 +223,7 @@ class SyncWorker @AssistedInject constructor(
                     Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
 
                     // Pull reading progress for the newly downloaded book
-                    val rawPct = summary.kosyncProgress
+                    val rawPct = summary.readProgress
                     if (rawPct != null && rawPct > 0f) {
                         val percentage = rawPct.normalizeGrimmoryPercentage()
                         readingProgressRepository.applyRemoteProgress(

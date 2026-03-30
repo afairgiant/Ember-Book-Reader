@@ -49,11 +49,11 @@ class ReadingProgressRepository @Inject constructor(
         readingProgressDao.upsert(progress.toEntity())
     }
 
-    suspend fun pushProgress(server: Server, bookId: String, documentHash: String): Result<Unit> {
+    suspend fun pushKosyncProgress(server: Server, bookId: String, documentHash: String): Result<Unit> {
         val progress = getByBookId(bookId) ?: return Result.success(Unit)
         val request = KosyncProgressRequest(
             document = documentHash,
-            progress = progress.locatorJson ?: "",
+            positionData = progress.locatorJson ?: "",
             percentage = progress.percentage,
             device = deviceIdentity.deviceName,
             deviceId = deviceIdentity.deviceId
@@ -72,16 +72,16 @@ class ReadingProgressRepository @Inject constructor(
         readingProgressDao.markSynced(bookId, Instant.now())
     }
 
-    data class RemoteProgressResult(
+    data class KosyncProgressResult(
         val progress: ReadingProgress,
         val deviceName: String?
     )
 
-    suspend fun pullProgress(
+    suspend fun pullKosyncProgress(
         server: Server,
         bookId: String,
         documentHash: String
-    ): Result<RemoteProgressResult?> = runCatching {
+    ): Result<KosyncProgressResult?> = runCatching {
         val remote = kosyncClient.pullProgress(
             baseUrl = server.url,
             username = server.kosyncUsername,
@@ -91,13 +91,13 @@ class ReadingProgressRepository @Inject constructor(
 
         val remotePercentage = remote.percentage ?: return@runCatching null
 
-        RemoteProgressResult(
+        KosyncProgressResult(
             progress = ReadingProgress(
                 bookId = bookId,
                 serverId = server.id,
                 percentage = remotePercentage,
-                locatorJson = remote.progress,
-                kosyncProgress = remote.progress,
+                locatorJson = remote.positionData,
+                kosyncProgress = remote.positionData,
                 lastReadAt = Instant.now(),
                 syncedAt = Instant.now(),
                 needsSync = false
@@ -114,10 +114,10 @@ class ReadingProgressRepository @Inject constructor(
      * Pulls remote progress for all downloaded books on a server.
      * Only updates local progress if the remote is newer (higher percentage).
      */
-    suspend fun pullProgressForAllBooks(server: Server, books: List<Pair<String, String>>) {
+    suspend fun pullKosyncProgressForAllBooks(server: Server, books: List<Pair<String, String>>) {
         for ((bookId, fileHash) in books) {
             runCatching {
-                val result = pullProgress(server, bookId, fileHash)
+                val result = pullKosyncProgress(server, bookId, fileHash)
                 val remote = result.getOrNull() ?: return@runCatching
 
                 val local = getByBookId(bookId)
@@ -133,11 +133,11 @@ class ReadingProgressRepository @Inject constructor(
         }
     }
 
-    suspend fun syncUnsyncedProgress(server: Server, getDocumentHash: suspend (String) -> String?) {
+    suspend fun pushUnsyncedKosyncProgress(server: Server, getDocumentHash: suspend (String) -> String?) {
         val unsynced = readingProgressDao.getUnsyncedProgress(server.id)
         for (entity in unsynced) {
             val hash = getDocumentHash(entity.bookId) ?: continue
-            pushProgress(server, entity.bookId, hash).onFailure {
+            pushKosyncProgress(server, entity.bookId, hash).onFailure {
                 Timber.w(it, "Failed to sync progress for ${entity.bookId}")
             }
         }
