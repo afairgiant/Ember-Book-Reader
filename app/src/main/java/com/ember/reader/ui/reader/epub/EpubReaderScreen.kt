@@ -571,3 +571,4 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
         letterSpacing = letterSpacing.toDouble()
     )
 }
+
