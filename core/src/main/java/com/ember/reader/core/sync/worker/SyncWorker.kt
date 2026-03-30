@@ -127,7 +127,7 @@ class SyncWorker @AssistedInject constructor(
             ).getOrThrow()
 
             for (summary in continueReading) {
-                val rawPct = summary.readProgress ?: continue
+                val rawPct = summary.kosyncProgress ?: continue
                 if (rawPct <= 0f) continue
                 val percentage = rawPct.normalizeGrimmoryPercentage()
                 serverProgress[summary.id] = percentage
@@ -224,7 +224,7 @@ class SyncWorker @AssistedInject constructor(
                     Timber.d("SyncWorker: auto-downloaded '${summary.title}'")
 
                     // Pull reading progress for the newly downloaded book
-                    val rawPct = summary.readProgress
+                    val rawPct = summary.kosyncProgress
                     if (rawPct != null && rawPct > 0f) {
                         val percentage = rawPct.normalizeGrimmoryPercentage()
                         readingProgressRepository.applyRemoteProgress(
