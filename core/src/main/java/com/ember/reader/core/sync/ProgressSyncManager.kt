@@ -34,10 +34,13 @@ class ProgressSyncManager @Inject constructor(
      * concurrently. Returns null if no remote progress found.
      */
     suspend fun pullBestProgress(server: Server, book: Book): RemoteSyncResult? = coroutineScope {
+        Timber.d("Sync pull: starting for '${book.title}' server='${server.name}'")
         val kosyncDeferred = async { pullKosync(server, book) }
         val grimmoryDeferred = async { pullGrimmory(server, book) }
-        listOfNotNull(kosyncDeferred.await(), grimmoryDeferred.await())
-            .maxByOrNull { it.progress.percentage }
+        val results = listOfNotNull(kosyncDeferred.await(), grimmoryDeferred.await())
+        val best = results.maxByOrNull { it.progress.percentage }
+        Timber.d("Sync pull: ${results.size} source(s) found, best=${best?.let { "${it.progress.percentage} from ${it.source}" } ?: "none"}")
+        best
     }
 
     /**
@@ -58,19 +61,34 @@ class ProgressSyncManager @Inject constructor(
     private suspend fun pullKosync(server: Server, book: Book): RemoteSyncResult? {
         val fileHash = book.fileHash ?: return null
         if (server.kosyncUsername.isBlank()) return null
+        Timber.d("Sync pull: trying kosync for '${book.title}' hash=$fileHash")
         val remote = readingProgressRepository.pullProgress(server, book.id, fileHash)
             .onFailure { Timber.w(it, "Failed to pull kosync progress for ${book.title}") }
             .getOrNull() ?: return null
+        Timber.d("Sync pull: kosync returned ${remote.progress.percentage} from ${remote.deviceName}")
         return RemoteSyncResult(remote.progress, remote.deviceName ?: "kosync")
     }
 
     private suspend fun pullGrimmory(server: Server, book: Book): RemoteSyncResult? {
-        val grimmoryBookId = book.grimmoryBookId ?: return null
-        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return null
+        val grimmoryBookId = book.grimmoryBookId
+        if (grimmoryBookId == null) {
+            Timber.d("Sync pull: skipping Grimmory for '${book.title}' — no grimmoryBookId (opdsEntryId=${book.opdsEntryId})")
+            return null
+        }
+        if (!server.isGrimmory) {
+            Timber.d("Sync pull: skipping Grimmory for '${book.title}' — server not Grimmory")
+            return null
+        }
+        if (!grimmoryTokenManager.isLoggedIn(server.id)) {
+            Timber.d("Sync pull: skipping Grimmory for '${book.title}' — not logged in to Grimmory")
+            return null
+        }
+        Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
         return runCatching {
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-            val rawPct = detail.readProgress ?: return@runCatching null
-            if (rawPct <= 0f) return@runCatching null
+            val rawPct = detail.readProgress
+            Timber.d("Sync pull: Grimmory returned rawPct=$rawPct for '${book.title}'")
+            if (rawPct == null || rawPct <= 0f) return@runCatching null
             RemoteSyncResult(
                 progress = ReadingProgress.fromRemote(book.id, server.id, rawPct.normalizeGrimmoryPercentage()),
                 source = "Grimmory Web Reader",
