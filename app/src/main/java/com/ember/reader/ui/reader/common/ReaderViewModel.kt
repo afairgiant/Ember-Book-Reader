@@ -195,66 +195,63 @@ class ReaderViewModel @Inject constructor(
     ) {
         val (server, fileHash) = getSyncContext() ?: return
         val localPercentage = localProgress?.percentage ?: 0f
-        var bestConflict: SyncConflict? = null
 
-        // Try kosync pull
-        if (fileHash != null && server.kosyncUsername.isNotBlank()) {
-            Timber.d("Sync: pulling kosync progress for hash=$fileHash")
-            val result = readingProgressRepository.pullProgress(server, bookId, fileHash)
-            val remoteResult = result.getOrNull()
-            if (remoteResult != null) {
+        // Pull from kosync and Grimmory concurrently
+        val candidates = kotlinx.coroutines.coroutineScope {
+            val kosyncDeferred = kotlinx.coroutines.async {
+                if (fileHash == null || server.kosyncUsername.isBlank()) return@async null
+                val remoteResult = readingProgressRepository.pullProgress(server, bookId, fileHash)
+                    .getOrNull() ?: return@async null
                 val remote = remoteResult.progress
                 Timber.d("Sync: kosync remote=${remote.percentage} local=$localPercentage device=${remoteResult.deviceName}")
                 if (remote.percentage > localPercentage + CONFLICT_THRESHOLD) {
-                    bestConflict = SyncConflict(
+                    SyncConflict(
                         remotePercentage = remote.percentage,
                         localPercentage = localPercentage,
                         remoteLocatorJson = remote.locatorJson,
                         remoteDevice = remoteResult.deviceName,
                         remoteProgress = remote
                     )
-                }
-            } else {
-                Timber.d("Sync: no kosync progress found (result=${result.exceptionOrNull()?.message})")
+                } else null
             }
-        }
 
-        // Try Grimmory pull
-        val grimmoryBookId = loadedBook.grimmoryBookId
-        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            runCatching {
-                val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-                val rawRemote = detail.readProgress ?: return@runCatching
-                val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
-                Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
-
-                if (remotePercentage > localPercentage + CONFLICT_THRESHOLD &&
-                    remotePercentage > (bestConflict?.remotePercentage ?: 0f)
-                ) {
-                    bestConflict = SyncConflict(
-                        remotePercentage = remotePercentage,
-                        localPercentage = localPercentage,
-                        remoteLocatorJson = null,
-                        remoteDevice = "Grimmory Web Reader",
-                        remoteProgress = ReadingProgress(
-                            bookId = bookId,
-                            serverId = server.id,
-                            percentage = remotePercentage,
-                            lastReadAt = java.time.Instant.now(),
-                            syncedAt = java.time.Instant.now(),
-                            needsSync = false
+            val grimmoryDeferred = kotlinx.coroutines.async {
+                val grimmoryBookId = loadedBook.grimmoryBookId ?: return@async null
+                if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return@async null
+                runCatching {
+                    val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+                    val rawRemote = detail.readProgress ?: return@runCatching null
+                    val remotePercentage = if (rawRemote > 1f) rawRemote / 100f else rawRemote
+                    Timber.d("Grimmory pull: remote=$remotePercentage (raw=$rawRemote) local=$localPercentage")
+                    if (remotePercentage > localPercentage + CONFLICT_THRESHOLD) {
+                        SyncConflict(
+                            remotePercentage = remotePercentage,
+                            localPercentage = localPercentage,
+                            remoteLocatorJson = null,
+                            remoteDevice = "Grimmory Web Reader",
+                            remoteProgress = ReadingProgress(
+                                bookId = bookId,
+                                serverId = server.id,
+                                percentage = remotePercentage,
+                                lastReadAt = java.time.Instant.now(),
+                                syncedAt = java.time.Instant.now(),
+                                needsSync = false
+                            )
                         )
-                    )
-                }
-            }.onFailure {
-                Timber.w(it, "Failed to pull Grimmory progress on open")
+                    } else null
+                }.onFailure {
+                    Timber.w(it, "Failed to pull Grimmory progress on open")
+                }.getOrNull()
             }
+
+            listOfNotNull(kosyncDeferred.await(), grimmoryDeferred.await())
         }
 
+        val bestConflict = candidates.maxByOrNull { it.remotePercentage }
         if (bestConflict != null) {
             _syncConflict.value = bestConflict
         } else {
-            Timber.d("Sync: no remote progress ahead enough to show conflict (threshold=$CONFLICT_THRESHOLD)")
+            Timber.d("Sync: no remote progress ahead enough to show conflict")
         }
     }
 
