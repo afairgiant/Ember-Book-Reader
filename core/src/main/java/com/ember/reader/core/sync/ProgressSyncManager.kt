@@ -97,14 +97,15 @@ class ProgressSyncManager @Inject constructor(
         Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
         return runCatching {
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-            // Prefer epubProgress.percentage (native Grimmory progress that Ember pushes to)
-            // over readProgress (which may reflect kosync/KOReader progress instead)
-            val rawPct = detail.epubProgress?.percentage ?: detail.readProgress
-            Timber.d("Sync pull: Grimmory returned rawPct=$rawPct (epub=${detail.epubProgress?.percentage}, readProgress=${detail.readProgress}) for '${book.title}'")
-            if (rawPct == null || rawPct <= 0f) return@runCatching null
+            // readProgress is 0-1 scale, reflects whichever client pushed last.
+            // Grimmory doesn't expose epubProgress/fileProgress in the book detail response,
+            // so readProgress is the only available progress field.
+            val pct = detail.readProgress
+            Timber.d("Sync pull: Grimmory returned readProgress=$pct for '${book.title}'")
+            if (pct == null || pct <= 0f) return@runCatching null
             RemoteSyncResult(
-                progress = ReadingProgress.fromRemote(book.id, server.id, rawPct.normalizeGrimmoryPercentage()),
-                source = "Grimmory Web Reader",
+                progress = ReadingProgress.fromRemote(book.id, server.id, pct),
+                source = detail.koreaderProgress?.device ?: "Grimmory",
             )
         }.onFailure {
             Timber.w(it, "Failed to pull Grimmory progress for ${book.title}")

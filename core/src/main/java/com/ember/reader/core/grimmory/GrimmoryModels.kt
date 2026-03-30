@@ -70,7 +70,7 @@ data class GrimmoryBookDetail(
     val subtitle: String? = null,
     val description: String? = null,
     val readStatus: ReadStatus? = null,
-    /** Overall progress from Grimmory — may reflect kosync/KOReader, not native Grimmory progress. */
+    /** Overall/latest reading progress (0-1 scale). Reflects whichever client pushed last. */
     val readProgress: Float? = null,
     val personalRating: Int? = null,
     val authors: List<String> = emptyList(),
@@ -90,8 +90,17 @@ data class GrimmoryBookDetail(
     val addedOn: String? = null,
     val lastReadTime: String? = null,
     val epubProgress: GrimmoryEpubProgress? = null,
+    val koreaderProgress: GrimmoryKoreaderProgress? = null,
     val files: List<GrimmoryBookFile> = emptyList(),
-    val shelves: List<GrimmoryShelfSummary>? = null
+    val shelves: List<GrimmoryShelfSummary>? = null,
+)
+
+@Serializable
+data class GrimmoryKoreaderProgress(
+    val percentage: Float? = null,
+    val device: String? = null,
+    val deviceId: String? = null,
+    val lastSyncTime: String? = null,
 )
 
 @Serializable
