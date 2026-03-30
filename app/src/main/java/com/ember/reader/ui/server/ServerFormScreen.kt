@@ -2,6 +2,7 @@ package com.ember.reader.ui.server
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -69,15 +70,21 @@ fun ServerFormScreen(
     var serverTypeChosen by rememberSaveable { mutableStateOf(uiState.isEditing) }
     var isGrimmoryType by rememberSaveable { mutableStateOf(uiState.isGrimmory) }
 
-    // For Grimmory: show OPDS/Kosync fields? Default OFF (Grimmory-only is sufficient)
-    var showOpdsKosync by rememberSaveable { mutableStateOf(false) }
+    // For Grimmory: use Grimmory login for OPDS/Kosync? Default ON for convenience
+    var useGrimmoryLoginForOpds by rememberSaveable { mutableStateOf(true) }
+    var useGrimmoryLoginForKosync by rememberSaveable { mutableStateOf(true) }
 
     // Update when editing state loads
     if (uiState.isEditing && !serverTypeChosen) {
         serverTypeChosen = true
         isGrimmoryType = uiState.isGrimmory
-        // Show OPDS/Kosync fields if they were previously configured
-        showOpdsKosync = uiState.opdsUsername.isNotBlank() || uiState.kosyncUsername.isNotBlank()
+        // If OPDS/Kosync credentials differ from Grimmory, uncheck the boxes
+        val hasCustomOpds = uiState.opdsUsername.isNotBlank() &&
+            uiState.opdsUsername != uiState.grimmoryUsername
+        val hasCustomKosync = uiState.kosyncUsername.isNotBlank() &&
+            uiState.kosyncUsername != uiState.grimmoryUsername
+        useGrimmoryLoginForOpds = !hasCustomOpds
+        useGrimmoryLoginForKosync = !hasCustomKosync
     }
 
     Scaffold(
@@ -136,10 +143,18 @@ fun ServerFormScreen(
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
                 uiState = uiState,
-                showOpdsKosync = showOpdsKosync,
-                onSameCredentialsChanged = { showOpdsKosync = it },
+                useGrimmoryLoginForOpds = useGrimmoryLoginForOpds,
+                onUseGrimmoryLoginForOpdsChanged = { useGrimmoryLoginForOpds = it },
+                useGrimmoryLoginForKosync = useGrimmoryLoginForKosync,
+                onUseGrimmoryLoginForKosyncChanged = { useGrimmoryLoginForKosync = it },
                 viewModel = viewModel,
-                onSave = { viewModel.saveGrimmory(showOpdsKosync, onNavigateBack) }
+                onSave = {
+                    viewModel.saveGrimmory(
+                        useGrimmoryLoginForOpds = useGrimmoryLoginForOpds,
+                        useGrimmoryLoginForKosync = useGrimmoryLoginForKosync,
+                        onSuccess = onNavigateBack,
+                    )
+                },
             )
         } else {
             // Step 2b: Generic OPDS form
@@ -253,10 +268,12 @@ private fun ServerTypePicker(
 private fun GrimmoryForm(
     modifier: Modifier = Modifier,
     uiState: ServerFormUiState,
-    showOpdsKosync: Boolean,
-    onSameCredentialsChanged: (Boolean) -> Unit,
+    useGrimmoryLoginForOpds: Boolean,
+    onUseGrimmoryLoginForOpdsChanged: (Boolean) -> Unit,
+    useGrimmoryLoginForKosync: Boolean,
+    onUseGrimmoryLoginForKosyncChanged: (Boolean) -> Unit,
     viewModel: ServerFormViewModel,
-    onSave: () -> Unit
+    onSave: () -> Unit,
 ) {
     Column(modifier = modifier) {
         // Server info
@@ -322,39 +339,17 @@ private fun GrimmoryForm(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Same credentials toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.same_credentials_label),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    stringResource(R.string.same_credentials_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = showOpdsKosync,
-                onCheckedChange = onSameCredentialsChanged
-            )
-        }
-
-        // Show separate OPDS/Kosync fields when toggled on
-        AnimatedVisibility(visible = showOpdsKosync) {
+        // OPDS section
+        SectionHeader(icon = Icons.Default.CloudQueue, title = stringResource(R.string.opds_credentials))
+        Spacer(modifier = Modifier.height(8.dp))
+        SameLoginCheckbox(
+            checked = useGrimmoryLoginForOpds,
+            onCheckedChange = onUseGrimmoryLoginForOpdsChanged,
+            label = stringResource(R.string.use_grimmory_login_for_opds),
+        )
+        AnimatedVisibility(visible = !useGrimmoryLoginForOpds) {
             Column {
-                Spacer(modifier = Modifier.height(20.dp))
-
-                SectionHeader(icon = Icons.Default.CloudQueue, title = stringResource(R.string.opds_credentials))
                 Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedTextField(
                     value = uiState.opdsUsername,
                     onValueChange = viewModel::updateOpdsUsername,
@@ -374,18 +369,36 @@ private fun GrimmoryForm(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        TestConnectionButton(
+            result = uiState.opdsTestResult,
+            onClick = {
+                if (useGrimmoryLoginForOpds) viewModel.testOpdsWithGrimmoryCredentials()
+                else viewModel.testOpdsConnection()
+            },
+            label = stringResource(R.string.test_opds),
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Kosync section
+        SectionHeader(icon = Icons.Default.Sync, title = stringResource(R.string.kosync_credentials))
+        Text(
+            text = stringResource(R.string.kosync_sync_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        SameLoginCheckbox(
+            checked = useGrimmoryLoginForKosync,
+            onCheckedChange = onUseGrimmoryLoginForKosyncChanged,
+            label = stringResource(R.string.use_grimmory_login_for_kosync),
+        )
+        AnimatedVisibility(visible = !useGrimmoryLoginForKosync) {
+            Column {
                 Spacer(modifier = Modifier.height(12.dp))
-                TestConnectionButton(
-                    result = uiState.opdsTestResult,
-                    onClick = viewModel::testOpdsConnection,
-                    label = stringResource(R.string.test_opds)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                SectionHeader(icon = Icons.Default.Sync, title = stringResource(R.string.kosync_credentials))
-                Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedTextField(
                     value = uiState.kosyncUsername,
                     onValueChange = viewModel::updateKosyncUsername,
@@ -405,14 +418,17 @@ private fun GrimmoryForm(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                TestConnectionButton(
-                    result = uiState.kosyncTestResult,
-                    onClick = viewModel::testKosyncConnection,
-                    label = stringResource(R.string.test_kosync)
-                )
             }
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        TestConnectionButton(
+            result = uiState.kosyncTestResult,
+            onClick = {
+                if (useGrimmoryLoginForKosync) viewModel.testKosyncWithGrimmoryCredentials()
+                else viewModel.testKosyncConnection()
+            },
+            label = stringResource(R.string.test_kosync),
+        )
 
         uiState.validationError?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
@@ -638,6 +654,32 @@ private fun SectionHeader(icon: androidx.compose.ui.graphics.vector.ImageVector,
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun SameLoginCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

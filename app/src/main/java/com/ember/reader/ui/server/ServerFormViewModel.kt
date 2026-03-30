@@ -105,6 +105,50 @@ class ServerFormViewModel @Inject constructor(
         }
     }
 
+    fun testOpdsWithGrimmoryCredentials() {
+        val state = _uiState.value
+        if (state.url.isBlank() || state.grimmoryUsername.isBlank()) return
+
+        _uiState.update { it.copy(opdsTestResult = TestResult.Testing) }
+        viewModelScope.launch {
+            val result = serverRepository.testOpdsConnection(
+                url = state.url,
+                username = state.grimmoryUsername,
+                password = state.grimmoryPassword
+            )
+            _uiState.update {
+                it.copy(
+                    opdsTestResult = result.fold(
+                        onSuccess = { msg -> TestResult.Success(msg) },
+                        onFailure = { err -> TestResult.Error(err.message ?: "Connection failed") }
+                    )
+                )
+            }
+        }
+    }
+
+    fun testKosyncWithGrimmoryCredentials() {
+        val state = _uiState.value
+        if (state.url.isBlank() || state.grimmoryUsername.isBlank()) return
+
+        _uiState.update { it.copy(kosyncTestResult = TestResult.Testing) }
+        viewModelScope.launch {
+            val result = serverRepository.testKosyncConnection(
+                url = state.url,
+                username = state.grimmoryUsername,
+                password = state.grimmoryPassword
+            )
+            _uiState.update {
+                it.copy(
+                    kosyncTestResult = result.fold(
+                        onSuccess = { TestResult.Success("Connected") },
+                        onFailure = { err -> TestResult.Error(err.message ?: "Auth failed") }
+                    )
+                )
+            }
+        }
+    }
+
     fun testGrimmoryConnection() {
         val state = _uiState.value
         if (state.url.isBlank() || state.grimmoryUsername.isBlank()) return
@@ -155,7 +199,11 @@ class ServerFormViewModel @Inject constructor(
         }
     }
 
-    fun saveGrimmory(showOpdsKosync: Boolean, onSuccess: () -> Unit) {
+    fun saveGrimmory(
+        useGrimmoryLoginForOpds: Boolean,
+        useGrimmoryLoginForKosync: Boolean,
+        onSuccess: () -> Unit,
+    ) {
         val state = _uiState.value
         if (state.name.isBlank() || state.url.isBlank()) {
             _uiState.update { it.copy(validationError = "Name and URL are required") }
@@ -168,11 +216,13 @@ class ServerFormViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSaving = true, validationError = null) }
         viewModelScope.launch {
-            // If OPDS/Kosync fields were shown, use what user entered; otherwise leave empty
-            val opdsUser = if (showOpdsKosync) state.opdsUsername.trim() else ""
-            val opdsPass = if (showOpdsKosync) state.opdsPassword else ""
-            val kosyncUser = if (showOpdsKosync) state.kosyncUsername.trim() else ""
-            val kosyncPass = if (showOpdsKosync) state.kosyncPassword else ""
+            val grimmoryUser = state.grimmoryUsername.trim()
+            val grimmoryPass = state.grimmoryPassword
+
+            val opdsUser = if (useGrimmoryLoginForOpds) grimmoryUser else state.opdsUsername.trim()
+            val opdsPass = if (useGrimmoryLoginForOpds) grimmoryPass else state.opdsPassword
+            val kosyncUser = if (useGrimmoryLoginForKosync) grimmoryUser else state.kosyncUsername.trim()
+            val kosyncPass = if (useGrimmoryLoginForKosync) grimmoryPass else state.kosyncPassword
 
             val server = Server(
                 id = serverId ?: 0,
@@ -182,8 +232,8 @@ class ServerFormViewModel @Inject constructor(
                 opdsPassword = opdsPass,
                 kosyncUsername = kosyncUser,
                 kosyncPassword = kosyncPass,
-                grimmoryUsername = state.grimmoryUsername.trim(),
-                grimmoryPassword = state.grimmoryPassword,
+                grimmoryUsername = grimmoryUser,
+                grimmoryPassword = grimmoryPass,
                 isGrimmory = true
             )
             serverRepository.save(server)
