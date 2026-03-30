@@ -59,12 +59,23 @@ class ProgressSyncManager @Inject constructor(
     }
 
     private suspend fun pullKosync(server: Server, book: Book): RemoteSyncResult? {
-        val fileHash = book.fileHash ?: return null
-        if (server.kosyncUsername.isBlank()) return null
+        val fileHash = book.fileHash
+        if (fileHash == null) {
+            Timber.d("Sync pull: skipping kosync for '${book.title}' — no fileHash")
+            return null
+        }
+        if (server.kosyncUsername.isBlank()) {
+            Timber.d("Sync pull: skipping kosync for '${book.title}' — no kosync credentials")
+            return null
+        }
         Timber.d("Sync pull: trying kosync for '${book.title}' hash=$fileHash")
         val remote = readingProgressRepository.pullProgress(server, book.id, fileHash)
             .onFailure { Timber.w(it, "Failed to pull kosync progress for ${book.title}") }
-            .getOrNull() ?: return null
+            .getOrNull()
+        if (remote == null) {
+            Timber.d("Sync pull: kosync returned nothing for '${book.title}'")
+            return null
+        }
         Timber.d("Sync pull: kosync returned ${remote.progress.percentage} from ${remote.deviceName}")
         return RemoteSyncResult(remote.progress, remote.deviceName ?: "kosync")
     }
@@ -99,8 +110,16 @@ class ProgressSyncManager @Inject constructor(
     }
 
     private suspend fun pushKosync(server: Server, book: Book): Boolean {
-        val fileHash = book.fileHash ?: return false
-        if (server.kosyncUsername.isBlank()) return false
+        val fileHash = book.fileHash
+        if (fileHash == null) {
+            Timber.d("Sync push: skipping kosync for '${book.title}' — no fileHash")
+            return false
+        }
+        if (server.kosyncUsername.isBlank()) {
+            Timber.d("Sync push: skipping kosync for '${book.title}' — no kosync credentials")
+            return false
+        }
+        Timber.d("Sync push: pushing kosync for '${book.title}' hash=$fileHash")
         return readingProgressRepository.pushProgress(server, book.id, fileHash)
             .onFailure { Timber.w(it, "Failed to push kosync progress for ${book.title}") }
             .isSuccess
