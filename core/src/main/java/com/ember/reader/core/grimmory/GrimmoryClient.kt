@@ -85,7 +85,10 @@ class GrimmoryClient @Inject constructor(
         if (!response.status.isSuccess()) {
             error("Book detail failed: ${response.status}")
         }
-        response.body<GrimmoryBookDetail>()
+        val rawJson = response.body<String>()
+        Timber.d("Grimmory book detail raw JSON: $rawJson")
+        kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString<GrimmoryBookDetail>(rawJson)
     }
 
     suspend fun pushProgress(
