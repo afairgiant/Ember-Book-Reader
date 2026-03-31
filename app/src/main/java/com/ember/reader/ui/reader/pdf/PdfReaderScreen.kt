@@ -166,7 +166,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 currentLocator = displayLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
-                onToggleBookmark = viewModel::addBookmark,
+                onToggleBookmark = viewModel::toggleBookmark,
                 onOpenTableOfContents = {},
                 onOpenPreferences = { showPreferences = true }
             ) {

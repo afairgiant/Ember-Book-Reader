@@ -185,7 +185,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 currentLocator = currentLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
-                onToggleBookmark = viewModel::addBookmark,
+                onToggleBookmark = viewModel::toggleBookmark,
                 onOpenTableOfContents = { showToc = true },
                 onOpenPreferences = { showPreferences = true },
                 onOpenHighlights = { showHighlights = true },

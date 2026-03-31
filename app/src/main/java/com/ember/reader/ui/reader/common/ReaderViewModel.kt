@@ -221,14 +221,20 @@ class ReaderViewModel @Inject constructor(
         _chromeVisible.update { !it }
     }
 
-    fun addBookmark() {
+    fun toggleBookmark() {
         val locator = _currentLocator.value ?: return
+        val href = locator.href.toString()
+        val existing = _bookmarks.value.find { it.locatorJson.contains(href) }
         viewModelScope.launch {
-            bookmarkRepository.addBookmark(
-                bookId = bookId,
-                locatorJson = locator.toJsonString(),
-                title = locator.title
-            )
+            if (existing != null) {
+                bookmarkRepository.deleteBookmark(existing.id)
+            } else {
+                bookmarkRepository.addBookmark(
+                    bookId = bookId,
+                    locatorJson = locator.toJsonString(),
+                    title = locator.title,
+                )
+            }
         }
     }
 
