@@ -15,15 +15,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -31,9 +40,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,8 +74,8 @@ fun AppSettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
             )
         }
     ) { padding ->
@@ -72,149 +84,213 @@ fun AppSettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Appearance
-            Text(
-                text = stringResource(R.string.appearance),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = themeMode == mode,
-                        onClick = { viewModel.updateThemeMode(mode) },
-                        label = { Text(mode.displayName) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            SettingToggle(
-                label = stringResource(R.string.keep_screen_on),
-                checked = keepScreenOn,
-                onCheckedChange = { viewModel.updateKeepScreenOn(it) }
-            )
-
-            SettingToggle(
-                label = stringResource(R.string.auto_cleanup),
-                description = stringResource(R.string.auto_cleanup_hint),
-                checked = autoCleanup,
-                onCheckedChange = { viewModel.updateAutoCleanup(it) }
-            )
-
-            SettingToggle(
-                label = stringResource(R.string.auto_download_reading),
-                description = stringResource(R.string.auto_download_reading_hint),
-                checked = autoDownloadReading,
-                onCheckedChange = { viewModel.updateAutoDownloadReading(it) }
-            )
-
-            // Synchronization
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.synchronization),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SyncFrequency.entries.forEach { frequency ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { viewModel.updateSyncFrequency(frequency) }
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            SettingsGroup(title = "Appearance") {
+                SettingsRow(
+                    icon = Icons.Default.DarkMode,
+                    title = "Theme",
                 ) {
-                    RadioButton(
-                        selected = syncFrequency == frequency,
-                        onClick = { viewModel.updateSyncFrequency(frequency) }
-                    )
-                    Text(
-                        text = frequency.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ThemeMode.entries.forEach { mode ->
+                            FilterChip(
+                                selected = themeMode == mode,
+                                onClick = { viewModel.updateThemeMode(mode) },
+                                label = { Text(mode.displayName) },
+                            )
+                        }
+                    }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsToggleRow(
+                    icon = Icons.Default.ScreenLockPortrait,
+                    title = stringResource(R.string.keep_screen_on),
+                    checked = keepScreenOn,
+                    onCheckedChange = { viewModel.updateKeepScreenOn(it) },
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Downloads & Storage
+            SettingsGroup(title = "Downloads") {
+                SettingsToggleRow(
+                    icon = Icons.Default.Download,
+                    title = stringResource(R.string.auto_download_reading),
+                    subtitle = stringResource(R.string.auto_download_reading_hint),
+                    checked = autoDownloadReading,
+                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
+                )
 
-            Button(
-                onClick = viewModel::syncNow,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.sync_now))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsToggleRow(
+                    icon = Icons.Default.Storage,
+                    title = stringResource(R.string.auto_cleanup),
+                    subtitle = stringResource(R.string.auto_cleanup_hint),
+                    checked = autoCleanup,
+                    onCheckedChange = { viewModel.updateAutoCleanup(it) },
+                )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = onOpenStorage,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(10.dp),
             ) {
                 Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.manage_downloads))
             }
 
-            // Notifications
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = stringResource(R.string.notifications_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            // Sync
+            SettingsGroup(title = "Sync") {
+                var showFrequencyMenu by remember { mutableStateOf(false) }
 
-            SettingToggle(
-                label = stringResource(R.string.sync_notifications_label),
-                description = stringResource(R.string.sync_notifications_hint),
-                checked = syncNotifications,
-                onCheckedChange = { viewModel.updateSyncNotifications(it) }
-            )
+                SettingsRow(
+                    icon = Icons.Default.Cloud,
+                    title = "Sync Frequency",
+                    subtitle = syncFrequency.displayName,
+                    modifier = Modifier.clickable { showFrequencyMenu = true },
+                ) {
+                    DropdownMenu(
+                        expanded = showFrequencyMenu,
+                        onDismissRequest = { showFrequencyMenu = false },
+                    ) {
+                        SyncFrequency.entries.forEach { frequency ->
+                            DropdownMenuItem(
+                                text = { Text(frequency.displayName) },
+                                onClick = {
+                                    viewModel.updateSyncFrequency(frequency)
+                                    showFrequencyMenu = false
+                                },
+                            )
+                        }
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsToggleRow(
+                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.sync_notifications_label),
+                    subtitle = stringResource(R.string.sync_notifications_hint),
+                    checked = syncNotifications,
+                    onCheckedChange = { viewModel.updateSyncNotifications(it) },
+                )
+            }
+
+            Button(
+                onClick = viewModel::syncNow,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+            ) {
+                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.sync_now))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun SettingToggle(
-    label: String,
-    description: String? = null,
+private fun SettingsGroup(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        )
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    trailing: @Composable () -> Unit = {},
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        trailing()
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            if (description != null) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
                 Text(
-                    description,
+                    subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
