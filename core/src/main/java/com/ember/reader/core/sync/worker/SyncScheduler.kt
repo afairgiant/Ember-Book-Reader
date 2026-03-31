@@ -5,12 +5,15 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.ember.reader.core.model.SyncFrequency
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 @Singleton
 class SyncScheduler @Inject constructor(
@@ -36,8 +39,18 @@ class SyncScheduler @Inject constructor(
     fun syncNow() {
         val request = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(networkConstraints)
+            .addTag(SYNC_NOW_TAG)
             .build()
         workManager.enqueue(request)
+    }
+
+    fun isSyncRunning(): Flow<Boolean> =
+        workManager.getWorkInfosByTagFlow(SYNC_NOW_TAG).map { workInfos ->
+            workInfos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
+        }
+
+    companion object {
+        private const val SYNC_NOW_TAG = "sync_now"
     }
 
     private fun schedulePeriodicSync(intervalMinutes: Long) {

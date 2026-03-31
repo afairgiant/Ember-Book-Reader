@@ -1,5 +1,11 @@
 package com.ember.reader.ui.settings
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +75,7 @@ fun AppSettingsScreen(
     val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
     val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -184,12 +192,26 @@ fun AppSettingsScreen(
 
             Button(
                 onClick = viewModel::syncNow,
+                enabled = !isSyncing,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
             ) {
-                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.sync_now))
+                if (isSyncing) {
+                    val rotation = rememberInfiniteRotation()
+                    Icon(
+                        Icons.Default.Sync,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer { rotationZ = rotation },
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Syncing...")
+                } else {
+                    Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.sync_now))
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -293,4 +315,19 @@ private fun SettingsToggleRow(
         Spacer(modifier = Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+@Composable
+private fun rememberInfiniteRotation(): Float {
+    val transition = rememberInfiniteTransition(label = "sync_rotation")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = -360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "rotation",
+    )
+    return rotation
 }

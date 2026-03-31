@@ -99,6 +99,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { appPreferencesRepository.updateSyncNotifications(enabled) }
     }
 
+    val isSyncing: StateFlow<Boolean> = syncScheduler.isSyncRunning()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun syncNow() {
         syncScheduler.syncNow()
     }
