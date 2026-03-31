@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.map
 
 @Singleton
 class HighlightRepository @Inject constructor(
-    private val highlightDao: HighlightDao
+    private val highlightDao: HighlightDao,
+    private val appPreferencesRepository: AppPreferencesRepository,
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Highlight>> =
@@ -26,22 +27,32 @@ class HighlightRepository @Inject constructor(
         color: HighlightColor,
         annotation: String? = null,
         selectedText: String? = null
-    ): Long = highlightDao.insert(
-        HighlightEntity(
-            bookId = bookId,
-            locatorJson = locatorJson,
-            color = color,
-            annotation = annotation,
-            selectedText = selectedText,
-            createdAt = Instant.now()
+    ): Long {
+        val now = Instant.now()
+        return highlightDao.insert(
+            HighlightEntity(
+                bookId = bookId,
+                locatorJson = locatorJson,
+                color = color,
+                annotation = annotation,
+                selectedText = selectedText,
+                createdAt = now,
+                updatedAt = now,
+            )
         )
-    )
+    }
 
     suspend fun updateHighlight(highlight: Highlight, annotation: String?, color: HighlightColor) {
-        highlightDao.update(highlight.copy(annotation = annotation, color = color).toEntity())
+        highlightDao.update(
+            highlight.copy(annotation = annotation, color = color, updatedAt = Instant.now()).toEntity()
+        )
     }
 
     suspend fun deleteHighlight(id: Long) {
-        highlightDao.deleteById(id)
+        if (appPreferencesRepository.getSyncHighlights()) {
+            highlightDao.softDeleteById(id, Instant.now().toEpochMilli())
+        } else {
+            highlightDao.deleteById(id)
+        }
     }
 }

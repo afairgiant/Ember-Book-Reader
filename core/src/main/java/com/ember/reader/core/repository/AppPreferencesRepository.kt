@@ -35,6 +35,8 @@ class AppPreferencesRepository @Inject constructor(
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
         val SYNC_NOTIFICATIONS = booleanPreferencesKey("sync_notifications")
+        val SYNC_HIGHLIGHTS = booleanPreferencesKey("sync_highlights")
+        val SYNC_BOOKMARKS = booleanPreferencesKey("sync_bookmarks")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -101,5 +103,25 @@ class AppPreferencesRepository @Inject constructor(
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.HAS_SEEN_TAP_ZONE_HINT] = true
         }
+    }
+
+    val syncHighlightsFlow: Flow<Boolean> =
+        context.appPreferencesDataStore.data.map { it[Keys.SYNC_HIGHLIGHTS] ?: false }
+
+    suspend fun getSyncHighlights(): Boolean =
+        context.appPreferencesDataStore.data.first()[Keys.SYNC_HIGHLIGHTS] ?: false
+
+    suspend fun updateSyncHighlights(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { it[Keys.SYNC_HIGHLIGHTS] = enabled }
+    }
+
+    val syncBookmarksFlow: Flow<Boolean> =
+        context.appPreferencesDataStore.data.map { it[Keys.SYNC_BOOKMARKS] ?: false }
+
+    suspend fun getSyncBookmarks(): Boolean =
+        context.appPreferencesDataStore.data.first()[Keys.SYNC_BOOKMARKS] ?: false
+
+    suspend fun updateSyncBookmarks(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { it[Keys.SYNC_BOOKMARKS] = enabled }
     }
 }

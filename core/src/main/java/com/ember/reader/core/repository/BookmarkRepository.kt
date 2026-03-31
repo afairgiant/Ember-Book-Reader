@@ -12,23 +12,31 @@ import kotlinx.coroutines.flow.map
 
 @Singleton
 class BookmarkRepository @Inject constructor(
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    private val appPreferencesRepository: AppPreferencesRepository,
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Bookmark>> =
         bookmarkDao.observeByBookId(bookId).map { entities -> entities.map { it.toDomain() } }
 
-    suspend fun addBookmark(bookId: String, locatorJson: String, title: String?): Long =
-        bookmarkDao.insert(
+    suspend fun addBookmark(bookId: String, locatorJson: String, title: String?): Long {
+        val now = Instant.now()
+        return bookmarkDao.insert(
             BookmarkEntity(
                 bookId = bookId,
                 locatorJson = locatorJson,
                 title = title,
-                createdAt = Instant.now()
+                createdAt = now,
+                updatedAt = now,
             )
         )
+    }
 
     suspend fun deleteBookmark(id: Long) {
-        bookmarkDao.deleteById(id)
+        if (appPreferencesRepository.getSyncBookmarks()) {
+            bookmarkDao.softDeleteById(id, Instant.now().toEpochMilli())
+        } else {
+            bookmarkDao.deleteById(id)
+        }
     }
 }
