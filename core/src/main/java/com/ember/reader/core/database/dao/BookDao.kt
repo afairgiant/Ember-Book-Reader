@@ -14,6 +14,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE serverId = :serverId ORDER BY title ASC")
     fun observeByServer(serverId: Long): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books WHERE serverId = :serverId")
+    suspend fun getBooksByServerId(serverId: Long): List<BookEntity>
+
     @Query("SELECT * FROM books WHERE serverId IS NULL ORDER BY title ASC")
     fun observeLocalBooks(): Flow<List<BookEntity>>
 

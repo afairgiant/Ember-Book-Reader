@@ -43,6 +43,7 @@ class SyncWorker @AssistedInject constructor(
     private val bookmarkSyncManager: BookmarkSyncManager,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
+    private val bookDao: com.ember.reader.core.database.dao.BookDao,
 ) : CoroutineWorker(context, params) {
 
     private var syncPushed = 0
@@ -86,27 +87,23 @@ class SyncWorker @AssistedInject constructor(
                         autoDownloadReadingBooks(server)
                     }
 
-                    // Highlight sync
-                    if (appPreferencesRepository.getSyncHighlights()) {
-                        val bookIdsWithHighlights = highlightDao.getBookIdsWithHighlights()
-                        for (bid in bookIdsWithHighlights) {
-                            val book = bookRepository.getById(bid) ?: continue
-                            val gid = book.grimmoryBookId ?: continue
-                            if (book.serverId != server.id) continue
-                            runCatching { highlightSyncManager.syncHighlightsForBook(server, bid, gid) }
-                                .onFailure { Timber.e(it, "SyncWorker: highlight sync failed for book=%s", bid) }
-                        }
-                    }
-
-                    // Bookmark sync
-                    if (appPreferencesRepository.getSyncBookmarks()) {
-                        val bookIdsWithBookmarks = bookmarkDao.getBookIdsWithBookmarks()
-                        for (bid in bookIdsWithBookmarks) {
-                            val book = bookRepository.getById(bid) ?: continue
-                            val gid = book.grimmoryBookId ?: continue
-                            if (book.serverId != server.id) continue
-                            runCatching { bookmarkSyncManager.syncBookmarksForBook(server, bid, gid) }
-                                .onFailure { Timber.e(it, "SyncWorker: bookmark sync failed for book=%s", bid) }
+                    // Highlight & bookmark sync — sync all books from this server
+                    val syncHighlights = appPreferencesRepository.getSyncHighlights()
+                    val syncBookmarks = appPreferencesRepository.getSyncBookmarks()
+                    if (syncHighlights || syncBookmarks) {
+                        val serverBooks = bookDao.getBooksByServerId(server.id)
+                        for (bookEntity in serverBooks) {
+                            val gid = bookEntity.opdsEntryId
+                                ?.substringAfterLast(":")
+                                ?.toLongOrNull() ?: continue
+                            if (syncHighlights) {
+                                runCatching { highlightSyncManager.syncHighlightsForBook(server, bookEntity.id, gid) }
+                                    .onFailure { Timber.e(it, "SyncWorker: highlight sync failed for book=%s", bookEntity.id) }
+                            }
+                            if (syncBookmarks) {
+                                runCatching { bookmarkSyncManager.syncBookmarksForBook(server, bookEntity.id, gid) }
+                                    .onFailure { Timber.e(it, "SyncWorker: bookmark sync failed for book=%s", bookEntity.id) }
+                            }
                         }
                     }
                 }
