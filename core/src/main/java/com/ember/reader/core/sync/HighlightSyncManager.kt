@@ -44,6 +44,18 @@ class HighlightSyncManager @Inject constructor(
                         .onSuccess { Timber.d("HighlightSync: deleted remote annotation %d", serverAnnotation.id) }
                         .onFailure { Timber.w(it, "HighlightSync: failed to delete remote annotation %d", serverAnnotation.id) }
                 } else {
+                    // Refresh locator if it has an empty href (fix for double-wrapped CFI bug)
+                    val cfi = serverAnnotation.cfi
+                    if (cfi != null && local.locatorJson.contains("\"href\":\"\"")) {
+                        val fixedLocator = CfiLocatorConverter.buildLocatorJson(
+                            cfi = cfi,
+                            selectedText = serverAnnotation.text ?: local.selectedText,
+                            chapterTitle = serverAnnotation.chapterTitle,
+                        )
+                        highlightDao.update(local.copy(locatorJson = fixedLocator))
+                        Timber.d("HighlightSync: refreshed locator for highlight %d", local.id)
+                    }
+
                     // Both active → compare timestamps, update loser
                     val serverTime = parseTimestamp(serverAnnotation.updatedAt)
                     if (serverTime != null && serverTime.isAfter(local.updatedAt)) {

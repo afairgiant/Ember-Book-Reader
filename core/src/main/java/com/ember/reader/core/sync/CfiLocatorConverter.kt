@@ -43,8 +43,10 @@ object CfiLocatorConverter {
         selectedText: String? = null,
         chapterTitle: String? = null,
     ): String {
+        // Normalize: ensure single epubcfi() wrapping
+        val normalizedCfi = if (cfi.startsWith("epubcfi(")) cfi else "epubcfi($cfi)"
         val locations = JSONObject().apply {
-            put("fragments", JSONArray().put("epubcfi($cfi)"))
+            put("fragments", JSONArray().put(normalizedCfi))
         }
         val text = JSONObject().apply {
             if (selectedText != null) put("highlight", selectedText)

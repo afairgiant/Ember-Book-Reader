@@ -60,7 +60,11 @@ class HighlightDecorationManager(
         val fragments = locator.locations.fragments
         if (fragments.isEmpty()) return null
 
-        val cfi = fragments.first().removePrefix("epubcfi(").removeSuffix(")")
+        // Strip all epubcfi() wrapping (handles double-wrapped too)
+        var cfi = fragments.first()
+        while (cfi.startsWith("epubcfi(") && cfi.endsWith(")")) {
+            cfi = cfi.removePrefix("epubcfi(").removeSuffix(")")
+        }
         // CFI format: /6/N!... where N is the spine position (1-indexed, even numbers)
         val spineMatch = Regex("^/6/(\\d+)").find(cfi) ?: return null
         val spinePosition = spineMatch.groupValues[1].toIntOrNull() ?: return null
