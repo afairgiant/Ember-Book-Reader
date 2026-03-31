@@ -26,8 +26,11 @@ import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
+import org.readium.adapter.pdfium.navigator.PdfiumDocumentFragment
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.adapter.pdfium.navigator.PdfiumPreferences
+import org.readium.adapter.pdfium.navigator.PdfiumSettings
+import org.readium.r2.navigator.preferences.Fit
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
@@ -103,7 +106,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
 
     var showBookmarks by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
-    var navigator by remember { mutableStateOf<PdfNavigatorFragment<*, *>?>(null) }
+    var navigator by remember { mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null) }
     val scope = rememberCoroutineScope()
 
     // Volume button page turning
@@ -159,7 +162,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
 
             ReaderScaffold(
                 title = state.book.title,
-                chromeVisible = true,
+                chromeVisible = chromeVisible,
                 currentLocator = displayLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
@@ -177,14 +180,16 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = PdfiumPreferences(pageSpacing = 8.0)
+                        initialPreferences = preferences.toPdfiumPreferences()
                     ),
                     locatorFlow = { fragment ->
-                        (fragment as? PdfNavigatorFragment<*, *>)?.currentLocator
+                        (@Suppress("UNCHECKED_CAST")
+                        (fragment as? PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>))?.currentLocator
                     },
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onNavigatorReady = { fragment ->
-                        navigator = fragment as? PdfNavigatorFragment<*, *>
+                        navigator = @Suppress("UNCHECKED_CAST")
+                        (fragment as? PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>)
                         // Find the PDFView inside the fragment and set its background
                         // so page spacing shows as a visible divider
                         fragment.view?.let { root ->
@@ -193,6 +198,19 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         }
                     }
                 )
+            }
+
+            // Apply PDF preferences and set up tap-to-toggle-chrome
+            androidx.compose.runtime.LaunchedEffect(preferences, navigator) {
+                val nav = navigator ?: return@LaunchedEffect
+                nav.submitPreferences(preferences.toPdfiumPreferences())
+
+                nav.addInputListener(object : org.readium.r2.navigator.input.InputListener {
+                    override fun onTap(event: org.readium.r2.navigator.input.TapEvent): Boolean {
+                        viewModel.toggleChrome()
+                        return true
+                    }
+                })
             }
 
             if (showBookmarks) {
@@ -213,7 +231,8 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 ReaderPreferencesSheet(
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
-                    onDismiss = { showPreferences = false }
+                    onDismiss = { showPreferences = false },
+                    isPdf = true,
                 )
             }
 
@@ -225,6 +244,22 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 )
             }
         }
+    }
+}
+
+private fun com.ember.reader.core.model.ReaderPreferences.toPdfiumPreferences(): PdfiumPreferences {
+    val fit = when (pdfFitMode) {
+        com.ember.reader.core.model.PdfFitMode.WIDTH -> Fit.WIDTH
+        com.ember.reader.core.model.PdfFitMode.CONTAIN -> Fit.CONTAIN
+    }
+    return runCatching {
+        PdfiumPreferences(
+            fit = fit,
+            pageSpacing = pdfPageSpacing.toDouble(),
+        )
+    }.getOrElse {
+        timber.log.Timber.w(it, "PdfiumPreferences creation failed, using defaults")
+        PdfiumPreferences()
     }
 }
 

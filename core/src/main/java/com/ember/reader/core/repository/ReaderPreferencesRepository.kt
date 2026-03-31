@@ -53,6 +53,8 @@ class ReaderPreferencesRepository @Inject constructor(
         val LEFT_ZONE_WIDTH = floatPreferencesKey("left_zone_width")
         val RIGHT_ZONE_WIDTH = floatPreferencesKey("right_zone_width")
         val VOLUME_PAGE_TURN = booleanPreferencesKey("volume_page_turn")
+        val PDF_FIT_MODE = stringPreferencesKey("pdf_fit_mode")
+        val PDF_PAGE_SPACING = floatPreferencesKey("pdf_page_spacing")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -95,6 +97,10 @@ class ReaderPreferencesRepository @Inject constructor(
                 leftZoneWidth = prefs[Keys.LEFT_ZONE_WIDTH] ?: 0.33f,
                 rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f,
                 volumePageTurn = prefs[Keys.VOLUME_PAGE_TURN] ?: false,
+                pdfFitMode = prefs[Keys.PDF_FIT_MODE]?.let {
+                    runCatching { com.ember.reader.core.model.PdfFitMode.valueOf(it) }.getOrNull()
+                } ?: com.ember.reader.core.model.PdfFitMode.WIDTH,
+                pdfPageSpacing = prefs[Keys.PDF_PAGE_SPACING] ?: 8f,
             )
         }
 
@@ -123,6 +129,8 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.LEFT_ZONE_WIDTH] = preferences.leftZoneWidth
             prefs[Keys.RIGHT_ZONE_WIDTH] = preferences.rightZoneWidth
             prefs[Keys.VOLUME_PAGE_TURN] = preferences.volumePageTurn
+            prefs[Keys.PDF_FIT_MODE] = preferences.pdfFitMode.name
+            prefs[Keys.PDF_PAGE_SPACING] = preferences.pdfPageSpacing
         }
     }
 }

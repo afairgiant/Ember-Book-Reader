@@ -24,7 +24,14 @@ data class ReaderPreferences(
     val leftZoneWidth: Float = 0.33f,
     val rightZoneWidth: Float = 0.33f,
     val volumePageTurn: Boolean = false,
+    val pdfFitMode: PdfFitMode = PdfFitMode.WIDTH,
+    val pdfPageSpacing: Float = 8f,
 )
+
+enum class PdfFitMode(val displayName: String) {
+    WIDTH("Fit Width"),
+    CONTAIN("Fit Page"),
+}
 
 enum class TapZoneBehavior(val displayName: String) {
     PREVIOUS_PAGE("Previous Page"),

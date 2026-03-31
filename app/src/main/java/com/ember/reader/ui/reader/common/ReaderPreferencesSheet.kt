@@ -57,7 +57,8 @@ import com.ember.reader.ui.common.SectionLabel
 fun ReaderPreferencesSheet(
     preferences: ReaderPreferences,
     onPreferencesChanged: (ReaderPreferences) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isPdf: Boolean = false,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -77,133 +78,172 @@ fun ReaderPreferencesSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            SectionLabel(stringResource(R.string.font_section))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FontFamily.entries.forEach { font ->
-                    FilterChip(
-                        selected = preferences.fontFamily == font,
-                        onClick = { onPreferencesChanged(preferences.copy(fontFamily = font)) },
-                        label = { Text(font.displayName) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.font_size_section))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                IconButton(
-                    onClick = {
-                        val newSize = (preferences.fontSize - 1f).coerceAtLeast(12f)
-                        onPreferencesChanged(preferences.copy(fontSize = newSize))
-                    }
+            // PDF-specific controls
+            if (isPdf) {
+                SectionLabel("Page Fit")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                    com.ember.reader.core.model.PdfFitMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = preferences.pdfFitMode == mode,
+                            onClick = { onPreferencesChanged(preferences.copy(pdfFitMode = mode)) },
+                            label = { Text(mode.displayName) },
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionLabel("Page Spacing")
+                Slider(
+                    value = preferences.pdfPageSpacing,
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(pdfPageSpacing = it))
+                    },
+                    valueRange = 0f..30f,
+                    steps = 5,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Text(
-                    text = "${preferences.fontSize.toInt()}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    text = "${preferences.pdfPageSpacing.toInt()} pt",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                IconButton(
-                    onClick = {
-                        val newSize = (preferences.fontSize + 1f).coerceAtMost(32f)
-                        onPreferencesChanged(preferences.copy(fontSize = newSize))
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // EPUB-specific controls
+            if (!isPdf) {
+                SectionLabel(stringResource(R.string.font_section))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FontFamily.entries.forEach { font ->
+                        FilterChip(
+                            selected = preferences.fontFamily == font,
+                            onClick = { onPreferencesChanged(preferences.copy(fontFamily = font)) },
+                            label = { Text(font.displayName) }
+                        )
+                    }
+                }
 
-            SectionLabel(stringResource(R.string.line_height_section))
-            Slider(
-                value = preferences.lineHeight,
-                onValueChange = {
-                    onPreferencesChanged(preferences.copy(lineHeight = it))
-                },
-                valueRange = 1.0f..2.5f,
-                steps = 14,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "%.1f".format(preferences.lineHeight),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                SectionLabel(stringResource(R.string.font_size_section))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    IconButton(
+                        onClick = {
+                            val newSize = (preferences.fontSize - 1f).coerceAtLeast(12f)
+                            onPreferencesChanged(preferences.copy(fontSize = newSize))
+                        }
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                    }
+                    Text(
+                        text = "${preferences.fontSize.toInt()}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            val newSize = (preferences.fontSize + 1f).coerceAtMost(32f)
+                            onPreferencesChanged(preferences.copy(fontSize = newSize))
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                    }
+                }
 
-            SectionLabel(stringResource(R.string.text_align_section))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                com.ember.reader.core.model.TextAlign.entries.forEach { align ->
-                    FilterChip(
-                        selected = preferences.textAlign == align,
-                        onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
-                        label = { Text(align.displayName) }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionLabel(stringResource(R.string.line_height_section))
+                Slider(
+                    value = preferences.lineHeight,
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(lineHeight = it))
+                    },
+                    valueRange = 1.0f..2.5f,
+                    steps = 14,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "%.1f".format(preferences.lineHeight),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionLabel(stringResource(R.string.text_align_section))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    com.ember.reader.core.model.TextAlign.entries.forEach { align ->
+                        FilterChip(
+                            selected = preferences.textAlign == align,
+                            onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
+                            label = { Text(align.displayName) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionLabel(stringResource(R.string.page_margins_section))
+                Slider(
+                    value = preferences.pageMargins,
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(pageMargins = it))
+                    },
+                    valueRange = 0.5f..2.5f,
+                    steps = 7,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "%.1f".format(preferences.pageMargins),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = preferences.publisherStyles,
+                        onCheckedChange = {
+                            onPreferencesChanged(preferences.copy(publisherStyles = it))
+                        }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = preferences.hyphenate,
+                        onCheckedChange = {
+                            onPreferencesChanged(preferences.copy(hyphenate = it))
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.page_margins_section))
-            Slider(
-                value = preferences.pageMargins,
-                onValueChange = {
-                    onPreferencesChanged(preferences.copy(pageMargins = it))
-                },
-                valueRange = 0.5f..2.5f,
-                steps = 7,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "%.1f".format(preferences.pageMargins),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = preferences.publisherStyles,
-                    onCheckedChange = {
-                        onPreferencesChanged(preferences.copy(publisherStyles = it))
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = preferences.hyphenate,
-                    onCheckedChange = {
-                        onPreferencesChanged(preferences.copy(hyphenate = it))
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel(stringResource(R.string.theme_section))
             FlowRow(
