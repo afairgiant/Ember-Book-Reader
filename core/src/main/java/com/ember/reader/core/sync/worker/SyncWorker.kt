@@ -92,6 +92,7 @@ class SyncWorker @AssistedInject constructor(
                     val syncBookmarks = appPreferencesRepository.getSyncBookmarks()
                     if (syncHighlights || syncBookmarks) {
                         val serverBooks = bookDao.getDownloadedBooksForServer(server.id)
+                        Timber.d("SyncWorker: highlight/bookmark sync for %d downloaded books on server %s", serverBooks.size, server.name)
                         for (bookEntity in serverBooks) {
                             val gid = bookEntity.opdsEntryId
                                 ?.substringAfterLast(":")

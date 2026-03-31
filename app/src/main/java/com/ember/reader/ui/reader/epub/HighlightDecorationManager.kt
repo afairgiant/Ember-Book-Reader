@@ -7,6 +7,8 @@ import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.shared.publication.Publication
+import timber.log.Timber
 
 /**
  * Manages Readium decorations for text highlights in the EPUB reader.
@@ -23,9 +25,21 @@ class HighlightDecorationManager(
      * Converts stored Highlights to Readium Decorations and applies them.
      * Readium internally diffs against the previous list for efficiency.
      */
-    suspend fun applyHighlights(highlights: List<Highlight>) {
+    suspend fun applyHighlights(highlights: List<Highlight>, publication: Publication? = null) {
         val decorations = highlights.mapNotNull { highlight ->
-            val locator = highlight.locatorJson.toLocator() ?: return@mapNotNull null
+            var locator = highlight.locatorJson.toLocator() ?: return@mapNotNull null
+
+            // Synced highlights may have empty href - resolve from CFI spine index
+            if (locator.href.toString().isBlank() && publication != null) {
+                val resolved = resolveHrefFromCfi(locator, publication)
+                if (resolved != null) {
+                    locator = resolved
+                } else {
+                    Timber.w("HighlightDecoration: could not resolve href for highlight %d", highlight.id)
+                    return@mapNotNull null
+                }
+            }
+
             Decoration(
                 id = highlight.id.toString(),
                 locator = locator,
@@ -36,6 +50,28 @@ class HighlightDecorationManager(
             )
         }
         navigator.applyDecorations(decorations, DECORATION_GROUP)
+    }
+
+    /**
+     * Resolve the href for a locator that has a CFI fragment but empty href.
+     * Extracts the spine index from the CFI and maps it to the publication's reading order.
+     */
+    private fun resolveHrefFromCfi(locator: org.readium.r2.shared.publication.Locator, publication: Publication): org.readium.r2.shared.publication.Locator? {
+        val fragments = locator.locations.fragments
+        if (fragments.isEmpty()) return null
+
+        val cfi = fragments.first().removePrefix("epubcfi(").removeSuffix(")")
+        // CFI format: /6/N!... where N is the spine position (1-indexed, even numbers)
+        val spineMatch = Regex("^/6/(\\d+)").find(cfi) ?: return null
+        val spinePosition = spineMatch.groupValues[1].toIntOrNull() ?: return null
+        // EPUB CFI uses 1-indexed even numbers: /6/2 = spine[0], /6/4 = spine[1], etc.
+        val spineIndex = (spinePosition / 2) - 1
+
+        val readingOrder = publication.readingOrder
+        if (spineIndex < 0 || spineIndex >= readingOrder.size) return null
+
+        val link = readingOrder[spineIndex]
+        return locator.copy(href = link.url())
     }
 
     /**

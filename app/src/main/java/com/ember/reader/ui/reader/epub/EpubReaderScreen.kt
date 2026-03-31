@@ -331,7 +331,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
             // Apply highlight decorations when navigator ready or highlights change
             LaunchedEffect(highlightManager, highlights) {
-                highlightManager?.applyHighlights(highlights)
+                highlightManager?.applyHighlights(highlights, state.publication)
             }
 
             // Color picker dialog (after selecting text and tapping Highlight)

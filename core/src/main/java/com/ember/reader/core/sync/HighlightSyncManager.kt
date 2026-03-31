@@ -30,9 +30,11 @@ class HighlightSyncManager @Inject constructor(
         val localHighlights = highlightDao.getAllByBookId(bookId)
         val localByRemoteId = localHighlights.filter { it.remoteId != null }.associateBy { it.remoteId!! }
         val serverById = serverAnnotations.associateBy { it.id }
+        Timber.d("HighlightSync: server=%d local=%d (withRemoteId=%d)", serverAnnotations.size, localHighlights.size, localByRemoteId.size)
 
         // Process server annotations
         for (serverAnnotation in serverAnnotations) {
+            Timber.d("HighlightSync: processing server annotation id=%d cfi=%s text=%s", serverAnnotation.id, serverAnnotation.cfi?.take(50), serverAnnotation.text?.take(30))
             val local = localByRemoteId[serverAnnotation.id]
 
             if (local != null) {
