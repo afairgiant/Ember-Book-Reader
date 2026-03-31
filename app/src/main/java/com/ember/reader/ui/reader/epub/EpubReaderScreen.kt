@@ -8,7 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -145,6 +155,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showAnnotationDialog by remember { mutableStateOf(false) }
+    var showBookmarkDialog by remember { mutableStateOf(false) }
     var editingHighlight by remember { mutableStateOf<Highlight?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -176,7 +187,17 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
         is ReaderUiState.Error -> ErrorScreen(state.message)
         is ReaderUiState.Ready -> {
             val hasBookmark = currentLocator?.let { loc ->
-                bookmarks.any { it.locatorJson.contains(loc.href.toString()) }
+                val href = loc.href.toString()
+                val hrefEscaped = href.replace("/", "\\/")
+                val currentProg = loc.locations.progression ?: -1.0
+                bookmarks.any { bm ->
+                    val inSameChapter = bm.locatorJson.contains(href) || bm.locatorJson.contains(hrefEscaped)
+                    if (!inSameChapter) return@any false
+                    // Check if bookmark is on the same page (within 1 page-worth of progression)
+                    val bmLocator = bm.locatorJson.toLocator() ?: return@any false
+                    val bmProg = bmLocator.locations.progression ?: return@any false
+                    kotlin.math.abs(currentProg - bmProg) < 0.02 // ~1 page tolerance
+                }
             } ?: false
 
             ReaderScaffold(
@@ -185,7 +206,11 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 currentLocator = currentLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
-                onToggleBookmark = viewModel::toggleBookmark,
+                onToggleBookmark = {
+                    val removed = viewModel.toggleBookmark()
+                    if (!removed) showBookmarkDialog = true
+                },
+                onOpenBookmarks = { showBookmarks = true },
                 onOpenTableOfContents = { showToc = true },
                 onOpenPreferences = { showPreferences = true },
                 onOpenHighlights = { showHighlights = true },
@@ -413,6 +438,46 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         showToc = false
                     },
                     onDismiss = { showToc = false }
+                )
+            }
+
+            // Bookmark name dialog
+            if (showBookmarkDialog) {
+                var bookmarkName by remember { mutableStateOf("") }
+                val chapterTitle = currentLocator?.title ?: ""
+                AlertDialog(
+                    onDismissRequest = { showBookmarkDialog = false },
+                    title = { Text("Add Bookmark") },
+                    text = {
+                        Column {
+                            if (chapterTitle.isNotBlank()) {
+                                Text(
+                                    chapterTitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
+                            OutlinedTextField(
+                                value = bookmarkName,
+                                onValueChange = { bookmarkName = it },
+                                label = { Text("Name (optional)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.addBookmark(bookmarkName.ifBlank { chapterTitle })
+                            showBookmarkDialog = false
+                        }) { Text("Save") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showBookmarkDialog = false
+                        }) { Text("Cancel") }
+                    },
                 )
             }
 

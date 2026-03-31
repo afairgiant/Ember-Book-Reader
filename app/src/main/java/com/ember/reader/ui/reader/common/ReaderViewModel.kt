@@ -221,20 +221,34 @@ class ReaderViewModel @Inject constructor(
         _chromeVisible.update { !it }
     }
 
-    fun toggleBookmark() {
-        val locator = _currentLocator.value ?: return
+    /** Returns true if bookmark was removed, false if a new one should be created (show dialog). */
+    fun toggleBookmark(): Boolean {
+        val locator = _currentLocator.value ?: return false
         val href = locator.href.toString()
-        val existing = _bookmarks.value.find { it.locatorJson.contains(href) }
+        val hrefEscaped = href.replace("/", "\\/")
+        val currentProg = locator.locations.progression ?: -1.0
+        val existing = _bookmarks.value.find { bm ->
+            val inSameChapter = bm.locatorJson.contains(href) || bm.locatorJson.contains(hrefEscaped)
+            if (!inSameChapter) return@find false
+            val bmLocator = bm.locatorJson.toLocator() ?: return@find false
+            val bmProg = bmLocator.locations.progression ?: return@find false
+            kotlin.math.abs(currentProg - bmProg) < 0.02
+        }
+        if (existing != null) {
+            viewModelScope.launch { bookmarkRepository.deleteBookmark(existing.id) }
+            return true
+        }
+        return false
+    }
+
+    fun addBookmark(title: String) {
+        val locator = _currentLocator.value ?: return
         viewModelScope.launch {
-            if (existing != null) {
-                bookmarkRepository.deleteBookmark(existing.id)
-            } else {
-                bookmarkRepository.addBookmark(
-                    bookId = bookId,
-                    locatorJson = locator.toJsonString(),
-                    title = locator.title,
-                )
-            }
+            bookmarkRepository.addBookmark(
+                bookId = bookId,
+                locatorJson = locator.toJsonString(),
+                title = title.ifBlank { locator.title ?: "Bookmark" },
+            )
         }
     }
 

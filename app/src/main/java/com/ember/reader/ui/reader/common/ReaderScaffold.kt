@@ -2,7 +2,11 @@ package com.ember.reader.ui.reader.common
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,12 +59,31 @@ fun ReaderScaffold(
     onOpenPreferences: () -> Unit,
     onOpenSearch: () -> Unit = {},
     onOpenHighlights: () -> Unit = {},
+    onOpenBookmarks: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
     content: @Composable () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Content fills the entire screen — bars overlay on top
         content()
+
+        // Bookmark ribbon indicator hanging from top-right
+        if (hasBookmarkAtCurrentPosition) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 16.dp)
+                    .width(24.dp)
+                    .height(40.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                            bottomStart = 4.dp,
+                            bottomEnd = 4.dp,
+                        ),
+                    ),
+            )
+        }
 
         // Top bar overlaid at the top
         AnimatedVisibility(
@@ -76,6 +99,7 @@ fun ReaderScaffold(
                 onToggleBookmark = onToggleBookmark,
                 onOpenTableOfContents = onOpenTableOfContents,
                 onOpenHighlights = onOpenHighlights,
+                onOpenBookmarks = onOpenBookmarks,
                 onOpenPreferences = onOpenPreferences,
                 onOpenSearch = onOpenSearch
             )
@@ -96,6 +120,7 @@ fun ReaderScaffold(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ReaderTopBar(
     title: String,
@@ -104,8 +129,9 @@ private fun ReaderTopBar(
     onToggleBookmark: () -> Unit,
     onOpenTableOfContents: () -> Unit,
     onOpenHighlights: () -> Unit,
+    onOpenBookmarks: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit
+    onOpenSearch: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -131,12 +157,17 @@ private fun ReaderTopBar(
         IconButton(onClick = onOpenTableOfContents) {
             Icon(Icons.Default.FormatListBulleted, contentDescription = stringResource(R.string.table_of_contents_cd))
         }
-        IconButton(onClick = onToggleBookmark) {
-            Icon(
-                if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                contentDescription = stringResource(R.string.bookmark_cd)
-            )
-        }
+        Icon(
+            if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+            contentDescription = stringResource(R.string.bookmark_cd),
+            modifier = Modifier
+                .combinedClickable(
+                    onClick = onToggleBookmark,
+                    onLongClick = onOpenBookmarks,
+                )
+                .padding(12.dp)
+                .size(24.dp),
+        )
         IconButton(onClick = onOpenHighlights) {
             Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.highlights_cd))
         }

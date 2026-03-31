@@ -3,7 +3,12 @@ package com.ember.reader.ui.reader.pdf
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -106,6 +111,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
 
     var showBookmarks by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
+    var showBookmarkDialog by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -131,7 +137,16 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
         is ReaderUiState.Error -> ErrorScreen(state.message)
         is ReaderUiState.Ready -> {
             val hasBookmark = currentLocator?.let { loc ->
-                bookmarks.any { it.locatorJson.contains(loc.href.toString()) }
+                val href = loc.href.toString()
+                val hrefEscaped = href.replace("/", "\\/")
+                val currentPos = loc.locations.position
+                bookmarks.any { bm ->
+                    val inSameFile = bm.locatorJson.contains(href) || bm.locatorJson.contains(hrefEscaped)
+                    if (!inSameFile) return@any false
+                    // For PDFs, match by page position
+                    val bmLocator = bm.locatorJson.toLocator() ?: return@any false
+                    bmLocator.locations.position == currentPos
+                }
             } ?: false
 
             // Adjust the locator's totalProgression for page-based display
@@ -166,7 +181,11 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 currentLocator = displayLocator,
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
-                onToggleBookmark = viewModel::toggleBookmark,
+                onToggleBookmark = {
+                    val removed = viewModel.toggleBookmark()
+                    if (!removed) showBookmarkDialog = true
+                },
+                onOpenBookmarks = { showBookmarks = true },
                 onOpenTableOfContents = {},
                 onOpenPreferences = { showPreferences = true }
             ) {
@@ -211,6 +230,45 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         return true
                     }
                 })
+            }
+
+            if (showBookmarkDialog) {
+                var bookmarkName by remember { mutableStateOf("") }
+                val pageTitle = currentLocator?.title ?: ""
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showBookmarkDialog = false },
+                    title = { androidx.compose.material3.Text("Add Bookmark") },
+                    text = {
+                        Column {
+                            if (pageTitle.isNotBlank()) {
+                                androidx.compose.material3.Text(
+                                    pageTitle,
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
+                            androidx.compose.material3.OutlinedTextField(
+                                value = bookmarkName,
+                                onValueChange = { bookmarkName = it },
+                                label = { androidx.compose.material3.Text("Name (optional)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            viewModel.addBookmark(bookmarkName.ifBlank { pageTitle })
+                            showBookmarkDialog = false
+                        }) { androidx.compose.material3.Text("Save") }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            showBookmarkDialog = false
+                        }) { androidx.compose.material3.Text("Cancel") }
+                    },
+                )
             }
 
             if (showBookmarks) {
