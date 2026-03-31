@@ -246,10 +246,14 @@ Only syncs books that have local highlights/bookmarks OR are from the current se
 | `app/.../ui/settings/AppSettingsScreen.kt` | Add two sync toggles |
 | `app/.../ui/settings/SettingsViewModel.kt` | Expose new prefs |
 
+## Conflict Resolution
+
+When the same highlight or bookmark exists on both sides (matched by `remoteId`), conflicts are resolved automatically using **last-write-wins** based on `updatedAt` timestamps. The newer version overwrites the older one with no user prompt. This applies to changes in color, annotation text, bookmark title, or any other mutable field. There is no manual conflict resolution UI.
+
 ## Out of Scope
 
 - Syncing underline/strikethrough/squiggly styles (Ember only supports highlight)
 - Syncing PDF annotations (different format entirely)
 - Syncing audiobook bookmarks (position_ms format, no CFI)
-- Highlight conflict UI (no user prompt - last-write-wins automatically)
+- Manual conflict resolution UI (future consideration)
 - Bulk initial import wizard
