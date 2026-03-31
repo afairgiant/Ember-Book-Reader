@@ -52,6 +52,7 @@ class ReaderPreferencesRepository @Inject constructor(
         val TOP_ZONE_HEIGHT = floatPreferencesKey("top_zone_height")
         val LEFT_ZONE_WIDTH = floatPreferencesKey("left_zone_width")
         val RIGHT_ZONE_WIDTH = floatPreferencesKey("right_zone_width")
+        val VOLUME_PAGE_TURN = booleanPreferencesKey("volume_page_turn")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -92,7 +93,8 @@ class ReaderPreferencesRepository @Inject constructor(
                 } ?: TapZoneBehavior.NEXT_PAGE,
                 topZoneHeight = prefs[Keys.TOP_ZONE_HEIGHT] ?: 0.15f,
                 leftZoneWidth = prefs[Keys.LEFT_ZONE_WIDTH] ?: 0.33f,
-                rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f
+                rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f,
+                volumePageTurn = prefs[Keys.VOLUME_PAGE_TURN] ?: false,
             )
         }
 
@@ -120,6 +122,7 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.TOP_ZONE_HEIGHT] = preferences.topZoneHeight
             prefs[Keys.LEFT_ZONE_WIDTH] = preferences.leftZoneWidth
             prefs[Keys.RIGHT_ZONE_WIDTH] = preferences.rightZoneWidth
+            prefs[Keys.VOLUME_PAGE_TURN] = preferences.volumePageTurn
         }
     }
 }

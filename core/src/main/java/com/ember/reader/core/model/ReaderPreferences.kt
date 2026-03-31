@@ -22,7 +22,8 @@ data class ReaderPreferences(
     val rightTapZone: TapZoneBehavior = TapZoneBehavior.NEXT_PAGE,
     val topZoneHeight: Float = 0.15f,
     val leftZoneWidth: Float = 0.33f,
-    val rightZoneWidth: Float = 0.33f
+    val rightZoneWidth: Float = 0.33f,
+    val volumePageTurn: Boolean = false,
 )
 
 enum class TapZoneBehavior(val displayName: String) {

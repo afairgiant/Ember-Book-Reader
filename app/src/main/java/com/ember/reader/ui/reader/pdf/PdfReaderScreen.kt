@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -44,6 +45,18 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+
+    // Save progress on pause (screen lock, app background)
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                viewModel.saveCurrentProgress()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Keep screen on while reading
     val view = LocalView.current
@@ -92,6 +105,23 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     var showPreferences by remember { mutableStateOf(false) }
     var navigator by remember { mutableStateOf<PdfNavigatorFragment<*, *>?>(null) }
     val scope = rememberCoroutineScope()
+
+    // Volume button page turning
+    DisposableEffect(preferences.volumePageTurn, navigator) {
+        val nav = navigator
+        if (preferences.volumePageTurn && nav != null) {
+            com.ember.reader.MainActivity.volumeKeyHandler = { forward ->
+                scope.launch {
+                    if (forward) nav.goForward() else nav.goBackward()
+                }
+            }
+        } else {
+            com.ember.reader.MainActivity.volumeKeyHandler = null
+        }
+        onDispose {
+            com.ember.reader.MainActivity.volumeKeyHandler = null
+        }
+    }
 
     when (val state = uiState) {
         ReaderUiState.Loading -> LoadingScreen()

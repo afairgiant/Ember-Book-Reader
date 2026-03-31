@@ -78,6 +78,18 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
 
+    // Save progress on pause (screen lock, app background)
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                viewModel.saveCurrentProgress()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Keep screen on while reading
     val view = LocalView.current
     DisposableEffect(keepScreenOn) {
@@ -288,6 +300,23 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
                 currentTapListener = listener
                 nav.addInputListener(listener)
+            }
+
+            // Volume button page turning
+            DisposableEffect(preferences.volumePageTurn, navigator) {
+                val nav = navigator
+                if (preferences.volumePageTurn && nav != null) {
+                    com.ember.reader.MainActivity.volumeKeyHandler = { forward ->
+                        scope.launch {
+                            if (forward) nav.goForward() else nav.goBackward()
+                        }
+                    }
+                } else {
+                    com.ember.reader.MainActivity.volumeKeyHandler = null
+                }
+                onDispose {
+                    com.ember.reader.MainActivity.volumeKeyHandler = null
+                }
             }
 
             // Handle sync navigation (accept remote progress)

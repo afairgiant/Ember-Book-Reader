@@ -277,6 +277,20 @@ fun ReaderPreferencesSheet(
                 )
             }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Volume buttons turn pages", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = preferences.volumePageTurn,
+                    onCheckedChange = {
+                        onPreferencesChanged(preferences.copy(volumePageTurn = it))
+                    },
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             SectionLabel(stringResource(R.string.orientation_section))

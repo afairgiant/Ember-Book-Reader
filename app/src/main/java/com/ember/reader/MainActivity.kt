@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
@@ -60,6 +61,35 @@ class MainActivity : FragmentActivity() {
             pendingNavRoute.value = route
             intent.removeExtra("navigate_to")
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    volumeKeyHandler?.let { it(true); return true }
+                }
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    volumeKeyHandler?.let { it(false); return true }
+                }
+            }
+        }
+        // Consume ACTION_UP too when handler is active to prevent volume change
+        if (event.action == KeyEvent.ACTION_UP && volumeKeyHandler != null) {
+            if (event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    companion object {
+        /**
+         * Set by reader screens when volume page turn is enabled.
+         * Callback receives true for next page, false for previous page.
+         * Set to null when leaving the reader to restore normal volume behavior.
+         */
+        var volumeKeyHandler: ((forward: Boolean) -> Unit)? = null
     }
 
     private fun requestNotificationPermission() {

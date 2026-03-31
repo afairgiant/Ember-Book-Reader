@@ -261,6 +261,12 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferencesRepository.updatePreferences(preferences) }
     }
 
+    /** Save current progress immediately. Called on Activity pause (screen lock, app background). */
+    fun saveCurrentProgress() {
+        val locator = _currentLocator.value ?: return
+        viewModelScope.launch { saveProgress(locator) }
+    }
+
     private fun scheduleSaveProgress(locator: Locator) {
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
