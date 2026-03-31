@@ -44,24 +44,32 @@ class HighlightSyncManager @Inject constructor(
                         .onSuccess { Timber.d("HighlightSync: deleted remote annotation %d", serverAnnotation.id) }
                         .onFailure { Timber.w(it, "HighlightSync: failed to delete remote annotation %d", serverAnnotation.id) }
                 } else {
-                    // Refresh locator if it has an empty href (fix for double-wrapped CFI bug)
+                    // Always refresh color and locator from server data
                     val cfi = serverAnnotation.cfi
+                    val serverColor = HighlightColor.fromHex(serverAnnotation.color)
+                    var updated = local
+
                     if (cfi != null && local.locatorJson.contains("\"href\":\"\"")) {
                         val fixedLocator = CfiLocatorConverter.buildLocatorJson(
                             cfi = cfi,
                             selectedText = serverAnnotation.text ?: local.selectedText,
                             chapterTitle = serverAnnotation.chapterTitle,
                         )
-                        highlightDao.update(local.copy(locatorJson = fixedLocator))
-                        Timber.d("HighlightSync: refreshed locator for highlight %d", local.id)
+                        updated = updated.copy(locatorJson = fixedLocator)
+                    }
+                    if (updated.color != serverColor) {
+                        updated = updated.copy(color = serverColor)
+                    }
+                    if (updated !== local) {
+                        highlightDao.update(updated)
+                        Timber.d("HighlightSync: refreshed highlight %d (color=%s)", local.id, serverColor)
                     }
 
                     // Both active → compare timestamps, update loser
                     val serverTime = parseTimestamp(serverAnnotation.updatedAt)
                     if (serverTime != null && serverTime.isAfter(local.updatedAt)) {
                         // Server is newer → update local
-                        highlightDao.update(local.copy(
-                            color = HighlightColor.fromHex(serverAnnotation.color),
+                        highlightDao.update(updated.copy(
                             annotation = serverAnnotation.note,
                             selectedText = serverAnnotation.text ?: local.selectedText,
                             updatedAt = serverTime,

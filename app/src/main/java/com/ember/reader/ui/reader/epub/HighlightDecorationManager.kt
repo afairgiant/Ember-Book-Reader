@@ -3,11 +3,14 @@ package com.ember.reader.ui.reader.epub
 import android.graphics.RectF
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.readium.toLocator
+import org.json.JSONObject
 import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Url
 import timber.log.Timber
 
 /**
@@ -26,19 +29,17 @@ class HighlightDecorationManager(
      * Readium internally diffs against the previous list for efficiency.
      */
     suspend fun applyHighlights(highlights: List<Highlight>, publication: Publication? = null) {
+        Timber.d("HighlightDecoration: applying %d highlights (publication=%s)", highlights.size, publication != null)
         val decorations = highlights.mapNotNull { highlight ->
-            var locator = highlight.locatorJson.toLocator() ?: return@mapNotNull null
+            val locator = highlight.locatorJson.toLocator()
+                ?: buildLocatorFromJson(highlight, publication)
 
-            // Synced highlights may have empty href - resolve from CFI spine index
-            if (locator.href.toString().isBlank() && publication != null) {
-                val resolved = resolveHrefFromCfi(locator, publication)
-                if (resolved != null) {
-                    locator = resolved
-                } else {
-                    Timber.w("HighlightDecoration: could not resolve href for highlight %d", highlight.id)
-                    return@mapNotNull null
-                }
+            if (locator == null) {
+                Timber.w("HighlightDecoration: cannot create locator for highlight %d", highlight.id)
+                return@mapNotNull null
             }
+
+            Timber.d("HighlightDecoration: highlight %d href='%s'", highlight.id, locator.href)
 
             Decoration(
                 id = highlight.id.toString(),
@@ -49,33 +50,58 @@ class HighlightDecorationManager(
                 )
             )
         }
+        Timber.d("HighlightDecoration: submitting %d decorations", decorations.size)
         navigator.applyDecorations(decorations, DECORATION_GROUP)
     }
 
     /**
-     * Resolve the href for a locator that has a CFI fragment but empty href.
-     * Extracts the spine index from the CFI and maps it to the publication's reading order.
+     * Build a Locator manually from stored JSON when Readium's fromJSON fails
+     * (e.g. synced highlights with empty href). Resolves href from CFI spine index.
      */
-    private fun resolveHrefFromCfi(locator: org.readium.r2.shared.publication.Locator, publication: Publication): org.readium.r2.shared.publication.Locator? {
-        val fragments = locator.locations.fragments
-        if (fragments.isEmpty()) return null
+    private fun buildLocatorFromJson(highlight: Highlight, publication: Publication?): Locator? {
+        if (publication == null) return null
+        return runCatching {
+            val json = JSONObject(highlight.locatorJson)
+            val locations = json.optJSONObject("locations") ?: return null
+            val fragments = locations.optJSONArray("fragments") ?: return null
+            if (fragments.length() == 0) return null
 
-        // Strip all epubcfi() wrapping (handles double-wrapped too)
-        var cfi = fragments.first()
+            val fragment = fragments.getString(0)
+            val href = resolveHrefFromFragment(fragment, publication) ?: return null
+
+            val textObj = json.optJSONObject("text")
+            val highlightText = textObj?.optString("highlight")?.ifBlank { null }
+
+            Locator(
+                href = href,
+                mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
+                locations = Locator.Locations(fragments = listOf(fragment)),
+                text = Locator.Text(highlight = highlightText),
+            )
+        }.onFailure {
+            Timber.w(it, "HighlightDecoration: failed to build locator for highlight %d", highlight.id)
+        }.getOrNull()
+    }
+
+    /**
+     * Resolve an href from a CFI fragment string by extracting the spine index
+     * and mapping it to the publication's reading order.
+     */
+    private fun resolveHrefFromFragment(fragment: String, publication: Publication): Url? {
+        // Strip all epubcfi() wrapping
+        var cfi = fragment
         while (cfi.startsWith("epubcfi(") && cfi.endsWith(")")) {
             cfi = cfi.removePrefix("epubcfi(").removeSuffix(")")
         }
-        // CFI format: /6/N!... where N is the spine position (1-indexed, even numbers)
+        // CFI format: /6/N!... where N is the spine position (even numbers)
         val spineMatch = Regex("^/6/(\\d+)").find(cfi) ?: return null
         val spinePosition = spineMatch.groupValues[1].toIntOrNull() ?: return null
-        // EPUB CFI uses 1-indexed even numbers: /6/2 = spine[0], /6/4 = spine[1], etc.
+        // EPUB CFI: /6/2 = spine[0], /6/4 = spine[1], etc.
         val spineIndex = (spinePosition / 2) - 1
 
         val readingOrder = publication.readingOrder
         if (spineIndex < 0 || spineIndex >= readingOrder.size) return null
-
-        val link = readingOrder[spineIndex]
-        return locator.copy(href = link.url())
+        return readingOrder[spineIndex].url()
     }
 
     /**

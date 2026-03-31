@@ -9,10 +9,27 @@ enum class HighlightColor(val argb: Long, val hex: String) {
     PURPLE(0xFF9C27B0, "#9C27B0");
 
     companion object {
+        // Grimmory uses different hex values than Ember for the same logical colors
+        private val grimmoryColorMap = mapOf(
+            "FACC15" to YELLOW,
+            "FFFF00" to YELLOW,
+            "4ADE80" to GREEN,
+            "90EE90" to GREEN,
+            "38BDF8" to BLUE,
+            "87CEEB" to BLUE,
+            "F472B6" to PINK,
+            "FFB6C1" to PINK,
+            "FB923C" to ORANGE,
+            "FFD580" to ORANGE,
+        )
+
         fun fromHex(hex: String?): HighlightColor {
             if (hex == null) return YELLOW
             val normalized = hex.uppercase().removePrefix("#")
-            return entries.firstOrNull { it.hex.removePrefix("#") == normalized } ?: YELLOW
+            // Try exact match first, then Grimmory color map
+            return entries.firstOrNull { it.hex.removePrefix("#") == normalized }
+                ?: grimmoryColorMap[normalized]
+                ?: YELLOW
         }
     }
 }
