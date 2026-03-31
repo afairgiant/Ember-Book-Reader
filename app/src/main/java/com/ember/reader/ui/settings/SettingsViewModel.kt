@@ -50,6 +50,12 @@ class SettingsViewModel @Inject constructor(
     val syncNotifications: StateFlow<Boolean> = appPreferencesRepository.syncNotificationsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val syncHighlights: StateFlow<Boolean> = appPreferencesRepository.syncHighlightsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val syncBookmarks: StateFlow<Boolean> = appPreferencesRepository.syncBookmarksFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -97,6 +103,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updateSyncNotifications(enabled: Boolean) {
         viewModelScope.launch { appPreferencesRepository.updateSyncNotifications(enabled) }
+    }
+
+    fun updateSyncHighlights(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateSyncHighlights(enabled) }
+    }
+
+    fun updateSyncBookmarks(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateSyncBookmarks(enabled) }
     }
 
     val isSyncing: StateFlow<Boolean> = syncScheduler.isSyncRunning()

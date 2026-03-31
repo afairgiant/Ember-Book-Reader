@@ -21,7 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Notifications
@@ -76,6 +78,8 @@ fun AppSettingsScreen(
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
     val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val syncHighlights by viewModel.syncHighlights.collectAsStateWithLifecycle()
+    val syncBookmarks by viewModel.syncBookmarks.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -187,6 +191,26 @@ fun AppSettingsScreen(
                     subtitle = stringResource(R.string.sync_notifications_hint),
                     checked = syncNotifications,
                     onCheckedChange = { viewModel.updateSyncNotifications(it) },
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsToggleRow(
+                    icon = Icons.Default.FormatColorFill,
+                    title = "Sync highlights",
+                    subtitle = "Sync highlights with Grimmory",
+                    checked = syncHighlights,
+                    onCheckedChange = { viewModel.updateSyncHighlights(it) },
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                SettingsToggleRow(
+                    icon = Icons.Default.BookmarkBorder,
+                    title = "Sync bookmarks",
+                    subtitle = "Sync bookmarks with Grimmory",
+                    checked = syncBookmarks,
+                    onCheckedChange = { viewModel.updateSyncBookmarks(it) },
                 )
             }
 
