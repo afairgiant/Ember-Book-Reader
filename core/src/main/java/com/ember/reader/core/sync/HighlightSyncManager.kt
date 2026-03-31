@@ -91,6 +91,15 @@ class HighlightSyncManager @Inject constructor(
             if (local.remoteId == null && local.deletedAt == null) {
                 // New local → push to server
                 val cfi = CfiLocatorConverter.extractCfi(local.locatorJson) ?: continue
+
+                // Check if server already has this CFI (match by position)
+                val existingOnServer = serverAnnotations.find { it.cfi == cfi }
+                if (existingOnServer != null) {
+                    highlightDao.update(local.copy(remoteId = existingOnServer.id))
+                    Timber.d("HighlightSync: linked local highlight %d → existing remote %d", local.id, existingOnServer.id)
+                    continue
+                }
+
                 val chapterTitle = CfiLocatorConverter.extractTitle(local.locatorJson)
                 grimmoryClient.createAnnotation(server.url, server.id,
                     CreateAnnotationRequest(
@@ -105,7 +114,16 @@ class HighlightSyncManager @Inject constructor(
                     highlightDao.update(local.copy(remoteId = created.id))
                     Timber.d("HighlightSync: pushed local highlight %d → remote %d", local.id, created.id)
                 }.onFailure {
-                    Timber.w(it, "HighlightSync: failed to push highlight %d", local.id)
+                    if (it.message?.contains("409") == true) {
+                        val refreshed = grimmoryClient.getAnnotations(server.url, server.id, grimmoryBookId).getOrNull()
+                        val match = refreshed?.find { a -> a.cfi == cfi }
+                        if (match != null) {
+                            highlightDao.update(local.copy(remoteId = match.id))
+                            Timber.d("HighlightSync: linked local highlight %d → remote %d after 409", local.id, match.id)
+                        }
+                    } else {
+                        Timber.w(it, "HighlightSync: failed to push highlight %d", local.id)
+                    }
                 }
             } else if (local.remoteId == null && local.deletedAt != null) {
                 // Tombstoned but never synced → just clean up

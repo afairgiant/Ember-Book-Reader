@@ -82,6 +82,16 @@ class BookmarkSyncManager @Inject constructor(
             if (local.remoteId == null && local.deletedAt == null) {
                 // New local → push to server
                 val cfi = CfiLocatorConverter.extractCfi(local.locatorJson) ?: continue
+
+                // Check if server already has this CFI (match by position)
+                val existingOnServer = serverBookmarks.find { it.cfi == cfi }
+                if (existingOnServer != null) {
+                    // Link to existing server bookmark instead of creating duplicate
+                    bookmarkDao.update(local.copy(remoteId = existingOnServer.id))
+                    Timber.d("BookmarkSync: linked local bookmark %d → existing remote %d", local.id, existingOnServer.id)
+                    continue
+                }
+
                 grimmoryClient.createBookmark(server.url, server.id,
                     CreateBookmarkRequest(
                         bookId = grimmoryBookId,
@@ -92,7 +102,17 @@ class BookmarkSyncManager @Inject constructor(
                     bookmarkDao.update(local.copy(remoteId = created.id))
                     Timber.d("BookmarkSync: pushed local bookmark %d → remote %d", local.id, created.id)
                 }.onFailure {
-                    Timber.w(it, "BookmarkSync: failed to push bookmark %d", local.id)
+                    // 409 = already exists on server, try to link by refetching
+                    if (it.message?.contains("409") == true) {
+                        val refreshed = grimmoryClient.getBookmarks(server.url, server.id, grimmoryBookId).getOrNull()
+                        val match = refreshed?.find { b -> b.cfi == cfi }
+                        if (match != null) {
+                            bookmarkDao.update(local.copy(remoteId = match.id))
+                            Timber.d("BookmarkSync: linked local bookmark %d → remote %d after 409", local.id, match.id)
+                        }
+                    } else {
+                        Timber.w(it, "BookmarkSync: failed to push bookmark %d", local.id)
+                    }
                 }
             } else if (local.remoteId == null && local.deletedAt != null) {
                 // Tombstoned but never synced → just clean up
