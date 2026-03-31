@@ -135,3 +135,61 @@ data class GrimmoryReadingSessionRequest(
     val startLocation: String? = null,
     val endLocation: String? = null
 )
+
+// Annotation/Highlight sync
+@Serializable
+data class GrimmoryAnnotation(
+    val id: Long,
+    val cfi: String? = null,
+    val text: String? = null,
+    val color: String? = null,
+    val style: String? = null,
+    val note: String? = null,
+    val chapterTitle: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+)
+
+@Serializable
+data class CreateAnnotationRequest(
+    val bookId: Long,
+    val cfi: String,
+    val text: String? = null,
+    val color: String? = null,
+    val style: String = "highlight",
+    val note: String? = null,
+    val chapterTitle: String? = null,
+)
+
+@Serializable
+data class UpdateAnnotationRequest(
+    val color: String? = null,
+    val style: String? = null,
+    val note: String? = null,
+)
+
+// Bookmark sync
+@Serializable
+data class GrimmoryBookmark(
+    val id: Long,
+    val cfi: String? = null,
+    val title: String? = null,
+    val color: String? = null,
+    val notes: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+)
+
+@Serializable
+data class CreateBookmarkRequest(
+    val bookId: Long,
+    val cfi: String,
+    val title: String? = null,
+)
+
+@Serializable
+data class UpdateBookmarkRequest(
+    val title: String? = null,
+    val color: String? = null,
+    val notes: String? = null,
+)

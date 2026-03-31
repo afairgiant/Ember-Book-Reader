@@ -9,6 +9,7 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
+import io.ktor.client.request.delete
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
@@ -182,6 +183,114 @@ class GrimmoryClient @Inject constructor(
             error("Audiobook info failed: ${response.status}")
         }
         response.body<AudiobookInfo>()
+    }
+
+    // --- Annotation/Highlight sync ---
+
+    suspend fun getAnnotations(
+        baseUrl: String,
+        serverId: Long,
+        bookId: Long,
+    ): Result<List<GrimmoryAnnotation>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/annotations/book/$bookId") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Get annotations failed: ${response.status}")
+        response.body<List<GrimmoryAnnotation>>()
+    }
+
+    suspend fun createAnnotation(
+        baseUrl: String,
+        serverId: Long,
+        request: CreateAnnotationRequest,
+    ): Result<GrimmoryAnnotation> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/annotations") {
+            header("Authorization", "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) error("Create annotation failed: ${response.status}")
+        response.body<GrimmoryAnnotation>()
+    }
+
+    suspend fun updateAnnotation(
+        baseUrl: String,
+        serverId: Long,
+        annotationId: Long,
+        request: UpdateAnnotationRequest,
+    ): Result<GrimmoryAnnotation> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/annotations/$annotationId") {
+            header("Authorization", "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) error("Update annotation failed: ${response.status}")
+        response.body<GrimmoryAnnotation>()
+    }
+
+    suspend fun deleteAnnotation(
+        baseUrl: String,
+        serverId: Long,
+        annotationId: Long,
+    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.delete("${serverOrigin(baseUrl)}/api/v1/annotations/$annotationId") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Delete annotation failed: ${response.status}")
+    }
+
+    // --- Bookmark sync ---
+
+    suspend fun getBookmarks(
+        baseUrl: String,
+        serverId: Long,
+        bookId: Long,
+    ): Result<List<GrimmoryBookmark>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/bookmarks/book/$bookId") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Get bookmarks failed: ${response.status}")
+        response.body<List<GrimmoryBookmark>>()
+    }
+
+    suspend fun createBookmark(
+        baseUrl: String,
+        serverId: Long,
+        request: CreateBookmarkRequest,
+    ): Result<GrimmoryBookmark> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/bookmarks") {
+            header("Authorization", "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) error("Create bookmark failed: ${response.status}")
+        response.body<GrimmoryBookmark>()
+    }
+
+    suspend fun updateBookmark(
+        baseUrl: String,
+        serverId: Long,
+        bookmarkId: Long,
+        request: UpdateBookmarkRequest,
+    ): Result<GrimmoryBookmark> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/bookmarks/$bookmarkId") {
+            header("Authorization", "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) error("Update bookmark failed: ${response.status}")
+        response.body<GrimmoryBookmark>()
+    }
+
+    suspend fun deleteBookmark(
+        baseUrl: String,
+        serverId: Long,
+        bookmarkId: Long,
+    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.delete("${serverOrigin(baseUrl)}/api/v1/bookmarks/$bookmarkId") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Delete bookmark failed: ${response.status}")
     }
 
     /**
