@@ -95,6 +95,21 @@ Ember is a modern Android EPUB/PDF reader app. Primary companion to self-hosted 
 ### Kosync Pull (GET /syncs/progress/:document)
 Response contains: document, progress, percentage, device, device_id, timestamp
 
+## Known Limitations
+
+### Highlight/Bookmark Push to Grimmory
+Highlights created in Ember push to Grimmory but **don't render in Grimmory's web reader**. Readium Kotlin uses `href + progression + text` locators without EPUB CFI. Grimmory's web reader requires CFI (`epubcfi(/6/112!/4/2...)`) to render highlights. The data IS stored on Grimmory and syncs correctly between Ember devices — it just can't be visualized in the web reader. Pull (Grimmory → Ember) works correctly because Grimmory's web reader generates real CFIs.
+
+**Root cause**: Readium Kotlin Toolkit doesn't expose EPUB CFI for text selections. Readium.js (used by Grimmory's web reader) does.
+
+**Potential fix**: Inject JavaScript into Readium's WebView at selection time to extract CFI from the DOM. Complex and fragile.
+
+### EPUB Scroll Mode Infinite Scroll
+Horizontal swipe is the only way to change chapters in scroll mode. True continuous/infinite vertical scrolling across chapters is not yet implemented. Requires deeper integration with Readium's CSS `overflow: scrolled-continuous` or loading multiple chapters into a single scrollable WebView.
+
+### Grimmory Audiobook Covers in OPDS
+Grimmory's OPDS feed doesn't include cover links for audiobooks (checks `coverUpdatedOn` but audiobooks use `audiobookCoverUpdatedOn`). Ember works around this by using `/api/v1/audiobooks/{id}/cover` directly. A Grimmory-side fix would resolve this for all OPDS clients.
+
 ## Current Status
 - **Phase**: 5 — Release Prep
 - **Completed**: Foundation, Reader Core, Sync, Polish

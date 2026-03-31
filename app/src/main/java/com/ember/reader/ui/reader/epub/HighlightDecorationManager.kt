@@ -29,17 +29,10 @@ class HighlightDecorationManager(
      * Readium internally diffs against the previous list for efficiency.
      */
     suspend fun applyHighlights(highlights: List<Highlight>, publication: Publication? = null) {
-        Timber.d("HighlightDecoration: applying %d highlights (publication=%s)", highlights.size, publication != null)
         val decorations = highlights.mapNotNull { highlight ->
             val locator = highlight.locatorJson.toLocator()
                 ?: buildLocatorFromJson(highlight, publication)
-
-            if (locator == null) {
-                Timber.w("HighlightDecoration: cannot create locator for highlight %d", highlight.id)
-                return@mapNotNull null
-            }
-
-            Timber.d("HighlightDecoration: highlight %d href='%s'", highlight.id, locator.href)
+                ?: return@mapNotNull null
 
             Decoration(
                 id = highlight.id.toString(),
@@ -50,7 +43,6 @@ class HighlightDecorationManager(
                 )
             )
         }
-        Timber.d("HighlightDecoration: submitting %d decorations", decorations.size)
         navigator.applyDecorations(decorations, DECORATION_GROUP)
     }
 

@@ -34,7 +34,6 @@ class HighlightSyncManager @Inject constructor(
 
         // Process server annotations
         for (serverAnnotation in serverAnnotations) {
-            Timber.d("HighlightSync: processing server annotation id=%d cfi=%s text=%s", serverAnnotation.id, serverAnnotation.cfi?.take(50), serverAnnotation.text?.take(30))
             val local = localByRemoteId[serverAnnotation.id]
 
             if (local != null) {
@@ -109,10 +108,18 @@ class HighlightSyncManager @Inject constructor(
         }
 
         // Process local highlights
+        // KNOWN LIMITATION: Readium Kotlin doesn't expose EPUB CFI for text selections.
+        // Locally-created highlights push with progression as "CFI" which Grimmory stores
+        // but can't render in the web reader. Pull (Grimmory → Ember) works correctly.
+        // See CLAUDE.md "Known Limitations" for details.
         for (local in localHighlights) {
             if (local.remoteId == null && local.deletedAt == null) {
                 // New local → push to server
-                val cfi = CfiLocatorConverter.extractCfi(local.locatorJson) ?: continue
+                val cfi = CfiLocatorConverter.extractCfi(local.locatorJson)
+                if (cfi == null) {
+                    Timber.w("HighlightSync: no CFI for local highlight %d, locator: %s", local.id, local.locatorJson.take(150))
+                    continue
+                }
 
                 // Check if server already has this CFI (match by position)
                 val existingOnServer = serverAnnotations.find { it.cfi == cfi }
