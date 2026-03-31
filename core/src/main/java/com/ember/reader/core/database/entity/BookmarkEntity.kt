@@ -24,5 +24,8 @@ data class BookmarkEntity(
     val bookId: String,
     val locatorJson: String,
     val title: String? = null,
-    val createdAt: Instant
+    val createdAt: Instant,
+    val remoteId: Long? = null,
+    val updatedAt: Instant = Instant.now(),
+    val deletedAt: Instant? = null,
 )

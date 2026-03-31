@@ -28,7 +28,7 @@ import com.ember.reader.core.database.entity.ServerEntity
         HighlightEntity::class,
         ReadingSessionEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -76,6 +76,19 @@ abstract class EmberDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE highlights ADD COLUMN selectedText TEXT")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE highlights ADD COLUMN remoteId INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE highlights ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE highlights ADD COLUMN deletedAt INTEGER DEFAULT NULL")
+                db.execSQL("UPDATE highlights SET updatedAt = createdAt")
+                db.execSQL("ALTER TABLE bookmarks ADD COLUMN remoteId INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE bookmarks ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE bookmarks ADD COLUMN deletedAt INTEGER DEFAULT NULL")
+                db.execSQL("UPDATE bookmarks SET updatedAt = createdAt")
             }
         }
 

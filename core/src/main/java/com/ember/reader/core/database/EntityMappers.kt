@@ -115,7 +115,10 @@ fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
     bookId = bookId,
     locatorJson = locatorJson,
     title = title,
-    createdAt = createdAt
+    createdAt = createdAt,
+    remoteId = remoteId,
+    updatedAt = updatedAt,
+    deletedAt = deletedAt,
 )
 
 fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
@@ -123,7 +126,10 @@ fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
     bookId = bookId,
     locatorJson = locatorJson,
     title = title,
-    createdAt = createdAt
+    createdAt = createdAt,
+    remoteId = remoteId,
+    updatedAt = updatedAt,
+    deletedAt = deletedAt,
 )
 
 fun HighlightEntity.toDomain(): Highlight = Highlight(
@@ -133,7 +139,10 @@ fun HighlightEntity.toDomain(): Highlight = Highlight(
     color = color,
     annotation = annotation,
     selectedText = selectedText,
-    createdAt = createdAt
+    createdAt = createdAt,
+    remoteId = remoteId,
+    updatedAt = updatedAt,
+    deletedAt = deletedAt,
 )
 
 fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -143,7 +152,10 @@ fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
     color = color,
     annotation = annotation,
     selectedText = selectedText,
-    createdAt = createdAt
+    createdAt = createdAt,
+    remoteId = remoteId,
+    updatedAt = updatedAt,
+    deletedAt = deletedAt,
 )
 
 fun ReadingSessionEntity.toDomain(): ReadingSession = ReadingSession(

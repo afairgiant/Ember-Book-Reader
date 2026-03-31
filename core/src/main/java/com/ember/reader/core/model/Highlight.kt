@@ -9,5 +9,8 @@ data class Highlight(
     val color: HighlightColor = HighlightColor.YELLOW,
     val annotation: String? = null,
     val selectedText: String? = null,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Instant = Instant.now(),
+    val remoteId: Long? = null,
+    val updatedAt: Instant = Instant.now(),
+    val deletedAt: Instant? = null,
 )
