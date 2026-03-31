@@ -91,7 +91,7 @@ class SyncWorker @AssistedInject constructor(
                     val syncHighlights = appPreferencesRepository.getSyncHighlights()
                     val syncBookmarks = appPreferencesRepository.getSyncBookmarks()
                     if (syncHighlights || syncBookmarks) {
-                        val serverBooks = bookDao.getBooksByServerId(server.id)
+                        val serverBooks = bookDao.getDownloadedBooksForServer(server.id)
                         for (bookEntity in serverBooks) {
                             val gid = bookEntity.opdsEntryId
                                 ?.substringAfterLast(":")
