@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,9 +80,10 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // ── Local Stats (This Device) ──
+
             // Streak + All Time
             item {
-                val streakValue = stats.grimmoryStreak?.currentStreak ?: stats.currentStreak
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -103,7 +105,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "$streakValue",
+                                text = "${stats.currentStreak}",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -141,27 +143,6 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                }
-            }
-
-            // Longest streak + Total reading days (when Grimmory connected)
-            stats.grimmoryStreak?.let { streak ->
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        StatMiniCard(
-                            label = stringResource(R.string.longest_streak),
-                            value = "${streak.longestStreak}",
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatMiniCard(
-                            label = stringResource(R.string.total_reading_days),
-                            value = "${streak.totalReadingDays}",
-                            modifier = Modifier.weight(1f),
-                        )
                     }
                 }
             }
@@ -210,7 +191,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                 }
             }
 
-            // Reading streak calendar — use Grimmory 52-week data if available, else local 12-week
+            // Reading Activity (local 12-week calendar)
             item {
                 Text(
                     text = stringResource(R.string.reading_activity),
@@ -219,82 +200,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                 )
             }
             item {
-                val grimmoryWeeks = stats.grimmoryStreak?.last52Weeks
-                if (grimmoryWeeks != null && grimmoryWeeks.isNotEmpty()) {
-                    GrimmoryStreakCalendar(weeks = grimmoryWeeks)
-                } else {
-                    StreakCalendar(readingDays = stats.readingDays)
-                }
-            }
-
-            // Library Overview (Grimmory)
-            stats.bookDistributions?.let { distributions ->
-                val statusMap = distributions.statusDistribution.associate { it.status to it.count }
-                val readCount = statusMap["READ"] ?: 0
-                val readingCount = statusMap["READING"] ?: 0
-                val unreadCount = statusMap["UNREAD"] ?: 0
-
-                item {
-                    GrimmorySectionHeader(stringResource(R.string.library_overview))
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        StatMiniCard(
-                            label = stringResource(R.string.books_read),
-                            value = "$readCount",
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatMiniCard(
-                            label = stringResource(R.string.books_reading),
-                            value = "$readingCount",
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatMiniCard(
-                            label = stringResource(R.string.books_unread),
-                            value = "$unreadCount",
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-
-            // Peak Reading Hours (Grimmory)
-            stats.peakHours?.let { hours ->
-                if (hours.isNotEmpty()) {
-                    item {
-                        GrimmorySectionHeader(stringResource(R.string.peak_reading_hours))
-                    }
-                    item {
-                        PeakHoursChart(hours)
-                    }
-                }
-            }
-
-            // Favorite Days (Grimmory)
-            stats.favoriteDays?.let { days ->
-                if (days.isNotEmpty()) {
-                    item {
-                        GrimmorySectionHeader(stringResource(R.string.favorite_days))
-                    }
-                    item {
-                        FavoriteDaysChart(days)
-                    }
-                }
-            }
-
-            // Top Genres (Grimmory)
-            stats.genreStats?.let { genres ->
-                if (genres.isNotEmpty()) {
-                    item {
-                        GrimmorySectionHeader(stringResource(R.string.top_genres))
-                    }
-                    item {
-                        TopGenresCard(genres)
-                    }
-                }
+                StreakCalendar(readingDays = stats.readingDays)
             }
 
             // Recent sessions
@@ -330,27 +236,170 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun GrimmorySectionHeader(title: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Icon(
-            Icons.Default.Cloud,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-        )
+            // ── Grimmory Stats (Cross-Device) ──
+
+            if (stats.isGrimmoryConnected) {
+                item {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                // Grimmory section title
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Cloud,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.grimmory_stats),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
+                // Streak: current, longest, total reading days
+                stats.grimmoryStreak?.let { streak ->
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatMiniCard(
+                                label = stringResource(R.string.day_streak),
+                                value = "${streak.currentStreak}",
+                                modifier = Modifier.weight(1f),
+                            )
+                            StatMiniCard(
+                                label = stringResource(R.string.longest_streak),
+                                value = "${streak.longestStreak}",
+                                modifier = Modifier.weight(1f),
+                            )
+                            StatMiniCard(
+                                label = stringResource(R.string.total_reading_days),
+                                value = "${streak.totalReadingDays}",
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
+                    // 52-week activity calendar
+                    if (streak.last52Weeks.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.reading_activity),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        item {
+                            GrimmoryStreakCalendar(weeks = streak.last52Weeks)
+                        }
+                    }
+                }
+
+                // Library Overview
+                stats.bookDistributions?.let { distributions ->
+                    val statusMap = distributions.statusDistribution.associate { it.status to it.count }
+                    val readCount = statusMap["READ"] ?: 0
+                    val readingCount = statusMap["READING"] ?: 0
+                    val unreadCount = statusMap["UNREAD"] ?: 0
+
+                    item {
+                        Text(
+                            text = stringResource(R.string.library_overview),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatMiniCard(
+                                label = stringResource(R.string.books_read),
+                                value = "$readCount",
+                                modifier = Modifier.weight(1f),
+                            )
+                            StatMiniCard(
+                                label = stringResource(R.string.books_reading),
+                                value = "$readingCount",
+                                modifier = Modifier.weight(1f),
+                            )
+                            StatMiniCard(
+                                label = stringResource(R.string.books_unread),
+                                value = "$unreadCount",
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+
+                // Peak Reading Hours
+                stats.peakHours?.let { hours ->
+                    if (hours.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.peak_reading_hours),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        item {
+                            PeakHoursChart(hours)
+                        }
+                    }
+                }
+
+                // Favorite Days
+                stats.favoriteDays?.let { days ->
+                    if (days.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.favorite_days),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        item {
+                            FavoriteDaysChart(days)
+                        }
+                    }
+                }
+
+                // Top Genres
+                stats.genreStats?.let { genres ->
+                    if (genres.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.top_genres),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        item {
+                            TopGenresCard(genres)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
