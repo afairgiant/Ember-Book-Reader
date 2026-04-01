@@ -482,13 +482,12 @@ private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Group the 52-week data into columns of 7 (weeks)
-            // Data is ordered chronologically, we want most recent on the right
-            val daysByWeek = weeks.chunked(7)
+            // Group into columns of 7, reversed so most recent week comes first
+            val daysByWeek = weeks.chunked(7).reversed()
 
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
-                reverseLayout = false
+                reverseLayout = true
             ) {
                 items(daysByWeek.size) { weekIdx ->
                     val weekDays = daysByWeek[weekIdx]
