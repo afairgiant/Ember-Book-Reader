@@ -109,6 +109,7 @@ class ReaderViewModel @Inject constructor(
     private var progressSaveJob: Job? = null
     private var sessionStartTime: java.time.Instant? = null
     private var sessionStartProgress: Float = 0f
+    private var sessionPausedAt: java.time.Instant? = null
 
     init {
         viewModelScope.launch { loadBook() }
@@ -287,6 +288,40 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { saveProgress(locator) }
     }
 
+    /** End and record the current reading session segment. Called on ON_PAUSE. */
+    fun onSessionPause() {
+        if (sessionPausedAt != null) return // already paused
+        val startTime = sessionStartTime ?: return // no active session
+
+        val pauseTime = java.time.Instant.now()
+        sessionPausedAt = pauseTime
+
+        val durationSeconds = java.time.Duration.between(startTime, pauseTime).seconds
+        if (durationSeconds >= MIN_SESSION_SECONDS) {
+            // Record this segment and mark session as consumed
+            viewModelScope.launch {
+                recordReadingSessionSegment(startTime, pauseTime)
+            }
+            sessionStartTime = null
+        }
+        // If < MIN_SESSION_SECONDS: keep sessionStartTime so time accumulates across pause/resume
+    }
+
+    /** Start a fresh reading session segment after resuming. Called on ON_RESUME. */
+    fun onSessionResume() {
+        if (sessionPausedAt == null) return // not paused (handles first ON_RESUME before any ON_PAUSE)
+
+        sessionPausedAt = null
+
+        if (sessionStartTime == null) {
+            // Previous segment was recorded on pause — start a fresh session
+            sessionStartTime = java.time.Instant.now()
+            sessionStartProgress = _currentLocator.value
+                ?.locations?.totalProgression?.toFloat() ?: 0f
+        }
+        // If sessionStartTime is still set (sub-threshold segment), just unpause — timer continues
+    }
+
     private fun scheduleSaveProgress(locator: Locator) {
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
@@ -342,24 +377,36 @@ class ReaderViewModel @Inject constructor(
             kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                 saveProgress(locator)
             }
-            // Fire-and-forget: push to server + record session
+
+            // Determine if there's an unrecorded session segment
+            val startTime = sessionStartTime
+            val endTime = when {
+                startTime == null -> null // session already recorded on pause
+                sessionPausedAt != null -> sessionPausedAt // paused but sub-threshold, use pause time
+                else -> java.time.Instant.now() // active session, use now (safety net)
+            }
+
+            // Fire-and-forget: push to server + record any remaining session
             // Uses GlobalScope intentionally — this work must outlive the ViewModel
             @Suppress("OPT_IN_USAGE")
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 pushProgressOnClose()
-                recordReadingSession()
+                if (startTime != null && endTime != null) {
+                    recordReadingSessionSegment(startTime, endTime)
+                }
             }
         }
         publication?.close()
     }
 
-    private suspend fun recordReadingSession() {
-        val startTime = sessionStartTime ?: return
+    private suspend fun recordReadingSessionSegment(
+        startTime: java.time.Instant,
+        endTime: java.time.Instant,
+    ) {
         val loadedBook = book ?: return
 
-        val endTime = java.time.Instant.now()
         val durationSeconds = java.time.Duration.between(startTime, endTime).seconds
-        if (durationSeconds < 30) return // Skip accidental opens
+        if (durationSeconds < MIN_SESSION_SECONDS) return // Skip accidental opens / sub-threshold segments
 
         val endProgress = readingProgressRepository.getByBookId(bookId)?.percentage ?: 0f
 
@@ -412,6 +459,7 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val SAVE_DEBOUNCE_MS = 5000L
         private const val CONFLICT_THRESHOLD = 0.01f
+        private const val MIN_SESSION_SECONDS = 30L
     }
 }
 

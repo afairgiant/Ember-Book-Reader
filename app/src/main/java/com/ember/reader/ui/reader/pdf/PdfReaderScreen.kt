@@ -54,12 +54,19 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
 
-    // Save progress on pause (screen lock, app background)
+    // Save progress and manage reading session on lifecycle changes
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
-                viewModel.saveCurrentProgress()
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.saveCurrentProgress()
+                    viewModel.onSessionPause()
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    viewModel.onSessionResume()
+                }
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
