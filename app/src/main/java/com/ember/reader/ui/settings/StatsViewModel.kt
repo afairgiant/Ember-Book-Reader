@@ -2,23 +2,37 @@ package com.ember.reader.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryBookDistributions
+import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryFavoriteDay
+import com.ember.reader.core.grimmory.GrimmoryGenreStat
+import com.ember.reader.core.grimmory.GrimmoryPeakHour
+import com.ember.reader.core.grimmory.GrimmoryStreakResponse
 import com.ember.reader.core.model.ReadingSession
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingSessionRepository
+import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Year
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val readingSessionRepository: ReadingSessionRepository,
     private val bookRepository: BookRepository,
-    private val readingProgressRepository: ReadingProgressRepository
+    private val readingProgressRepository: ReadingProgressRepository,
+    private val serverRepository: ServerRepository,
+    private val grimmoryClient: GrimmoryClient,
 ) : ViewModel() {
 
     private val _stats = MutableStateFlow(StatsData())
@@ -33,6 +47,7 @@ class StatsViewModel @Inject constructor(
     }
 
     private suspend fun loadStats() {
+        // Load local stats first
         val todayDuration = readingSessionRepository.getTotalDurationToday()
         val weekDuration = readingSessionRepository.getTotalDurationThisWeek()
         val monthDuration = readingSessionRepository.getTotalDurationThisMonth()
@@ -41,10 +56,8 @@ class StatsViewModel @Inject constructor(
         val recentSessions = readingSessionRepository.getRecentSessions(15)
         val readingDays = readingSessionRepository.getReadingDays(84)
 
-        // Estimate time to finish current book
         val estimatedCompletion = calculateEstimatedCompletion()
 
-        // Map session bookIds to titles
         val bookTitles = mutableMapOf<String, String>()
         for (session in recentSessions) {
             if (session.bookId !in bookTitles) {
@@ -52,6 +65,7 @@ class StatsViewModel @Inject constructor(
             }
         }
 
+        // Show local stats immediately
         _stats.value = StatsData(
             todaySeconds = todayDuration,
             weekSeconds = weekDuration,
@@ -61,12 +75,63 @@ class StatsViewModel @Inject constructor(
             recentSessions = recentSessions,
             bookTitles = bookTitles,
             readingDays = readingDays,
-            estimatedMinutesToFinish = estimatedCompletion
+            estimatedMinutesToFinish = estimatedCompletion,
         )
+
+        // Then load Grimmory stats if available
+        val grimmoryServer = findGrimmoryServer()
+        if (grimmoryServer != null) {
+            loadGrimmoryStats(grimmoryServer)
+        }
+    }
+
+    private suspend fun findGrimmoryServer(): Server? =
+        serverRepository.getAll().firstOrNull { it.isGrimmory }
+
+    private suspend fun loadGrimmoryStats(server: Server) {
+        val baseUrl = server.url
+        val serverId = server.id
+        val currentYear = Year.now().value
+
+        try {
+            coroutineScope {
+                val streakDeferred = async {
+                    grimmoryClient.getReadingStreak(baseUrl, serverId).getOrNull()
+                }
+                val peakHoursDeferred = async {
+                    grimmoryClient.getPeakHours(baseUrl, serverId).getOrNull()
+                }
+                val favoriteDaysDeferred = async {
+                    grimmoryClient.getFavoriteDays(baseUrl, serverId).getOrNull()
+                }
+                val distributionsDeferred = async {
+                    grimmoryClient.getBookDistributions(baseUrl, serverId).getOrNull()
+                }
+                val genresDeferred = async {
+                    grimmoryClient.getGenreStats(baseUrl, serverId).getOrNull()
+                }
+
+                val grimmoryStreak = streakDeferred.await()
+                val peakHours = peakHoursDeferred.await()
+                val favoriteDays = favoriteDaysDeferred.await()
+                val distributions = distributionsDeferred.await()
+                val genres = genresDeferred.await()
+
+                _stats.value = _stats.value.copy(
+                    isGrimmoryConnected = true,
+                    grimmoryStreak = grimmoryStreak,
+                    peakHours = peakHours,
+                    favoriteDays = favoriteDays,
+                    bookDistributions = distributions,
+                    genreStats = genres?.sortedByDescending { it.totalDurationSeconds }?.take(8),
+                )
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load Grimmory stats, falling back to local only")
+        }
     }
 
     private suspend fun calculateEstimatedCompletion(): Long? {
-        // Find the most recently read book that isn't finished
         val allProgress = readingProgressRepository.observeAll().first()
         val currentBook = allProgress
             .filter { it.percentage > 0f && it.percentage < 0.99f }
@@ -97,7 +162,14 @@ data class StatsData(
     val recentSessions: List<ReadingSession> = emptyList(),
     val bookTitles: Map<String, String> = emptyMap(),
     val readingDays: Set<Long> = emptySet(),
-    val estimatedMinutesToFinish: Long? = null
+    val estimatedMinutesToFinish: Long? = null,
+    // Grimmory remote stats
+    val isGrimmoryConnected: Boolean = false,
+    val grimmoryStreak: GrimmoryStreakResponse? = null,
+    val peakHours: List<GrimmoryPeakHour>? = null,
+    val favoriteDays: List<GrimmoryFavoriteDay>? = null,
+    val bookDistributions: GrimmoryBookDistributions? = null,
+    val genreStats: List<GrimmoryGenreStat>? = null,
 )
 
 fun Long.formatDuration(): String {

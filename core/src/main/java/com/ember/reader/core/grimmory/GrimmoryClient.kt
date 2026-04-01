@@ -293,6 +293,126 @@ class GrimmoryClient @Inject constructor(
         if (!response.status.isSuccess()) error("Delete bookmark failed: ${response.status}")
     }
 
+    // --- Reading stats ---
+
+    suspend fun getReadingStreak(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<GrimmoryStreakResponse> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/streak") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Reading streak failed: ${response.status}")
+        response.body<GrimmoryStreakResponse>()
+    }
+
+    suspend fun getReadingHeatmap(
+        baseUrl: String,
+        serverId: Long,
+        year: Int,
+    ): Result<List<GrimmoryDateCount>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/heatmap") {
+            header("Authorization", "Bearer $token")
+            parameter("year", year)
+        }
+        if (!response.status.isSuccess()) error("Reading heatmap failed: ${response.status}")
+        response.body<List<GrimmoryDateCount>>()
+    }
+
+    suspend fun getPeakHours(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<List<GrimmoryPeakHour>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/peak-hours") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Peak hours failed: ${response.status}")
+        response.body<List<GrimmoryPeakHour>>()
+    }
+
+    suspend fun getFavoriteDays(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<List<GrimmoryFavoriteDay>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/favorite-days") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Favorite days failed: ${response.status}")
+        response.body<List<GrimmoryFavoriteDay>>()
+    }
+
+    suspend fun getBookDistributions(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<GrimmoryBookDistributions> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/book-distributions") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Book distributions failed: ${response.status}")
+        response.body<GrimmoryBookDistributions>()
+    }
+
+    suspend fun getGenreStats(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<List<GrimmoryGenreStat>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/genres") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Genre stats failed: ${response.status}")
+        response.body<List<GrimmoryGenreStat>>()
+    }
+
+    suspend fun getReadingDates(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<List<GrimmoryDateCount>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/dates") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Reading dates failed: ${response.status}")
+        response.body<List<GrimmoryDateCount>>()
+    }
+
+    suspend fun getReadingTimeline(
+        baseUrl: String,
+        serverId: Long,
+        year: Int,
+        week: Int,
+    ): Result<List<GrimmoryTimelineEntry>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/timeline") {
+            header("Authorization", "Bearer $token")
+            parameter("year", year)
+            parameter("week", week)
+        }
+        if (!response.status.isSuccess()) error("Reading timeline failed: ${response.status}")
+        response.body<List<GrimmoryTimelineEntry>>()
+    }
+
+    suspend fun getPageTurnerScores(
+        baseUrl: String,
+        serverId: Long,
+    ): Result<List<GrimmoryPageTurnerScore>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/page-turner-scores") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Page turner scores failed: ${response.status}")
+        response.body<List<GrimmoryPageTurnerScore>>()
+    }
+
+    suspend fun getSessionScatter(
+        baseUrl: String,
+        serverId: Long,
+        year: Int,
+    ): Result<List<GrimmorySessionScatter>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/session-scatter") {
+            header("Authorization", "Bearer $token")
+            parameter("year", year)
+        }
+        if (!response.status.isSuccess()) error("Session scatter failed: ${response.status}")
+        response.body<List<GrimmorySessionScatter>>()
+    }
+
     /**
      * Builds a streaming URL for an audiobook with JWT auth query param.
      * ExoPlayer will use this URL directly for HTTP streaming with Range support.

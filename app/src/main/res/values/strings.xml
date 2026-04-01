@@ -217,6 +217,20 @@
     <string name="today">Today</string>
     <string name="this_week">This Week</string>
     <string name="this_month">This Month</string>
+    <string name="longest_streak">Longest Streak</string>
+    <string name="total_reading_days">Reading Days</string>
+    <string name="reading_activity">Reading Activity</string>
+    <string name="recent_sessions">Recent Sessions</string>
+    <string name="peak_reading_hours">Peak Reading Hours</string>
+    <string name="favorite_days">Favorite Days</string>
+    <string name="library_overview">Library</string>
+    <string name="top_genres">Top Genres</string>
+    <string name="books_read">Read</string>
+    <string name="books_reading">Reading</string>
+    <string name="books_unread">Unread</string>
+    <string name="no_sessions_yet">No reading sessions yet. Open a book and start reading!</string>
+    <string name="estimated_time_to_finish">Estimated time to finish current book:</string>
+    <string name="grimmory_stats">Cross-device stats from Grimmory</string>
 
     <!-- Storage -->
     <string name="manage_storage">Manage Storage</string>
