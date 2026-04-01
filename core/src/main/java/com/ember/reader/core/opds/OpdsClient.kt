@@ -12,6 +12,7 @@ import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentLength
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -34,7 +35,7 @@ class OpdsClient @Inject constructor(
         password: String
     ): Result<String> = runCatching {
         val response = httpClient.get(normalizeUrl(baseUrl)) {
-            header("Accept", "application/atom+xml")
+            headers[HttpHeaders.Accept] = "application/atom+xml"
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
@@ -54,7 +55,7 @@ class OpdsClient @Inject constructor(
     ): Result<OpdsFeed> = runCatching {
         val url = if (path != null) resolveUrl(baseUrl, path) else normalizeUrl(baseUrl)
         val response = httpClient.get(url) {
-            header("Accept", "application/atom+xml")
+            headers[HttpHeaders.Accept] = "application/atom+xml"
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
@@ -75,7 +76,7 @@ class OpdsClient @Inject constructor(
         val resolvedPath = "${path}${separator}page=$page"
         val url = resolveUrl(baseUrl, resolvedPath)
         val response = httpClient.get(url) {
-            header("Accept", "application/atom+xml")
+            headers[HttpHeaders.Accept] = "application/atom+xml"
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {
@@ -95,7 +96,7 @@ class OpdsClient @Inject constructor(
         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
         val searchPath = "${normalizeUrl(baseUrl)}/catalog?q=$encodedQuery&page=$page"
         val response = httpClient.get(searchPath) {
-            header("Accept", "application/atom+xml")
+            headers[HttpHeaders.Accept] = "application/atom+xml"
             header("Authorization", basicAuth(username, password))
         }
         if (!response.status.isSuccess()) {

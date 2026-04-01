@@ -9,6 +9,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import javax.inject.Inject
@@ -27,7 +28,7 @@ class KosyncClient @Inject constructor(
             val response = httpClient.get(serverOrigin(baseUrl) + "/api/koreader/users/auth") {
                 header("x-auth-user", username)
                 header("x-auth-key", md5Hash(password))
-                header("Accept", ACCEPT_HEADER)
+                headers[HttpHeaders.Accept] = ACCEPT_HEADER
             }
             if (!response.status.isSuccess()) {
                 error("Authentication failed: ${response.status}")
@@ -43,7 +44,7 @@ class KosyncClient @Inject constructor(
         val response = httpClient.put(serverOrigin(baseUrl) + "/api/koreader/syncs/progress") {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
-            header("Accept", ACCEPT_HEADER)
+            headers[HttpHeaders.Accept] = ACCEPT_HEADER
             contentType(ContentType.Application.Json)
             setBody(request)
         }
@@ -63,7 +64,7 @@ class KosyncClient @Inject constructor(
         ) {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
-            header("Accept", ACCEPT_HEADER)
+            headers[HttpHeaders.Accept] = ACCEPT_HEADER
         }
         if (response.status.isSuccess()) {
             response.body<KosyncProgressResponse>()

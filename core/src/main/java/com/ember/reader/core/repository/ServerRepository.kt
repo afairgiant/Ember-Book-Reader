@@ -145,6 +145,15 @@ class ServerRepository @Inject constructor(
 
     suspend fun detectGrimmory(url: String): Boolean = grimmoryClient.checkHealth(url)
 
+    /** Attempt to re-login to Grimmory using stored credentials. Returns true on success. */
+    suspend fun tryGrimmoryRelogin(server: Server): Boolean {
+        if (server.grimmoryUsername.isBlank() || server.grimmoryPassword.isBlank()) return false
+        return grimmoryClient.login(server.url, server.grimmoryUsername, server.grimmoryPassword)
+            .onSuccess { tokens -> grimmoryTokenManager.storeTokens(server.id, tokens) }
+            .onFailure { Timber.w(it, "Grimmory re-login failed for server ${server.id}") }
+            .isSuccess
+    }
+
     suspend fun updateLastConnected(serverId: Long) {
         serverDao.updateLastConnected(serverId, Instant.now())
     }

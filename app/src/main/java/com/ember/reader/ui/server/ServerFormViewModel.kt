@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.model.Server.Companion.GRIMMORY_OPDS_PATH
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -66,8 +67,13 @@ class ServerFormViewModel @Inject constructor(
         viewModelScope.launch {
             // Also detect if this is a Grimmory server
             val isGrimmory = serverRepository.detectGrimmory(state.url)
+            val opdsUrl = if (isGrimmory && "/opds" !in state.url) {
+                state.url.trimEnd('/') + GRIMMORY_OPDS_PATH
+            } else {
+                state.url
+            }
             val result = serverRepository.testOpdsConnection(
-                url = state.url,
+                url = opdsUrl,
                 username = state.opdsUsername,
                 password = state.opdsPassword
             )
@@ -111,8 +117,13 @@ class ServerFormViewModel @Inject constructor(
 
         _uiState.update { it.copy(opdsTestResult = TestResult.Testing) }
         viewModelScope.launch {
+            val opdsUrl = if (state.isGrimmory && "/opds" !in state.url) {
+                state.url.trimEnd('/') + GRIMMORY_OPDS_PATH
+            } else {
+                state.url
+            }
             val result = serverRepository.testOpdsConnection(
-                url = state.url,
+                url = opdsUrl,
                 username = state.grimmoryUsername,
                 password = state.grimmoryPassword
             )

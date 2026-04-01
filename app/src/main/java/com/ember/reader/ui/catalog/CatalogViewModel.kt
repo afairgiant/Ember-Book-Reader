@@ -73,6 +73,11 @@ class CatalogViewModel @Inject constructor(
         }
 
         if (currentServer.isGrimmory) {
+            // Re-login if token is missing (e.g., after keystore invalidation or app update)
+            if (!grimmoryTokenManager.isLoggedIn(currentServer.id)) {
+                serverRepository.tryGrimmoryRelogin(currentServer)
+            }
+
             if (grimmoryTokenManager.isLoggedIn(currentServer.id)) {
                 fetchGrimmoryCatalog(currentServer)
             } else if (currentServer.opdsUsername.isNotBlank()) {
@@ -246,7 +251,7 @@ class CatalogViewModel @Inject constructor(
 
     private suspend fun fetchOpdsFeed(server: Server) {
         val result = opdsClient.fetchCatalog(
-            baseUrl = server.url,
+            baseUrl = server.opdsUrl,
             username = server.opdsUsername,
             password = server.opdsPassword,
             path = path.ifEmpty { null }

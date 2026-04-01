@@ -14,4 +14,16 @@ data class Server(
     val grimmoryPassword: String = "",
     val isGrimmory: Boolean = false,
     val lastConnected: Instant? = null
-)
+) {
+    /** Returns the OPDS feed URL — appends the known OPDS path for Grimmory servers. */
+    val opdsUrl: String
+        get() = if (isGrimmory && "/opds" !in url) {
+            url.trimEnd('/') + GRIMMORY_OPDS_PATH
+        } else {
+            url
+        }
+
+    companion object {
+        const val GRIMMORY_OPDS_PATH = "/api/v1/opds"
+    }
+}

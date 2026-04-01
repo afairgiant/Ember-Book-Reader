@@ -56,6 +56,7 @@ object HttpClientFactory {
 
         defaultRequest {
             header("User-Agent", "Ember/1.0 (Android)")
+            header("Accept", "application/json")
         }
 
         expectSuccess = false
