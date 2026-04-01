@@ -193,3 +193,109 @@ data class UpdateBookmarkRequest(
     val color: String? = null,
     val notes: String? = null,
 )
+
+// Reading stats responses
+
+@Serializable
+data class GrimmoryStreakResponse(
+    val currentStreak: Int,
+    val longestStreak: Int,
+    val totalReadingDays: Int,
+    val last52Weeks: List<GrimmoryStreakDay>,
+)
+
+@Serializable
+data class GrimmoryStreakDay(
+    val date: String,
+    val active: Boolean,
+)
+
+@Serializable
+data class GrimmoryDateCount(
+    val date: String,
+    val count: Int,
+)
+
+@Serializable
+data class GrimmoryPeakHour(
+    val hourOfDay: Int,
+    val sessionCount: Int,
+    val totalDurationSeconds: Long,
+)
+
+@Serializable
+data class GrimmoryFavoriteDay(
+    val dayOfWeek: Int,
+    val dayName: String,
+    val sessionCount: Int,
+    val totalDurationSeconds: Long,
+)
+
+@Serializable
+data class GrimmoryBookDistributions(
+    val ratingDistribution: List<GrimmoryRatingEntry>,
+    val progressDistribution: List<GrimmoryProgressEntry>,
+    val statusDistribution: List<GrimmoryStatusEntry>,
+)
+
+@Serializable
+data class GrimmoryRatingEntry(
+    val rating: Int,
+    val count: Int,
+)
+
+@Serializable
+data class GrimmoryProgressEntry(
+    val range: String,
+    val min: Int,
+    val max: Int,
+    val count: Int,
+)
+
+@Serializable
+data class GrimmoryStatusEntry(
+    val status: String,
+    val count: Int,
+)
+
+@Serializable
+data class GrimmoryGenreStat(
+    val genre: String,
+    val bookCount: Int,
+    val totalSessions: Int,
+    val totalDurationSeconds: Long,
+    val averageSessionsPerBook: Double,
+)
+
+@Serializable
+data class GrimmoryTimelineEntry(
+    val bookId: Long,
+    val bookTitle: String,
+    val bookType: String,
+    val startDate: String,
+    val endDate: String,
+    val totalSessions: Int,
+    val totalDurationSeconds: Long,
+)
+
+@Serializable
+data class GrimmoryPageTurnerScore(
+    val bookId: Long,
+    val bookTitle: String,
+    val categories: List<String> = emptyList(),
+    val pageCount: Int,
+    val personalRating: Int? = null,
+    val gripScore: Int,
+    val totalSessions: Int,
+    val avgSessionDurationSeconds: Double,
+    val sessionAcceleration: Double,
+    val gapReduction: Double,
+    val finishBurst: Boolean,
+)
+
+@Serializable
+data class GrimmorySessionScatter(
+    val hourOfDay: Double,
+    val durationMinutes: Double,
+    val dayOfWeek: Int,
+)

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
@@ -43,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
+import com.ember.reader.core.grimmory.GrimmoryFavoriteDay
+import com.ember.reader.core.grimmory.GrimmoryPeakHour
+import com.ember.reader.core.grimmory.GrimmoryStreakDay
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -77,6 +81,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
         ) {
             // Streak + All Time
             item {
+                val streakValue = stats.grimmoryStreak?.currentStreak ?: stats.currentStreak
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -98,7 +103,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${stats.currentStreak}",
+                                text = "$streakValue",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -140,6 +145,27 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                 }
             }
 
+            // Longest streak + Total reading days (when Grimmory connected)
+            stats.grimmoryStreak?.let { streak ->
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StatMiniCard(
+                            label = stringResource(R.string.longest_streak),
+                            value = "${streak.longestStreak}",
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatMiniCard(
+                            label = stringResource(R.string.total_reading_days),
+                            value = "${streak.totalReadingDays}",
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
             // Time cards: Today / Week / Month
             item {
                 Row(
@@ -169,7 +195,7 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Estimated time to finish current book:",
+                                text = stringResource(R.string.estimated_time_to_finish),
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
@@ -184,23 +210,98 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                 }
             }
 
-            // Reading streak calendar
+            // Reading streak calendar — use Grimmory 52-week data if available, else local 12-week
             item {
                 Text(
-                    text = "Reading Activity",
+                    text = stringResource(R.string.reading_activity),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             item {
-                StreakCalendar(readingDays = stats.readingDays)
+                val grimmoryWeeks = stats.grimmoryStreak?.last52Weeks
+                if (grimmoryWeeks != null && grimmoryWeeks.isNotEmpty()) {
+                    GrimmoryStreakCalendar(weeks = grimmoryWeeks)
+                } else {
+                    StreakCalendar(readingDays = stats.readingDays)
+                }
+            }
+
+            // Library Overview (Grimmory)
+            stats.bookDistributions?.let { distributions ->
+                val statusMap = distributions.statusDistribution.associate { it.status to it.count }
+                val readCount = statusMap["READ"] ?: 0
+                val readingCount = statusMap["READING"] ?: 0
+                val unreadCount = statusMap["UNREAD"] ?: 0
+
+                item {
+                    GrimmorySectionHeader(stringResource(R.string.library_overview))
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StatMiniCard(
+                            label = stringResource(R.string.books_read),
+                            value = "$readCount",
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatMiniCard(
+                            label = stringResource(R.string.books_reading),
+                            value = "$readingCount",
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatMiniCard(
+                            label = stringResource(R.string.books_unread),
+                            value = "$unreadCount",
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            // Peak Reading Hours (Grimmory)
+            stats.peakHours?.let { hours ->
+                if (hours.isNotEmpty()) {
+                    item {
+                        GrimmorySectionHeader(stringResource(R.string.peak_reading_hours))
+                    }
+                    item {
+                        PeakHoursChart(hours)
+                    }
+                }
+            }
+
+            // Favorite Days (Grimmory)
+            stats.favoriteDays?.let { days ->
+                if (days.isNotEmpty()) {
+                    item {
+                        GrimmorySectionHeader(stringResource(R.string.favorite_days))
+                    }
+                    item {
+                        FavoriteDaysChart(days)
+                    }
+                }
+            }
+
+            // Top Genres (Grimmory)
+            stats.genreStats?.let { genres ->
+                if (genres.isNotEmpty()) {
+                    item {
+                        GrimmorySectionHeader(stringResource(R.string.top_genres))
+                    }
+                    item {
+                        TopGenresCard(genres)
+                    }
+                }
             }
 
             // Recent sessions
             if (stats.recentSessions.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Recent Sessions",
+                        text = stringResource(R.string.recent_sessions),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -222,13 +323,62 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No reading sessions yet. Open a book and start reading!",
+                            text = stringResource(R.string.no_sessions_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GrimmorySectionHeader(title: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Icon(
+            Icons.Default.Cloud,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun StatMiniCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -263,11 +413,7 @@ private fun TimeCard(label: String, seconds: Long, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun StreakCalendar(readingDays: Set<Long>) {
-    val today = LocalDate.now()
-    val weeks = 12
-    val totalDays = weeks * 7
-
+private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -276,7 +422,6 @@ private fun StreakCalendar(readingDays: Set<Long>) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Day labels
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -288,7 +433,62 @@ private fun StreakCalendar(readingDays: Set<Long>) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Calendar grid
+            // Group the 52-week data into columns of 7 (weeks)
+            // Data is ordered chronologically, we want most recent on the right
+            val daysByWeek = weeks.chunked(7)
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                reverseLayout = false
+            ) {
+                items(daysByWeek.size) { weekIdx ->
+                    val weekDays = daysByWeek[weekIdx]
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        for (day in weekDays) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        if (day.active) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                        } else {
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                        }
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StreakCalendar(readingDays: Set<Long>) {
+    val today = LocalDate.now()
+    val weeks = 12
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Mon", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.weight(1f))
+                Text("Sun", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 reverseLayout = true
@@ -299,9 +499,7 @@ private fun StreakCalendar(readingDays: Set<Long>) {
                             val daysAgo = weekIdx * 7 + (6 - dayOfWeek)
                             val date = today.minusDays(daysAgo.toLong())
                             val epochDay = date.toEpochDay()
-                            // The DAO returns startTime/86400000 — convert to epoch day
                             val hasActivity = epochDay in readingDays ||
-                                // Also check millisecond-based epoch day (startTime stored as millis)
                                 readingDays.any {
                                     it == date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() / 86400000
                                 }
@@ -319,6 +517,179 @@ private fun StreakCalendar(readingDays: Set<Long>) {
                                     )
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeakHoursChart(hours: List<GrimmoryPeakHour>) {
+    val maxDuration = hours.maxOfOrNull { it.totalDurationSeconds } ?: 1L
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Show all 24 hours as a compact bar chart
+            val hourMap = hours.associate { it.hourOfDay to it.totalDurationSeconds }
+            for (hour in 0..23) {
+                val duration = hourMap[hour] ?: 0L
+                if (duration > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = String.format("%02d:00", hour),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(44.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(16.dp)
+                        ) {
+                            val fraction = duration.toFloat() / maxDuration
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fraction)
+                                    .height(16.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = duration.formatDuration(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(48.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteDaysChart(days: List<GrimmoryFavoriteDay>) {
+    val maxDuration = days.maxOfOrNull { it.totalDurationSeconds } ?: 1L
+    // Sort by dayOfWeek (1=Sunday in Grimmory, but display Mon-Sun)
+    val orderedDays = days.sortedBy {
+        // Grimmory: 1=Sunday, 2=Monday ... 7=Saturday
+        // Reorder to Mon(2), Tue(3), Wed(4), Thu(5), Fri(6), Sat(7), Sun(1)
+        if (it.dayOfWeek == 1) 8 else it.dayOfWeek
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (day in orderedDays) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = day.dayName.take(3),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(32.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(20.dp)
+                    ) {
+                        val fraction = day.totalDurationSeconds.toFloat() / maxDuration
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction)
+                                .height(20.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f))
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = day.totalDurationSeconds.formatDuration(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(48.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopGenresCard(genres: List<com.ember.reader.core.grimmory.GrimmoryGenreStat>) {
+    val maxDuration = genres.maxOfOrNull { it.totalDurationSeconds } ?: 1L
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (genre in genres) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = genre.genre,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${genre.bookCount} books",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                    ) {
+                        val fraction = genre.totalDurationSeconds.toFloat() / maxDuration
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f))
+                        )
                     }
                 }
             }
