@@ -107,6 +107,7 @@ class ReaderViewModel @Inject constructor(
     private var publication: Publication? = null
     private var book: Book? = null
     private var progressSaveJob: Job? = null
+    private var sessionPauseJob: Job? = null
     private var sessionStartTime: java.time.Instant? = null
     private var sessionStartProgress: Float = 0f
     private var sessionPausedAt: java.time.Instant? = null
@@ -288,7 +289,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { saveProgress(locator) }
     }
 
-    /** End and record the current reading session segment. Called on ON_PAUSE. */
+    /**
+     * Start a grace period before ending the reading session. Called on ON_PAUSE.
+     * If the user returns within [PAUSE_GRACE_MS], the session continues seamlessly.
+     */
     fun onSessionPause() {
         if (sessionPausedAt != null) return // already paused
         val startTime = sessionStartTime ?: return // no active session
@@ -296,30 +300,39 @@ class ReaderViewModel @Inject constructor(
         val pauseTime = java.time.Instant.now()
         sessionPausedAt = pauseTime
 
-        val durationSeconds = java.time.Duration.between(startTime, pauseTime).seconds
-        if (durationSeconds >= MIN_SESSION_SECONDS) {
-            // Record this segment and mark session as consumed
-            viewModelScope.launch {
+        // Delay session recording — gives the user a window to return without splitting the session
+        sessionPauseJob?.cancel()
+        sessionPauseJob = viewModelScope.launch {
+            delay(PAUSE_GRACE_MS)
+            // Grace period expired — end the session at the pause time
+            val durationSeconds = java.time.Duration.between(startTime, pauseTime).seconds
+            if (durationSeconds >= MIN_SESSION_SECONDS) {
                 recordReadingSessionSegment(startTime, pauseTime)
             }
             sessionStartTime = null
         }
-        // If < MIN_SESSION_SECONDS: keep sessionStartTime so time accumulates across pause/resume
     }
 
-    /** Start a fresh reading session segment after resuming. Called on ON_RESUME. */
+    /** Resume the reading session or start a fresh one. Called on ON_RESUME. */
     fun onSessionResume() {
         if (sessionPausedAt == null) return // not paused (handles first ON_RESUME before any ON_PAUSE)
 
+        val graceStillActive = sessionPauseJob?.isActive == true
+        sessionPauseJob?.cancel()
+        sessionPauseJob = null
         sessionPausedAt = null
 
+        if (graceStillActive) {
+            // Returned within grace period — session continues as if nothing happened
+            return
+        }
+
         if (sessionStartTime == null) {
-            // Previous segment was recorded on pause — start a fresh session
+            // Grace expired and session was recorded — start a fresh session
             sessionStartTime = java.time.Instant.now()
             sessionStartProgress = _currentLocator.value
                 ?.locations?.totalProgression?.toFloat() ?: 0f
         }
-        // If sessionStartTime is still set (sub-threshold segment), just unpause — timer continues
     }
 
     private fun scheduleSaveProgress(locator: Locator) {
@@ -372,6 +385,9 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        // Cancel any pending grace timer — we'll record immediately below
+        sessionPauseJob?.cancel()
+
         _currentLocator.value?.let { locator ->
             // Save progress to local DB — runs on IO, fast Room write
             kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
@@ -381,8 +397,8 @@ class ReaderViewModel @Inject constructor(
             // Determine if there's an unrecorded session segment
             val startTime = sessionStartTime
             val endTime = when {
-                startTime == null -> null // session already recorded on pause
-                sessionPausedAt != null -> sessionPausedAt // paused but sub-threshold, use pause time
+                startTime == null -> null // session already recorded (grace timer completed)
+                sessionPausedAt != null -> sessionPausedAt // paused with pending grace timer, use pause time
                 else -> java.time.Instant.now() // active session, use now (safety net)
             }
 
@@ -459,7 +475,8 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val SAVE_DEBOUNCE_MS = 5000L
         private const val CONFLICT_THRESHOLD = 0.01f
-        private const val MIN_SESSION_SECONDS = 30L
+        private const val MIN_SESSION_SECONDS = 120L
+        private const val PAUSE_GRACE_MS = 30_000L
     }
 }
 
