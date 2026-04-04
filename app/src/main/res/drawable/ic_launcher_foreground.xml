@@ -1,44 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
 
-    <!-- Open book - left page -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M28,32 L28,78 Q28,80 30,79 L52,72 L52,28 L30,34 Q28,35 28,32 Z" />
+    <!-- Ember glow (radial, behind everything) -->
+    <path android:pathData="M162,512 A350,350 0 1 0 862,512 A350,350 0 1 0 162,512 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="512"
+                android:centerY="512"
+                android:gradientRadius="350"
+                android:startColor="#CCFF5722"
+                android:centerColor="#33FF5722"
+                android:endColor="#00FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Open book - right page -->
-    <path
-        android:fillColor="#F5F0EB"
-        android:pathData="M80,32 L80,78 Q80,80 78,79 L56,72 L56,28 L78,34 Q80,35 80,32 Z" />
+    <!-- Flame body -->
+    <path android:pathData="M512,230 c-40,0 -80,40 -80,100 c0,100 130,100 130,180 c0,60 -60,90 -120,90 s-100,-30 -120,-80 c-10,-20 -40,-20 -50,0 c0,100 80,130 150,130 s180,-70 180,-180 c0,-110 -90,-240 -90,-240 c-20,-30 -10,-60 -10,-80 s-20,-20 -40,-20 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="512"
+                android:startY="230"
+                android:endX="512"
+                android:endY="710"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Book spine -->
-    <path
-        android:fillColor="#E0D5C8"
-        android:pathData="M52,28 L54,26 L56,28 L56,72 L54,74 L52,72 Z" />
+    <!-- Flame eye detail -->
+    <path android:pathData="M522,350 c20,0 40,30 40,60 c0,20 -10,30 -20,30 s-20,-10 -20,-30 c0,-15 -20,-20 -30,-20 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="532"
+                android:startY="350"
+                android:endX="532"
+                android:endY="440"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Flame - outer glow -->
-    <path
-        android:fillColor="#FF6D00"
-        android:fillAlpha="0.35"
-        android:pathData="M54,38 C48,46 44,52 47,59 C48.5,54 51,49 54,45 C57,49 59.5,54 61,59 C64,52 60,46 54,38 Z" />
+    <!-- Left book outline -->
+    <path android:pathData="M380,350 v360 s-100,60 -180,20 v-360 s100,-40 180,0 Z"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="290"
+                android:startY="350"
+                android:endX="290"
+                android:endY="730"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Flame - main body -->
-    <path
-        android:fillColor="#FF8F00"
-        android:pathData="M54,41 C49.5,48 47.5,52 50,58 C51,55 52.5,51 54,48 C55.5,51 57,55 58,58 C60.5,52 58.5,48 54,41 Z" />
+    <!-- Left book inner line 1 -->
+    <path android:pathData="M340,380 v300 s-80,50 -140,20"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="270"
+                android:startY="380"
+                android:endX="270"
+                android:endY="700"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Flame - inner bright core -->
-    <path
-        android:fillColor="#FFB300"
-        android:pathData="M54,47 C52,50.5 51,53 52.5,57 C53,55 53.5,53 54,51 C54.5,53 55,55 55.5,57 C57,53 56,50.5 54,47 Z" />
+    <!-- Left book inner line 2 -->
+    <path android:pathData="M300,410 v240 s-60,40 -100,10"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="250"
+                android:startY="410"
+                android:endX="250"
+                android:endY="660"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
-    <!-- Flame - hottest center -->
-    <path
-        android:fillColor="#FFE082"
-        android:pathData="M54,51 C53.2,53 53,54.5 53.5,56 C53.7,55 54,54 54,53 C54,54 54.3,55 54.5,56 C55,54.5 54.8,53 54,51 Z" />
+    <!-- Right book outline -->
+    <path android:pathData="M644,350 v360 s100,60 180,20 v-360 s-100,-40 -180,0 Z"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="734"
+                android:startY="350"
+                android:endX="734"
+                android:endY="730"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
+
+    <!-- Right book inner line 1 -->
+    <path android:pathData="M684,380 v300 s80,50 140,20"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="754"
+                android:startY="380"
+                android:endX="754"
+                android:endY="700"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
+
+    <!-- Right book inner line 2 -->
+    <path android:pathData="M724,410 v240 s60,40 100,10"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="774"
+                android:startY="410"
+                android:endX="774"
+                android:endY="660"
+                android:startColor="#FFAB91"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
+
+    <!-- Bottom connector right -->
+    <path android:pathData="M512,710 c30,-10 60,0 60,0"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="542"
+                android:startY="700"
+                android:endX="542"
+                android:endY="710"
+                android:startColor="#FF5722"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
+
+    <!-- Bottom connector left -->
+    <path android:pathData="M512,710 c-30,-10 -60,0 -60,0"
+        android:strokeWidth="20">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="482"
+                android:startY="700"
+                android:endX="482"
+                android:endY="710"
+                android:startColor="#FF5722"
+                android:endColor="#FF5722" />
+        </aapt:attr>
+    </path>
 
 </vector>
