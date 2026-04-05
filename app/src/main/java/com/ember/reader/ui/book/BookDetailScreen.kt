@@ -25,6 +25,9 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,6 +65,9 @@ import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.ReadStatus
+import com.ember.reader.core.hardcover.HardcoverBookDetail
+import com.ember.reader.core.hardcover.HardcoverStatus
+import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
@@ -82,6 +88,8 @@ fun BookDetailScreen(
     val downloading by viewModel.downloading.collectAsStateWithLifecycle()
     val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
     val grimmoryDetail by viewModel.grimmoryDetail.collectAsStateWithLifecycle()
+    val hardcoverMatch by viewModel.hardcoverMatch.collectAsStateWithLifecycle()
+    val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -125,66 +133,96 @@ fun BookDetailScreen(
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Cover + basic info header
-                Row(
+                // Hero cover — centered
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    // Cover image
                     BookCover(
                         book = currentBook,
                         coverAuthHeader = coverAuthHeader,
                         modifier = Modifier
-                            .width(140.dp)
-                            .aspectRatio(0.67f)
+                            .width(180.dp)
+                            .aspectRatio(0.67f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Title + Author + Series — centered
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = currentBook.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                     )
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    // Title, author, metadata
-                    Column(modifier = Modifier.weight(1f)) {
+                    currentBook.author?.let { author ->
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = currentBook.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            text = author,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
+                    }
 
-                        currentBook.author?.let { author ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = author,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                    currentBook.series?.let { series ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val idx = currentBook.seriesIndex
+                        val seriesText = if (idx != null) {
+                            if (idx == idx.toLong().toFloat()) "$series #${idx.toLong()}" else "$series #$idx"
+                        } else {
+                            series
                         }
+                        Text(
+                            text = seriesText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
 
-                        currentBook.series?.let { series ->
+                    // Hardcover community rating
+                    val hcMatch = hardcoverMatch
+                    if (hcMatch != null) {
+                        val avg = hcMatch.averageRating
+                        if (avg != null && avg > 0f) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            val idx = currentBook.seriesIndex
-                            val seriesText = if (idx != null) {
-                                if (idx == idx.toLong().toFloat()) {
-                                    "$series #${idx.toLong()}"
-                                } else {
-                                    "$series #$idx"
-                                }
-                            } else {
-                                series
-                            }
-                            Text(
-                                text = seriesText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            HardcoverRatingRow(rating = avg, count = hcMatch.ratingsCount)
                         }
+                    }
 
+                    // Hardcover user status badge
+                    val hcEntry = hardcoverUserEntry
+                    if (hcEntry != null) {
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Hardcover: ${HardcoverStatus.label(hcEntry.statusId)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                        )
+                    }
 
-                        // Format badge
+                    // Format badge + reading progress
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
                             text = currentBook.format.name,
                             style = MaterialTheme.typography.labelSmall,
@@ -193,28 +231,30 @@ fun BookDetailScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
                         )
-
-                        // Reading progress
                         val pct = progress?.percentage
                         if (pct != null && pct > 0f) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            LinearProgressIndicator(
-                                progress = { pct },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = stringResource(R.string.percent_complete, (pct * 100).roundToInt()),
+                                text = "${(pct * 100).roundToInt()}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
+                    }
+
+                    val pct = progress?.percentage
+                    if (pct != null && pct > 0f) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { pct },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        )
                     }
                 }
 
@@ -581,6 +621,42 @@ private fun InfoRow(label: String, value: String) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun HardcoverRatingRow(rating: Float, count: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        RatingStars(rating = rating)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "%.1f".format(rating),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = " ($count)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun RatingStars(rating: Float) {
+    Row {
+        for (i in 1..5) {
+            val icon = when {
+                rating >= i -> Icons.Default.Star
+                rating >= i - 0.5f -> Icons.Default.StarHalf
+                else -> Icons.Default.StarBorder
+            }
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFFFB300))
+        }
     }
 }
 
