@@ -223,8 +223,8 @@ class BookdropViewModel @Inject constructor(
             )
             bookdropClient.finalizeImport(s.url, s.id, request)
                 .onSuccess { result ->
-                    _message.value = "Imported ${result.successCount} book(s)" +
-                        if (result.failureCount > 0) ", ${result.failureCount} failed" else ""
+                    _message.value = "Imported ${result.successfullyImported} book(s)" +
+                        if (result.failed > 0) ", ${result.failed} failed" else ""
                     loadData()
                 }
                 .onFailure { _message.value = "Finalize failed: ${it.message}" }

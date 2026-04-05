@@ -69,8 +69,9 @@ data class BookdropFinalizeFile(
 
 @Serializable
 data class BookdropFinalizeResult(
-    val successCount: Int = 0,
-    val failureCount: Int = 0,
+    val totalFiles: Int = 0,
+    val successfullyImported: Int = 0,
+    val failed: Int = 0,
 )
 
 @Serializable
