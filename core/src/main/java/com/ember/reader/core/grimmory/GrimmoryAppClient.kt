@@ -104,6 +104,8 @@ class GrimmoryAppClient @Inject constructor(
         serverId: Long,
         page: Int = 0,
         size: Int = 20,
+        sort: String = "name",
+        dir: String = "asc",
         libraryId: Long? = null,
         search: String? = null
     ): Result<GrimmoryAppPage<GrimmoryAppSeries>> = withAuth(baseUrl, serverId) { token ->
@@ -111,6 +113,8 @@ class GrimmoryAppClient @Inject constructor(
             header("Authorization", "Bearer $token")
             parameter("page", page)
             parameter("size", size)
+            parameter("sort", sort)
+            parameter("dir", dir)
             libraryId?.let { parameter("libraryId", it) }
             search?.let { parameter("search", it) }
         }
