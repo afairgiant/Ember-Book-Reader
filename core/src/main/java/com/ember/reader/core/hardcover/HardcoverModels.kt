@@ -38,6 +38,21 @@ data class HardcoverBookDetail(
     val hardcoverUrl: String get() = "https://hardcover.app/books/$slug"
 }
 
+data class HardcoverSearchResult(
+    val bookId: Int,
+    val title: String,
+    val slug: String,
+    val averageRating: Float?,
+    val ratingsCount: Int,
+    val authors: List<String>,
+)
+
+data class HardcoverUserBookEntry(
+    val statusId: Int,
+    val rating: Float?,
+    val dateAdded: String?,
+)
+
 object HardcoverStatus {
     const val WANT_TO_READ = 1
     const val CURRENTLY_READING = 2

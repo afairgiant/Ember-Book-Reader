@@ -93,6 +93,7 @@ data class GrimmoryBookDetail(
     val koreaderProgress: GrimmoryKoreaderProgress? = null,
     val files: List<GrimmoryBookFile> = emptyList(),
     val shelves: List<GrimmoryShelfSummary>? = null,
+    val hardcoverBookId: Long? = null,
 )
 
 @Serializable

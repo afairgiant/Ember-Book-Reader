@@ -104,6 +104,61 @@ class HardcoverClient @Inject constructor(
         }
     }
 
+    suspend fun searchBooks(searchQuery: String, limit: Int = 3): Result<List<HardcoverSearchResult>> = runCatching {
+        val escaped = searchQuery.replace("\"", "\\\"")
+        val json = query(
+            """
+            query {
+                search(query: "$escaped", query_type: "Book", per_page: $limit) {
+                    results
+                }
+            }
+            """.trimIndent()
+        )
+        val searchData = json.obj("data").obj("search")
+        val results = searchData["results"]
+        if (results == null || results is kotlinx.serialization.json.JsonNull) return@runCatching emptyList()
+
+        results.jsonArray
+            .filter { it.jsonObject.containsKey("document") }
+            .map { it.jsonObject.obj("document") }
+            .map { doc ->
+                HardcoverSearchResult(
+                    bookId = doc.int("id"),
+                    title = doc.str("title"),
+                    slug = doc.str("slug"),
+                    averageRating = doc.floatOrNull("rating"),
+                    ratingsCount = doc.intOrDefault("ratings_count", 0),
+                    authors = doc["author_names"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                )
+            }
+    }
+
+    suspend fun fetchUserBookEntry(userId: Int, bookId: Int): Result<HardcoverUserBookEntry?> = runCatching {
+        val json = query(
+            """
+            query {
+                user_books(
+                    where: {user_id: {_eq: $userId}, book_id: {_eq: $bookId}}
+                    limit: 1
+                ) {
+                    status_id
+                    rating
+                    date_added
+                }
+            }
+            """.trimIndent()
+        )
+        val entries = json.obj("data").arr("user_books")
+        if (entries.isEmpty()) return@runCatching null
+        val entry = entries.first().jsonObject
+        HardcoverUserBookEntry(
+            statusId = entry.int("status_id"),
+            rating = entry.floatOrNull("rating"),
+            dateAdded = entry.strOrNull("date_added"),
+        )
+    }
+
     suspend fun fetchBookDetail(bookId: Int): Result<HardcoverBookDetail> = runCatching {
         val json = query(
             """
