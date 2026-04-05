@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CloudQueue
@@ -64,6 +65,7 @@ fun SettingsHubScreen(
     onOpenSync: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenStats: () -> Unit,
+    onOpenHardcover: () -> Unit,
     onOpenDevLog: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -226,6 +228,15 @@ fun SettingsHubScreen(
                     title = "Reading Statistics",
                     subtitle = "History, streaks, and Grimmory stats",
                     onClick = onOpenStats,
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                SettingsNavRow(
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    title = "Hardcover",
+                    subtitle = "View your reading lists",
+                    onClick = onOpenHardcover,
                 )
             }
 

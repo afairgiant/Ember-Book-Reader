@@ -51,6 +51,7 @@ object Routes {
     const val SETTINGS_APPEARANCE = "settings/appearance"
     const val SETTINGS_SYNC = "settings/sync"
     const val SETTINGS_DOWNLOADS = "settings/downloads"
+    const val HARDCOVER = "hardcover"
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
@@ -200,6 +201,7 @@ fun EmberNavHost(
                     onOpenSync = { navController.navigate(Routes.SETTINGS_SYNC) },
                     onOpenDownloads = { navController.navigate(Routes.SETTINGS_DOWNLOADS) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
+                    onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
                 )
             }
@@ -219,6 +221,11 @@ fun EmberNavHost(
                 com.ember.reader.ui.settings.DownloadSettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenStorage = { navController.navigate(Routes.STORAGE) },
+                )
+            }
+            composable(Routes.HARDCOVER) {
+                com.ember.reader.ui.hardcover.HardcoverScreen(
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
 
