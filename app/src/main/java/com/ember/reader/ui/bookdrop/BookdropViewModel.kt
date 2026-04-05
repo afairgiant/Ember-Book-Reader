@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import com.ember.reader.ui.common.friendlyErrorMessage
 import javax.inject.Inject
 
@@ -224,6 +225,7 @@ class BookdropViewModel @Inject constructor(
             )
             bookdropClient.finalizeImport(s.url, s.id, request)
                 .onSuccess { result ->
+                    Timber.d("Bookdrop: finalized ${result.successfullyImported} imported, ${result.failed} failed")
                     _message.value = "Imported ${result.successfullyImported} book(s)" +
                         if (result.failed > 0) ", ${result.failed} failed" else ""
                     loadData()
@@ -278,6 +280,7 @@ class BookdropViewModel @Inject constructor(
         val librariesResult = librariesDeferred.await()
 
         filesResult.onSuccess { page ->
+            Timber.d("Bookdrop: loaded ${page.content.size} pending files, ${librariesResult.getOrNull()?.size ?: 0} libraries")
             val fileStates = page.content.map { file ->
                 BookdropFileState(
                     file = file,
