@@ -33,6 +33,11 @@ class CatalogViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<CatalogUiState>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
+    private val _seriesSort = MutableStateFlow(SeriesSortOption.NAME)
+    val seriesSort: StateFlow<SeriesSortOption> = _seriesSort.asStateFlow()
+
+    val isSeriesView: Boolean get() = path == "grimmory:series"
+
     private var server: Server? = null
 
     init {
@@ -52,6 +57,14 @@ class CatalogViewModel @Inject constructor(
     fun refresh() {
         _uiState.value = CatalogUiState.Loading
         viewModelScope.launch { fetchFeed() }
+    }
+
+    fun setSeriesSort(sort: SeriesSortOption) {
+        if (_seriesSort.value == sort) return
+        _seriesSort.value = sort
+        val currentServer = server ?: return
+        _uiState.value = CatalogUiState.Loading
+        viewModelScope.launch { fetchGrimmorySeries(currentServer) }
     }
 
     private suspend fun fetchFeed() {
@@ -195,7 +208,8 @@ class CatalogViewModel @Inject constructor(
             val allEntries = mutableListOf<OpdsFeedEntry>()
             var page = 0
             do {
-                val result = grimmoryAppClient.getSeries(server.url, server.id, page = page, size = 100).getOrThrow()
+                val sort = _seriesSort.value
+                val result = grimmoryAppClient.getSeries(server.url, server.id, page = page, size = 100, sort = sort.key, dir = sort.dir).getOrThrow()
                 result.content.forEach { series ->
                     val subtitle = buildString {
                         append("${series.bookCount} books")
@@ -271,4 +285,11 @@ sealed interface CatalogUiState {
     data object Loading : CatalogUiState
     data class Success(val feed: OpdsFeed) : CatalogUiState
     data class Error(val message: String) : CatalogUiState
+}
+
+enum class SeriesSortOption(val key: String, val dir: String, val label: String) {
+    NAME("name", "asc", "A-Z"),
+    BOOK_COUNT("bookcount", "desc", "Most Books"),
+    READ_PROGRESS("readprogress", "desc", "Most Read"),
+    RECENTLY_ADDED("recentlyAdded", "desc", "Recent"),
 }

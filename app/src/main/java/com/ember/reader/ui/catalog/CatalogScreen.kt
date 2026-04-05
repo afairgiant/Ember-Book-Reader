@@ -54,6 +54,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.opds.OpdsFeedEntry
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material3.FilterChip
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 
@@ -66,6 +69,7 @@ fun CatalogScreen(
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val seriesSort by viewModel.seriesSort.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
@@ -136,6 +140,24 @@ fun CatalogScreen(
                                     imeAction = androidx.compose.ui.text.input.ImeAction.Search
                                 )
                             )
+                        }
+                        if (viewModel.isSeriesView) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                items(SeriesSortOption.entries.size) { index ->
+                                    val option = SeriesSortOption.entries[index]
+                                    FilterChip(
+                                        selected = seriesSort == option,
+                                        onClick = { viewModel.setSeriesSort(option) },
+                                        label = { Text(option.label, style = MaterialTheme.typography.labelMedium) },
+                                        modifier = Modifier.height(32.dp),
+                                    )
+                                }
+                            }
                         }
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),

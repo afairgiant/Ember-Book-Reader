@@ -200,7 +200,9 @@ class BookRepository @Inject constructor(
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
                         coverUrl = coverUrl,
-                        downloadUrl = "/api/v1/opds/${appBook.id}/download"
+                        downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                        series = appBook.seriesName,
+                        seriesIndex = appBook.seriesNumber,
                     )
                 )
                 resolvedIds.add(existing.id)
@@ -214,6 +216,8 @@ class BookRepository @Inject constructor(
                     coverUrl = coverUrl,
                     downloadUrl = "/api/v1/opds/${appBook.id}/download",
                     format = format,
+                    series = appBook.seriesName,
+                    seriesIndex = appBook.seriesNumber,
                     addedAt = Instant.now()
                 )
                 bookDao.insert(book.toEntity())

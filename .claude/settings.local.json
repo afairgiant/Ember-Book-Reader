@@ -6,7 +6,11 @@
       "Bash(jar tf:*)",
       "Bash(dir /s /b C:UsersAlex.gradlecaches8.11.1transforms)",
       "Bash(findstr \"readium-shared.*classes.jar\")",
-      "Bash(findstr /v \"source\")"
+      "Bash(findstr /v \"source\")",
+      "WebFetch(domain:docs.hardcover.app)",
+      "WebFetch(domain:hardcover.app)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

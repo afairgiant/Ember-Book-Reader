@@ -24,7 +24,9 @@ data class GrimmoryAppBook(
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
     val coverUpdatedOn: String? = null,
-    val addedOn: String? = null
+    val addedOn: String? = null,
+    val seriesName: String? = null,
+    val seriesNumber: Float? = null,
 )
 
 @Serializable

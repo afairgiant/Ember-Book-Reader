@@ -1,0 +1,183 @@
+<h2>Proposed Settings Page Layout</h2>
+<p class="subtitle">Following the Grimmory-style grouped sections with icons — designed to be easily expandable</p>
+
+<div class="mockup">
+  <div class="mockup-header">Settings Screen</div>
+  <div class="mockup-body" style="background: #1a1a1a; color: #e0e0e0; padding: 0; font-family: system-ui, sans-serif;">
+
+    <!-- Header Card -->
+    <div style="background: linear-gradient(135deg, #2a1a1a, #1e1e2e); border-radius: 16px; padding: 20px; margin: 16px; display: flex; align-items: center; gap: 16px;">
+      <div style="width: 64px; height: 64px; background: #FF5722; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: white;">E</div>
+      <div>
+        <div style="font-size: 22px; font-weight: bold;">Settings</div>
+        <div style="font-size: 13px; color: #999; margin-top: 2px;">Customize your reading experience</div>
+        <div style="display: inline-block; background: #2e7d32; color: white; font-size: 11px; padding: 3px 10px; border-radius: 12px; margin-top: 6px; font-weight: 600;">Grimmory connected</div>
+      </div>
+    </div>
+
+    <!-- Connected Servers Section -->
+    <div style="margin: 16px; background: #242424; border-radius: 16px; padding: 16px;">
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Connected Servers</div>
+      <div style="font-size: 12px; color: #888; margin-bottom: 14px;">Manage your book server connections</div>
+
+      <!-- Server row -->
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">☁</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Grimmory Server</div>
+          <div style="font-size: 12px; color: #888;">
+            <span style="color: #4CAF50;">●</span> OPDS
+            <span style="color: #4CAF50; margin-left: 8px;">●</span> Kosync
+            <span style="color: #4CAF50; margin-left: 8px;">●</span> Grimmory
+          </div>
+        </div>
+        <span style="color: #666; font-size: 18px;">›</span>
+      </div>
+
+      <!-- Add server -->
+      <div style="display: flex; align-items: center; padding: 12px 0; color: #FF5722; font-size: 14px; cursor: pointer;">
+        <span style="margin-right: 8px; font-size: 18px;">+</span> Add Server
+      </div>
+    </div>
+
+    <!-- Reading & Display Section -->
+    <div style="margin: 16px; background: #242424; border-radius: 16px; padding: 16px;">
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Reading & Display</div>
+      <div style="font-size: 12px; color: #888; margin-bottom: 14px;">Appearance, theme, and reading preferences</div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">🎨</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Theme</div>
+          <div style="font-size: 12px; color: #888;">Dark</div>
+        </div>
+        <span style="color: #666; font-size: 18px;">›</span>
+      </div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">💡</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Keep Screen On</div>
+          <div style="font-size: 12px; color: #888;">Prevent screen timeout while reading</div>
+        </div>
+        <div style="width: 44px; height: 24px; background: #FF5722; border-radius: 12px; position: relative;">
+          <div style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">📊</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Reading Statistics</div>
+          <div style="font-size: 12px; color: #888;">View your reading history and streaks</div>
+        </div>
+        <span style="color: #666; font-size: 18px;">›</span>
+      </div>
+    </div>
+
+    <!-- Sync & Downloads Section -->
+    <div style="margin: 16px; background: #242424; border-radius: 16px; padding: 16px;">
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">Sync & Downloads</div>
+      <div style="font-size: 12px; color: #888; margin-bottom: 14px;">Synchronization and storage management</div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">🔄</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Sync Settings</div>
+          <div style="font-size: 12px; color: #888;">Frequency, highlights, bookmarks</div>
+        </div>
+        <span style="color: #666; font-size: 18px;">›</span>
+      </div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">📥</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Auto Download</div>
+          <div style="font-size: 12px; color: #888;">Download books marked as reading</div>
+        </div>
+        <div style="width: 44px; height: 24px; background: #FF5722; border-radius: 12px; position: relative;">
+          <div style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">🗑</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Auto Cleanup</div>
+          <div style="font-size: 12px; color: #888;">Delete finished books automatically</div>
+        </div>
+        <div style="width: 44px; height: 24px; background: #555; border-radius: 12px; position: relative;">
+          <div style="width: 20px; height: 20px; background: #999; border-radius: 50%; position: absolute; left: 2px; top: 2px;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">💾</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Manage Downloads</div>
+          <div style="font-size: 12px; color: #888;">View and manage downloaded books</div>
+        </div>
+        <span style="color: #666; font-size: 18px;">›</span>
+      </div>
+    </div>
+
+    <!-- About Section -->
+    <div style="margin: 16px; background: #242424; border-radius: 16px; padding: 16px;">
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">About</div>
+      <div style="font-size: 12px; color: #888; margin-bottom: 14px;">App info and developer tools</div>
+
+      <div style="display: flex; align-items: center; padding: 12px 0;">
+        <div style="width: 40px; height: 40px; background: rgba(255,87,34,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+          <span style="color: #FF5722; font-size: 18px;">ℹ</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Ember Reader</div>
+          <div style="font-size: 12px; color: #888;">v1.0.0 · Long press for dev logs</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom nav preview -->
+    <div style="display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #333; margin-top: 8px; background: #1a1a1a;">
+      <div style="text-align: center; font-size: 11px; color: #888;">
+        <div style="font-size: 20px;">🏠</div>Home
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #888;">
+        <div style="font-size: 20px;">🔍</div>Browse
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #888;">
+        <div style="font-size: 20px;">📚</div>Library
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #FF5722;">
+        <div style="font-size: 20px;">⚙</div>Settings
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p style="margin-top: 16px; color: #aaa; font-size: 14px;">
+  <strong>Key design decisions:</strong><br>
+  • Header card shows logo + connection status badge<br>
+  • Connected Servers at top with per-server status dots<br>
+  • Toggle items show switches inline, navigation items show chevrons<br>
+  • Sync Settings groups frequency/highlights/bookmarks behind a single chevron row (expandable later)<br>
+  • About section at bottom with dev log on long-press<br>
+  • Bottom nav: Home | Browse | Library | Settings
+</p>

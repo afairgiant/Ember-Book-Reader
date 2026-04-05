@@ -63,7 +63,14 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Search: `GET /api/v1/app/books/search?q=`
 - [ ] Covers: `GET /api/v1/media/book/{bookId}/cover` (JWT auth, cacheable)
 
-**Phase 3 — Annotations & Bookmarks Sync:**
+**Phase 3 — Book Management:**
+- [ ] Ability to edit basic book metadata
+- [ ] Ability to change "read" status
+- [ ] Ability to shelve books
+- [ ] Ability to upload books
+- [x] Access to book drop
+
+**Phase 4 — Annotations & Bookmarks Sync:**
 - [ ] Annotations: `GET/POST/PUT/DELETE /api/v1/annotations` (CFI-based highlights)
 - [ ] Bookmarks: `GET/POST/PUT/DELETE /api/v1/bookmarks` (CFI-based)
 - [ ] Notes: `GET/POST/PUT/DELETE /api/v2/book-notes` (V2 CFI-based notes)
@@ -81,12 +88,12 @@ Full API reference: `docs/grimmory-api.md`
 ## UI / Design
 
 ### Bottom Navigation
-- [ ] Add a 4th "Catalog" tab that aggregates catalogs across all connected servers
-- [ ] Currently 3 tabs (Home, Library, Profile) — designs showed 4
+- [x] Add a 4th "Catalog" tab that aggregates catalogs across all connected servers
+- [x] Currently 3 tabs (Home, Library, Profile) — designs showed 4
 
 ### Home Screen
 - [ ] Reading streaks / reading goals widget
-- [ ] "Featured Publication" card (from OPDS featured/recent feed)
+- [x] "Featured Publication" card (from OPDS featured/recent feed)
 
 ### Library
 - [x] Search across all downloaded books
@@ -173,7 +180,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Highlights button in reader top bar
 - [ ] Underline, strikethrough styles
 - [ ] Highlights export
-- [ ] Sync highlights to Grimmory API (Phase 3)
+- [x] Sync highlights to Grimmory API (Phase 3)
 
 ### Reading Statistics
 - [x] Time spent reading today/week/month (StatsScreen with time cards)
@@ -185,7 +192,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Book Details Screen
 - [x] Dedicated book detail page (cover, description, metadata, series info)
-- [ ] Rating (personal + Goodreads if available from Grimmory)
+- [ ] Rating (personal + Goodreads + Hardcover if available from Grimmory)
 - [x] Read status toggle (Unread/Reading/Read/DNF) — Grimmory API
 - [ ] Shelves/collections management
 - [ ] Download progress indicator
