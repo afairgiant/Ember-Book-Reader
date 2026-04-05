@@ -228,7 +228,7 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onSearchGrimmory = { serverId, query ->
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        navController.navigate(Routes.catalog(serverId, "grimmory:search=$encodedQuery"))
+                        navController.navigate(Routes.library(serverId, "grimmory:search=$encodedQuery"))
                     },
                 )
             }

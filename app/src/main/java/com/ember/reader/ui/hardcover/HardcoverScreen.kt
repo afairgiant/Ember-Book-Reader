@@ -149,8 +149,12 @@ fun HardcoverScreen(
     // Book detail bottom sheet
     val detail = selectedBookDetail
     if (detail != null) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+        )
         ModalBottomSheet(
             onDismissRequest = viewModel::clearSelectedBook,
+            sheetState = sheetState,
         ) {
             BookDetailSheet(
                 detail = detail,
