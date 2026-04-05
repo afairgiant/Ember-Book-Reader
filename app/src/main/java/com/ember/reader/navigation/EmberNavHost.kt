@@ -118,6 +118,8 @@ fun EmberNavHost(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute in bottomNavRoutes
+        || currentRoute?.startsWith("catalog/") == true
+        || currentRoute?.startsWith("library/") == true
 
     Scaffold(
         bottomBar = {
