@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import android.os.Build
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -88,11 +90,36 @@ fun AudiobookPlayerScreen(
         AudiobookUiState.Loading -> LoadingScreen()
         is AudiobookUiState.Error -> ErrorScreen(state.message)
         is AudiobookUiState.Ready -> {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(Color.Black)
             ) {
+                // Blurred cover backdrop (API 31+ only — hardware-accelerated blur)
+                val coverUrl = state.book.coverUrl
+                if (coverUrl != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.3f,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .blur(30.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f))
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
                 // Top bar
                 Row(
                     modifier = Modifier
@@ -119,7 +146,6 @@ fun AudiobookPlayerScreen(
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    val coverUrl = state.book.coverUrl
                     if (coverUrl != null) {
                         val context = LocalContext.current
                         AsyncImage(
@@ -329,6 +355,7 @@ fun AudiobookPlayerScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                }
             }
 
             // Track / chapter list bottom sheet

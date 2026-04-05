@@ -57,6 +57,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.R
+import com.ember.reader.ui.common.BookCoverPlaceholderColors
+import com.ember.reader.ui.common.bookCoverColorIndex
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
@@ -77,7 +79,6 @@ fun ServerListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
-    val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
     Scaffold(
@@ -144,7 +145,6 @@ fun ServerListScreen(
                                         ContinueReadingCard(
                                             book = recent.book,
                                             percentage = recent.percentage,
-                                            coverAuthHeader = recent.book.serverId?.let { coverAuthHeaders[it] },
                                             onClick = { onOpenReader(recent.book.id, recent.book.format) }
                                         )
                                     }
@@ -171,7 +171,6 @@ fun ServerListScreen(
                                             title = recent.summary.title,
                                             authors = recent.summary.authors.joinToString(", "),
                                             coverUrl = recent.coverUrl,
-                                            coverAuthHeader = coverAuthHeaders[recent.serverId],
                                             onClick = {
                                                 recent.localBookId?.let { onOpenBookDetail(it) }
                                             }
@@ -258,21 +257,13 @@ fun ServerListScreen(
     }
 }
 
-private val placeholderColors = listOf(
-    Color(0xFFFFE0D0), Color(0xFFE8D5C8), Color(0xFFFFF0E0),
-    Color(0xFFD4E8D0), Color(0xFFD8D8E8), Color(0xFFE8D0D8)
-)
-
 @Composable
 private fun ContinueReadingCard(
     book: Book,
     percentage: Float,
-    coverAuthHeader: String? = null,
     onClick: () -> Unit
 ) {
-    val colorIndex = book.title.hashCode().mod(placeholderColors.size).let {
-        if (it < 0) it + placeholderColors.size else it
-    }
+    val colorIndex = bookCoverColorIndex(book.title)
 
     Card(
         modifier = Modifier
@@ -291,20 +282,9 @@ private fun ContinueReadingCard(
                     .height(160.dp)
             ) {
                 if (book.coverUrl != null) {
-                    val coverUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                        val token = coverAuthHeader.removePrefix("jwt:")
-                        "${book.coverUrl}?token=$token"
-                    } else {
-                        book.coverUrl
-                    }
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(coverUrl)
-                            .apply {
-                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                    addHeader("Authorization", coverAuthHeader)
-                                }
-                            }
+                            .data(book.coverUrl)
                             .crossfade(true)
                             .build(),
                         contentDescription = book.title,
@@ -317,7 +297,7 @@ private fun ContinueReadingCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(placeholderColors[colorIndex]),
+                            .background(BookCoverPlaceholderColors[colorIndex]),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -363,13 +343,8 @@ private fun RecentlyAddedCard(
     title: String,
     authors: String,
     coverUrl: String,
-    coverAuthHeader: String? = null,
     onClick: () -> Unit,
 ) {
-    val colorIndex = title.hashCode().mod(placeholderColors.size).let {
-        if (it < 0) it + placeholderColors.size else it
-    }
-
     Card(
         modifier = Modifier
             .width(130.dp)
@@ -385,20 +360,9 @@ private fun RecentlyAddedCard(
                     .fillMaxWidth()
                     .height(160.dp)
             ) {
-                val resolvedUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                    val token = coverAuthHeader.removePrefix("jwt:")
-                    "$coverUrl?token=$token"
-                } else {
-                    coverUrl
-                }
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(resolvedUrl)
-                        .apply {
-                            if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                addHeader("Authorization", coverAuthHeader)
-                            }
-                        }
+                        .data(coverUrl)
                         .crossfade(true)
                         .build(),
                     contentDescription = title,

@@ -36,43 +36,25 @@ class ServerListViewModel @Inject constructor(
         .map { servers -> ServerListUiState.Success(servers) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ServerListUiState.Loading)
 
-    private val _coverAuthHeaders = MutableStateFlow<Map<Long, String>>(emptyMap())
-    val coverAuthHeaders: StateFlow<Map<Long, String>> = _coverAuthHeaders.asStateFlow()
-
     init {
-        // Observe servers and build auth headers (fast, no network)
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
-                _coverAuthHeaders.value = buildAuthHeaders(servers)
-                // Kick off Grimmory loading in a separate coroutine so it never blocks the UI
                 val grimmoryServer = servers.firstOrNull { it.isGrimmory }
                 if (grimmoryServer != null) {
-                    launch { loadGrimmoryContent(servers, grimmoryServer) }
+                    launch { loadGrimmoryContent(grimmoryServer) }
                 }
             }
         }
     }
 
-    private suspend fun loadGrimmoryContent(servers: List<Server>, grimmoryServer: Server) {
+    private suspend fun loadGrimmoryContent(grimmoryServer: Server) {
         if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
             serverRepository.tryGrimmoryRelogin(grimmoryServer)
         }
         if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
-            // Refresh auth headers now that we have a valid token
-            _coverAuthHeaders.value = buildAuthHeaders(servers)
             loadRecentlyAdded(grimmoryServer)
         }
     }
-
-    private fun buildAuthHeaders(servers: List<Server>): Map<Long, String> =
-        servers.associate { server ->
-            val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-                grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
-            } else {
-                null
-            }
-            server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
-        }
 
     private suspend fun loadRecentlyAdded(server: Server) {
         grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = 10)

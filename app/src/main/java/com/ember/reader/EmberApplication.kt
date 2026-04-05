@@ -7,10 +7,13 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.ember.reader.core.network.CoverAuthInterceptor
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
+import okhttp3.OkHttpClient
 import com.ember.reader.ui.common.DevLog
 import com.ember.reader.ui.common.NotificationHelper
 import dagger.hilt.android.HiltAndroidApp
@@ -40,6 +43,12 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
     @Inject
     lateinit var bookRepository: BookRepository
 
+    @Inject
+    lateinit var serverRepository: ServerRepository
+
+    @Inject
+    lateinit var coverAuthInterceptor: CoverAuthInterceptor
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration by lazy {
@@ -57,10 +66,16 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         NotificationHelper.createChannels(this)
         initializeSync()
         runAutoCleanup()
+        observeServersForCoverAuth()
     }
 
     override fun newImageLoader(): ImageLoader {
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor(coverAuthInterceptor)
+            .build()
+
         return ImageLoader.Builder(this)
+            .okHttpClient(okHttpClient)
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.25)
@@ -81,6 +96,14 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         applicationScope.launch {
             val frequency = syncPreferencesRepository.syncFrequencyFlow.first()
             syncScheduler.applyFrequency(frequency)
+        }
+    }
+
+    private fun observeServersForCoverAuth() {
+        applicationScope.launch {
+            serverRepository.observeAll().collect { servers ->
+                coverAuthInterceptor.updateServers(servers)
+            }
         }
     }
 

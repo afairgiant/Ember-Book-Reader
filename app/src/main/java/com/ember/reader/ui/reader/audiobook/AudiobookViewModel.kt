@@ -180,7 +180,15 @@ class AudiobookViewModel @Inject constructor(
         server: com.ember.reader.core.model.Server?,
         info: AudiobookInfo?,
     ): List<MediaItem> {
-        val artworkUri = book.coverUrl?.let { Uri.parse(it) }
+        // Build authenticated artwork URI for media notification
+        val artworkUri = book.coverUrl?.let { rawUrl ->
+            if (server != null && server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                val token = grimmoryTokenManager.getAccessToken(server.id)
+                if (token != null) Uri.parse("$rawUrl?token=$token") else Uri.parse(rawUrl)
+            } else {
+                Uri.parse(rawUrl)
+            }
+        }
         // Downloaded folder-based audiobook: play from local track files
         val localPath = book.localPath
         if (book.isDownloaded && localPath != null) {
@@ -199,6 +207,7 @@ class AudiobookViewModel @Inject constructor(
                                 MediaMetadata.Builder()
                                     .setTitle(file.nameWithoutExtension)
                                     .setArtist(book.author)
+                                    .setAlbumTitle(book.title)
                                     .setArtworkUri(artworkUri)
                                     .build()
                             )
@@ -258,6 +267,7 @@ class AudiobookViewModel @Inject constructor(
                     MediaMetadata.Builder()
                         .setTitle(book.title)
                         .setArtist(book.author)
+                        .setArtworkUri(artworkUri)
                         .build()
                 )
                 .build()
