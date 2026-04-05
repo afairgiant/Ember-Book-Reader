@@ -16,7 +16,11 @@ data class HardcoverBook(
     val rating: Float?,
     val dateAdded: String?,
     val pages: Int?,
-)
+    val slug: String?,
+) {
+    val hardcoverUrl: String?
+        get() = slug?.let { "https://hardcover.app/books/$it" }
+}
 
 object HardcoverStatus {
     const val WANT_TO_READ = 1

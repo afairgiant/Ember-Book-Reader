@@ -1,5 +1,8 @@
 package com.ember.reader.ui.hardcover
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -272,7 +275,15 @@ private fun ConnectedView(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(books, key = { it.id }) { book ->
-                        BookRow(book = book)
+                        val context = LocalContext.current
+                        BookRow(
+                            book = book,
+                            onClick = {
+                                book.hardcoverUrl?.let { url ->
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -281,13 +292,15 @@ private fun ConnectedView(
 }
 
 @Composable
-private fun BookRow(book: HardcoverBook) {
+private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

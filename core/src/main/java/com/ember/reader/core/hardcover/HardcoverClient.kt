@@ -69,6 +69,7 @@ class HardcoverClient @Inject constructor(
                     date_added
                     book {
                         title
+                        slug
                         pages
                         image { url }
                         contributions(order_by: {author: {name: asc}}, limit: 1) {
@@ -96,6 +97,7 @@ class HardcoverClient @Inject constructor(
                 rating = obj.floatOrNull("rating"),
                 dateAdded = obj.strOrNull("date_added"),
                 pages = book.intOrNull("pages"),
+                slug = book.strOrNull("slug"),
             )
         }
     }
