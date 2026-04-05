@@ -154,9 +154,7 @@ fun SettingsHubScreen(
             ) {
                 servers.forEachIndexed { index, server ->
                     if (index > 0) {
-                        androidx.compose.material3.HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
+                        com.ember.reader.ui.settings.components.SettingsDivider()
                     }
                     ServerRow(
                         server = server,

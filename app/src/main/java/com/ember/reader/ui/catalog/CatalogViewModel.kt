@@ -205,10 +205,10 @@ class CatalogViewModel @Inject constructor(
 
     private suspend fun fetchGrimmorySeries(server: Server) {
         try {
+            val sort = _seriesSort.value
             val allEntries = mutableListOf<OpdsFeedEntry>()
             var page = 0
             do {
-                val sort = _seriesSort.value
                 val result = grimmoryAppClient.getSeries(server.url, server.id, page = page, size = 100, sort = sort.key, dir = sort.dir).getOrThrow()
                 result.content.forEach { series ->
                     val subtitle = buildString {

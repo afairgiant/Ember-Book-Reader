@@ -13,12 +13,13 @@ import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import timber.log.Timber
+import com.ember.reader.ui.common.friendlyErrorMessage
 import javax.inject.Inject
 
 data class BookdropFileState(
@@ -271,15 +272,12 @@ class BookdropViewModel @Inject constructor(
 
     private suspend fun loadData() {
         val s = server ?: return
-        val filesResult = bookdropClient.getFiles(s.url, s.id)
-        val librariesResult = bookdropClient.getLibrariesWithPaths(s.url, s.id)
+        val filesDeferred = viewModelScope.async { bookdropClient.getFiles(s.url, s.id) }
+        val librariesDeferred = viewModelScope.async { bookdropClient.getLibrariesWithPaths(s.url, s.id) }
+        val filesResult = filesDeferred.await()
+        val librariesResult = librariesDeferred.await()
 
         filesResult.onSuccess { page ->
-            page.content.forEach { file ->
-                Timber.d("Bookdrop file: id=${file.id} name=${file.fileName}")
-                Timber.d("  originalMetadata: ${file.originalMetadata}")
-                Timber.d("  fetchedMetadata: ${file.fetchedMetadata}")
-            }
             val fileStates = page.content.map { file ->
                 BookdropFileState(
                     file = file,
@@ -292,7 +290,7 @@ class BookdropViewModel @Inject constructor(
                 libraries = libraries,
             )
         }.onFailure { error ->
-            _uiState.value = BookdropUiState.Error(error.message ?: "Failed to load book drop")
+            _uiState.value = BookdropUiState.Error(friendlyErrorMessage(error))
         }
     }
 

@@ -15,11 +15,13 @@ import com.ember.reader.core.repository.ReadingSessionRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -39,6 +41,8 @@ class ServerListViewModel @Inject constructor(
     private val _quickStats = MutableStateFlow<QuickStats?>(null)
     val quickStats: StateFlow<QuickStats?> = _quickStats.asStateFlow()
 
+    private var grimmoryContentJob: Job? = null
+
     init {
         viewModelScope.launch {
             // Load local stats immediately as fallback
@@ -47,12 +51,15 @@ class ServerListViewModel @Inject constructor(
             _quickStats.value = QuickStats(todaySeconds = todaySeconds, currentStreak = localStreak)
         }
         viewModelScope.launch {
-            serverRepository.observeAll().collect { servers ->
-                val grimmoryServer = servers.firstOrNull { it.isGrimmory }
-                if (grimmoryServer != null) {
-                    launch { loadGrimmoryContent(grimmoryServer) }
+            serverRepository.observeAll()
+                .map { servers -> servers.firstOrNull { it.isGrimmory } }
+                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .collect { grimmoryServer ->
+                    if (grimmoryServer != null) {
+                        grimmoryContentJob?.cancel()
+                        grimmoryContentJob = launch { loadGrimmoryContent(grimmoryServer) }
+                    }
                 }
-            }
         }
     }
 
@@ -121,9 +128,9 @@ class ServerListViewModel @Inject constructor(
 
     val recentlyReading: StateFlow<List<RecentBook>> = bookRepository.observeRecentlyReading()
         .combine(readingProgressRepository.observeAll()) { books, progressList ->
+            val progressMap = progressList.associateBy { it.bookId }
             books.map { book ->
-                val progress = progressList.find { it.bookId == book.id }
-                RecentBook(book = book, percentage = progress?.percentage ?: 0f)
+                RecentBook(book = book, percentage = progressMap[book.id]?.percentage ?: 0f)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

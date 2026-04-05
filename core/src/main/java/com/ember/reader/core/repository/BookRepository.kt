@@ -225,23 +225,9 @@ class BookRepository @Inject constructor(
             }
         }
 
-        val books = result.content.map { appBook ->
-            Book(
-                id = "",
-                serverId = server.id,
-                opdsEntryId = "urn:booklore:book:${appBook.id}",
-                title = appBook.title,
-                author = appBook.authors.firstOrNull(),
-                format = BookFormat.EPUB,
-                addedAt = Instant.now()
-            )
-        }
-
-        Timber.d("GrimmoryRefresh: resolvedIds count=${resolvedIds.size}")
-
         return Result.success(
             OpdsBookPage(
-                books = books,
+                books = emptyList(),
                 resolvedBookIds = resolvedIds,
                 totalResults = result.totalElements.toInt(),
                 nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null

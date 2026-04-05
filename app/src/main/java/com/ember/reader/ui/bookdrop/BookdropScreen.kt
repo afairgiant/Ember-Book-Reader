@@ -65,6 +65,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.grimmory.BookdropMetadata
 import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
+import com.ember.reader.ui.common.ErrorScreen
+import com.ember.reader.ui.common.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,52 +116,18 @@ fun BookdropScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         when (val state = uiState) {
-            is BookdropUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
+            is BookdropUiState.Loading -> LoadingScreen(Modifier.padding(padding))
 
-            is BookdropUiState.NoServer -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "No Grimmory server connected",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            is BookdropUiState.NoServer -> ErrorScreen(
+                message = "No Grimmory server connected",
+                modifier = Modifier.padding(padding),
+            )
 
-            is BookdropUiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            state.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(onClick = viewModel::refresh) {
-                            Text("Retry")
-                        }
-                    }
-                }
-            }
+            is BookdropUiState.Error -> ErrorScreen(
+                message = state.message,
+                modifier = Modifier.padding(padding),
+                onRetry = viewModel::refresh,
+            )
 
             is BookdropUiState.Success -> {
                 BookdropContent(
@@ -425,7 +393,7 @@ private fun MetadataSection(
     onApplyFetched: (String) -> Unit,
     onUpdateField: (String, String) -> Unit,
 ) {
-    val fields = listOf(
+    val fields = remember(editedMetadata, fetchedMetadata) { listOf(
         MetadataField("title", "Title", editedMetadata.title, fetchedMetadata?.title),
         MetadataField("subtitle", "Subtitle", editedMetadata.subtitle, fetchedMetadata?.subtitle),
         MetadataField("authors", "Authors", editedMetadata.authors?.joinToString(", "), fetchedMetadata?.authors?.joinToString(", ")),
@@ -450,8 +418,8 @@ private fun MetadataSection(
         MetadataField("hardcoverRating", "Hardcover \u2605", editedMetadata.hardcoverRating?.toString(), fetchedMetadata?.hardcoverRating?.toString()),
         MetadataField("hardcoverReviewCount", "Hardcover #", editedMetadata.hardcoverReviewCount?.toString(), fetchedMetadata?.hardcoverReviewCount?.toString()),
         MetadataField("categories", "Genres", editedMetadata.categories?.joinToString(", "), fetchedMetadata?.categories?.joinToString(", ")),
-        MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description),
-    )
+        MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description, isMultiLine = true),
+    ) }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         fields.forEach { field ->
@@ -469,6 +437,7 @@ private data class MetadataField(
     val label: String,
     val currentValue: String?,
     val fetchedValue: String?,
+    val isMultiLine: Boolean = false,
 )
 
 @Composable
@@ -516,7 +485,7 @@ private fun MetadataComparisonRow(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(4.dp))
                         .padding(vertical = 2.dp),
-                    singleLine = field.key != "description",
+                    singleLine = !field.isMultiLine,
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -547,7 +516,7 @@ private fun MetadataComparisonRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (current.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
                     else MaterialTheme.colorScheme.onSurface,
-                    maxLines = if (field.key == "description") 3 else 1,
+                    maxLines = if (field.isMultiLine) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.clickable { isEditing = true },
                 )
@@ -572,7 +541,7 @@ private fun MetadataComparisonRow(
                         fetched,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        maxLines = if (field.key == "description") 2 else 1,
+                        maxLines = if (field.isMultiLine) 2 else 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable(onClick = onApplyFetched),
                     )

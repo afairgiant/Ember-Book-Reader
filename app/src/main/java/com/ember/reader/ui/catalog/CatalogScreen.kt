@@ -148,8 +148,7 @@ fun CatalogScreen(
                                     .padding(horizontal = 16.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                items(SeriesSortOption.entries.size) { index ->
-                                    val option = SeriesSortOption.entries[index]
+                                items(SeriesSortOption.entries, key = { it.name }) { option ->
                                     FilterChip(
                                         selected = seriesSort == option,
                                         onClick = { viewModel.setSeriesSort(option) },
