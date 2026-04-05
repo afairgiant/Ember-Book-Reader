@@ -10,6 +10,7 @@ import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
+import com.ember.reader.core.repository.ReadingSessionRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,15 +29,20 @@ class ServerListViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val bookRepository: BookRepository,
     readingProgressRepository: ReadingProgressRepository,
+    private val readingSessionRepository: ReadingSessionRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val grimmoryAppClient: GrimmoryAppClient,
 ) : ViewModel() {
 
-    val uiState: StateFlow<ServerListUiState> = serverRepository.observeAll()
-        .map { servers -> ServerListUiState.Success(servers) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ServerListUiState.Loading)
+    private val _quickStats = MutableStateFlow<QuickStats?>(null)
+    val quickStats: StateFlow<QuickStats?> = _quickStats.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            val todaySeconds = readingSessionRepository.getTotalDurationToday()
+            val streak = readingSessionRepository.getCurrentStreak()
+            _quickStats.value = QuickStats(todaySeconds = todaySeconds, currentStreak = streak)
+        }
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
                 val grimmoryServer = servers.firstOrNull { it.isGrimmory }
@@ -96,12 +102,12 @@ class ServerListViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun deleteServer(serverId: Long) {
-        viewModelScope.launch {
-            serverRepository.delete(serverId)
-        }
-    }
 }
+
+data class QuickStats(
+    val todaySeconds: Long,
+    val currentStreak: Int,
+)
 
 data class RecentBook(
     val book: Book,
@@ -114,8 +120,3 @@ data class RecentlyAddedBook(
     val serverId: Long,
     val localBookId: String? = null,
 )
-
-sealed interface ServerListUiState {
-    data object Loading : ServerListUiState
-    data class Success(val servers: List<Server>) : ServerListUiState
-}

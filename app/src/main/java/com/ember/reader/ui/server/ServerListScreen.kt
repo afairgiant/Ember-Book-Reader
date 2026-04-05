@@ -16,27 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CloudQueue
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -61,24 +52,19 @@ import com.ember.reader.ui.common.BookCoverPlaceholderColors
 import com.ember.reader.ui.common.bookCoverColorIndex
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.core.model.Server
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServerListScreen(
-    onAddServer: () -> Unit,
-    onEditServer: (Long) -> Unit,
-    onOpenLibrary: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
-    onOpenStats: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
+    val quickStats by viewModel.quickStats.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
     Scaffold(
@@ -116,140 +102,68 @@ fun ServerListScreen(
                 .padding(padding)
         ) {
             com.ember.reader.ui.common.OfflineBanner(isOffline = !networkAvailable)
-            when (val state = uiState) {
-                ServerListUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                // Continue Reading section
+                if (recentlyReading.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.continue_reading),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+                    item {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(recentlyReading, key = { it.book.id }) { recent ->
+                                ContinueReadingCard(
+                                    book = recent.book,
+                                    percentage = recent.percentage,
+                                    onClick = { onOpenReader(recent.book.id, recent.book.format) }
+                                )
+                            }
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(4.dp)) }
                 }
-                is ServerListUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        // Continue Reading section
-                        if (recentlyReading.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = stringResource(R.string.continue_reading),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            item {
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(recentlyReading, key = { it.book.id }) { recent ->
-                                        ContinueReadingCard(
-                                            book = recent.book,
-                                            percentage = recent.percentage,
-                                            onClick = { onOpenReader(recent.book.id, recent.book.format) }
-                                        )
+
+                // Recently Added from Grimmory
+                if (recentlyAdded.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Recently Added",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    item {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(recentlyAdded, key = { it.summary.id }) { recent ->
+                                RecentlyAddedCard(
+                                    title = recent.summary.title,
+                                    authors = recent.summary.authors.joinToString(", "),
+                                    coverUrl = recent.coverUrl,
+                                    onClick = {
+                                        recent.localBookId?.let { onOpenBookDetail(it) }
                                     }
-                                }
-                            }
-                            item { Spacer(modifier = Modifier.height(4.dp)) }
-                        }
-
-                        // Recently Added from Grimmory
-                        if (recentlyAdded.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = "Recently Added",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
-                            item {
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(recentlyAdded, key = { it.summary.id }) { recent ->
-                                        RecentlyAddedCard(
-                                            title = recent.summary.title,
-                                            authors = recent.summary.authors.joinToString(", "),
-                                            coverUrl = recent.coverUrl,
-                                            onClick = {
-                                                recent.localBookId?.let { onOpenBookDetail(it) }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                            item { Spacer(modifier = Modifier.height(4.dp)) }
                         }
+                    }
+                    item { Spacer(modifier = Modifier.height(4.dp)) }
+                }
 
-                        // Connected Servers header
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Connected Servers",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                if (state.servers.isNotEmpty()) {
-                                    Text(
-                                        text = "${state.servers.size} ACTIVE",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-
-                        // Server cards
-                        items(state.servers, key = { it.id }) { server ->
-                            ServerCard(
-                                server = server,
-                                onOpenLibrary = { onOpenLibrary(server.id) },
-                                onEdit = { onEditServer(server.id) },
-                                onDelete = { viewModel.deleteServer(server.id) }
-                            )
-                        }
-
-                        // Add Server button
-                        item {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TextButton(
-                                onClick = onAddServer,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.add_server))
-                            }
-                        }
-
-                        // Reading Statistics
-                        item {
-                            OutlinedButton(
-                                onClick = onOpenStats,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Schedule,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.reading_statistics))
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
+                // Quick Stats
+                if (quickStats != null) {
+                    item {
+                        QuickStatsCard(stats = quickStats!!)
                     }
                 }
             }
@@ -396,86 +310,46 @@ private fun RecentlyAddedCard(
 }
 
 @Composable
-private fun ServerCard(
-    server: Server,
-    onOpenLibrary: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
+private fun QuickStatsCard(stats: QuickStats) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpenLibrary),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.CloudQueue,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp)
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val hours = stats.todaySeconds / 3600
+                val minutes = (stats.todaySeconds % 3600) / 60
                 Text(
-                    text = server.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    text = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF4CAF50))
-                            .align(Alignment.CenterVertically)
-                    )
-                    Text(
-                        text = buildString {
-                            append("OPDS")
-                            if (server.kosyncUsername.isNotBlank()) append(" · Kosync")
-                            if (server.isGrimmory) append(" · Grimmory")
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            IconButton(onClick = onEdit) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.edit_server),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = "Today",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "${stats.currentStreak}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = if (stats.currentStreak == 1) "Day streak" else "Day streak",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
