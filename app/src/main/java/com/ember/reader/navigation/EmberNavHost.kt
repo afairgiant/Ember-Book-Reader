@@ -3,8 +3,8 @@ package com.ember.reader.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +34,6 @@ import com.ember.reader.ui.reader.pdf.PdfReaderScreen
 import com.ember.reader.ui.server.ServerFormScreen
 import com.ember.reader.ui.server.ServerListScreen
 import com.ember.reader.ui.settings.DevLogScreen
-import com.ember.reader.ui.settings.SettingsScreen
 import com.ember.reader.ui.settings.StorageScreen
 
 object Routes {
@@ -44,12 +43,14 @@ object Routes {
 
     // Top-level (bottom nav)
     const val HOME = "home"
+    const val BROWSE = "browse"
     const val LOCAL_LIBRARY = "local_library"
-    const val PROFILE = "profile"
     const val APP_SETTINGS = "app_settings"
 
-    @Deprecated("Use PROFILE instead")
-    const val SETTINGS = "profile"
+    // Settings sub-pages
+    const val SETTINGS_APPEARANCE = "settings/appearance"
+    const val SETTINGS_SYNC = "settings/sync"
+    const val SETTINGS_DOWNLOADS = "settings/downloads"
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
@@ -91,13 +92,13 @@ private enum class BottomNavTab(
     val icon: ImageVector
 ) {
     HOME(Routes.HOME, "Home", Icons.Default.Home),
+    BROWSE(Routes.BROWSE, "Browse", Icons.Default.Explore),
     LIBRARY(Routes.LOCAL_LIBRARY, "Library", Icons.AutoMirrored.Filled.LibraryBooks),
-    PROFILE(Routes.PROFILE, "Profile", Icons.Default.Person),
     SETTINGS(Routes.APP_SETTINGS, "Settings", Icons.Default.Settings)
 }
 
 // Routes where the bottom nav should be visible
-private val bottomNavRoutes = setOf(Routes.HOME, Routes.LOCAL_LIBRARY, Routes.PROFILE, Routes.APP_SETTINGS)
+private val bottomNavRoutes = setOf(Routes.HOME, Routes.BROWSE, Routes.LOCAL_LIBRARY, Routes.APP_SETTINGS)
 
 @Composable
 fun EmberNavHost(
@@ -154,11 +155,8 @@ fun EmberNavHost(
             // Top-level: Home
             composable(Routes.HOME) {
                 ServerListScreen(
-                    onAddServer = { navController.navigate(Routes.serverForm()) },
-                    onEditServer = { serverId -> navController.navigate(Routes.serverForm(serverId)) },
-                    onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
                     onOpenSettings = {
-                        navController.navigate(Routes.PROFILE) {
+                        navController.navigate(Routes.APP_SETTINGS) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
@@ -170,7 +168,13 @@ fun EmberNavHost(
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
                     },
-                    onOpenStats = { navController.navigate(Routes.STATS) }
+                )
+            }
+
+            // Top-level: Browse
+            composable(Routes.BROWSE) {
+                com.ember.reader.ui.browse.BrowseScreen(
+                    onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
                 )
             }
 
@@ -187,21 +191,34 @@ fun EmberNavHost(
                 )
             }
 
-            // Top-level: Profile
-            composable(Routes.PROFILE) {
-                SettingsScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onOpenStorage = { navController.navigate(Routes.STORAGE) },
+            // Top-level: Settings
+            composable(Routes.APP_SETTINGS) {
+                com.ember.reader.ui.settings.SettingsHubScreen(
+                    onEditServer = { serverId -> navController.navigate(Routes.serverForm(serverId)) },
+                    onAddServer = { navController.navigate(Routes.serverForm()) },
+                    onOpenAppearance = { navController.navigate(Routes.SETTINGS_APPEARANCE) },
+                    onOpenSync = { navController.navigate(Routes.SETTINGS_SYNC) },
+                    onOpenDownloads = { navController.navigate(Routes.SETTINGS_DOWNLOADS) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
-                    onOpenDevLog = { navController.navigate(Routes.DEV_LOG) }
+                    onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
                 )
             }
 
-            // Top-level: Settings
-            composable(Routes.APP_SETTINGS) {
-                com.ember.reader.ui.settings.AppSettingsScreen(
+            // Settings sub-pages
+            composable(Routes.SETTINGS_APPEARANCE) {
+                com.ember.reader.ui.settings.AppearanceSettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenStorage = { navController.navigate(Routes.STORAGE) }
+                )
+            }
+            composable(Routes.SETTINGS_SYNC) {
+                com.ember.reader.ui.settings.SyncSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.SETTINGS_DOWNLOADS) {
+                com.ember.reader.ui.settings.DownloadSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenStorage = { navController.navigate(Routes.STORAGE) },
                 )
             }
 
