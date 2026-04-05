@@ -63,6 +63,16 @@ class ServerListViewModel @Inject constructor(
         if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
             loadRecentlyAdded(grimmoryServer)
             loadGrimmoryStats(grimmoryServer)
+        } else {
+            // Token may not be ready yet — retry once after a short delay
+            kotlinx.coroutines.delay(2000)
+            if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                serverRepository.tryGrimmoryRelogin(grimmoryServer)
+            }
+            if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                loadRecentlyAdded(grimmoryServer)
+                loadGrimmoryStats(grimmoryServer)
+            }
         }
     }
 
