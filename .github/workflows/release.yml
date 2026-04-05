@@ -56,8 +56,7 @@ jobs:
           mkdir -p dist
           APK=$(find app/build/outputs/apk/release -name '*.apk' -type f | head -1)
           if [ -n "$APK" ]; then
-            VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
-            cp "$APK" "dist/ember-${VERSION}.apk"
+            cp "$APK" "dist/$(basename "$APK")"
           else
             echo "ERROR: No APK found"
             exit 1
