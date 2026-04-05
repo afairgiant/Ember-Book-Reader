@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookSummary
+import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -32,6 +33,7 @@ class ServerListViewModel @Inject constructor(
     private val readingSessionRepository: ReadingSessionRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryClient: GrimmoryClient,
 ) : ViewModel() {
 
     private val _quickStats = MutableStateFlow<QuickStats?>(null)
@@ -39,9 +41,10 @@ class ServerListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // Load local stats immediately as fallback
             val todaySeconds = readingSessionRepository.getTotalDurationToday()
-            val streak = readingSessionRepository.getCurrentStreak()
-            _quickStats.value = QuickStats(todaySeconds = todaySeconds, currentStreak = streak)
+            val localStreak = readingSessionRepository.getCurrentStreak()
+            _quickStats.value = QuickStats(todaySeconds = todaySeconds, currentStreak = localStreak)
         }
         viewModelScope.launch {
             serverRepository.observeAll().collect { servers ->
@@ -59,7 +62,20 @@ class ServerListViewModel @Inject constructor(
         }
         if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
             loadRecentlyAdded(grimmoryServer)
+            loadGrimmoryStats(grimmoryServer)
         }
+    }
+
+    private suspend fun loadGrimmoryStats(server: Server) {
+        grimmoryClient.getReadingStreak(server.url, server.id)
+            .onSuccess { streak ->
+                val current = _quickStats.value
+                _quickStats.value = QuickStats(
+                    todaySeconds = current?.todaySeconds ?: 0L,
+                    currentStreak = streak.currentStreak,
+                )
+            }
+            .onFailure { Timber.w(it, "Failed to load Grimmory streak") }
     }
 
     private suspend fun loadRecentlyAdded(server: Server) {
