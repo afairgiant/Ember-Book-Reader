@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryAppBook
+import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
@@ -37,6 +39,7 @@ class BookDetailViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
+    private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val hardcoverClient: HardcoverClient,
     private val hardcoverTokenManager: HardcoverTokenManager,
@@ -62,6 +65,9 @@ class BookDetailViewModel @Inject constructor(
 
     private val _hardcoverUserEntry = MutableStateFlow<HardcoverUserBookEntry?>(null)
     val hardcoverUserEntry: StateFlow<HardcoverUserBookEntry?> = _hardcoverUserEntry.asStateFlow()
+
+    private val _seriesBooks = MutableStateFlow<List<SeriesBookItem>>(emptyList())
+    val seriesBooks: StateFlow<List<SeriesBookItem>> = _seriesBooks.asStateFlow()
 
     private val _downloading = MutableStateFlow(false)
     val downloading: StateFlow<Boolean> = _downloading.asStateFlow()
@@ -131,8 +137,45 @@ class BookDetailViewModel @Inject constructor(
             grimmoryClient.getBookDetail(srv.url, srv.id, grimmoryBookId).onSuccess { detail ->
                 _readStatus.value = detail.readStatus
                 _grimmoryDetail.value = detail
+                // Load series books if book is in a series
+                val seriesName = detail.seriesName ?: _book.value?.series
+                if (seriesName != null) {
+                    loadSeriesBooks(srv, seriesName)
+                }
             }
         }
+    }
+
+    private suspend fun loadSeriesBooks(server: Server, seriesName: String) {
+        grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName)
+            .onSuccess { page ->
+                val currentBookId = _book.value?.grimmoryBookId
+                _seriesBooks.value = page.content
+                    .filter { it.id != currentBookId } // exclude current book
+                    .map { appBook ->
+                        SeriesBookItem(
+                            grimmoryBookId = appBook.id,
+                            title = appBook.title,
+                            author = appBook.authors.firstOrNull(),
+                            coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id),
+                            localBookId = null, // resolved below
+                        )
+                    }
+                // Ensure local book entries exist (same as recently added)
+                _seriesBooks.value = _seriesBooks.value.map { item ->
+                    val opdsEntryId = "urn:booklore:book:${item.grimmoryBookId}"
+                    val localId = bookRepository.ensureBookExists(
+                        serverId = server.id,
+                        opdsEntryId = opdsEntryId,
+                        title = item.title,
+                        author = item.author,
+                        coverUrl = item.coverUrl,
+                        format = com.ember.reader.core.model.BookFormat.EPUB,
+                    )
+                    item.copy(localBookId = localId)
+                }
+            }
+            .onFailure { Timber.w(it, "Failed to load series books for $seriesName") }
     }
 
     private fun loadHardcoverData(book: Book) {
@@ -194,3 +237,11 @@ class BookDetailViewModel @Inject constructor(
         }
     }
 }
+
+data class SeriesBookItem(
+    val grimmoryBookId: Long,
+    val title: String,
+    val author: String?,
+    val coverUrl: String,
+    val localBookId: String?,
+)

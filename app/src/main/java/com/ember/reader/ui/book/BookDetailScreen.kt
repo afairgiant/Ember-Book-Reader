@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -82,6 +84,7 @@ import kotlin.math.roundToInt
 fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
+    onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: BookDetailViewModel = hiltViewModel()
 ) {
     val book by viewModel.book.collectAsStateWithLifecycle()
@@ -93,6 +96,7 @@ fun BookDetailScreen(
     val grimmoryDetail by viewModel.grimmoryDetail.collectAsStateWithLifecycle()
     val hardcoverMatch by viewModel.hardcoverMatch.collectAsStateWithLifecycle()
     val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
+    val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -509,7 +513,81 @@ fun BookDetailScreen(
                     }
                 }
 
+                // Series books
+                if (seriesBooks.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "More in Series",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(seriesBooks, key = { it.grimmoryBookId }) { item ->
+                            SeriesBookCard(
+                                item = item,
+                                onClick = {
+                                    val localId = item.localBookId
+                                    if (localId != null) {
+                                        onOpenBookDetail(localId)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeriesBookCard(item: SeriesBookItem, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .width(110.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(item.coverUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = item.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+            )
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                item.author?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
