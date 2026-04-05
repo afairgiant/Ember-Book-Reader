@@ -27,7 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +48,15 @@ fun BrowseScreen(
     viewModel: BrowseViewModel = hiltViewModel(),
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
+
+    // Auto-navigate if only one server
+    var autoNavigated by remember { mutableStateOf(false) }
+    LaunchedEffect(servers) {
+        if (servers.size == 1 && !autoNavigated) {
+            autoNavigated = true
+            onOpenLibrary(servers.first().id)
+        }
+    }
 
     Scaffold(
         topBar = {
