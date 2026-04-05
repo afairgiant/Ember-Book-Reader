@@ -35,7 +35,7 @@ class BookdropClient @Inject constructor(
     suspend fun getFiles(
         baseUrl: String,
         serverId: Long,
-        status: String? = "PENDING_REVIEW",
+        status: String? = "pending",
         page: Int = 0,
         size: Int = 50,
     ): Result<BookdropPage<BookdropFile>> = withAuth(baseUrl, serverId) { token ->

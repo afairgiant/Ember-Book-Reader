@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 data class BookdropFileState(
@@ -247,6 +248,11 @@ class BookdropViewModel @Inject constructor(
         val librariesResult = bookdropClient.getLibrariesWithPaths(s.url, s.id)
 
         filesResult.onSuccess { page ->
+            page.content.forEach { file ->
+                Timber.d("Bookdrop file: id=${file.id} name=${file.fileName}")
+                Timber.d("  originalMetadata: ${file.originalMetadata}")
+                Timber.d("  fetchedMetadata: ${file.fetchedMetadata}")
+            }
             val fileStates = page.content.map { file ->
                 BookdropFileState(
                     file = file,

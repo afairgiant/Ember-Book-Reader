@@ -433,7 +433,7 @@ private fun MetadataSection(
         MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description),
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         fields.forEach { field ->
             MetadataComparisonRow(
                 field = field,
@@ -461,91 +461,102 @@ private fun MetadataComparisonRow(
     val fetched = field.fetchedValue ?: ""
     val hasFetched = fetched.isNotEmpty() && fetched != current
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        // Label
-        Text(
-            field.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium,
-        )
-
-        // Current value (editable)
-        var isEditing by remember { mutableStateOf(false) }
-        var editText by remember(current) { mutableStateOf(current) }
-
-        if (isEditing) {
-            BasicTextField(
-                value = editText,
-                onValueChange = { editText = it },
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(4.dp))
-                    .padding(vertical = 2.dp),
-                singleLine = field.key != "description",
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            // Label
+            Text(
+                field.label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Save",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable {
-                        onUpdate(editText)
-                        isEditing = false
-                    },
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Current value (editable)
+            var isEditing by remember { mutableStateOf(false) }
+            var editText by remember(current) { mutableStateOf(current) }
+
+            if (isEditing) {
+                BasicTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .padding(vertical = 2.dp),
+                    singleLine = field.key != "description",
                 )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Text(
+                        "Save",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            onUpdate(editText)
+                            isEditing = false
+                        },
+                    )
+                    Text(
+                        "Cancel",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable {
+                            editText = current
+                            isEditing = false
+                        },
+                    )
+                }
+            } else {
                 Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable {
-                        editText = current
-                        isEditing = false
-                    },
+                    current.ifEmpty { "(empty)" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (current.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurface,
+                    maxLines = if (field.key == "description") 3 else 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { isEditing = true },
                 )
             }
-        } else {
-            Text(
-                current.ifEmpty { "(empty)" },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (current.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.onSurface,
-                maxLines = if (field.key == "description") 3 else 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable { isEditing = true },
-            )
-        }
 
-        // Fetched value (if different)
-        if (hasFetched) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 1.dp),
-            ) {
-                Icon(
-                    Icons.Default.ChevronLeft,
-                    contentDescription = "Apply fetched value",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clickable(onClick = onApplyFetched),
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    fetched,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = if (field.key == "description") 2 else 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable(onClick = onApplyFetched),
-                )
+            // Fetched value (if different)
+            if (hasFetched) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Icon(
+                        Icons.Default.ChevronLeft,
+                        contentDescription = "Apply fetched value",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable(onClick = onApplyFetched),
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        fetched,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = if (field.key == "description") 2 else 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable(onClick = onApplyFetched),
+                    )
+                }
             }
         }
     }
