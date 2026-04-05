@@ -8,12 +8,17 @@ import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.ReadStatus
+import com.ember.reader.core.hardcover.HardcoverBookDetail
+import com.ember.reader.core.hardcover.HardcoverClient
+import com.ember.reader.core.hardcover.HardcoverTokenManager
+import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import timber.log.Timber
 import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,6 +38,8 @@ class BookDetailViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val hardcoverClient: HardcoverClient,
+    private val hardcoverTokenManager: HardcoverTokenManager,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -49,6 +56,12 @@ class BookDetailViewModel @Inject constructor(
 
     private val _grimmoryDetail = MutableStateFlow<GrimmoryBookDetail?>(null)
     val grimmoryDetail: StateFlow<GrimmoryBookDetail?> = _grimmoryDetail.asStateFlow()
+
+    private val _hardcoverMatch = MutableStateFlow<HardcoverBookDetail?>(null)
+    val hardcoverMatch: StateFlow<HardcoverBookDetail?> = _hardcoverMatch.asStateFlow()
+
+    private val _hardcoverUserEntry = MutableStateFlow<HardcoverUserBookEntry?>(null)
+    val hardcoverUserEntry: StateFlow<HardcoverUserBookEntry?> = _hardcoverUserEntry.asStateFlow()
 
     private val _downloading = MutableStateFlow(false)
     val downloading: StateFlow<Boolean> = _downloading.asStateFlow()
@@ -79,6 +92,7 @@ class BookDetailViewModel @Inject constructor(
             bookRepository.observeById(bookId).collect { book ->
                 _book.value = book
                 book?.serverId?.let { loadServer(it) }
+                book?.let { loadHardcoverData(it) }
             }
         }
         viewModelScope.launch {
@@ -117,6 +131,39 @@ class BookDetailViewModel @Inject constructor(
             grimmoryClient.getBookDetail(srv.url, srv.id, grimmoryBookId).onSuccess { detail ->
                 _readStatus.value = detail.readStatus
                 _grimmoryDetail.value = detail
+            }
+        }
+    }
+
+    private fun loadHardcoverData(book: Book) {
+        if (!hardcoverTokenManager.isConnected()) return
+        if (_hardcoverMatch.value != null) return // already loaded
+
+        viewModelScope.launch {
+            // Tier 1: Direct ID from Grimmory metadata
+            val directId = _grimmoryDetail.value?.hardcoverBookId?.toInt()
+            val bookId = if (directId != null) {
+                directId
+            } else {
+                // Tier 2: Search by title + author
+                val query = buildString {
+                    append(book.title)
+                    book.author?.let { append(" $it") }
+                }
+                hardcoverClient.searchBooks(query, limit = 1)
+                    .getOrNull()?.firstOrNull()?.bookId
+            }
+
+            if (bookId != null) {
+                hardcoverClient.fetchBookDetail(bookId)
+                    .onSuccess { _hardcoverMatch.value = it }
+                    .onFailure { Timber.w(it, "Hardcover: failed to fetch book detail") }
+
+                hardcoverClient.fetchMe().onSuccess { user ->
+                    hardcoverClient.fetchUserBookEntry(user.id, bookId)
+                        .onSuccess { _hardcoverUserEntry.value = it }
+                        .onFailure { Timber.w(it, "Hardcover: failed to fetch user entry") }
+                }
             }
         }
     }
