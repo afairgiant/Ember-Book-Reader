@@ -176,6 +176,7 @@ fun EmberNavHost(
             composable(Routes.BROWSE) {
                 com.ember.reader.ui.browse.BrowseScreen(
                     onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
+                    onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                 )
             }
 

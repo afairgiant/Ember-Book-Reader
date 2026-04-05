@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,14 +46,16 @@ import com.ember.reader.core.model.Server
 @Composable
 fun BrowseScreen(
     onOpenLibrary: (Long) -> Unit,
+    onOpenHardcover: () -> Unit = {},
     viewModel: BrowseViewModel = hiltViewModel(),
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
+    val hardcoverConnected = viewModel.isHardcoverConnected
 
-    // Auto-navigate if only one server
+    // Auto-navigate if only one server and no Hardcover
     var autoNavigated by remember { mutableStateOf(false) }
-    LaunchedEffect(servers) {
-        if (servers.size == 1 && !autoNavigated) {
+    LaunchedEffect(servers, hardcoverConnected) {
+        if (servers.size == 1 && !hardcoverConnected && !autoNavigated) {
             autoNavigated = true
             onOpenLibrary(servers.first().id)
         }
@@ -68,7 +71,7 @@ fun BrowseScreen(
             )
         },
     ) { padding ->
-        if (servers.isEmpty()) {
+        if (servers.isEmpty() && !hardcoverConnected) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -108,6 +111,11 @@ fun BrowseScreen(
                         server = server,
                         onClick = { onOpenLibrary(server.id) },
                     )
+                }
+                if (hardcoverConnected) {
+                    item(key = "hardcover") {
+                        BrowseHardcoverCard(onClick = onOpenHardcover)
+                    }
                 }
             }
         }
@@ -151,6 +159,52 @@ private fun BrowseServerCard(
                 )
                 Text(
                     text = if (server.isGrimmory) "Grimmory" else "OPDS",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BrowseHardcoverCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Hardcover",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Book tracking & reading lists",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
