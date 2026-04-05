@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sync
@@ -66,6 +67,7 @@ fun SettingsHubScreen(
     onOpenDownloads: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenHardcover: () -> Unit,
+    onOpenBookdrop: () -> Unit,
     onOpenDevLog: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -237,6 +239,15 @@ fun SettingsHubScreen(
                     title = "Hardcover",
                     subtitle = "View your reading lists",
                     onClick = onOpenHardcover,
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                SettingsNavRow(
+                    icon = Icons.Default.Inbox,
+                    title = "Book Drop",
+                    subtitle = "Review and import pending books",
+                    onClick = onOpenBookdrop,
                 )
             }
 

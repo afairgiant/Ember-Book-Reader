@@ -52,6 +52,7 @@ object Routes {
     const val SETTINGS_SYNC = "settings/sync"
     const val SETTINGS_DOWNLOADS = "settings/downloads"
     const val HARDCOVER = "hardcover"
+    const val BOOKDROP = "bookdrop"
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
@@ -203,6 +204,7 @@ fun EmberNavHost(
                     onOpenDownloads = { navController.navigate(Routes.SETTINGS_DOWNLOADS) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
+                    onOpenBookdrop = { navController.navigate(Routes.BOOKDROP) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
                 )
             }
@@ -231,6 +233,11 @@ fun EmberNavHost(
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
                         navController.navigate(Routes.library(serverId, "grimmory:search=$encodedQuery"))
                     },
+                )
+            }
+            composable(Routes.BOOKDROP) {
+                com.ember.reader.ui.bookdrop.BookdropScreen(
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
 
