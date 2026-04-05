@@ -38,7 +38,7 @@ class BookdropClient @Inject constructor(
         status: String? = "PENDING_REVIEW",
         page: Int = 0,
         size: Int = 50,
-    ): Result<GrimmoryAppPage<BookdropFile>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<BookdropPage<BookdropFile>> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/bookdrop/files") {
             header("Authorization", "Bearer $token")
             status?.let { parameter("status", it) }
@@ -46,7 +46,7 @@ class BookdropClient @Inject constructor(
             parameter("size", size)
         }
         if (!response.status.isSuccess()) error("Bookdrop files failed: ${response.status}")
-        response.body<GrimmoryAppPage<BookdropFile>>()
+        response.body<BookdropPage<BookdropFile>>()
     }
 
     suspend fun finalizeImport(

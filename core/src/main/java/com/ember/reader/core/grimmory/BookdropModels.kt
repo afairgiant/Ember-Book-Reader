@@ -62,6 +62,20 @@ data class BookdropFinalizeResult(
 )
 
 @Serializable
+data class BookdropPage<T>(
+    val content: List<T> = emptyList(),
+    val page: BookdropPageInfo = BookdropPageInfo(),
+)
+
+@Serializable
+data class BookdropPageInfo(
+    val size: Int = 20,
+    val number: Int = 0,
+    val totalElements: Long = 0,
+    val totalPages: Int = 0,
+)
+
+@Serializable
 data class BookdropDiscardRequest(
     val selectAll: Boolean = false,
     val excludedIds: List<Long>? = null,
