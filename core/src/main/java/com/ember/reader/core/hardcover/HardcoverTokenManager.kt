@@ -12,9 +12,8 @@ class HardcoverTokenManager @Inject constructor(
     fun getToken(): String? = credentialEncryption.getPassword(TOKEN_KEY)
 
     fun storeToken(token: String) {
-        // Strip "Bearer " prefix if user pasted it from the Hardcover UI
-        val cleanToken = token.removePrefix("Bearer ").trim()
-        credentialEncryption.storePassword(TOKEN_KEY, cleanToken)
+        // Store as-is — the Hardcover token includes "Bearer " and the API expects it
+        credentialEncryption.storePassword(TOKEN_KEY, token.trim())
     }
 
     fun isConnected(): Boolean = getToken() != null

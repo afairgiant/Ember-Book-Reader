@@ -43,7 +43,9 @@ class HardcoverClient @Inject constructor(
             }
             """.trimIndent()
         )
-        val me = json.obj("data").obj("me")
+        val meData = json.obj("data")["me"]!!
+        // me can be a single object or an array — handle both
+        val me = if (meData is JsonArray) meData.first().jsonObject else meData.jsonObject
         HardcoverUser(
             id = me.int("id"),
             username = me.str("username"),
