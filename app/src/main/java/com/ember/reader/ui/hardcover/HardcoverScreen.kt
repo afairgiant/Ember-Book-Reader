@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,10 +27,12 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +69,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.R
 import com.ember.reader.core.hardcover.HardcoverBook
+import com.ember.reader.core.hardcover.HardcoverBookDetail
 import com.ember.reader.core.hardcover.HardcoverStatus
 import kotlinx.coroutines.launch
 
@@ -73,11 +77,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun HardcoverScreen(
     onNavigateBack: () -> Unit,
+    onSearchGrimmory: (serverId: Long, query: String) -> Unit = { _, _ -> },
     viewModel: HardcoverViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val selectedBookDetail by viewModel.selectedBookDetail.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(message) {
         message?.let {
@@ -132,8 +140,33 @@ fun HardcoverScreen(
                 ConnectedView(
                     state = state,
                     modifier = Modifier.padding(padding),
+                    onBookClick = viewModel::selectBook,
                 )
             }
+        }
+    }
+
+    // Book detail bottom sheet
+    val detail = selectedBookDetail
+    if (detail != null) {
+        ModalBottomSheet(
+            onDismissRequest = viewModel::clearSelectedBook,
+        ) {
+            BookDetailSheet(
+                detail = detail,
+                onViewOnHardcover = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(detail.hardcoverUrl)))
+                },
+                onSearchGrimmory = {
+                    viewModel.clearSelectedBook()
+                    scope.launch {
+                        val serverId = viewModel.findGrimmoryServerId()
+                        if (serverId != null) {
+                            onSearchGrimmory(serverId, detail.title)
+                        }
+                    }
+                },
+            )
         }
     }
 }
@@ -187,6 +220,7 @@ private fun ConnectView(
 private fun ConnectedView(
     state: HardcoverUiState.Connected,
     modifier: Modifier = Modifier,
+    onBookClick: (Int) -> Unit = {},
 ) {
     val pagerState = rememberPagerState(pageCount = { state.tabs.size })
     val scope = rememberCoroutineScope()
@@ -275,14 +309,9 @@ private fun ConnectedView(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(books, key = { it.id }) { book ->
-                        val context = LocalContext.current
                         BookRow(
                             book = book,
-                            onClick = {
-                                book.hardcoverUrl?.let { url ->
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                }
-                            },
+                            onClick = { onBookClick(book.bookId) },
                         )
                     }
                 }
@@ -363,6 +392,135 @@ private fun RatingStars(rating: Float) {
                 modifier = Modifier.size(16.dp),
                 tint = Color(0xFFFFB300),
             )
+        }
+    }
+}
+
+@Composable
+private fun BookDetailSheet(
+    detail: HardcoverBookDetail,
+    onViewOnHardcover: () -> Unit,
+    onSearchGrimmory: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+    ) {
+        // Cover + info
+        Row {
+            if (detail.coverUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(detail.coverUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = detail.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .width(100.dp)
+                        .aspectRatio(2f / 3f)
+                        .clip(RoundedCornerShape(8.dp)),
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = detail.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                val subtitle = detail.subtitle
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (detail.authors.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = detail.authors.joinToString(", "),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                val series = detail.seriesName
+                if (series != null) {
+                    val pos = detail.seriesPosition
+                    val seriesText = if (pos != null) {
+                        "$series #${if (pos % 1f == 0f) pos.toInt().toString() else pos.toString()}"
+                    } else {
+                        series
+                    }
+                    Text(
+                        text = seriesText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val avg = detail.averageRating
+                    if (avg != null && avg > 0f) {
+                        RatingStars(rating = avg)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "(${detail.ratingsCount})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                val meta = buildList {
+                    detail.pages?.let { add("$it pages") }
+                    detail.releaseYear?.let { add("$it") }
+                }.joinToString(" \u00B7 ")
+                if (meta.isNotBlank()) {
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        // Description
+        val description = detail.description
+        if (description != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Action buttons
+        Button(
+            onClick = onSearchGrimmory,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+        ) {
+            Text("Search in Grimmory")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onViewOnHardcover,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
+            Text("View on Hardcover")
         }
     }
 }

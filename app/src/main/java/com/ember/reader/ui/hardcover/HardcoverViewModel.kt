@@ -3,10 +3,12 @@ package com.ember.reader.ui.hardcover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.hardcover.HardcoverBook
+import com.ember.reader.core.hardcover.HardcoverBookDetail
 import com.ember.reader.core.hardcover.HardcoverClient
 import com.ember.reader.core.hardcover.HardcoverStatus
 import com.ember.reader.core.hardcover.HardcoverTokenManager
 import com.ember.reader.core.hardcover.HardcoverUser
+import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import timber.log.Timber
 class HardcoverViewModel @Inject constructor(
     private val hardcoverClient: HardcoverClient,
     private val tokenManager: HardcoverTokenManager,
+    private val serverRepository: ServerRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HardcoverUiState>(HardcoverUiState.Loading)
@@ -26,6 +29,9 @@ class HardcoverViewModel @Inject constructor(
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _selectedBookDetail = MutableStateFlow<HardcoverBookDetail?>(null)
+    val selectedBookDetail: StateFlow<HardcoverBookDetail?> = _selectedBookDetail.asStateFlow()
 
     fun dismissMessage() {
         _message.value = null
@@ -43,6 +49,22 @@ class HardcoverViewModel @Inject constructor(
         if (token.isBlank()) return
         tokenManager.storeToken(token)
         loadProfile()
+    }
+
+    fun selectBook(bookId: Int) {
+        viewModelScope.launch {
+            hardcoverClient.fetchBookDetail(bookId)
+                .onSuccess { _selectedBookDetail.value = it }
+                .onFailure { Timber.w(it, "Hardcover: failed to fetch book detail") }
+        }
+    }
+
+    fun clearSelectedBook() {
+        _selectedBookDetail.value = null
+    }
+
+    suspend fun findGrimmoryServerId(): Long? {
+        return serverRepository.getAll().firstOrNull { it.isGrimmory }?.id
     }
 
     fun disconnect() {

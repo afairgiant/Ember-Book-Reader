@@ -9,6 +9,7 @@ data class HardcoverUser(
 
 data class HardcoverBook(
     val id: Int,
+    val bookId: Int,
     val title: String,
     val author: String?,
     val coverUrl: String?,
@@ -17,9 +18,24 @@ data class HardcoverBook(
     val dateAdded: String?,
     val pages: Int?,
     val slug: String?,
+)
+
+data class HardcoverBookDetail(
+    val id: Int,
+    val title: String,
+    val subtitle: String?,
+    val description: String?,
+    val slug: String,
+    val pages: Int?,
+    val releaseYear: Int?,
+    val averageRating: Float?,
+    val ratingsCount: Int,
+    val coverUrl: String?,
+    val authors: List<String>,
+    val seriesName: String?,
+    val seriesPosition: Float?,
 ) {
-    val hardcoverUrl: String?
-        get() = slug?.let { "https://hardcover.app/books/$it" }
+    val hardcoverUrl: String get() = "https://hardcover.app/books/$slug"
 }
 
 object HardcoverStatus {

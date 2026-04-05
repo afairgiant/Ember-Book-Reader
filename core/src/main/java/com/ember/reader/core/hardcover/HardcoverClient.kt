@@ -67,6 +67,7 @@ class HardcoverClient @Inject constructor(
                     status_id
                     rating
                     date_added
+                    book_id
                     book {
                         title
                         slug
@@ -90,6 +91,7 @@ class HardcoverClient @Inject constructor(
             val coverUrl = book.objOrNull("image")?.strOrNull("url")
             HardcoverBook(
                 id = obj.int("id"),
+                bookId = obj.int("book_id"),
                 title = book.str("title"),
                 author = author,
                 coverUrl = coverUrl,
@@ -100,6 +102,56 @@ class HardcoverClient @Inject constructor(
                 slug = book.strOrNull("slug"),
             )
         }
+    }
+
+    suspend fun fetchBookDetail(bookId: Int): Result<HardcoverBookDetail> = runCatching {
+        val json = query(
+            """
+            query {
+                books(where: {id: {_eq: $bookId}}, limit: 1) {
+                    id
+                    title
+                    subtitle
+                    description
+                    slug
+                    pages
+                    release_year
+                    rating
+                    ratings_count
+                    image { url }
+                    contributions(order_by: {author: {name: asc}}) {
+                        author { name }
+                    }
+                    book_series {
+                        series { name }
+                        position
+                    }
+                }
+            }
+            """.trimIndent()
+        )
+        val books = json.obj("data").arr("books")
+        if (books.isEmpty()) error("Book not found")
+        val book = books.first().jsonObject
+        val authors = book.arr("contributions").map {
+            it.jsonObject.obj("author").str("name")
+        }
+        val seriesEntry = book.arr("book_series").firstOrNull()?.jsonObject
+        HardcoverBookDetail(
+            id = book.int("id"),
+            title = book.str("title"),
+            subtitle = book.strOrNull("subtitle"),
+            description = book.strOrNull("description"),
+            slug = book.str("slug"),
+            pages = book.intOrNull("pages"),
+            releaseYear = book.intOrNull("release_year"),
+            averageRating = book.floatOrNull("rating"),
+            ratingsCount = book.intOrDefault("ratings_count", 0),
+            coverUrl = book.objOrNull("image")?.strOrNull("url"),
+            authors = authors,
+            seriesName = seriesEntry?.objOrNull("series")?.strOrNull("name"),
+            seriesPosition = seriesEntry?.floatOrNull("position"),
+        )
     }
 
     private suspend fun query(graphql: String): JsonObject {

@@ -226,6 +226,10 @@ fun EmberNavHost(
             composable(Routes.HARDCOVER) {
                 com.ember.reader.ui.hardcover.HardcoverScreen(
                     onNavigateBack = { navController.popBackStack() },
+                    onSearchGrimmory = { serverId, query ->
+                        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+                        navController.navigate(Routes.catalog(serverId, "grimmory:search=$encodedQuery"))
+                    },
                 )
             }
 
