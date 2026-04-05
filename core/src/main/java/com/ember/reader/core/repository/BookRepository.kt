@@ -77,6 +77,30 @@ class BookRepository @Inject constructor(
     suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): Book? =
         bookDao.getByOpdsEntryId(opdsEntryId, serverId)?.toDomain()
 
+    /** Ensures a book metadata entry exists in the local DB. Returns the book's local ID. */
+    suspend fun ensureBookExists(
+        serverId: Long,
+        opdsEntryId: String,
+        title: String,
+        author: String?,
+        coverUrl: String?,
+        format: BookFormat,
+    ): String {
+        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
+        if (existing != null) return existing.id
+        val book = Book(
+            id = java.util.UUID.randomUUID().toString(),
+            serverId = serverId,
+            opdsEntryId = opdsEntryId,
+            title = title,
+            author = author,
+            coverUrl = coverUrl,
+            format = format,
+        )
+        bookDao.insert(book.toEntity())
+        return book.id
+    }
+
     suspend fun refreshFromServer(
         server: Server,
         page: Int = 1,

@@ -70,11 +70,13 @@ fun ServerListScreen(
     onOpenLibrary: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
+    onOpenBookDetail: (bookId: String) -> Unit = {},
     onOpenStats: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
+    val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
     val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
@@ -144,6 +146,35 @@ fun ServerListScreen(
                                             percentage = recent.percentage,
                                             coverAuthHeader = recent.book.serverId?.let { coverAuthHeaders[it] },
                                             onClick = { onOpenReader(recent.book.id, recent.book.format) }
+                                        )
+                                    }
+                                }
+                            }
+                            item { Spacer(modifier = Modifier.height(4.dp)) }
+                        }
+
+                        // Recently Added from Grimmory
+                        if (recentlyAdded.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Recently Added",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            item {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(recentlyAdded, key = { it.summary.id }) { recent ->
+                                        RecentlyAddedCard(
+                                            title = recent.summary.title,
+                                            authors = recent.summary.authors.joinToString(", "),
+                                            coverUrl = recent.coverUrl,
+                                            coverAuthHeader = coverAuthHeaders[recent.serverId],
+                                            onClick = {
+                                                recent.localBookId?.let { onOpenBookDetail(it) }
+                                            }
                                         )
                                     }
                                 }
@@ -322,6 +353,79 @@ private fun ContinueReadingCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentlyAddedCard(
+    title: String,
+    authors: String,
+    coverUrl: String,
+    coverAuthHeader: String? = null,
+    onClick: () -> Unit,
+) {
+    val colorIndex = title.hashCode().mod(placeholderColors.size).let {
+        if (it < 0) it + placeholderColors.size else it
+    }
+
+    Card(
+        modifier = Modifier
+            .width(130.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+            ) {
+                val resolvedUrl = if (coverAuthHeader?.startsWith("jwt:") == true) {
+                    val token = coverAuthHeader.removePrefix("jwt:")
+                    "$coverUrl?token=$token"
+                } else {
+                    coverUrl
+                }
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(resolvedUrl)
+                        .apply {
+                            if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                                addHeader("Authorization", coverAuthHeader)
+                            }
+                        }
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                )
+            }
+
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (authors.isNotBlank()) {
+                    Text(
+                        text = authors,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

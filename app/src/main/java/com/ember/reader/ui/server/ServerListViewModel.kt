@@ -2,8 +2,11 @@ package com.ember.reader.ui.server
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -18,13 +21,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @HiltViewModel
 class ServerListViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
-    bookRepository: BookRepository,
+    private val bookRepository: BookRepository,
     readingProgressRepository: ReadingProgressRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager
+    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryAppClient: GrimmoryAppClient,
 ) : ViewModel() {
 
     val uiState: StateFlow<ServerListUiState> = serverRepository.observeAll()
@@ -45,9 +50,59 @@ class ServerListViewModel @Inject constructor(
                     }
                     server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
                 }
+                // Re-login to Grimmory if token is missing, then fetch recently added
+                val grimmoryServer = servers.firstOrNull { it.isGrimmory }
+                if (grimmoryServer != null) {
+                    if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                        serverRepository.tryGrimmoryRelogin(grimmoryServer)
+                    }
+                    if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                        // Refresh auth headers after potential re-login
+                        _coverAuthHeaders.value = servers.associate { server ->
+                            val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
+                                grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
+                            } else {
+                                null
+                            }
+                            server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
+                        }
+                        loadRecentlyAdded(grimmoryServer)
+                    }
+                }
             }
         }
     }
+
+    private suspend fun loadRecentlyAdded(server: Server) {
+        grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = 10)
+            .onSuccess { books ->
+                _recentlyAdded.value = books.map { summary ->
+                    val opdsEntryId = "urn:booklore:book:${summary.id}"
+                    val localBook = bookRepository.getByOpdsEntryId(opdsEntryId, server.id)
+                    val localId = localBook?.id ?: bookRepository.ensureBookExists(
+                        serverId = server.id,
+                        opdsEntryId = opdsEntryId,
+                        title = summary.title,
+                        author = summary.authors.joinToString(", ").ifBlank { null },
+                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id),
+                        format = when (summary.primaryFileType?.uppercase()) {
+                            "PDF" -> BookFormat.PDF
+                            else -> BookFormat.EPUB
+                        },
+                    )
+                    RecentlyAddedBook(
+                        summary = summary,
+                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id),
+                        serverId = server.id,
+                        localBookId = localId,
+                    )
+                }
+            }
+            .onFailure { Timber.w(it, "Failed to load recently added books") }
+    }
+
+    private val _recentlyAdded = MutableStateFlow<List<RecentlyAddedBook>>(emptyList())
+    val recentlyAdded: StateFlow<List<RecentlyAddedBook>> = _recentlyAdded.asStateFlow()
 
     val recentlyReading: StateFlow<List<RecentBook>> = bookRepository.observeRecentlyReading()
         .combine(readingProgressRepository.observeAll()) { books, progressList ->
@@ -68,6 +123,13 @@ class ServerListViewModel @Inject constructor(
 data class RecentBook(
     val book: Book,
     val percentage: Float
+)
+
+data class RecentlyAddedBook(
+    val summary: GrimmoryBookSummary,
+    val coverUrl: String,
+    val serverId: Long,
+    val localBookId: String? = null,
 )
 
 sealed interface ServerListUiState {
