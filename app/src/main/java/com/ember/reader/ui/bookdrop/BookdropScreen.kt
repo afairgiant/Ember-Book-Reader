@@ -169,8 +169,8 @@ fun BookdropScreen(
                     onToggleChecked = viewModel::toggleChecked,
                     onSelectAll = viewModel::selectAll,
                     onDeselectAll = viewModel::deselectAll,
-                    onSelectLibrary = viewModel::selectLibrary,
-                    onSelectPath = viewModel::selectPath,
+                    onSelectFileLibrary = viewModel::selectFileLibrary,
+                    onSelectFilePath = viewModel::selectFilePath,
                     onApplyFetchedField = viewModel::applyFetchedField,
                     onUpdateField = viewModel::updateField,
                     onFinalize = viewModel::finalizeSelected,
@@ -189,15 +189,15 @@ private fun BookdropContent(
     onToggleChecked: (Long) -> Unit,
     onSelectAll: () -> Unit,
     onDeselectAll: () -> Unit,
-    onSelectLibrary: (Long?) -> Unit,
-    onSelectPath: (Long?) -> Unit,
+    onSelectFileLibrary: (Long, Long?) -> Unit,
+    onSelectFilePath: (Long, Long?) -> Unit,
     onApplyFetchedField: (Long, String) -> Unit,
     onUpdateField: (Long, String, String) -> Unit,
     onFinalize: () -> Unit,
     onDiscard: () -> Unit,
 ) {
     val checkedCount = state.files.count { it.isChecked }
-    val selectedLibrary = state.libraries.firstOrNull { it.id == state.selectedLibraryId }
+    val allCheckedHaveLibrary = state.files.filter { it.isChecked }.all { it.libraryId != null }
 
     Column(modifier = modifier.fillMaxSize()) {
         // Controls bar
@@ -208,77 +208,53 @@ private fun BookdropContent(
             shape = RoundedCornerShape(0.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                // Library + Path dropdowns
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(
+                    onClick = onSelectAll,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    LibraryDropdown(
-                        libraries = state.libraries,
-                        selectedLibraryId = state.selectedLibraryId,
-                        onSelect = onSelectLibrary,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (selectedLibrary != null && selectedLibrary.paths.isNotEmpty()) {
-                        PathDropdown(
-                            paths = selectedLibrary.paths,
-                            selectedPathId = state.selectedPathId,
-                            onSelect = onSelectPath,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    Text("All", style = MaterialTheme.typography.labelMedium)
+                }
+                OutlinedButton(
+                    onClick = onDeselectAll,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Text("None", style = MaterialTheme.typography.labelMedium)
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
-                // Select all / deselect all + action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                OutlinedButton(
+                    onClick = onDiscard,
+                    enabled = checkedCount > 0,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
-                    OutlinedButton(
-                        onClick = onSelectAll,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        Text("All", style = MaterialTheme.typography.labelMedium)
-                    }
-                    OutlinedButton(
-                        onClick = onDeselectAll,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        Text("None", style = MaterialTheme.typography.labelMedium)
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    OutlinedButton(
-                        onClick = onDiscard,
-                        enabled = checkedCount > 0,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
-                    ) {
-                        Icon(
-                            Icons.Default.DeleteOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Discard", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Button(
-                        onClick = onFinalize,
-                        enabled = checkedCount > 0 && state.selectedLibraryId != null,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            if (checkedCount > 0) "Finalize ($checkedCount)" else "Finalize",
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Discard", style = MaterialTheme.typography.labelMedium)
+                }
+                Button(
+                    onClick = onFinalize,
+                    enabled = checkedCount > 0 && allCheckedHaveLibrary,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        if (checkedCount > 0) "Finalize ($checkedCount)" else "Finalize",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }
@@ -305,8 +281,11 @@ private fun BookdropContent(
                 items(state.files, key = { it.file.id }) { fileState ->
                     BookdropFileCard(
                         fileState = fileState,
+                        libraries = state.libraries,
                         onToggleExpanded = { onToggleExpanded(fileState.file.id) },
                         onToggleChecked = { onToggleChecked(fileState.file.id) },
+                        onSelectLibrary = { libraryId -> onSelectFileLibrary(fileState.file.id, libraryId) },
+                        onSelectPath = { pathId -> onSelectFilePath(fileState.file.id, pathId) },
                         onApplyFetchedField = { field -> onApplyFetchedField(fileState.file.id, field) },
                         onUpdateField = { field, value -> onUpdateField(fileState.file.id, field, value) },
                     )
@@ -319,8 +298,11 @@ private fun BookdropContent(
 @Composable
 private fun BookdropFileCard(
     fileState: BookdropFileState,
+    libraries: List<GrimmoryAppLibraryWithPaths>,
     onToggleExpanded: () -> Unit,
     onToggleChecked: () -> Unit,
+    onSelectLibrary: (Long?) -> Unit,
+    onSelectPath: (Long?) -> Unit,
     onApplyFetchedField: (String) -> Unit,
     onUpdateField: (String, String) -> Unit,
 ) {
@@ -399,6 +381,31 @@ private fun BookdropFileCard(
             ) {
                 Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                     HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+
+                    // Per-file library + path
+                    val selectedLibrary = libraries.firstOrNull { it.id == fileState.libraryId }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        LibraryDropdown(
+                            libraries = libraries,
+                            selectedLibraryId = fileState.libraryId,
+                            onSelect = onSelectLibrary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (selectedLibrary != null && selectedLibrary.paths.isNotEmpty()) {
+                            PathDropdown(
+                                paths = selectedLibrary.paths,
+                                selectedPathId = fileState.pathId,
+                                onSelect = onSelectPath,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
                     MetadataSection(
                         editedMetadata = metadata,
                         fetchedMetadata = file.fetchedMetadata,
@@ -426,9 +433,22 @@ private fun MetadataSection(
         MetadataField("publishedDate", "Published", editedMetadata.publishedDate, fetchedMetadata?.publishedDate),
         MetadataField("seriesName", "Series", editedMetadata.seriesName, fetchedMetadata?.seriesName),
         MetadataField("seriesNumber", "Book #", editedMetadata.seriesNumber?.toString(), fetchedMetadata?.seriesNumber?.toString()),
+        MetadataField("seriesTotal", "Total Books", editedMetadata.seriesTotal?.toString(), fetchedMetadata?.seriesTotal?.toString()),
         MetadataField("language", "Language", editedMetadata.language, fetchedMetadata?.language),
-        MetadataField("isbn13", "ISBN-13", editedMetadata.isbn13, fetchedMetadata?.isbn13),
         MetadataField("isbn10", "ISBN-10", editedMetadata.isbn10, fetchedMetadata?.isbn10),
+        MetadataField("isbn13", "ISBN-13", editedMetadata.isbn13, fetchedMetadata?.isbn13),
+        MetadataField("pageCount", "Pages", editedMetadata.pageCount?.toString(), fetchedMetadata?.pageCount?.toString()),
+        MetadataField("asin", "ASIN", editedMetadata.asin, fetchedMetadata?.asin),
+        MetadataField("googleId", "Google ID", editedMetadata.googleId, fetchedMetadata?.googleId),
+        MetadataField("amazonRating", "Amazon \u2605", editedMetadata.amazonRating?.toString(), fetchedMetadata?.amazonRating?.toString()),
+        MetadataField("amazonReviewCount", "Amazon #", editedMetadata.amazonReviewCount?.toString(), fetchedMetadata?.amazonReviewCount?.toString()),
+        MetadataField("goodreadsId", "Goodreads ID", editedMetadata.goodreadsId, fetchedMetadata?.goodreadsId),
+        MetadataField("goodreadsRating", "Goodreads \u2605", editedMetadata.goodreadsRating?.toString(), fetchedMetadata?.goodreadsRating?.toString()),
+        MetadataField("goodreadsReviewCount", "Goodreads #", editedMetadata.goodreadsReviewCount?.toString(), fetchedMetadata?.goodreadsReviewCount?.toString()),
+        MetadataField("hardcoverBookId", "HC Book ID", editedMetadata.hardcoverBookId, fetchedMetadata?.hardcoverBookId),
+        MetadataField("hardcoverId", "Hardcover ID", editedMetadata.hardcoverId, fetchedMetadata?.hardcoverId),
+        MetadataField("hardcoverRating", "Hardcover \u2605", editedMetadata.hardcoverRating?.toString(), fetchedMetadata?.hardcoverRating?.toString()),
+        MetadataField("hardcoverReviewCount", "Hardcover #", editedMetadata.hardcoverReviewCount?.toString(), fetchedMetadata?.hardcoverReviewCount?.toString()),
         MetadataField("categories", "Genres", editedMetadata.categories?.joinToString(", "), fetchedMetadata?.categories?.joinToString(", ")),
         MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description),
     )

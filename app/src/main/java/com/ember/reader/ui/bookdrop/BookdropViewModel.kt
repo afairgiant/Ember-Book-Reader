@@ -36,8 +36,6 @@ sealed interface BookdropUiState {
     data class Success(
         val files: List<BookdropFileState>,
         val libraries: List<GrimmoryAppLibraryWithPaths>,
-        val selectedLibraryId: Long?,
-        val selectedPathId: Long?,
     ) : BookdropUiState
     data class Error(val message: String) : BookdropUiState
 }
@@ -105,14 +103,20 @@ class BookdropViewModel @Inject constructor(
         updateFiles { files -> files.map { it.copy(isChecked = false) } }
     }
 
-    fun selectLibrary(libraryId: Long?) {
-        val state = _uiState.value as? BookdropUiState.Success ?: return
-        _uiState.value = state.copy(selectedLibraryId = libraryId, selectedPathId = null)
+    fun selectFileLibrary(fileId: Long, libraryId: Long?) {
+        updateFiles { files ->
+            files.map {
+                if (it.file.id == fileId) it.copy(libraryId = libraryId, pathId = null) else it
+            }
+        }
     }
 
-    fun selectPath(pathId: Long?) {
-        val state = _uiState.value as? BookdropUiState.Success ?: return
-        _uiState.value = state.copy(selectedPathId = pathId)
+    fun selectFilePath(fileId: Long, pathId: Long?) {
+        updateFiles { files ->
+            files.map {
+                if (it.file.id == fileId) it.copy(pathId = pathId) else it
+            }
+        }
     }
 
     fun applyFetchedField(fileId: Long, fieldName: String) {
@@ -129,12 +133,24 @@ class BookdropViewModel @Inject constructor(
                     "publishedDate" -> current.copy(publishedDate = fetched.publishedDate)
                     "seriesName" -> current.copy(seriesName = fetched.seriesName)
                     "seriesNumber" -> current.copy(seriesNumber = fetched.seriesNumber)
+                    "seriesTotal" -> current.copy(seriesTotal = fetched.seriesTotal)
                     "language" -> current.copy(language = fetched.language)
                     "isbn13" -> current.copy(isbn13 = fetched.isbn13)
                     "isbn10" -> current.copy(isbn10 = fetched.isbn10)
+                    "asin" -> current.copy(asin = fetched.asin)
+                    "pageCount" -> current.copy(pageCount = fetched.pageCount)
                     "categories" -> current.copy(categories = fetched.categories)
                     "description" -> current.copy(description = fetched.description)
-                    "pageCount" -> current.copy(pageCount = fetched.pageCount)
+                    "googleId" -> current.copy(googleId = fetched.googleId)
+                    "goodreadsId" -> current.copy(goodreadsId = fetched.goodreadsId)
+                    "goodreadsRating" -> current.copy(goodreadsRating = fetched.goodreadsRating)
+                    "goodreadsReviewCount" -> current.copy(goodreadsReviewCount = fetched.goodreadsReviewCount)
+                    "amazonRating" -> current.copy(amazonRating = fetched.amazonRating)
+                    "amazonReviewCount" -> current.copy(amazonReviewCount = fetched.amazonReviewCount)
+                    "hardcoverId" -> current.copy(hardcoverId = fetched.hardcoverId)
+                    "hardcoverBookId" -> current.copy(hardcoverBookId = fetched.hardcoverBookId)
+                    "hardcoverRating" -> current.copy(hardcoverRating = fetched.hardcoverRating)
+                    "hardcoverReviewCount" -> current.copy(hardcoverReviewCount = fetched.hardcoverReviewCount)
                     else -> current
                 }
                 fileState.copy(editedMetadata = updated)
@@ -155,11 +171,24 @@ class BookdropViewModel @Inject constructor(
                     "publishedDate" -> current.copy(publishedDate = value.ifBlank { null })
                     "seriesName" -> current.copy(seriesName = value.ifBlank { null })
                     "seriesNumber" -> current.copy(seriesNumber = value.toFloatOrNull())
+                    "seriesTotal" -> current.copy(seriesTotal = value.toIntOrNull())
                     "language" -> current.copy(language = value.ifBlank { null })
                     "isbn13" -> current.copy(isbn13 = value.ifBlank { null })
                     "isbn10" -> current.copy(isbn10 = value.ifBlank { null })
+                    "asin" -> current.copy(asin = value.ifBlank { null })
+                    "pageCount" -> current.copy(pageCount = value.toIntOrNull())
                     "categories" -> current.copy(categories = value.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet())
                     "description" -> current.copy(description = value.ifBlank { null })
+                    "googleId" -> current.copy(googleId = value.ifBlank { null })
+                    "goodreadsId" -> current.copy(goodreadsId = value.ifBlank { null })
+                    "goodreadsRating" -> current.copy(goodreadsRating = value.toDoubleOrNull())
+                    "goodreadsReviewCount" -> current.copy(goodreadsReviewCount = value.toIntOrNull())
+                    "amazonRating" -> current.copy(amazonRating = value.toDoubleOrNull())
+                    "amazonReviewCount" -> current.copy(amazonReviewCount = value.toIntOrNull())
+                    "hardcoverId" -> current.copy(hardcoverId = value.ifBlank { null })
+                    "hardcoverBookId" -> current.copy(hardcoverBookId = value.ifBlank { null })
+                    "hardcoverRating" -> current.copy(hardcoverRating = value.toDoubleOrNull())
+                    "hardcoverReviewCount" -> current.copy(hardcoverReviewCount = value.toIntOrNull())
                     else -> current
                 }
                 fileState.copy(editedMetadata = updated)
@@ -169,14 +198,14 @@ class BookdropViewModel @Inject constructor(
 
     fun finalizeSelected() {
         val state = _uiState.value as? BookdropUiState.Success ?: return
-        val libraryId = state.selectedLibraryId
-        if (libraryId == null) {
-            _message.value = "Select a library first"
-            return
-        }
         val checked = state.files.filter { it.isChecked }
         if (checked.isEmpty()) {
             _message.value = "No files selected"
+            return
+        }
+        val missingLibrary = checked.any { it.libraryId == null }
+        if (missingLibrary) {
+            _message.value = "Select a library for each file"
             return
         }
         val s = server ?: return
@@ -186,13 +215,11 @@ class BookdropViewModel @Inject constructor(
                 files = checked.map { fileState ->
                     BookdropFinalizeFile(
                         fileId = fileState.file.id,
-                        libraryId = fileState.libraryId ?: libraryId,
-                        pathId = fileState.pathId ?: state.selectedPathId,
+                        libraryId = fileState.libraryId!!,
+                        pathId = fileState.pathId,
                         metadata = fileState.editedMetadata,
                     )
                 },
-                defaultLibraryId = libraryId,
-                defaultPathId = state.selectedPathId,
             )
             bookdropClient.finalizeImport(s.url, s.id, request)
                 .onSuccess { result ->
@@ -260,12 +287,9 @@ class BookdropViewModel @Inject constructor(
                 )
             }
             val libraries = librariesResult.getOrDefault(emptyList())
-            val currentState = _uiState.value as? BookdropUiState.Success
             _uiState.value = BookdropUiState.Success(
                 files = fileStates,
                 libraries = libraries,
-                selectedLibraryId = currentState?.selectedLibraryId,
-                selectedPathId = currentState?.selectedPathId,
             )
         }.onFailure { error ->
             _uiState.value = BookdropUiState.Error(error.message ?: "Failed to load book drop")
