@@ -411,19 +411,67 @@ class AudiobookViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Save progress on main thread (MediaController requires it)
-        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Main.immediate) {
-            saveProgress()
-        }
-        // Stop the service if not playing
+        // Read position from MediaController on main thread (required by API),
+        // then save to DB asynchronously — never block the main thread
         val ctrl = controller
-        if (ctrl != null && !ctrl.isPlaying) {
-            ctrl.stop()
+        if (ctrl != null) {
+            val position = ctrl.currentPosition
+            val trackIndex = ctrl.currentMediaItemIndex
+            val duration = ctrl.duration
+            val trackCount = ctrl.mediaItemCount
+            val playing = ctrl.isPlaying
+
+            // Fire-and-forget: save progress on IO (survives ViewModel destruction)
+            @Suppress("OPT_IN_USAGE")
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                saveProgressSnapshot(position, trackIndex, duration, trackCount)
+            }
+
+            if (!playing) {
+                ctrl.stop()
+            }
             ctrl.release()
-        } else {
-            ctrl?.release()
         }
         controller = null
         Timber.d("AudiobookViewModel: onCleared")
+    }
+
+    private suspend fun saveProgressSnapshot(
+        position: Long,
+        trackIndex: Int,
+        duration: Long,
+        trackCount: Int,
+    ) {
+        if (duration <= 0) return
+
+        val percentage = if (trackCount > 1) {
+            val infoTracks = audiobookInfo?.tracks
+            if (!infoTracks.isNullOrEmpty()) {
+                val totalDurationMs = infoTracks.sumOf { it.durationMs }
+                if (totalDurationMs > 0) {
+                    val cumulativeMs = infoTracks.take(trackIndex).sumOf { it.durationMs } + position
+                    (cumulativeMs.toFloat() / totalDurationMs).coerceIn(0f, 1f)
+                } else {
+                    ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
+                }
+            } else {
+                ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
+            }
+        } else {
+            (position.toFloat() / duration).coerceIn(0f, 1f)
+        }
+
+        val locatorJson = org.json.JSONObject().apply {
+            put("type", "audiobook")
+            put("positionMs", position)
+            put("trackIndex", trackIndex)
+        }.toString()
+
+        readingProgressRepository.updateProgress(
+            bookId = bookId,
+            serverId = book?.serverId,
+            percentage = percentage,
+            locatorJson = locatorJson,
+        )
     }
 }
