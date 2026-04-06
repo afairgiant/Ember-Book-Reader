@@ -5,7 +5,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -45,8 +46,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import kotlin.math.abs
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,29 +87,50 @@ fun ReaderScaffold(
 
         // Left-edge brightness gesture strip
         if (!chromeVisible) {
-            val density = LocalDensity.current
+            val view = LocalView.current
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .width(40.dp)
+                    .width(24.dp)
                     .fillMaxHeight()
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures(
-                            onDragStart = {
-                                showBrightnessIndicator = true
-                                displayBrightness = if (brightness >= 0) brightness else 0.5f
-                            },
-                            onDragEnd = { showBrightnessIndicator = false },
-                            onDragCancel = { showBrightnessIndicator = false },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
-                                val heightPx = size.height.toFloat()
-                                val delta = -dragAmount / heightPx // negative because up = brighter
-                                val newBrightness = (displayBrightness + delta).coerceIn(0.01f, 1.0f)
-                                displayBrightness = newBrightness
-                                onBrightnessChange(newBrightness)
-                            },
+                    .onGloballyPositioned { coordinates ->
+                        // Exclude from system back gesture so touches reach the app
+                        val rect = android.graphics.Rect(
+                            0, 0,
+                            coordinates.size.width,
+                            coordinates.size.height,
                         )
+                        view.systemGestureExclusionRects = listOf(rect)
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            down.consume()
+                            displayBrightness = if (brightness >= 0) brightness else 0.5f
+                            var dragging = false
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: break
+                                if (!change.pressed) {
+                                    if (dragging) showBrightnessIndicator = false
+                                    break
+                                }
+                                val delta = change.positionChange()
+                                if (!dragging && abs(delta.y) > 4f) {
+                                    dragging = true
+                                    showBrightnessIndicator = true
+                                }
+                                if (dragging) {
+                                    change.consume()
+                                    val heightPx = size.height.toFloat()
+                                    val brightnessChange = -delta.y / heightPx
+                                    val newBrightness = (displayBrightness + brightnessChange).coerceIn(0.01f, 1.0f)
+                                    displayBrightness = newBrightness
+                                    onBrightnessChange(newBrightness)
+                                }
+                            }
+                        }
                     },
             )
         }
