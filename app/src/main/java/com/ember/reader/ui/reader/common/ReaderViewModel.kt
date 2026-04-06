@@ -60,6 +60,7 @@ class ReaderViewModel @Inject constructor(
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
+    val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""

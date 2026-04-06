@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ember.reader.core.database.converter.Converters
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.BookmarkDao
+import com.ember.reader.core.database.dao.DictionaryDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
 import com.ember.reader.core.database.dao.ReadingSessionDao
@@ -16,6 +17,7 @@ import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
+import com.ember.reader.core.database.entity.DictionaryEntryEntity
 import com.ember.reader.core.database.entity.ReadingSessionEntity
 import com.ember.reader.core.database.entity.ServerEntity
 
@@ -26,9 +28,10 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingProgressEntity::class,
         BookmarkEntity::class,
         HighlightEntity::class,
-        ReadingSessionEntity::class
+        ReadingSessionEntity::class,
+        DictionaryEntryEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -92,6 +95,23 @@ abstract class EmberDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE dictionary_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        word TEXT NOT NULL,
+                        phonetic TEXT,
+                        definitions TEXT NOT NULL,
+                        cachedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX index_dictionary_cache_word ON dictionary_cache(word)")
+            }
+        }
+
         /**
          * Migration 1→2: Change books foreign key from CASCADE to SET_NULL
          * so deleting a server doesn't destroy downloaded books.
@@ -135,4 +155,5 @@ abstract class EmberDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun highlightDao(): HighlightDao
     abstract fun readingSessionDao(): ReadingSessionDao
+    abstract fun dictionaryDao(): DictionaryDao
 }

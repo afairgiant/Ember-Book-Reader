@@ -52,6 +52,8 @@ import com.ember.reader.ui.reader.common.HighlightColorPicker
 import com.ember.reader.ui.reader.common.HighlightsSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
+import com.ember.reader.core.dictionary.DictionaryRepository
+import com.ember.reader.ui.reader.common.DictionarySheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
@@ -165,6 +167,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var showAnnotationDialog by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     var editingHighlight by remember { mutableStateOf<Highlight?>(null) }
+    var dictionaryWord by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     // Selection action handler — called from ActionMode.Callback
@@ -282,11 +285,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                     R.id.action_define -> {
                                         val text = selection.locator.text.highlight ?: ""
                                         if (text.isNotBlank()) {
-                                            val defineIntent = Intent(Intent.ACTION_DEFINE).apply {
-                                                putExtra(Intent.EXTRA_TEXT, text)
-                                            }
-                                            val fallbackUrl = "https://en.wiktionary.org/wiki/${java.net.URLEncoder.encode(text.trim().split("\\s+".toRegex()).first(), "UTF-8")}"
-                                            context.launchIntentOrFallback(defineIntent, fallbackUrl)
+                                            // Use the first word for single-word lookup, or full text for phrases
+                                            dictionaryWord = text.trim()
                                         }
                                         manager.clearSelection()
                                     }
@@ -548,6 +548,14 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         showSearch = false
                     },
                     onDismiss = { showSearch = false }
+                )
+            }
+
+            dictionaryWord?.let { word ->
+                DictionarySheet(
+                    word = word,
+                    dictionaryRepository = viewModel.dictionaryRepository,
+                    onDismiss = { dictionaryWord = null },
                 )
             }
 
