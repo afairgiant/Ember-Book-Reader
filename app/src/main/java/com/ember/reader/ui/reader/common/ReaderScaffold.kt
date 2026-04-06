@@ -5,6 +5,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
@@ -15,10 +17,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -40,7 +44,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
@@ -61,11 +69,87 @@ fun ReaderScaffold(
     onOpenHighlights: () -> Unit = {},
     onOpenBookmarks: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
+    brightness: Float = -1f,
+    onBrightnessChange: (Float) -> Unit = {},
     content: @Composable () -> Unit
 ) {
+    var showBrightnessIndicator by remember { mutableStateOf(false) }
+    var displayBrightness by remember { mutableFloatStateOf(if (brightness >= 0) brightness else 0.5f) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Content fills the entire screen — bars overlay on top
         content()
+
+        // Left-edge brightness gesture strip
+        if (!chromeVisible) {
+            val density = LocalDensity.current
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(40.dp)
+                    .fillMaxHeight()
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragStart = {
+                                showBrightnessIndicator = true
+                                displayBrightness = if (brightness >= 0) brightness else 0.5f
+                            },
+                            onDragEnd = { showBrightnessIndicator = false },
+                            onDragCancel = { showBrightnessIndicator = false },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                val heightPx = size.height.toFloat()
+                                val delta = -dragAmount / heightPx // negative because up = brighter
+                                val newBrightness = (displayBrightness + delta).coerceIn(0.01f, 1.0f)
+                                displayBrightness = newBrightness
+                                onBrightnessChange(newBrightness)
+                            },
+                        )
+                    },
+            )
+        }
+
+        // Brightness indicator
+        if (showBrightnessIndicator) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = 48.dp)
+                    .width(36.dp)
+                    .height(140.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                // Background track
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
+                )
+                // Fill level
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight(displayBrightness)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+                // Percentage label
+                Text(
+                    text = "${(displayBrightness * 100).roundToInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-4).dp),
+                )
+            }
+        }
 
         // Bookmark ribbon indicator hanging from top-right
         if (hasBookmarkAtCurrentPosition) {

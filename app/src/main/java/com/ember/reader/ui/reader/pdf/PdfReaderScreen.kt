@@ -194,7 +194,9 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 },
                 onOpenBookmarks = { showBookmarks = true },
                 onOpenTableOfContents = {},
-                onOpenPreferences = { showPreferences = true }
+                onOpenPreferences = { showPreferences = true },
+                brightness = preferences.brightness,
+                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
             ) {
                 NavigatorContainer(
                     key = state.publication,

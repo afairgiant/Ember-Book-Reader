@@ -228,7 +228,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                             navigator?.go(it)
                         }
                     }
-                }
+                },
+                brightness = preferences.brightness,
+                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
             ) {
                 NavigatorContainer(
                     key = state.publication,
