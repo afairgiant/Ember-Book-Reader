@@ -172,6 +172,9 @@
     <string name="edit_highlight">Edit Highlight</string>
     <string name="annotation_hint">Add a note&#8230;</string>
     <string name="copy">Copy</string>
+    <string name="define">Define</string>
+    <string name="search_web">Search Web</string>
+    <string name="translate">Translate</string>
     <string name="highlights_cd">Highlights</string>
 
     <!-- Reader: Search -->

@@ -1,5 +1,6 @@
 package com.ember.reader.ui.reader.epub
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import androidx.compose.foundation.clickable
@@ -177,6 +178,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 menu.add(0, R.id.action_highlight, 0, R.string.highlight_action)
                 menu.add(0, R.id.action_add_note, 1, R.string.add_note)
                 menu.add(0, R.id.action_copy, 2, R.string.copy)
+                menu.add(0, R.id.action_define, 3, R.string.define)
+                menu.add(0, R.id.action_search_web, 4, R.string.search_web)
+                menu.add(0, R.id.action_translate, 5, R.string.translate)
                 return true
             }
             override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
@@ -273,6 +277,38 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                         val text = selection.locator.text.highlight ?: ""
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
+                                        manager.clearSelection()
+                                    }
+                                    R.id.action_define -> {
+                                        val text = selection.locator.text.highlight ?: ""
+                                        if (text.isNotBlank()) {
+                                            val defineIntent = Intent(Intent.ACTION_DEFINE).apply {
+                                                putExtra(Intent.EXTRA_TEXT, text)
+                                            }
+                                            val fallbackUrl = "https://en.wiktionary.org/wiki/${java.net.URLEncoder.encode(text.trim().split("\\s+".toRegex()).first(), "UTF-8")}"
+                                            context.launchIntentOrFallback(defineIntent, fallbackUrl)
+                                        }
+                                        manager.clearSelection()
+                                    }
+                                    R.id.action_search_web -> {
+                                        val text = selection.locator.text.highlight ?: ""
+                                        if (text.isNotBlank()) {
+                                            val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                                                putExtra(android.app.SearchManager.QUERY, text)
+                                            }
+                                            val fallbackUrl = "https://www.google.com/search?q=${java.net.URLEncoder.encode(text, "UTF-8")}"
+                                            context.launchIntentOrFallback(searchIntent, fallbackUrl)
+                                        }
+                                        manager.clearSelection()
+                                    }
+                                    R.id.action_translate -> {
+                                        val text = selection.locator.text.highlight ?: ""
+                                        if (text.isNotBlank()) {
+                                            val translateIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                data = android.net.Uri.parse("https://translate.google.com/?sl=auto&tl=en&text=${java.net.URLEncoder.encode(text, "UTF-8")}")
+                                            }
+                                            context.startActivity(translateIntent)
+                                        }
                                         manager.clearSelection()
                                     }
                                 }
@@ -673,5 +709,13 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
         wordSpacing = wordSpacing.toDouble(),
         letterSpacing = letterSpacing.toDouble()
     )
+}
+
+private fun android.content.Context.launchIntentOrFallback(intent: Intent, fallbackUrl: String) {
+    if (intent.resolveActivity(packageManager) != null) {
+        startActivity(intent)
+    } else {
+        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(fallbackUrl)))
+    }
 }
 

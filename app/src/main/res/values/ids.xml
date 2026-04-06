@@ -3,4 +3,7 @@
     <item name="action_highlight" type="id" />
     <item name="action_add_note" type="id" />
     <item name="action_copy" type="id" />
+    <item name="action_define" type="id" />
+    <item name="action_search_web" type="id" />
+    <item name="action_translate" type="id" />
 </resources>
