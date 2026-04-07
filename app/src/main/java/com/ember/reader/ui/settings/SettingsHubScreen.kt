@@ -302,12 +302,21 @@ private fun ServerRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            Icons.Default.CloudQueue,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp),
-        )
+        if (server.isGrimmory) {
+            Icon(
+                painter = painterResource(R.drawable.ic_grimmory),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(22.dp),
+            )
+        } else {
+            Icon(
+                Icons.Default.CloudQueue,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(

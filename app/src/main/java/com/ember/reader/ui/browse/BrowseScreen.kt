@@ -19,6 +19,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material3.Card
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.ember.reader.R
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -142,12 +145,21 @@ private fun BrowseServerCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.CloudQueue,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp),
-            )
+            if (server.isGrimmory) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_grimmory),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(28.dp),
+                )
+            } else {
+                Icon(
+                    Icons.Default.CloudQueue,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

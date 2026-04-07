@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.GrimmoryFavoriteDay
 import com.ember.reader.core.grimmory.GrimmoryPeakHour
@@ -255,10 +257,10 @@ fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltView
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            Icons.Default.Cloud,
+                            painter = painterResource(R.drawable.ic_grimmory),
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color.Unspecified,
                         )
                         Text(
                             text = stringResource(R.string.grimmory_stats),
