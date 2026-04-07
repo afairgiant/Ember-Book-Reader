@@ -2,27 +2,34 @@ package com.ember.reader.core.dictionary.di
 
 import com.ember.reader.core.database.EmberDatabase
 import com.ember.reader.core.database.dao.DictionaryDao
+import com.ember.reader.core.dictionary.ChainedDictionaryProvider
 import com.ember.reader.core.dictionary.DictionaryProvider
 import com.ember.reader.core.dictionary.FreeDictionaryApiProvider
-import dagger.Binds
+import com.ember.reader.core.dictionary.WiktionaryProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 /**
- * To swap dictionary sources, change the @Binds binding below.
- * For example, bind an OfflineDictionaryProvider instead of FreeDictionaryApiProvider.
+ * Wires up the dictionary provider chain. Wiktionary is tried first for its
+ * much broader coverage; Free Dictionary API is the fallback for the rarer
+ * cases where Wiktionary misses but also brings phonetics to the table.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class DictionaryModule {
+object DictionaryModule {
 
-    @Binds
-    abstract fun bindDictionaryProvider(impl: FreeDictionaryApiProvider): DictionaryProvider
+    @Provides
+    @Singleton
+    fun provideDictionaryProvider(
+        wiktionary: WiktionaryProvider,
+        freeDictionary: FreeDictionaryApiProvider,
+    ): DictionaryProvider = ChainedDictionaryProvider(
+        providers = listOf(wiktionary, freeDictionary),
+    )
 
-    companion object {
-        @Provides
-        fun provideDictionaryDao(database: EmberDatabase): DictionaryDao = database.dictionaryDao()
-    }
+    @Provides
+    fun provideDictionaryDao(database: EmberDatabase): DictionaryDao = database.dictionaryDao()
 }

@@ -170,6 +170,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Built-in dictionary lookup (or Android system dictionary intent)
 - [ ] Wikipedia / web search for selected text
 - [ ] Translate selected text (via Android translation intent)
+- [ ] **Crowdsourced dictionary cache on Grimmory**: add a `/api/v1/dictionary/{word}` endpoint to Grimmory that Ember queries before falling through to Free Dictionary / Wiktionary. Every successful upstream lookup is POSTed back to Grimmory so the server gradually builds a SQLite library of words its users actually read. Over time most lookups would be served from the user's own server — fast, offline-from-the-internet, and shareable across all clients on that Grimmory instance.
 
 ### Highlights & Annotations
 - [x] Select text → highlight with color picker (custom ActionMode.Callback with Highlight/Note/Copy)

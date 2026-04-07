@@ -219,6 +219,17 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                 }
             }
 
+            // Clear dictionary cache (temporary debug button)
+            item {
+                OutlinedButton(
+                    onClick = viewModel::clearDictionaryCache,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Clear Dictionary Cache")
+                }
+            }
+
             // Recovery result message
             if (recoveryResult != null) {
                 item {

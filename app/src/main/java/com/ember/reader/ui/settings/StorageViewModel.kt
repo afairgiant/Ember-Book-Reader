@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.StatFs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.database.dao.DictionaryDao
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +30,8 @@ enum class StorageSortMode(val displayName: String) {
 @HiltViewModel
 class StorageViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val dictionaryDao: DictionaryDao,
 ) : ViewModel() {
 
     private val _sortMode = MutableStateFlow(StorageSortMode.LATEST_FIRST)
@@ -105,6 +107,14 @@ class StorageViewModel @Inject constructor(
 
     fun dismissRecoveryResult() {
         _recoveryResult.value = null
+    }
+
+    fun clearDictionaryCache() {
+        viewModelScope.launch {
+            val before = dictionaryDao.count()
+            dictionaryDao.clearAll()
+            _recoveryResult.value = "Cleared $before dictionary entries"
+        }
     }
 }
 
