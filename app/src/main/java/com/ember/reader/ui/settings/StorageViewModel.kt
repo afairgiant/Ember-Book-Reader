@@ -43,7 +43,7 @@ class StorageViewModel @Inject constructor(
     val uiState: StateFlow<StorageUiState> = combine(
         bookRepository.observeServerDownloads().map { books ->
             books.map { book ->
-                val fileSize = book.localPath?.let { File(it).length() } ?: 0L
+                val fileSize = book.localPath?.let { sizeOf(File(it)) } ?: 0L
                 DownloadedBookItem(book = book, fileSize = fileSize)
             }
         },
@@ -129,6 +129,17 @@ data class DownloadedBookItem(
     val book: Book,
     val fileSize: Long
 )
+
+/**
+ * Returns the size of a file, or the recursive size of all files inside a
+ * directory. Folder-based audiobooks store each track as a separate file under
+ * an `audiobook_<id>/` directory, so a plain `File.length()` returns 0 for them.
+ */
+private fun sizeOf(file: File): Long {
+    if (!file.exists()) return 0L
+    if (file.isFile) return file.length()
+    return file.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+}
 
 fun Long.toReadableSize(): String = when {
     this < 1024 -> "$this B"

@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
+import com.ember.reader.core.model.BookFormat
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -186,7 +188,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "${uiState.downloadedBooks.size} books",
+                                    text = "${uiState.downloadedBooks.size} ${if (uiState.downloadedBooks.size == 1) "item" else "items"}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -272,7 +274,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Downloaded Books",
+                        text = "Downloads",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
@@ -297,7 +299,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
             if (uiState.downloadedBooks.isEmpty()) {
                 item {
                     Text(
-                        text = "No downloaded books",
+                        text = "No downloads",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -321,7 +323,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Deleting a book removes it from this device only. You can re-download any titles from your library at any time.",
+                    text = "Deleting a download removes it from this device only. You can re-download any titles from your library at any time.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -388,16 +390,17 @@ private fun DownloadedBookCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val (bg, fg) = formatBadgeColors(item.book.format)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(bg)
                     ) {
                         Text(
                             text = item.book.format.name,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = fg,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
                         )
                     }
@@ -420,4 +423,15 @@ private fun DownloadedBookCard(
             }
         }
     }
+}
+
+/**
+ * Distinct background/foreground colors per book format so the badge is
+ * scannable at a glance. Tuned to read on both light and dark backgrounds.
+ */
+@Composable
+private fun formatBadgeColors(format: BookFormat): Pair<Color, Color> = when (format) {
+    BookFormat.EPUB -> Color(0xFF1E88E5).copy(alpha = 0.18f) to Color(0xFF1E88E5)
+    BookFormat.PDF -> Color(0xFFE53935).copy(alpha = 0.18f) to Color(0xFFE53935)
+    BookFormat.AUDIOBOOK -> Color(0xFF8E24AA).copy(alpha = 0.18f) to Color(0xFF8E24AA)
 }
