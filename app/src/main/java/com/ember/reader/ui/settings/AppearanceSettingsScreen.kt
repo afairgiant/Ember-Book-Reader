@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.repository.ThemeMode
+import com.ember.reader.ui.reader.common.ReaderPreferencesContent
 import com.ember.reader.ui.settings.components.SettingsDetailRow
 import com.ember.reader.ui.settings.components.SettingsDivider
 import com.ember.reader.ui.settings.components.SettingsGroup
@@ -40,9 +41,11 @@ import com.ember.reader.ui.settings.components.SettingsToggleRow
 fun AppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
+    readerDefaultsViewModel: ReaderDefaultsViewModel = hiltViewModel(),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
+    val readerDefaults by readerDefaultsViewModel.preferences.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -91,6 +94,22 @@ fun AppearanceSettingsScreen(
                     checked = keepScreenOn,
                     onCheckedChange = { viewModel.updateKeepScreenOn(it) },
                 )
+            }
+
+            SettingsGroup(title = "Reader Defaults") {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        text = "These settings apply to every book unless that book has its own customizations.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+                    ReaderPreferencesContent(
+                        preferences = readerDefaults,
+                        onPreferencesChanged = readerDefaultsViewModel::updatePreferences,
+                        isPdf = false,
+                    )
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
 import com.ember.reader.core.repository.AppPreferencesRepository
+import com.ember.reader.core.repository.BookReaderPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.HighlightRepository
@@ -53,6 +54,7 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkRepository: BookmarkRepository,
     private val highlightRepository: HighlightRepository,
     private val readerPreferencesRepository: ReaderPreferencesRepository,
+    private val bookReaderPreferencesRepository: BookReaderPreferencesRepository,
     private val serverRepository: ServerRepository,
     private val syncPreferencesRepository: SyncPreferencesRepository,
     private val grimmoryClient: GrimmoryClient,
@@ -74,9 +76,20 @@ class ReaderViewModel @Inject constructor(
     private val _syncConflict = MutableStateFlow<SyncConflict?>(null)
     val syncConflict: StateFlow<SyncConflict?> = _syncConflict.asStateFlow()
 
+    // Per-book overrides take priority over global defaults. Falls back to the
+    // global flow when bookId is unset (defensive — shouldn't happen in practice).
     val preferences: StateFlow<ReaderPreferences> =
-        readerPreferencesRepository.preferencesFlow
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReaderPreferences())
+        if (bookId.isNotEmpty()) {
+            bookReaderPreferencesRepository.observeEffective(bookId)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReaderPreferences())
+        } else {
+            readerPreferencesRepository.preferencesFlow
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReaderPreferences())
+        }
+
+    val hasBookOverride: StateFlow<Boolean> =
+        bookReaderPreferencesRepository.observeHasOverride(bookId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val keepScreenOn: StateFlow<Boolean> = appPreferencesRepository.keepScreenOnFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -281,7 +294,21 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun updatePreferences(preferences: ReaderPreferences) {
-        viewModelScope.launch { readerPreferencesRepository.updatePreferences(preferences) }
+        viewModelScope.launch {
+            if (bookId.isNotEmpty()) {
+                // Forks the book away from global defaults — first edit creates
+                // an override row, subsequent edits replace it.
+                bookReaderPreferencesRepository.saveOverride(bookId, preferences)
+            } else {
+                readerPreferencesRepository.updatePreferences(preferences)
+            }
+        }
+    }
+
+    /** Removes the per-book override so the book inherits global defaults again. */
+    fun resetPreferencesToDefaults() {
+        if (bookId.isEmpty()) return
+        viewModelScope.launch { bookReaderPreferencesRepository.clearOverride(bookId) }
     }
 
     /** Save current progress immediately. Called on Activity pause (screen lock, app background). */

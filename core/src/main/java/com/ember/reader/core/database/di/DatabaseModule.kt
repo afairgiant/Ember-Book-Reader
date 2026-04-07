@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.ember.reader.core.database.EmberDatabase
 import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.database.dao.BookReaderPreferencesDao
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
@@ -27,7 +28,7 @@ object DatabaseModule {
         EmberDatabase::class.java,
         "ember.db"
     )
-        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8)
+        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8, EmberDatabase.MIGRATION_8_9)
         .build()
 
     @Provides
@@ -49,4 +50,8 @@ object DatabaseModule {
     @Provides
     fun provideReadingSessionDao(database: EmberDatabase): ReadingSessionDao =
         database.readingSessionDao()
+
+    @Provides
+    fun provideBookReaderPreferencesDao(database: EmberDatabase): BookReaderPreferencesDao =
+        database.bookReaderPreferencesDao()
 }

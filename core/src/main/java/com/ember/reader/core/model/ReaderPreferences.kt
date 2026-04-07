@@ -1,5 +1,8 @@
 package com.ember.reader.core.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ReaderPreferences(
     val fontFamily: FontFamily = FontFamily.SYSTEM,
     val fontSize: Float = 16f,
@@ -28,11 +31,13 @@ data class ReaderPreferences(
     val pdfPageSpacing: Float = 8f,
 )
 
+@Serializable
 enum class PdfFitMode(val displayName: String) {
     WIDTH("Fit Width"),
     CONTAIN("Fit Page"),
 }
 
+@Serializable
 enum class TapZoneBehavior(val displayName: String) {
     PREVIOUS_PAGE("Previous Page"),
     NEXT_PAGE("Next Page"),
@@ -40,18 +45,21 @@ enum class TapZoneBehavior(val displayName: String) {
     NOTHING("Nothing")
 }
 
+@Serializable
 enum class TextAlign(val displayName: String) {
     START("Left"),
     JUSTIFY("Justify"),
     CENTER("Center")
 }
 
+@Serializable
 enum class OrientationLock(val displayName: String) {
     AUTO("Auto"),
     PORTRAIT("Portrait"),
     LANDSCAPE("Landscape")
 }
 
+@Serializable
 enum class FontFamily(val displayName: String, val cssValue: String?) {
     SYSTEM("System Default", null),
     SERIF("Serif", "serif"),
@@ -67,6 +75,7 @@ enum class FontFamily(val displayName: String, val cssValue: String?) {
  *
  * Color values sourced from Grimmory's web reader theme palette.
  */
+@Serializable
 enum class ReaderTheme(
     val displayName: String,
     val foregroundColor: Long,

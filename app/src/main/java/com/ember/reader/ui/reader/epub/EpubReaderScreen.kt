@@ -84,6 +84,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val hasBookOverride by viewModel.hasBookOverride.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val highlights by viewModel.highlights.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
@@ -563,7 +564,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 ReaderPreferencesSheet(
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
-                    onDismiss = { showPreferences = false }
+                    onDismiss = { showPreferences = false },
+                    hasOverride = hasBookOverride,
+                    onResetToDefaults = viewModel::resetPreferencesToDefaults,
                 )
             }
 

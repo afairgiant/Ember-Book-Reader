@@ -7,6 +7,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ember.reader.core.database.converter.Converters
 import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.database.dao.BookReaderPreferencesDao
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.DictionaryDao
 import com.ember.reader.core.database.dao.HighlightDao
@@ -14,6 +15,7 @@ import com.ember.reader.core.database.dao.ReadingProgressDao
 import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.BookEntity
+import com.ember.reader.core.database.entity.BookReaderPreferencesEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
@@ -30,8 +32,9 @@ import com.ember.reader.core.database.entity.ServerEntity
         HighlightEntity::class,
         ReadingSessionEntity::class,
         DictionaryEntryEntity::class,
+        BookReaderPreferencesEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -112,6 +115,20 @@ abstract class EmberDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE book_reader_preferences (
+                        bookId TEXT NOT NULL PRIMARY KEY,
+                        preferencesJson TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         /**
          * Migration 1→2: Change books foreign key from CASCADE to SET_NULL
          * so deleting a server doesn't destroy downloaded books.
@@ -156,4 +173,5 @@ abstract class EmberDatabase : RoomDatabase() {
     abstract fun highlightDao(): HighlightDao
     abstract fun readingSessionDao(): ReadingSessionDao
     abstract fun dictionaryDao(): DictionaryDao
+    abstract fun bookReaderPreferencesDao(): BookReaderPreferencesDao
 }

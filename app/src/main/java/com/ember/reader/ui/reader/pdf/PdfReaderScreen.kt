@@ -50,6 +50,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     val chromeVisible by viewModel.chromeVisible.collectAsStateWithLifecycle()
     val currentLocator by viewModel.currentLocator.collectAsStateWithLifecycle()
     val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val hasBookOverride by viewModel.hasBookOverride.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
@@ -300,6 +301,8 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     onPreferencesChanged = viewModel::updatePreferences,
                     onDismiss = { showPreferences = false },
                     isPdf = true,
+                    hasOverride = hasBookOverride,
+                    onResetToDefaults = viewModel::resetPreferencesToDefaults,
                 )
             }
 
