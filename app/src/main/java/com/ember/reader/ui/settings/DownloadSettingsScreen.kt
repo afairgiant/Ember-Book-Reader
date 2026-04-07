@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
-import com.ember.reader.ui.settings.components.SettingsDivider
 import com.ember.reader.ui.settings.components.SettingsGroup
 import com.ember.reader.ui.settings.components.SettingsToggleRow
 
@@ -46,7 +44,6 @@ fun DownloadSettingsScreen(
     onOpenStorage: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
-    val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
     val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -72,16 +69,6 @@ fun DownloadSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SettingsGroup(title = "Automatic") {
-                SettingsToggleRow(
-                    icon = Icons.Default.Download,
-                    title = stringResource(R.string.auto_download_reading),
-                    subtitle = stringResource(R.string.auto_download_reading_hint),
-                    checked = autoDownloadReading,
-                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
-                )
-
-                SettingsDivider()
-
                 SettingsToggleRow(
                     icon = Icons.Default.CleaningServices,
                     title = stringResource(R.string.auto_cleanup),

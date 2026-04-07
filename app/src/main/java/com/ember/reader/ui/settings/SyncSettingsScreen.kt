@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sync
@@ -66,6 +67,7 @@ fun SyncSettingsScreen(
     val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
     val syncHighlights by viewModel.syncHighlights.collectAsStateWithLifecycle()
     val syncBookmarks by viewModel.syncBookmarks.collectAsStateWithLifecycle()
+    val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -143,6 +145,16 @@ fun SyncSettingsScreen(
                     subtitle = "Sync bookmarks with Grimmory",
                     checked = syncBookmarks,
                     onCheckedChange = { viewModel.updateSyncBookmarks(it) },
+                )
+
+                SettingsDivider()
+
+                SettingsToggleRow(
+                    icon = Icons.Default.Download,
+                    title = stringResource(R.string.auto_download_reading),
+                    subtitle = stringResource(R.string.auto_download_reading_hint),
+                    checked = autoDownloadReading,
+                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
                 )
             }
 
