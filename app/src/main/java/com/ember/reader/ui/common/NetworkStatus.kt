@@ -37,18 +37,24 @@ fun rememberNetworkAvailable(): State<Boolean> {
 
     DisposableEffect(Unit) {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val availableNetworks = mutableSetOf<Network>()
 
-        // Check current state
+        // Seed from current active network so the initial value is correct
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = activeNetwork?.let { connectivityManager.getNetworkCapabilities(it) }
-        isAvailable.value = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        if (capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true) {
+            availableNetworks.add(activeNetwork)
+        }
+        isAvailable.value = availableNetworks.isNotEmpty()
 
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                isAvailable.value = true
+                availableNetworks.add(network)
+                isAvailable.value = availableNetworks.isNotEmpty()
             }
             override fun onLost(network: Network) {
-                isAvailable.value = false
+                availableNetworks.remove(network)
+                isAvailable.value = availableNetworks.isNotEmpty()
             }
         }
 
