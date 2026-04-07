@@ -23,7 +23,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -41,6 +43,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +67,9 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelecting = selectedIds.isNotEmpty()
+
+    var pendingSingleDelete by remember { mutableStateOf<DownloadedBookItem?>(null) }
+    var pendingBatchDelete by remember { mutableStateOf(false) }
 
     val usageFraction = if (uiState.deviceTotalBytes > 0) {
         (uiState.totalSize.toFloat() / uiState.deviceTotalBytes).coerceIn(0f, 1f)
@@ -108,7 +116,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                             }
                         }
                         Button(
-                            onClick = viewModel::deleteSelected,
+                            onClick = { pendingBatchDelete = true },
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(
@@ -310,7 +318,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                         item = item,
                         isSelected = item.book.id in selectedIds,
                         isSelecting = isSelecting,
-                        onRemove = { viewModel.removeDownload(item.book.id) },
+                        onRemove = { pendingSingleDelete = item },
                         onClick = {
                             if (isSelecting) viewModel.toggleSelection(item.book.id)
                         },
@@ -329,6 +337,55 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                 )
             }
         }
+    }
+
+    pendingSingleDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingSingleDelete = null },
+            title = { Text("Delete download?") },
+            text = {
+                Text("\"${target.book.title}\" will be removed from this device. You can re-download it from your library at any time.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removeDownload(target.book.id)
+                        pendingSingleDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSingleDelete = null }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (pendingBatchDelete) {
+        val count = selectedIds.size
+        AlertDialog(
+            onDismissRequest = { pendingBatchDelete = false },
+            title = { Text("Delete $count ${if (count == 1) "download" else "downloads"}?") },
+            text = {
+                Text("These items will be removed from this device. You can re-download them from your library at any time.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSelected()
+                        pendingBatchDelete = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBatchDelete = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 
