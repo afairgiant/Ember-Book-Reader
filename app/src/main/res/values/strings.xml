@@ -49,6 +49,49 @@
     <string name="no_books_found">No books found</string>
     <string name="toggle_view">Toggle view</string>
 
+    <!-- Library toolbar / filters / sort / layout -->
+    <string name="library_count">%d books</string>
+    <string name="filter">Filter</string>
+    <string name="sort">Sort</string>
+    <string name="layout">Layout</string>
+    <string name="sort_by">Sort by</string>
+    <string name="group_by">Group by</string>
+    <string name="group_none">None</string>
+    <string name="group_series">Series</string>
+    <string name="group_format">Format</string>
+    <string name="group_status">Status</string>
+    <string name="sort_recent">Recent</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_author">Author</string>
+    <string name="sort_progress">Progress</string>
+    <string name="sort_date_added">Date added</string>
+    <string name="sort_file_size">File size</string>
+    <string name="view_mode">View</string>
+    <string name="view_grid">Grid</string>
+    <string name="view_list">List</string>
+    <string name="view_compact">Compact</string>
+    <string name="density">Density</string>
+    <string name="show_continue_reading">Show Continue Reading</string>
+    <string name="card_info">Card info</string>
+    <string name="card_progress">Progress bar</string>
+    <string name="card_author">Author</string>
+    <string name="card_source_badge">Source badge</string>
+    <string name="card_format_badge">Format badge</string>
+    <string name="quick_presets">Quick presets</string>
+    <string name="format">Format</string>
+    <string name="source">Source</string>
+    <string name="status">Status</string>
+    <string name="status_reading">Reading</string>
+    <string name="status_unread">Unread</string>
+    <string name="status_finished">Finished</string>
+    <string name="preset_currently_reading">Currently Reading</string>
+    <string name="preset_unread">Unread</string>
+    <string name="preset_finished">Finished</string>
+    <string name="preset_downloaded">Downloaded</string>
+    <string name="preset_audiobooks">Audiobooks</string>
+    <string name="clear_filters">Clear filters</string>
+    <string name="no_matches">No matches</string>
+
     <!-- Delete confirmation -->
     <string name="delete_book_title">Delete Book</string>
     <string name="delete_book_message">Remove \"%1$s\" from your library? The file will be deleted from your device.</string>
