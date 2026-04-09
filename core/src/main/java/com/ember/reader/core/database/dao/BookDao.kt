@@ -76,6 +76,15 @@ interface BookDao {
     @Query("DELETE FROM books WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("SELECT opdsEntryId FROM books WHERE serverId = :serverId AND opdsEntryId IS NOT NULL")
+    suspend fun getOpdsEntryIdsForServer(serverId: Long): List<String>
+
+    @Query("DELETE FROM books WHERE serverId = :serverId AND localPath IS NULL AND opdsEntryId IN (:opdsEntryIds)")
+    suspend fun deleteServerBooksByOpdsEntryIds(serverId: Long, opdsEntryIds: List<String>)
+
+    @Query("UPDATE books SET serverId = NULL WHERE serverId = :serverId AND localPath IS NOT NULL AND opdsEntryId IN (:opdsEntryIds)")
+    suspend fun detachServerAssociation(serverId: Long, opdsEntryIds: List<String>)
+
     @Query(
         """
         SELECT * FROM books

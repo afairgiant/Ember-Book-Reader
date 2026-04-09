@@ -132,6 +132,23 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * True when the current view is a full unfiltered catalog root (not a shelf, library, series,
+     * search, or subcategory). Reconcile/prune only runs for these.
+     */
+    private fun isUnfilteredRootView(): Boolean {
+        if (catalogPath.startsWith("grimmory:")) {
+            val params = catalogPath.removePrefix("grimmory:")
+            if (params.isEmpty() || params == "all") return true
+            // grimmory:sort=... with no libraryId/shelfId/seriesName/status/search is still root
+            val keys = params.split("&").mapNotNull { it.substringBefore("=", "").takeIf { k -> k.isNotEmpty() } }.toSet()
+            val filterKeys = setOf("libraryId", "shelfId", "seriesName", "status", "search")
+            return keys.none { it in filterKeys }
+        }
+        // OPDS: root path has no query string
+        return "?" !in catalogPath && catalogPath.isNotEmpty()
+    }
+
     fun refresh() {
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
@@ -139,6 +156,19 @@ class LibraryViewModel @Inject constructor(
         _nextPagePath.value = null
         _isRefreshing.value = true
         viewModelScope.launch {
+            // Full catalog reconcile (prunes deleted books) only on unfiltered root views.
+            // Filtered/paginated/subcategory refreshes stay upsert-only so browsing a shelf
+            // or series doesn't wipe books outside its scope.
+            if (!isSubcategory && isUnfilteredRootView()) {
+                if (catalogPath == "grimmory:all" || catalogPath == "grimmory:") {
+                    bookRepository.reconcileGrimmoryLibrary(currentServer)
+                        .onFailure { timber.log.Timber.w(it, "LibraryVM: grimmory reconcile failed, skipping prune") }
+                } else if (!catalogPath.startsWith("grimmory:")) {
+                    bookRepository.reconcileOpdsLibrary(currentServer, rootPath = catalogPath)
+                        .onFailure { timber.log.Timber.w(it, "LibraryVM: opds reconcile failed, skipping prune") }
+                }
+            }
+
             val result = if (catalogPath.startsWith("grimmory:")) {
                 refreshFromGrimmory(currentServer)
             } else {

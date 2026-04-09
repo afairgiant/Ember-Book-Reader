@@ -235,6 +235,161 @@ class BookRepository @Inject constructor(
         )
     }
 
+    /**
+     * Walks every page of the unfiltered Grimmory catalog, upserting books as it goes, then prunes
+     * server-scoped rows whose opdsEntryId wasn't seen. Downloaded stale books are detached
+     * (serverId = NULL) so the file remains in the local library. Undownloaded stale books are
+     * deleted outright.
+     *
+     * If any page fetch fails, the reconcile aborts WITHOUT deleting anything — a partial fetch
+     * would falsely flag books as missing.
+     */
+    suspend fun reconcileGrimmoryLibrary(server: Server): Result<Int> = runCatching {
+        val seenOpdsIds = mutableSetOf<String>()
+        val origin = serverOrigin(server.url)
+        var page = 0
+        val pageSize = 200
+
+        while (true) {
+            val appPage = grimmoryAppClient.getBooks(
+                baseUrl = server.url,
+                serverId = server.id,
+                page = page,
+                size = pageSize,
+            ).getOrElse { throw it }
+
+            for (appBook in appPage.content) {
+                val opdsEntryId = "urn:booklore:book:${appBook.id}"
+                seenOpdsIds.add(opdsEntryId)
+                upsertGrimmoryBook(server.id, origin, opdsEntryId, appBook)
+            }
+
+            if (!appPage.hasNext) break
+            page++
+        }
+
+        pruneStaleServerBooks(server.id, seenOpdsIds)
+    }
+
+    /**
+     * Walks every page of an OPDS catalog path, upserting books as it goes, then prunes stale rows
+     * the same way as [reconcileGrimmoryLibrary].
+     */
+    suspend fun reconcileOpdsLibrary(server: Server, rootPath: String): Result<Int> = runCatching {
+        val seenOpdsIds = mutableSetOf<String>()
+        var currentPath: String? = rootPath
+        var page = 1
+
+        while (currentPath != null) {
+            val bookPage = opdsClient.fetchBooks(
+                baseUrl = server.url,
+                username = server.opdsUsername,
+                password = server.opdsPassword,
+                serverId = server.id,
+                path = currentPath,
+                page = page,
+            ).getOrElse { throw it }
+
+            for (book in bookPage.books) {
+                val opdsEntryId = book.opdsEntryId ?: continue
+                seenOpdsIds.add(opdsEntryId)
+                val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
+                if (existing != null) {
+                    bookDao.update(
+                        existing.copy(
+                            title = book.title,
+                            author = book.author,
+                            description = book.description,
+                            coverUrl = book.coverUrl,
+                            downloadUrl = book.downloadUrl,
+                        )
+                    )
+                } else {
+                    bookDao.insert(book.toEntity())
+                }
+            }
+
+            if (bookPage.nextPagePath == null) break
+            page++
+        }
+
+        pruneStaleServerBooks(server.id, seenOpdsIds)
+    }
+
+    private suspend fun upsertGrimmoryBook(
+        serverId: Long,
+        origin: String,
+        opdsEntryId: String,
+        appBook: com.ember.reader.core.grimmory.GrimmoryAppBook,
+    ) {
+        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
+        val format = when (appBook.primaryFileType?.uppercase()) {
+            "PDF" -> BookFormat.PDF
+            "AUDIOBOOK" -> BookFormat.AUDIOBOOK
+            else -> BookFormat.EPUB
+        }
+        val coverUrl = if (format == BookFormat.AUDIOBOOK) {
+            "$origin/api/v1/audiobooks/${appBook.id}/cover"
+        } else {
+            "$origin/api/v1/media/book/${appBook.id}/cover"
+        }
+        if (existing != null) {
+            bookDao.update(
+                existing.copy(
+                    title = appBook.title,
+                    author = appBook.authors.firstOrNull(),
+                    coverUrl = coverUrl,
+                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                    series = appBook.seriesName,
+                    seriesIndex = appBook.seriesNumber,
+                )
+            )
+        } else {
+            val book = Book(
+                id = java.util.UUID.randomUUID().toString(),
+                serverId = serverId,
+                opdsEntryId = opdsEntryId,
+                title = appBook.title,
+                author = appBook.authors.firstOrNull(),
+                coverUrl = coverUrl,
+                downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                format = format,
+                series = appBook.seriesName,
+                seriesIndex = appBook.seriesNumber,
+                addedAt = Instant.now(),
+            )
+            bookDao.insert(book.toEntity())
+        }
+    }
+
+    /**
+     * Given the set of opdsEntryIds seen on the server, deletes undownloaded stale rows and
+     * detaches downloaded stale rows (serverId -> NULL). Returns the total number of rows
+     * affected.
+     */
+    private suspend fun pruneStaleServerBooks(serverId: Long, seenOpdsIds: Set<String>): Int {
+        val cachedIds = bookDao.getOpdsEntryIdsForServer(serverId)
+        val staleIds = cachedIds.filter { it !in seenOpdsIds }
+        if (staleIds.isEmpty()) {
+            Timber.d("Reconcile: no stale books for server=$serverId")
+            return 0
+        }
+        val allServerBooks = bookDao.getBooksByServerId(serverId).associateBy { it.opdsEntryId }
+        val (downloadedStale, undownloadedStale) = staleIds.partition { id ->
+            allServerBooks[id]?.localPath != null
+        }
+        if (undownloadedStale.isNotEmpty()) {
+            bookDao.deleteServerBooksByOpdsEntryIds(serverId, undownloadedStale)
+        }
+        if (downloadedStale.isNotEmpty()) {
+            bookDao.detachServerAssociation(serverId, downloadedStale)
+        }
+        Timber.d(
+            "Reconcile: server=$serverId pruned=${undownloadedStale.size} detached=${downloadedStale.size}"
+        )
+        return staleIds.size
+    }
+
     suspend fun downloadBook(
         book: Book,
         server: Server,
