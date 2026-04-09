@@ -11,18 +11,18 @@ import com.ember.reader.core.grimmory.ReadStatus
  * back to `addedOn`. Ember exposes only the three it actually supports.
  */
 data class GrimmoryFilter(
-    val sort: GrimmorySortKey = GrimmorySortKey.ADDED,
-    val direction: SortDirection = SortDirection.DESC,
+    val sort: GrimmorySortKey = GrimmorySortKey.TITLE,
+    val direction: SortDirection = SortDirection.ASC,
     val status: ReadStatus? = null,
     val minRating: Int? = null,
     val maxRating: Int? = null,
     val authors: String? = null,
     val language: String? = null,
 ) {
-    /** True if any filter is set OR the sort differs from the default (addedOn desc). */
+    /** True if any filter is set OR the sort differs from the default (title asc). */
     val isActive: Boolean
-        get() = sort != GrimmorySortKey.ADDED ||
-            direction != SortDirection.DESC ||
+        get() = sort != GrimmorySortKey.TITLE ||
+            direction != SortDirection.ASC ||
             status != null ||
             minRating != null ||
             maxRating != null ||

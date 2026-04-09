@@ -72,6 +72,13 @@ class LibraryViewModel @Inject constructor(
     private val isSubcategory = catalogPath.contains("?") || catalogPath.contains("recent") || catalogPath.contains("surprise")
     private val _fetchedBookIds = MutableStateFlow<Set<String>?>(null)
 
+    // Ordered list of book IDs in the order the server returned them. Used for Grimmory
+    // paths where we want to preserve server sort (e.g. seriesName + seriesNumber) instead of
+    // re-sorting client-side with a local comparator. Kept as a Map<String, Int> for O(1) lookup.
+    private val _fetchedBookOrder = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    private val isGrimmoryPath = catalogPath.startsWith("grimmory:")
+
     private var server: Server? = null
 
     private val _coverAuthHeader = MutableStateFlow<String?>(null)
@@ -94,22 +101,34 @@ class LibraryViewModel @Inject constructor(
         bookRepository.observeByServer(serverId),
         downloadingBooks,
         _searchQuery,
-        combine(_sortOrder, _fetchedBookIds) { sort, ids -> sort to ids },
+        combine(_sortOrder, _fetchedBookIds, _fetchedBookOrder) { sort, ids, order -> Triple(sort, ids, order) },
         combine(_formatFilter, _downloadedOnly) { format, downloaded -> format to downloaded }
-    ) { books, downloading, query, (sort, fetchedIds), (formatFilter, downloadedOnly) ->
+    ) { books, downloading, query, (sort, fetchedIds, order), (formatFilter, downloadedOnly) ->
         timber.log.Timber.d("LibraryVM combine: totalBooks=${books.size} fetchedIds=${fetchedIds?.size} query='$query'")
-        val filtered = books
-            .filter { book ->
-                // In subcategory view, only show books from the current fetch
-                (fetchedIds == null || book.id in fetchedIds) &&
-                    (
-                        query.isBlank() || book.title.contains(query, ignoreCase = true) ||
-                            book.author?.contains(query, ignoreCase = true) == true
-                        ) &&
-                    (formatFilter == null || book.format == formatFilter) &&
-                    (!downloadedOnly || book.isDownloaded)
-            }
-            .sortedWith(sort.comparator)
+        val filteredBooks = books.filter { book ->
+            // In subcategory view, only show books from the current fetch
+            (fetchedIds == null || book.id in fetchedIds) &&
+                (
+                    query.isBlank() || book.title.contains(query, ignoreCase = true) ||
+                        book.author?.contains(query, ignoreCase = true) == true
+                    ) &&
+                (formatFilter == null || book.format == formatFilter) &&
+                (!downloadedOnly || book.isDownloaded)
+        }
+        // For Grimmory paths, preserve the server's returned order (handles series sort
+        // correctly: Grimmory orders by seriesName, and within a series we want the server's
+        // intended order, not a client-side re-sort by title). Books not in the order map fall
+        // through to the end and get the local comparator as a tiebreaker.
+        val filtered = if (isGrimmoryPath && order.isNotEmpty()) {
+            filteredBooks.sortedWith(
+                compareBy<Book>(
+                    { order[it.id] ?: Int.MAX_VALUE },
+                    { it.title.lowercase() },
+                )
+            )
+        } else {
+            filteredBooks.sortedWith(sort.comparator)
+        }
 
         LibraryUiState.Success(
             books = filtered,
@@ -158,6 +177,7 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
         _fetchedBookIds.value = null // Reset for fresh load
+        _fetchedBookOrder.value = emptyMap()
         _nextPagePath.value = null
         _isRefreshing.value = true
         viewModelScope.launch {
@@ -187,6 +207,10 @@ class LibraryViewModel @Inject constructor(
                     val combined = existing + newIds
                     timber.log.Timber.d("LibraryVM: fetchedBookIds count=${combined.size} (was ${existing.size}, new ${newIds.size})")
                     _fetchedBookIds.value = combined
+                    // Record server-returned order for Grimmory paths so uiState can preserve it.
+                    _fetchedBookOrder.value = page.resolvedBookIds
+                        .withIndex()
+                        .associate { (idx, id) -> id to idx }
                     _nextPagePath.value = page.nextPagePath
                 }
             } else {
@@ -218,6 +242,15 @@ class LibraryViewModel @Inject constructor(
                 val newIds = page.resolvedBookIds.toSet()
                 val existing = _fetchedBookIds.value ?: emptySet()
                 _fetchedBookIds.value = existing + newIds
+                // Append new IDs to the order map, keeping existing offsets stable.
+                val existingOrder = _fetchedBookOrder.value
+                val nextIndex = existingOrder.size
+                val appended = existingOrder.toMutableMap().apply {
+                    page.resolvedBookIds.forEachIndexed { idx, id ->
+                        putIfAbsent(id, nextIndex + idx)
+                    }
+                }
+                _fetchedBookOrder.value = appended
                 _nextPagePath.value = page.nextPagePath
             }
             _loadingMore.value = false
@@ -310,6 +343,9 @@ class LibraryViewModel @Inject constructor(
                 )
                 result.onSuccess { page ->
                     _fetchedBookIds.value = page.resolvedBookIds.toSet()
+                    _fetchedBookOrder.value = page.resolvedBookIds
+                        .withIndex()
+                        .associate { (idx, id) -> id to idx }
                 }
                 _isRefreshing.value = false
             }
