@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewList
@@ -84,7 +85,9 @@ fun LibraryScreen(
     val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
+    val grimmoryFilter by viewModel.grimmoryFilter.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
+    var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -98,6 +101,17 @@ fun LibraryScreen(
                 actions = {
                     IconButton(onClick = { searchActive = !searchActive }) {
                         Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                    }
+                    IconButton(onClick = { filterSheetOpen = true }) {
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "Sort and filter",
+                            tint = if (grimmoryFilter.isActive) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                        )
                     }
                     IconButton(onClick = viewModel::toggleViewMode) {
                         Icon(
@@ -186,6 +200,15 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+
+    if (filterSheetOpen) {
+        com.ember.reader.ui.library.components.GrimmoryFilterSheet(
+            filter = grimmoryFilter,
+            onApply = viewModel::updateGrimmoryFilter,
+            onReset = viewModel::resetGrimmoryFilter,
+            onDismiss = { filterSheetOpen = false },
+        )
     }
 }
 

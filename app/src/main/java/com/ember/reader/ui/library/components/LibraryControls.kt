@@ -608,3 +608,231 @@ private fun presetLabel(preset: LibraryPreset): String = when (preset) {
     LibraryPreset.AUDIOBOOKS -> stringResource(R.string.preset_audiobooks)
 }
 
+// ============================================================================
+// Grimmory filter sheet — server-side sort/filter for remote library views.
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GrimmoryFilterSheet(
+    filter: com.ember.reader.ui.library.GrimmoryFilter,
+    onApply: (com.ember.reader.ui.library.GrimmoryFilter) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Local draft so the user can tweak without every change triggering a network call.
+    var draft by remember(filter) { mutableStateOf(filter) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Sort & filter",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = {
+                    onReset()
+                    onDismiss()
+                }) { Text("Reset") }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Sort key
+            Text("Sort by", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            com.ember.reader.ui.library.GrimmorySortKey.values().forEach { key ->
+                val isSelected = draft.sort == key
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { draft = draft.copy(sort = key) }
+                        .padding(vertical = 10.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = null,
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = when (key) {
+                            com.ember.reader.ui.library.GrimmorySortKey.ADDED -> "Recently added"
+                            com.ember.reader.ui.library.GrimmorySortKey.TITLE -> "Title"
+                            com.ember.reader.ui.library.GrimmorySortKey.SERIES -> "Series"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // Direction toggle
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("Direction", style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.weight(1f))
+                com.ember.reader.ui.library.SortDirection.values().forEach { dir ->
+                    val isSelected = draft.direction == dir
+                    AssistChip(
+                        onClick = { draft = draft.copy(direction = dir) },
+                        label = {
+                            Text(
+                                when (dir) {
+                                    com.ember.reader.ui.library.SortDirection.ASC -> "Asc"
+                                    com.ember.reader.ui.library.SortDirection.DESC -> "Desc"
+                                },
+                            )
+                        },
+                        colors = if (isSelected) {
+                            AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        } else {
+                            AssistChipDefaults.assistChipColors()
+                        },
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            // Read status
+            Text("Read status", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            val statusOptions: List<com.ember.reader.core.grimmory.ReadStatus?> = listOf(
+                null,
+                com.ember.reader.core.grimmory.ReadStatus.UNREAD,
+                com.ember.reader.core.grimmory.ReadStatus.READING,
+                com.ember.reader.core.grimmory.ReadStatus.RE_READING,
+                com.ember.reader.core.grimmory.ReadStatus.PARTIALLY_READ,
+                com.ember.reader.core.grimmory.ReadStatus.PAUSED,
+                com.ember.reader.core.grimmory.ReadStatus.READ,
+                com.ember.reader.core.grimmory.ReadStatus.ABANDONED,
+                com.ember.reader.core.grimmory.ReadStatus.WONT_READ,
+                com.ember.reader.core.grimmory.ReadStatus.UNSET,
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(statusOptions) { status ->
+                    val isSelected = draft.status == status
+                    AssistChip(
+                        onClick = { draft = draft.copy(status = status) },
+                        label = {
+                            Text(
+                                when (status) {
+                                    null -> "Any"
+                                    com.ember.reader.core.grimmory.ReadStatus.UNREAD -> "Unread"
+                                    com.ember.reader.core.grimmory.ReadStatus.READING -> "Reading"
+                                    com.ember.reader.core.grimmory.ReadStatus.RE_READING -> "Re-reading"
+                                    com.ember.reader.core.grimmory.ReadStatus.READ -> "Read"
+                                    com.ember.reader.core.grimmory.ReadStatus.PARTIALLY_READ -> "Partial"
+                                    com.ember.reader.core.grimmory.ReadStatus.PAUSED -> "Paused"
+                                    com.ember.reader.core.grimmory.ReadStatus.WONT_READ -> "Won't read"
+                                    com.ember.reader.core.grimmory.ReadStatus.ABANDONED -> "Abandoned"
+                                    com.ember.reader.core.grimmory.ReadStatus.UNSET -> "Unset"
+                                },
+                            )
+                        },
+                        colors = if (isSelected) {
+                            AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        } else {
+                            AssistChipDefaults.assistChipColors()
+                        },
+                    )
+                }
+            }
+
+            // Rating range
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("Personal rating (0–5)", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = draft.minRating?.toString().orEmpty(),
+                    onValueChange = { text ->
+                        draft = draft.copy(
+                            minRating = text.toIntOrNull()?.coerceIn(0, 5),
+                        )
+                    },
+                    label = { Text("Min") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = draft.maxRating?.toString().orEmpty(),
+                    onValueChange = { text ->
+                        draft = draft.copy(
+                            maxRating = text.toIntOrNull()?.coerceIn(0, 5),
+                        )
+                    },
+                    label = { Text("Max") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            // Authors
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = draft.authors.orEmpty(),
+                onValueChange = { draft = draft.copy(authors = it.takeIf { s -> s.isNotBlank() }) },
+                label = { Text("Author (exact)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            // Language
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = draft.language.orEmpty(),
+                onValueChange = { draft = draft.copy(language = it.takeIf { s -> s.isNotBlank() }) },
+                label = { Text("Language code (e.g. en)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Cancel") }
+                androidx.compose.material3.Button(
+                    onClick = {
+                        onApply(draft)
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Apply") }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+

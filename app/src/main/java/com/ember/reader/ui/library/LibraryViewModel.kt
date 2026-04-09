@@ -61,6 +61,11 @@ class LibraryViewModel @Inject constructor(
     private val _downloadedOnly = MutableStateFlow(false)
     val downloadedOnly: StateFlow<Boolean> = _downloadedOnly.asStateFlow()
 
+    // Server-side sort/filter for Grimmory library views. Resets per navigation because the VM
+    // is scoped to the nav backstack entry. Only consulted for grimmory: catalog paths.
+    private val _grimmoryFilter = MutableStateFlow(GrimmoryFilter())
+    val grimmoryFilter: StateFlow<GrimmoryFilter> = _grimmoryFilter.asStateFlow()
+
     val downloadingBooks: StateFlow<Set<String>> = DownloadService.downloadingBookIds
 
     // When viewing a subcategory (series, shelf, etc.), only show books from that fetch
@@ -156,10 +161,11 @@ class LibraryViewModel @Inject constructor(
         _nextPagePath.value = null
         _isRefreshing.value = true
         viewModelScope.launch {
-            // Full catalog reconcile (prunes deleted books) only on unfiltered root views.
-            // Filtered/paginated/subcategory refreshes stay upsert-only so browsing a shelf
-            // or series doesn't wipe books outside its scope.
-            if (!isSubcategory && isUnfilteredRootView()) {
+            // Full catalog reconcile (prunes deleted books) only on unfiltered root views with
+            // no active filters. Filtered/paginated/subcategory refreshes stay upsert-only so
+            // browsing a shelf / series / filtered list doesn't wipe books outside its scope.
+            val grimmoryFilterActive = _grimmoryFilter.value.hasRestrictiveFilters
+            if (!isSubcategory && isUnfilteredRootView() && !grimmoryFilterActive) {
                 if (catalogPath == "grimmory:all" || catalogPath == "grimmory:") {
                     bookRepository.reconcileGrimmoryLibrary(currentServer)
                         .onFailure { timber.log.Timber.w(it, "LibraryVM: grimmory reconcile failed, skipping prune") }
@@ -218,9 +224,16 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private suspend fun refreshFromGrimmoryPage(
+    /**
+     * Parses the path's query params and returns a lambda that kicks a Grimmory refresh. Both the
+     * initial refresh and `loadMore` paginate through this so filter/sort settings apply
+     * consistently across pages. Path-embedded filters (libraryId/shelfId/seriesName/status/
+     * search) and the user's toolbar filters are merged — path-level `status` wins if both are
+     * set.
+     */
+    private suspend fun refreshFromGrimmoryWithFilter(
         server: com.ember.reader.core.model.Server,
-        page: Int
+        page: Int,
     ): Result<com.ember.reader.core.opds.OpdsBookPage> {
         val paramString = catalogPath.removePrefix("grimmory:")
         val params = paramString.split("&")
@@ -229,36 +242,49 @@ class LibraryViewModel @Inject constructor(
                 val (key, value) = it.split("=", limit = 2)
                 key to java.net.URLDecoder.decode(value, "UTF-8")
             }
+        val filter = _grimmoryFilter.value
+        timber.log.Timber.d(
+            "GrimmoryRefresh: catalogPath='$catalogPath' params=$params filter=$filter page=$page",
+        )
         return bookRepository.refreshFromGrimmory(
             server = server,
             page = page,
             libraryId = params["libraryId"]?.toLongOrNull(),
             shelfId = params["shelfId"]?.toLongOrNull(),
             seriesName = params["seriesName"],
-            status = params["status"],
-            search = params["search"]
+            status = params["status"] ?: filter.status?.name,
+            search = params["search"],
+            sort = filter.sort.apiValue,
+            dir = filter.direction.apiValue,
+            minRating = filter.minRating,
+            maxRating = filter.maxRating,
+            authors = filter.authors,
+            language = filter.language,
         )
     }
 
+    private suspend fun refreshFromGrimmoryPage(
+        server: com.ember.reader.core.model.Server,
+        page: Int
+    ): Result<com.ember.reader.core.opds.OpdsBookPage> = refreshFromGrimmoryWithFilter(server, page)
+
     private suspend fun refreshFromGrimmory(
         server: com.ember.reader.core.model.Server
-    ): Result<com.ember.reader.core.opds.OpdsBookPage> {
-        val paramString = catalogPath.removePrefix("grimmory:")
-        val params = paramString.split("&")
-            .filter { "=" in it }
-            .associate {
-                val (key, value) = it.split("=", limit = 2)
-                key to java.net.URLDecoder.decode(value, "UTF-8")
-            }
-        timber.log.Timber.d("GrimmoryRefresh: catalogPath='$catalogPath' paramString='$paramString' params=$params")
-        return bookRepository.refreshFromGrimmory(
-            server = server,
-            libraryId = params["libraryId"]?.toLongOrNull(),
-            shelfId = params["shelfId"]?.toLongOrNull(),
-            seriesName = params["seriesName"],
-            status = params["status"],
-            search = params["search"]
-        )
+    ): Result<com.ember.reader.core.opds.OpdsBookPage> = refreshFromGrimmoryWithFilter(server, page = 0)
+
+    /**
+     * Updates the Grimmory sort/filter state and reloads. Called from the filter sheet.
+     */
+    fun updateGrimmoryFilter(filter: GrimmoryFilter) {
+        if (_grimmoryFilter.value == filter) return
+        _grimmoryFilter.value = filter
+        refresh()
+    }
+
+    fun resetGrimmoryFilter() {
+        if (_grimmoryFilter.value == GrimmoryFilter()) return
+        _grimmoryFilter.value = GrimmoryFilter()
+        refresh()
     }
 
     fun updateSearchQuery(query: String) {

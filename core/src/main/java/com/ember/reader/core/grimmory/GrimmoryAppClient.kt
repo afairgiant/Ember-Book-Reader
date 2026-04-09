@@ -30,7 +30,11 @@ class GrimmoryAppClient @Inject constructor(
         shelfId: Long? = null,
         status: String? = null,
         search: String? = null,
-        fileType: String? = null
+        fileType: String? = null,
+        minRating: Int? = null,
+        maxRating: Int? = null,
+        authors: String? = null,
+        language: String? = null,
     ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books") {
             header("Authorization", "Bearer $token")
@@ -43,6 +47,10 @@ class GrimmoryAppClient @Inject constructor(
             status?.let { parameter("status", it) }
             search?.let { parameter("search", it) }
             fileType?.let { parameter("fileType", it) }
+            minRating?.let { parameter("minRating", it) }
+            maxRating?.let { parameter("maxRating", it) }
+            authors?.takeIf { it.isNotBlank() }?.let { parameter("authors", it) }
+            language?.takeIf { it.isNotBlank() }?.let { parameter("language", it) }
         }
         if (!response.status.isSuccess()) error("Get books failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppBook>>()
