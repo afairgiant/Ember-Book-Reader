@@ -86,6 +86,7 @@ fun LibraryScreen(
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val grimmoryFilter by viewModel.grimmoryFilter.collectAsStateWithLifecycle()
+    val grimmoryFilterOptions by viewModel.grimmoryFilterOptions.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -205,6 +206,7 @@ fun LibraryScreen(
     if (filterSheetOpen) {
         com.ember.reader.ui.library.components.GrimmoryFilterSheet(
             filter = grimmoryFilter,
+            filterOptions = grimmoryFilterOptions,
             onApply = viewModel::updateGrimmoryFilter,
             onReset = viewModel::resetGrimmoryFilter,
             onDismiss = { filterSheetOpen = false },

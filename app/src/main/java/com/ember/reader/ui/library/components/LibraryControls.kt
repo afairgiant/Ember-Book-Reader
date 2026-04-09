@@ -616,6 +616,7 @@ private fun presetLabel(preset: LibraryPreset): String = when (preset) {
 @Composable
 fun GrimmoryFilterSheet(
     filter: com.ember.reader.ui.library.GrimmoryFilter,
+    filterOptions: com.ember.reader.core.grimmory.GrimmoryAppFilterOptions?,
     onApply: (com.ember.reader.ui.library.GrimmoryFilter) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
@@ -797,25 +798,128 @@ fun GrimmoryFilterSheet(
                 )
             }
 
-            // Authors
+            // Authors — dropdown when filter options available, text field otherwise
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = draft.authors.orEmpty(),
-                onValueChange = { draft = draft.copy(authors = it.takeIf { s -> s.isNotBlank() }) },
-                label = { Text("Author (exact)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            val authors = filterOptions?.authors.orEmpty()
+            if (authors.isNotEmpty()) {
+                var authorMenuOpen by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = draft.authors ?: "Any",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Author") },
+                        trailingIcon = {
+                            Icon(
+                                if (authorMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { authorMenuOpen = true },
+                    )
+                    // Invisible click overlay — OutlinedTextField in readOnly still blocks clicks.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { authorMenuOpen = true },
+                    )
+                    DropdownMenu(
+                        expanded = authorMenuOpen,
+                        onDismissRequest = { authorMenuOpen = false },
+                        modifier = Modifier.heightIn(max = 320.dp),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Any") },
+                            onClick = {
+                                draft = draft.copy(authors = null)
+                                authorMenuOpen = false
+                            },
+                        )
+                        authors.forEach { author ->
+                            DropdownMenuItem(
+                                text = { Text("${author.name} (${author.count})") },
+                                onClick = {
+                                    draft = draft.copy(authors = author.name)
+                                    authorMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = draft.authors.orEmpty(),
+                    onValueChange = { draft = draft.copy(authors = it.takeIf { s -> s.isNotBlank() }) },
+                    label = { Text("Author (exact)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
-            // Language
+            // Language — dropdown when filter options available
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = draft.language.orEmpty(),
-                onValueChange = { draft = draft.copy(language = it.takeIf { s -> s.isNotBlank() }) },
-                label = { Text("Language code (e.g. en)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            val languages = filterOptions?.languages.orEmpty()
+            if (languages.isNotEmpty()) {
+                var langMenuOpen by remember { mutableStateOf(false) }
+                val selectedLabel = when (val code = draft.language) {
+                    null -> "Any"
+                    else -> languages.firstOrNull { it.code == code }
+                        ?.let { "${it.label ?: it.code}" }
+                        ?: code
+                }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Language") },
+                        trailingIcon = {
+                            Icon(
+                                if (langMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { langMenuOpen = true },
+                    )
+                    DropdownMenu(
+                        expanded = langMenuOpen,
+                        onDismissRequest = { langMenuOpen = false },
+                        modifier = Modifier.heightIn(max = 320.dp),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Any") },
+                            onClick = {
+                                draft = draft.copy(language = null)
+                                langMenuOpen = false
+                            },
+                        )
+                        languages.forEach { lang ->
+                            DropdownMenuItem(
+                                text = { Text("${lang.label ?: lang.code} (${lang.count})") },
+                                onClick = {
+                                    draft = draft.copy(language = lang.code)
+                                    langMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = draft.language.orEmpty(),
+                    onValueChange = { draft = draft.copy(language = it.takeIf { s -> s.isNotBlank() }) },
+                    label = { Text("Language code (e.g. en)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

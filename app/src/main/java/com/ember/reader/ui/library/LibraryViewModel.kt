@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
@@ -35,6 +36,7 @@ class LibraryViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
+    private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
@@ -65,6 +67,14 @@ class LibraryViewModel @Inject constructor(
     // is scoped to the nav backstack entry. Only consulted for grimmory: catalog paths.
     private val _grimmoryFilter = MutableStateFlow(GrimmoryFilter())
     val grimmoryFilter: StateFlow<GrimmoryFilter> = _grimmoryFilter.asStateFlow()
+
+    // Available filter options (authors, languages, statuses, file types) for the current
+    // library/shelf, fetched once on init from Grimmory's /app/filter-options endpoint. Null
+    // until loaded; falls back to free-text input in the sheet if fetch fails.
+    private val _grimmoryFilterOptions =
+        MutableStateFlow<com.ember.reader.core.grimmory.GrimmoryAppFilterOptions?>(null)
+    val grimmoryFilterOptions: StateFlow<com.ember.reader.core.grimmory.GrimmoryAppFilterOptions?> =
+        _grimmoryFilterOptions.asStateFlow()
 
     val downloadingBooks: StateFlow<Set<String>> = DownloadService.downloadingBookIds
 
@@ -157,6 +167,38 @@ class LibraryViewModel @Inject constructor(
                 }
             }
             refresh()
+            loadGrimmoryFilterOptions()
+        }
+    }
+
+    /**
+     * Fetches the set of available filter values (authors, languages, statuses, file types)
+     * scoped to the current library/shelf. Called once on init — filter options rarely change
+     * during a session and are only used to populate dropdowns in the filter sheet.
+     */
+    private suspend fun loadGrimmoryFilterOptions() {
+        val currentServer = server ?: return
+        if (!isGrimmoryPath) return
+        val paramString = catalogPath.removePrefix("grimmory:")
+        val params = paramString.split("&")
+            .filter { "=" in it }
+            .associate {
+                val (key, value) = it.split("=", limit = 2)
+                key to java.net.URLDecoder.decode(value, "UTF-8")
+            }
+        grimmoryAppClient.getFilterOptions(
+            baseUrl = currentServer.url,
+            serverId = currentServer.id,
+            libraryId = params["libraryId"]?.toLongOrNull(),
+            shelfId = params["shelfId"]?.toLongOrNull(),
+        ).onSuccess { options ->
+            _grimmoryFilterOptions.value = options
+            timber.log.Timber.d(
+                "FilterOptions loaded: ${options.authors.size} authors, " +
+                    "${options.languages.size} languages"
+            )
+        }.onFailure {
+            timber.log.Timber.w(it, "LibraryVM: failed to load Grimmory filter options")
         }
     }
 

@@ -178,6 +178,21 @@ class GrimmoryAppClient @Inject constructor(
         response.body<List<GrimmoryBookSummary>>()
     }
 
+    suspend fun getFilterOptions(
+        baseUrl: String,
+        serverId: Long,
+        libraryId: Long? = null,
+        shelfId: Long? = null,
+    ): Result<GrimmoryAppFilterOptions> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/filter-options") {
+            header("Authorization", "Bearer $token")
+            libraryId?.let { parameter("libraryId", it) }
+            shelfId?.let { parameter("shelfId", it) }
+        }
+        if (!response.status.isSuccess()) error("Get filter options failed: ${response.status}")
+        response.body<GrimmoryAppFilterOptions>()
+    }
+
     fun coverUrl(baseUrl: String, grimmoryBookId: Long): String =
         "${serverOrigin(baseUrl)}/api/v1/media/book/$grimmoryBookId/cover"
 
