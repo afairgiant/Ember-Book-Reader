@@ -120,8 +120,12 @@ class LibraryViewModel @Inject constructor(
         // intended order, not a client-side re-sort by title). Books not in the order map fall
         // through to the end and get the local comparator as a tiebreaker.
         val filtered = if (isGrimmoryPath && order.isNotEmpty()) {
+            // When sorting by series, push books without a series to the end. Grimmory's SQL
+            // returns NULL seriesName first by default, which the user finds confusing.
+            val pushNullSeriesLast = _grimmoryFilter.value.sort == GrimmorySortKey.SERIES
             filteredBooks.sortedWith(
                 compareBy<Book>(
+                    { if (pushNullSeriesLast && it.series.isNullOrBlank()) 1 else 0 },
                     { order[it.id] ?: Int.MAX_VALUE },
                     { it.title.lowercase() },
                 )
