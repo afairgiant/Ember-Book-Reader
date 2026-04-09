@@ -65,6 +65,10 @@ class LibraryViewModel @Inject constructor(
 
     // When viewing a subcategory (series, shelf, etc.), only show books from that fetch
     private val isSubcategory = catalogPath.contains("?") || catalogPath.contains("recent") || catalogPath.contains("surprise")
+
+    // Any Grimmory path or OPDS subcategory requires strict filtering by current fetch,
+    // otherwise the UI leaks cached books from other libraries while a refresh is in flight.
+    private val requiresFetchedIdsFilter = isSubcategory || catalogPath.startsWith("grimmory:")
     private val _fetchedBookIds = MutableStateFlow<Set<String>?>(null)
 
     private var server: Server? = null
@@ -95,8 +99,15 @@ class LibraryViewModel @Inject constructor(
         timber.log.Timber.d("LibraryVM combine: totalBooks=${books.size} fetchedIds=${fetchedIds?.size} query='$query'")
         val filtered = books
             .filter { book ->
-                // In subcategory view, only show books from the current fetch
-                (fetchedIds == null || book.id in fetchedIds) &&
+                // For Grimmory / subcategory views, only show books from the current fetch.
+                // A null fetchedIds means the fetch hasn't completed yet — hide everything until
+                // it does, otherwise books from other libraries leak in during the race window.
+                val passesFetchFilter = if (requiresFetchedIdsFilter) {
+                    fetchedIds != null && book.id in fetchedIds
+                } else {
+                    fetchedIds == null || book.id in fetchedIds
+                }
+                passesFetchFilter &&
                     (
                         query.isBlank() || book.title.contains(query, ignoreCase = true) ||
                             book.author?.contains(query, ignoreCase = true) == true
