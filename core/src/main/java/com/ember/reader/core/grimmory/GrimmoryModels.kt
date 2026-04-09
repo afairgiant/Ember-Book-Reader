@@ -24,8 +24,13 @@ data class GrimmoryRefreshRequest(
 enum class ReadStatus {
     UNREAD,
     READING,
+    RE_READING,
     READ,
-    DNF
+    PARTIALLY_READ,
+    PAUSED,
+    WONT_READ,
+    ABANDONED,
+    UNSET,
 }
 
 @Serializable

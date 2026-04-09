@@ -708,6 +708,11 @@ private val ReadStatus.displayName: String
     get() = when (this) {
         ReadStatus.UNREAD -> "Unread"
         ReadStatus.READING -> "Reading"
+        ReadStatus.RE_READING -> "Re-reading"
         ReadStatus.READ -> "Read"
-        ReadStatus.DNF -> "DNF"
+        ReadStatus.PARTIALLY_READ -> "Partially read"
+        ReadStatus.PAUSED -> "Paused"
+        ReadStatus.WONT_READ -> "Won't read"
+        ReadStatus.ABANDONED -> "Abandoned"
+        ReadStatus.UNSET -> "Unset"
     }
