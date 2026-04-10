@@ -46,6 +46,7 @@
     <string name="push_progress">Push Progress</string>
     <string name="relink_to_server">Relink to Server</string>
     <string name="more_options">More</string>
+    <string name="edit_metadata">Edit metadata</string>
     <string name="no_books_found">No books found</string>
     <string name="toggle_view">Toggle view</string>
 

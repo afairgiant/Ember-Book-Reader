@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -34,6 +35,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -85,6 +88,9 @@ fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
     onOpenBookDetail: (bookId: String) -> Unit = {},
+    onEditMetadata: (bookId: String) -> Unit = {},
+    metadataSaved: Boolean = false,
+    onMetadataSavedConsumed: () -> Unit = {},
     viewModel: BookDetailViewModel = hiltViewModel()
 ) {
     val book by viewModel.book.collectAsStateWithLifecycle()
@@ -107,6 +113,13 @@ fun BookDetailScreen(
         }
     }
 
+    LaunchedEffect(metadataSaved) {
+        if (metadataSaved) {
+            viewModel.refreshFromServer()
+            onMetadataSavedConsumed()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -119,6 +132,24 @@ fun BookDetailScreen(
                 },
                 actions = {
                     val currentBook = book
+                    if (currentBook != null) {
+                        var menuOpen by remember { mutableStateOf(false) }
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        }
+                        DropdownMenu(
+                            expanded = menuOpen,
+                            onDismissRequest = { menuOpen = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit_metadata)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onEditMetadata(currentBook.id)
+                                },
+                            )
+                        }
+                    }
                     if (currentBook?.isDownloaded == true && currentBook.localPath != null) {
                         val context = LocalContext.current
                         IconButton(onClick = {

@@ -855,6 +855,37 @@ class BookRepository @Inject constructor(
         return BookMetadata(title, author, coverUrl, publisher, language, subjects, pageCount, publishedDate, description)
     }
 
+    /** Update local book metadata fields from user edits. DB only — does not modify the file. */
+    suspend fun updateLocalBookMetadata(
+        bookId: String,
+        title: String,
+        author: String?,
+        description: String?,
+        series: String?,
+        seriesIndex: Float?,
+        publisher: String?,
+        language: String?,
+        subjects: String?,
+        pageCount: Int?,
+        publishedDate: String?,
+    ) {
+        val entity = bookDao.getById(bookId) ?: return
+        bookDao.update(
+            entity.copy(
+                title = title,
+                author = author,
+                description = description,
+                series = series,
+                seriesIndex = seriesIndex,
+                publisher = publisher,
+                language = language,
+                subjects = subjects,
+                pageCount = pageCount,
+                publishedDate = publishedDate,
+            ),
+        )
+    }
+
     /** Update a book's metadata from its embedded file data (called after download). */
     suspend fun enrichBookMetadata(bookId: String) {
         val entity = bookDao.getById(bookId) ?: return

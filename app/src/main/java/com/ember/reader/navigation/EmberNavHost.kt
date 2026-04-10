@@ -62,12 +62,14 @@ object Routes {
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
     const val AUDIOBOOK_READER = "reader/audiobook/{$ARG_BOOK_ID}"
     const val BOOK_DETAIL = "book_detail/{$ARG_BOOK_ID}"
+    const val EDIT_METADATA = "edit_metadata/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
     const val STATS = "stats"
     const val DEV_LOG = "dev_log"
 
     fun audiobookReader(bookId: String): String = "reader/audiobook/$bookId"
     fun bookDetail(bookId: String): String = "book_detail/$bookId"
+    fun editMetadata(bookId: String): String = "edit_metadata/$bookId"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
@@ -334,6 +336,7 @@ fun EmberNavHost(
                 route = Routes.BOOK_DETAIL,
                 arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
             ) {
+                val metadataSaved = it.savedStateHandle.get<Boolean>("metadata_saved") == true
                 BookDetailScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenReader = { bookId, format ->
@@ -341,6 +344,28 @@ fun EmberNavHost(
                     },
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
+                    },
+                    onEditMetadata = { bookId ->
+                        navController.navigate(Routes.editMetadata(bookId))
+                    },
+                    metadataSaved = metadataSaved,
+                    onMetadataSavedConsumed = {
+                        it.savedStateHandle["metadata_saved"] = false
+                    },
+                )
+            }
+
+            composable(
+                route = Routes.EDIT_METADATA,
+                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
+            ) {
+                com.ember.reader.ui.editmetadata.EditMetadataScreen(
+                    onNavigateBack = { saved ->
+                        if (saved) {
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle?.set("metadata_saved", true)
+                        }
+                        navController.popBackStack()
                     },
                 )
             }

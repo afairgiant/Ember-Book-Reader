@@ -219,6 +219,14 @@ class BookDetailViewModel @Inject constructor(
         DownloadService.start(context, book.id, server.id)
     }
 
+    /** Re-fetch book detail from Grimmory (e.g. after metadata edit). */
+    fun refreshFromServer() {
+        viewModelScope.launch {
+            val srv = _server.value ?: return@launch
+            loadServer(srv.id)
+        }
+    }
+
     fun updateReadStatus(status: ReadStatus) {
         val book = _book.value ?: return
         val server = _server.value ?: return
