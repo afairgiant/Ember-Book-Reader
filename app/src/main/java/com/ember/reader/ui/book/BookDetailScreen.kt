@@ -48,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -182,11 +183,16 @@ fun BookDetailScreen(
         }
     ) { padding ->
         val currentBook = book
+        var coverZoomed by remember { mutableStateOf(false) }
+        BackHandler(enabled = coverZoomed) { coverZoomed = false }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
         if (currentBook == null) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -195,7 +201,6 @@ fun BookDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
                 // Hero cover — centered
@@ -210,7 +215,14 @@ fun BookDetailScreen(
                         coverAuthHeader = coverAuthHeader,
                         modifier = Modifier
                             .width(180.dp)
-                            .aspectRatio(0.67f),
+                            .aspectRatio(0.67f)
+                            .then(
+                                if (currentBook.coverUrl != null) {
+                                    Modifier.clickable { coverZoomed = true }
+                                } else {
+                                    Modifier
+                                }
+                            ),
                     )
                 }
 
@@ -576,6 +588,14 @@ fun BookDetailScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
+        if (coverZoomed && currentBook != null) {
+            FullscreenCoverOverlay(
+                book = currentBook,
+                coverAuthHeader = coverAuthHeader,
+                onDismiss = { coverZoomed = false },
+            )
+        }
+        }
     }
 }
 
@@ -667,6 +687,49 @@ private fun BookCover(book: Book, coverAuthHeader: String?, modifier: Modifier =
                 color = Color(0xFF5D4037)
             )
         }
+    }
+}
+
+@Composable
+private fun FullscreenCoverOverlay(
+    book: Book,
+    coverAuthHeader: String?,
+    onDismiss: () -> Unit,
+) {
+    val bookCoverUrl = book.coverUrl ?: return
+    val context = LocalContext.current
+    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
+        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
+            val token = coverAuthHeader.removePrefix("jwt:")
+            bookCoverUrl.appendQueryParam("token", token)
+        } else {
+            bookCoverUrl
+        }
+        ImageRequest.Builder(context)
+            .data(url)
+            .apply {
+                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
+                    addHeader("Authorization", coverAuthHeader)
+                }
+            }
+            .crossfade(true)
+            .build()
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.85f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = imageModel,
+            contentDescription = book.title,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(8.dp)),
+        )
     }
 }
 
