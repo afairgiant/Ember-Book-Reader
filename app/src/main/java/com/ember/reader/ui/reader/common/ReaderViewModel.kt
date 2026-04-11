@@ -503,7 +503,7 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val SAVE_DEBOUNCE_MS = 5000L
         private const val CONFLICT_THRESHOLD = 0.01f
-        private const val MIN_SESSION_SECONDS = 120L
+        private const val MIN_SESSION_SECONDS = 30L
         private const val PAUSE_GRACE_MS = 30_000L
     }
 }
