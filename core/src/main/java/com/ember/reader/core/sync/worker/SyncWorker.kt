@@ -212,7 +212,10 @@ class SyncWorker @AssistedInject constructor(
                             "PDF" -> com.ember.reader.core.model.BookFormat.PDF
                             else -> com.ember.reader.core.model.BookFormat.EPUB
                         },
-                        coverUrl = "${com.ember.reader.core.network.serverOrigin(server.url)}/api/v1/media/book/${summary.id}/cover"
+                        coverUrl = buildString {
+                            append("${com.ember.reader.core.network.serverOrigin(server.url)}/api/v1/media/book/${summary.id}/cover")
+                            summary.coverUpdatedOn?.let { append("?v=${java.net.URLEncoder.encode(it, "UTF-8")}") }
+                        },
                     )
                     bookRepository.addLocalBook(newBook)
                     newBook

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.ember.reader.core.network.appendQueryParam
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
@@ -95,13 +96,14 @@ fun UnifiedBookCard(
                     .fillMaxWidth()
                     .aspectRatio(0.67f),
             ) {
-                if (book.coverUrl != null) {
+                val bookCoverUrl = book.coverUrl
+                if (bookCoverUrl != null) {
                     val context = LocalContext.current
-                    val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
                         val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
                             val token = coverAuthHeader.removePrefix("jwt:")
-                            "${book.coverUrl}?token=$token"
-                        } else book.coverUrl
+                            bookCoverUrl.appendQueryParam("token", token)
+                        } else bookCoverUrl
                         ImageRequest.Builder(context)
                             .data(url)
                             .apply {
@@ -321,12 +323,13 @@ fun UnifiedBookListRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!compact) {
-                if (book.coverUrl != null) {
+                val bookCoverUrl = book.coverUrl
+                if (bookCoverUrl != null) {
                     val context = LocalContext.current
-                    val imageModel = remember(book.coverUrl, coverAuthHeader) {
+                    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
                         val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                            "${book.coverUrl}?token=${coverAuthHeader.removePrefix("jwt:")}"
-                        } else book.coverUrl
+                            bookCoverUrl.appendQueryParam("token", coverAuthHeader.removePrefix("jwt:"))
+                        } else bookCoverUrl
                         ImageRequest.Builder(context)
                             .data(url)
                             .apply {

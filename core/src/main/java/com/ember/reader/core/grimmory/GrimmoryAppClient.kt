@@ -193,8 +193,21 @@ class GrimmoryAppClient @Inject constructor(
         response.body<GrimmoryAppFilterOptions>()
     }
 
-    fun coverUrl(baseUrl: String, grimmoryBookId: Long): String =
-        "${serverOrigin(baseUrl)}/api/v1/media/book/$grimmoryBookId/cover"
+    /**
+     * Build a cover URL for a Grimmory book. When [coverUpdatedOn] is provided, a `?v=` query
+     * parameter is appended so Coil's URL-keyed cache refetches whenever the server's cover
+     * changes (via metadata edit, web UI upload, etc.).
+     */
+    fun coverUrl(baseUrl: String, grimmoryBookId: Long, coverUpdatedOn: String? = null): String {
+        val base = "${serverOrigin(baseUrl)}/api/v1/media/book/$grimmoryBookId/cover"
+        return coverUpdatedOn?.let { "$base?v=${java.net.URLEncoder.encode(it, "UTF-8")}" } ?: base
+    }
+
+    /** Same as [coverUrl] but for audiobook covers, which are served from a different endpoint. */
+    fun audiobookCoverUrl(baseUrl: String, grimmoryBookId: Long, coverUpdatedOn: String? = null): String {
+        val base = "${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/cover"
+        return coverUpdatedOn?.let { "$base?v=${java.net.URLEncoder.encode(it, "UTF-8")}" } ?: base
+    }
 
     private suspend fun <T> withAuth(
         baseUrl: String,

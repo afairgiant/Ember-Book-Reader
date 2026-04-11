@@ -106,7 +106,7 @@ class ServerListViewModel @Inject constructor(
                         opdsEntryId = opdsEntryId,
                         title = summary.title,
                         author = summary.authors.joinToString(", ").ifBlank { null },
-                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id),
+                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),
                         format = when (summary.primaryFileType?.uppercase()) {
                             "PDF" -> BookFormat.PDF
                             else -> BookFormat.EPUB
@@ -114,7 +114,7 @@ class ServerListViewModel @Inject constructor(
                     )
                     RecentlyAddedBook(
                         summary = summary,
-                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id),
+                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),
                         serverId = server.id,
                         localBookId = localId,
                     )

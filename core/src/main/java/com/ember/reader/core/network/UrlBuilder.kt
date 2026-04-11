@@ -34,3 +34,13 @@ fun resolveUrl(baseUrl: String, href: String): String = when {
     href.startsWith("/") -> "${serverOrigin(baseUrl)}$href"
     else -> "${normalizeUrl(baseUrl).trimEnd('/')}/$href"
 }
+
+/**
+ * Appends a query parameter to a URL, using `&` if a query string already exists and
+ * `?` otherwise. The key and value are passed through unchanged — callers are responsible
+ * for URL-encoding values that may contain reserved characters.
+ */
+fun String.appendQueryParam(key: String, value: String): String {
+    val sep = if (contains('?')) '&' else '?'
+    return "$this$sep$key=$value"
+}

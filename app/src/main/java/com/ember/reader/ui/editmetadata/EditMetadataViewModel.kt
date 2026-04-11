@@ -14,6 +14,7 @@ import com.ember.reader.core.grimmory.MetadataUpdateWrapper
 import com.ember.reader.core.grimmory.searchableProviders
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
@@ -150,6 +151,8 @@ data class EditMetadataSuccess(
     val selectedCandidate: GrimmoryBookMetadata? = null,
     val saving: Boolean = false,
     val readOnly: Boolean = false,
+    /** URL of the cover currently being uploaded, null when idle. Used for per-button spinners. */
+    val applyingCoverUrl: String? = null,
 ) {
     val isLocal: Boolean get() = server == null
     val isDirty: Boolean get() = edited != originalEditable || clearFlags.isNotEmpty()
@@ -179,6 +182,10 @@ class EditMetadataViewModel @Inject constructor(
 
     private val _saved = MutableStateFlow(false)
     val saved: StateFlow<Boolean> = _saved.asStateFlow()
+
+    /** Ticks once per successful cover apply. Used by the UI to dismiss the cover preview overlay. */
+    private val _coverAppliedTicker = MutableStateFlow(0)
+    val coverAppliedTicker: StateFlow<Int> = _coverAppliedTicker.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -329,6 +336,40 @@ class EditMetadataViewModel @Inject constructor(
     }
 
     fun closeCandidate() = updateSuccess { it.copy(selectedCandidate = null) }
+
+    /**
+     * Upload a cover image from a provider thumbnail URL to Grimmory. Grimmory downloads the
+     * image, rewrites the EPUB on disk, and bumps `coverUpdatedOn`. On success, we update the
+     * local Room row with a cache-busted URL so Coil refetches immediately.
+     *
+     * This is fully independent of the metadata save flow — applying a cover does not stage
+     * any text-field changes and does not require the Save button.
+     */
+    fun applyCover(url: String) {
+        val current = currentSuccess() ?: return
+        if (current.isLocal || current.server == null || current.grimmoryBookId == null) return
+        if (current.applyingCoverUrl != null) return // one upload at a time
+        updateSuccess { it.copy(applyingCoverUrl = url) }
+        viewModelScope.launch {
+            metadataClient.uploadCoverFromUrl(
+                baseUrl = current.server!!.url,
+                serverId = current.server.id,
+                bookId = current.grimmoryBookId!!,
+                url = url,
+            ).onSuccess {
+                val origin = serverOrigin(current.server.url)
+                val newUrl = "$origin/api/v1/media/book/${current.grimmoryBookId}/cover?v=${java.time.Instant.now().epochSecond}"
+                bookRepository.updateBookCoverUrl(current.bookId, newUrl)
+                _message.value = "Cover applied"
+                _coverAppliedTicker.value = _coverAppliedTicker.value + 1
+                updateSuccess { it.copy(applyingCoverUrl = null) }
+            }.onFailure { e ->
+                Timber.e(e, "Apply cover failed")
+                _message.value = friendlyErrorMessage(e)
+                updateSuccess { it.copy(applyingCoverUrl = null) }
+            }
+        }
+    }
 
     fun applyFetchedField(key: MetadataFieldKey) = updateSuccess { s ->
         val candidate = s.selectedCandidate ?: return@updateSuccess s

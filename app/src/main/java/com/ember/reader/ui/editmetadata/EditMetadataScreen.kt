@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,9 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -69,6 +72,7 @@ fun EditMetadataScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val saved by viewModel.saved.collectAsStateWithLifecycle()
+    val coverAppliedTicker by viewModel.coverAppliedTicker.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
@@ -102,6 +106,11 @@ fun EditMetadataScreen(
     ) { padding ->
         var enlargedCoverUrl by remember { mutableStateOf<String?>(null) }
 
+        // Close the cover preview overlay when a cover apply succeeds.
+        LaunchedEffect(coverAppliedTicker) {
+            if (coverAppliedTicker > 0) enlargedCoverUrl = null
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -126,13 +135,17 @@ fun EditMetadataScreen(
                     onApplyField = viewModel::applyFetchedField,
                     onApplyAll = viewModel::applyAllFetched,
                     onCoverClick = { enlargedCoverUrl = it },
+                    onApplyCover = viewModel::applyCover,
                 )
             }
 
             // Fullscreen cover overlay
             enlargedCoverUrl?.let { url ->
+                val applyingCoverUrl = (state as? EditMetadataUiState.Success)?.state?.applyingCoverUrl
                 CoverOverlay(
                     coverUrl = url,
+                    applyingCoverUrl = applyingCoverUrl,
+                    onApplyCover = { viewModel.applyCover(url) },
                     onDismiss = { enlargedCoverUrl = null },
                 )
             }
@@ -236,6 +249,7 @@ private fun EditMetadataContent(
     onApplyField: (MetadataFieldKey) -> Unit,
     onApplyAll: () -> Unit,
     onCoverClick: (String) -> Unit,
+    onApplyCover: (String) -> Unit,
 ) {
     val candidate = state.selectedCandidate
     Column(
@@ -284,12 +298,14 @@ private fun EditMetadataContent(
             results = state.searchResults,
             error = state.searchError,
             selectedCandidateId = candidate?.bookId,
+            applyingCoverUrl = state.applyingCoverUrl,
             onFormChange = onSearchFormChange,
             onToggleProvider = onToggleProvider,
             onStart = onStartSearch,
             onCancel = onCancelSearch,
             onSelect = onSelectCandidate,
             onCoverClick = onCoverClick,
+            onApplyCover = onApplyCover,
         )
 
         // Candidate merge banner + Apply All (Grimmory only)
@@ -374,12 +390,14 @@ private fun SearchSection(
     results: List<GrimmoryBookMetadata>,
     error: String?,
     selectedCandidateId: Long?,
+    applyingCoverUrl: String?,
     onFormChange: ((SearchForm) -> SearchForm) -> Unit,
     onToggleProvider: (MetadataProvider) -> Unit,
     onStart: () -> Unit,
     onCancel: () -> Unit,
     onSelect: (GrimmoryBookMetadata) -> Unit,
     onCoverClick: (String) -> Unit,
+    onApplyCover: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Card {
@@ -474,8 +492,10 @@ private fun SearchSection(
                                 providerName = provider?.name ?: "Unknown",
                                 candidates = candidates,
                                 selectedCandidateId = selectedCandidateId,
+                                applyingCoverUrl = applyingCoverUrl,
                                 onSelect = onSelect,
                                 onCoverClick = onCoverClick,
+                                onApplyCover = onApplyCover,
                             )
                         }
                     }
@@ -490,8 +510,10 @@ private fun ProviderResultGroup(
     providerName: String,
     candidates: List<GrimmoryBookMetadata>,
     selectedCandidateId: Long?,
+    applyingCoverUrl: String?,
     onSelect: (GrimmoryBookMetadata) -> Unit,
     onCoverClick: (String) -> Unit,
+    onApplyCover: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Card(
@@ -534,8 +556,10 @@ private fun ProviderResultGroup(
                         CandidateRow(
                             metadata = candidate,
                             selected = candidate.bookId != null && candidate.bookId == selectedCandidateId,
+                            applyingCoverUrl = applyingCoverUrl,
                             onClick = { onSelect(candidate) },
                             onCoverClick = onCoverClick,
+                            onApplyCover = onApplyCover,
                         )
                     }
                 }
@@ -548,8 +572,10 @@ private fun ProviderResultGroup(
 private fun CandidateRow(
     metadata: GrimmoryBookMetadata,
     selected: Boolean,
+    applyingCoverUrl: String?,
     onClick: () -> Unit,
     onCoverClick: (String) -> Unit = {},
+    onApplyCover: (String) -> Unit = {},
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -561,7 +587,10 @@ private fun CandidateRow(
             .fillMaxWidth()
             .clickable(onClick = onClick),
     ) {
-        Row(Modifier.padding(10.dp)) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             // Small cover thumbnail
             val coverUrl = metadata.thumbnailUrl
             if (coverUrl != null) {
@@ -574,7 +603,29 @@ private fun CandidateRow(
                         .clip(RoundedCornerShape(4.dp))
                         .clickable { onCoverClick(coverUrl) },
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(6.dp))
+                // "Use this cover" button — stops propagation so it doesn't select the candidate.
+                val uploadingThis = applyingCoverUrl == coverUrl
+                val anyUploading = applyingCoverUrl != null
+                IconButton(
+                    onClick = { onApplyCover(coverUrl) },
+                    enabled = !anyUploading,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    if (uploadingThis) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            Icons.Outlined.Image,
+                            contentDescription = "Use this cover",
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(4.dp))
             }
             Column(Modifier.weight(1f)) {
                 Text(
@@ -615,8 +666,14 @@ private fun CandidateRow(
 @Composable
 private fun CoverOverlay(
     coverUrl: String,
+    applyingCoverUrl: String?,
+    onApplyCover: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var resolution by remember(coverUrl) { mutableStateOf<IntSize?>(null) }
+    val uploadingThis = applyingCoverUrl == coverUrl
+    val anyUploading = applyingCoverUrl != null
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -624,14 +681,67 @@ private fun CoverOverlay(
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = coverUrl,
-            contentDescription = "Cover preview",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .clip(RoundedCornerShape(8.dp)),
-        )
+        // Inner column holds the image + resolution caption + apply button.
+        // clickable(enabled = false) on the column would block the parent's dismiss tap;
+        // instead we simply attach no click handlers so taps on the image area pass
+        // through to the parent scrim for dismiss, while the Button intercepts its own tap.
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(0.8f),
+        ) {
+            Box {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = "Cover preview",
+                    contentScale = ContentScale.Fit,
+                    onSuccess = { success ->
+                        val d = success.result.drawable
+                        resolution = IntSize(d.intrinsicWidth, d.intrinsicHeight)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp)),
+                )
+                resolution?.let { size ->
+                    Text(
+                        "${size.width} × ${size.height}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .background(
+                                Color.Black.copy(alpha = 0.55f),
+                                RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+            Button(
+                onClick = onApplyCover,
+                enabled = !anyUploading,
+            ) {
+                if (uploadingThis) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Applying…")
+                } else {
+                    Icon(
+                        Icons.Outlined.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Use this cover")
+                }
+            }
+        }
     }
 }
 

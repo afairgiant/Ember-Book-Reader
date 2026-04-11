@@ -70,6 +70,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.ember.reader.core.network.appendQueryParam
 import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.ReadStatus
@@ -626,14 +627,15 @@ private fun SeriesBookCard(item: SeriesBookItem, onClick: () -> Unit) {
 
 @Composable
 private fun BookCover(book: Book, coverAuthHeader: String?, modifier: Modifier = Modifier) {
-    if (book.coverUrl != null) {
+    val bookCoverUrl = book.coverUrl
+    if (bookCoverUrl != null) {
         val context = LocalContext.current
-        val imageModel = remember(book.coverUrl, coverAuthHeader) {
+        val imageModel = remember(bookCoverUrl, coverAuthHeader) {
             val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
                 val token = coverAuthHeader.removePrefix("jwt:")
-                "${book.coverUrl}?token=$token"
+                bookCoverUrl.appendQueryParam("token", token)
             } else {
-                book.coverUrl
+                bookCoverUrl
             }
             ImageRequest.Builder(context)
                 .data(url)

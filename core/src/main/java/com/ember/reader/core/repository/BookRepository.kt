@@ -201,9 +201,9 @@ class BookRepository @Inject constructor(
             }
 
             val coverUrl = if (format == BookFormat.AUDIOBOOK) {
-                "$origin/api/v1/audiobooks/${appBook.id}/cover"
+                grimmoryAppClient.audiobookCoverUrl(server.url, appBook.id, appBook.coverUpdatedOn)
             } else {
-                "$origin/api/v1/media/book/${appBook.id}/cover"
+                grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn)
             }
 
             if (existing != null) {
@@ -341,9 +341,9 @@ class BookRepository @Inject constructor(
             else -> BookFormat.EPUB
         }
         val coverUrl = if (format == BookFormat.AUDIOBOOK) {
-            "$origin/api/v1/audiobooks/${appBook.id}/cover"
+            grimmoryAppClient.audiobookCoverUrl(origin, appBook.id, appBook.coverUpdatedOn)
         } else {
-            "$origin/api/v1/media/book/${appBook.id}/cover"
+            grimmoryAppClient.coverUrl(origin, appBook.id, appBook.coverUpdatedOn)
         }
         if (existing != null) {
             bookDao.update(
@@ -697,14 +697,13 @@ class BookRepository @Inject constructor(
                             val matchId = if (existing != null) {
                                 existing.id
                             } else {
-                                val origin = com.ember.reader.core.network.serverOrigin(server.url)
                                 val newBook = Book(
                                     id = java.util.UUID.randomUUID().toString(),
                                     serverId = server.id,
                                     opdsEntryId = opdsEntryId,
                                     title = appBook.title,
                                     author = appBook.authors.firstOrNull(),
-                                    coverUrl = "$origin/api/v1/media/book/${appBook.id}/cover",
+                                    coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
                                     downloadUrl = "/api/v1/opds/${appBook.id}/download",
                                     format = when (appBook.primaryFileType?.uppercase()) {
                                         "PDF" -> BookFormat.PDF
@@ -853,6 +852,12 @@ class BookRepository @Inject constructor(
 
         publication.close()
         return BookMetadata(title, author, coverUrl, publisher, language, subjects, pageCount, publishedDate, description)
+    }
+
+    /** Update just the cover URL on an existing book row. Used after applying a new cover. */
+    suspend fun updateBookCoverUrl(bookId: String, coverUrl: String) {
+        val entity = bookDao.getById(bookId) ?: return
+        bookDao.update(entity.copy(coverUrl = coverUrl))
     }
 
     /** Update local book metadata fields from user edits. DB only — does not modify the file. */
