@@ -50,20 +50,14 @@ data class GrimmoryFullBookMetadata(
     val isbn13: String? = null,
     val isbn10: String? = null,
     val language: String? = null,
-    val categories: List<GrimmoryNamedEntity>? = null,
-    val moods: List<GrimmoryNamedEntity>? = null,
-    val tags: List<GrimmoryNamedEntity>? = null,
+    val categories: List<String>? = null,
+    val moods: List<String>? = null,
+    val tags: List<String>? = null,
 ) {
     val categoryNames: Set<String>
-        get() = categories?.map { it.name }?.toSet() ?: emptySet()
+        get() = categories?.toSet() ?: emptySet()
     val moodNames: Set<String>
-        get() = moods?.map { it.name }?.toSet() ?: emptySet()
+        get() = moods?.toSet() ?: emptySet()
     val tagNames: Set<String>
-        get() = tags?.map { it.name }?.toSet() ?: emptySet()
+        get() = tags?.toSet() ?: emptySet()
 }
-
-@Serializable
-data class GrimmoryNamedEntity(
-    val id: Long? = null,
-    val name: String = "",
-)
