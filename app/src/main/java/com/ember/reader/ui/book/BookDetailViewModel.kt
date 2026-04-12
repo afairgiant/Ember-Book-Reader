@@ -20,6 +20,7 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import timber.log.Timber
 import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,6 +44,7 @@ class BookDetailViewModel @Inject constructor(
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val hardcoverClient: HardcoverClient,
     private val hardcoverTokenManager: HardcoverTokenManager,
+    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 

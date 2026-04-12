@@ -57,6 +57,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +81,9 @@ import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.BookCoverImage
+import com.ember.reader.ui.organize.OrganizeFilesSheet
+import com.ember.reader.ui.organize.OrganizeFilesViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -104,6 +108,8 @@ fun BookDetailScreen(
     val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var showOrganizeSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(message) {
         message?.let {
@@ -147,6 +153,17 @@ fun BookDetailScreen(
                                     onEditMetadata(currentBook.id)
                                 },
                             )
+                            val canOrganize = server?.canMoveOrganizeFiles == true
+                                && grimmoryDetail != null
+                            if (canOrganize) {
+                                DropdownMenuItem(
+                                    text = { Text("Organize file…") },
+                                    onClick = {
+                                        menuOpen = false
+                                        showOrganizeSheet = true
+                                    },
+                                )
+                            }
                         }
                     }
                     if (currentBook?.isDownloaded == true && currentBook.localPath != null) {
@@ -589,6 +606,32 @@ fun BookDetailScreen(
                 onDismiss = { coverZoomed = false },
             )
         }
+        }
+    }
+
+    if (showOrganizeSheet) {
+        val currentServer = server
+        val currentDetail = grimmoryDetail
+        if (currentServer != null && currentDetail != null) {
+            val organizeVm = remember(currentDetail.id) {
+                viewModel.organizeFilesViewModelFactory.create(
+                    baseUrl = currentServer.url,
+                    serverId = currentServer.id,
+                    bookIds = listOf(currentDetail.id),
+                )
+            }
+            OrganizeFilesSheet(
+                viewModel = organizeVm,
+                onDismiss = { showOrganizeSheet = false },
+                onSuccess = { count, libName ->
+                    val plural = if (count == 1) "book" else "books"
+                    scope.launch { snackbarHostState.showSnackbar("Moved $count $plural to $libName") }
+                    viewModel.refreshFromServer()
+                    showOrganizeSheet = false
+                },
+            )
+        } else {
+            showOrganizeSheet = false
         }
     }
 }
