@@ -106,6 +106,7 @@ fun BookDetailScreen(
     val hardcoverMatch by viewModel.hardcoverMatch.collectAsStateWithLifecycle()
     val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
     val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
+    val grimmoryFullBook by viewModel.grimmoryFullBook.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -534,6 +535,9 @@ fun BookDetailScreen(
                             InfoRow(stringResource(R.string.info_server), currentServer.name)
                             gd?.libraryName?.let { InfoRow(stringResource(R.string.info_library), it) }
                             primaryFileName?.let { InfoRow("File", it) }
+                            grimmoryFullBook?.metadataMatchScore?.let { score ->
+                                MetadataScoreRow(score)
+                            }
                             subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
                             gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
                                 InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
@@ -701,6 +705,41 @@ private fun FullscreenCoverOverlay(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(8.dp)),
+        )
+    }
+}
+
+@Composable
+private fun MetadataScoreRow(score: Float) {
+    val pct = score.roundToInt()
+    val color = when {
+        score >= 90f -> Color(0xFF16A34A) // green
+        score >= 70f -> Color(0xFF84CC16) // lime
+        score >= 50f -> Color(0xFFF59E0B) // amber
+        score >= 30f -> Color(0xFFF97316) // orange
+        else -> Color(0xFFEF4444)         // red
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.info_metadata_score),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "$pct%",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = color,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.12f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
         )
     }
 }

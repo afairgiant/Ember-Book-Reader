@@ -8,6 +8,7 @@ import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryFullBook
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.hardcover.HardcoverBookDetail
@@ -26,6 +27,7 @@ import com.ember.reader.ui.download.DownloadService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -70,6 +72,9 @@ class BookDetailViewModel @Inject constructor(
 
     private val _seriesBooks = MutableStateFlow<List<SeriesBookItem>>(emptyList())
     val seriesBooks: StateFlow<List<SeriesBookItem>> = _seriesBooks.asStateFlow()
+
+    private val _grimmoryFullBook = MutableStateFlow<GrimmoryFullBook?>(null)
+    val grimmoryFullBook: StateFlow<GrimmoryFullBook?> = _grimmoryFullBook.asStateFlow()
 
     private val _downloading = MutableStateFlow(false)
     val downloading: StateFlow<Boolean> = _downloading.asStateFlow()
@@ -121,13 +126,20 @@ class BookDetailViewModel @Inject constructor(
         // Fetch full detail from Grimmory if available
         val grimmoryBookId = _book.value?.grimmoryBookId
         if (srv.isGrimmory && grimmoryTokenManager.isLoggedIn(srv.id) && grimmoryBookId != null) {
-            grimmoryClient.getBookDetail(srv.url, srv.id, grimmoryBookId).onSuccess { detail ->
-                _readStatus.value = detail.readStatus
-                _grimmoryDetail.value = detail
-                // Load series books if book is in a series
-                val seriesName = detail.seriesName ?: _book.value?.series
-                if (seriesName != null) {
-                    loadSeriesBooks(srv, seriesName)
+            coroutineScope {
+                launch {
+                    grimmoryClient.getBookDetail(srv.url, srv.id, grimmoryBookId).onSuccess { detail ->
+                        _readStatus.value = detail.readStatus
+                        _grimmoryDetail.value = detail
+                        val seriesName = detail.seriesName ?: _book.value?.series
+                        if (seriesName != null) {
+                            loadSeriesBooks(srv, seriesName)
+                        }
+                    }
+                }
+                launch {
+                    grimmoryAppClient.getBookDetailFull(srv.url, srv.id, grimmoryBookId)
+                        .onSuccess { fullBook -> _grimmoryFullBook.value = fullBook }
                 }
             }
         }

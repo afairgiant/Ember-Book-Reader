@@ -20,6 +20,7 @@ data class GrimmoryFullBook(
     val libraryPath: GrimmoryFullBookLibraryPath? = null,
     val primaryFile: GrimmoryFullBookFile? = null,
     val metadata: GrimmoryFullBookMetadata? = null,
+    val metadataMatchScore: Float? = null,
 )
 
 @Serializable
