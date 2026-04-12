@@ -65,6 +65,7 @@ fun ServerListScreen(
     onOpenSettings: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
+    onOpenStats: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
@@ -176,7 +177,7 @@ fun ServerListScreen(
                 // Quick Stats
                 if (quickStats != null) {
                     item {
-                        QuickStatsCard(stats = quickStats!!)
+                        QuickStatsCard(stats = quickStats!!, onClick = onOpenStats)
                     }
                 }
             }
@@ -373,8 +374,9 @@ private fun RecentlyAddedPlaceholderCard() {
 }
 
 @Composable
-private fun QuickStatsCard(stats: QuickStats) {
+private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
     Card(
+        onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -388,8 +390,8 @@ private fun QuickStatsCard(stats: QuickStats) {
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val hours = stats.todaySeconds / 3600
-                val minutes = (stats.todaySeconds % 3600) / 60
+                val hours = stats.weekSeconds / 3600
+                val minutes = (stats.weekSeconds % 3600) / 60
                 Text(
                     text = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
                     style = MaterialTheme.typography.titleLarge,
@@ -397,7 +399,7 @@ private fun QuickStatsCard(stats: QuickStats) {
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "Today",
+                    text = "This week",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

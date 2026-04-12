@@ -1,4 +1,4 @@
-package com.ember.reader.ui.settings
+package com.ember.reader.ui.settings.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,7 +7,9 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryFavoriteDay
 import com.ember.reader.core.grimmory.GrimmoryGenreStat
 import com.ember.reader.core.grimmory.GrimmoryPeakHour
+import com.ember.reader.core.grimmory.GrimmorySessionScatter
 import com.ember.reader.core.grimmory.GrimmoryStreakResponse
+import com.ember.reader.core.grimmory.GrimmoryTimelineEntry
 import com.ember.reader.core.model.ReadingSession
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
@@ -15,7 +17,9 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingSessionRepository
 import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
 import java.time.Year
+import java.time.temporal.WeekFields
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -46,8 +50,20 @@ class StatsViewModel @Inject constructor(
         viewModelScope.launch { loadStats() }
     }
 
+    fun loadTimeline(year: Int, week: Int) {
+        viewModelScope.launch {
+            val server = findGrimmoryServer() ?: return@launch
+            val result = grimmoryClient.getReadingTimeline(
+                server.url,
+                server.id,
+                year,
+                week,
+            ).getOrNull()
+            _stats.value = _stats.value.copy(timeline = result)
+        }
+    }
+
     private suspend fun loadStats() {
-        // Load local stats first
         val todayDuration = readingSessionRepository.getTotalDurationToday()
         val weekDuration = readingSessionRepository.getTotalDurationThisWeek()
         val monthDuration = readingSessionRepository.getTotalDurationThisMonth()
@@ -65,7 +81,6 @@ class StatsViewModel @Inject constructor(
             }
         }
 
-        // Show local stats immediately
         _stats.value = StatsData(
             todaySeconds = todayDuration,
             weekSeconds = weekDuration,
@@ -78,7 +93,6 @@ class StatsViewModel @Inject constructor(
             estimatedMinutesToFinish = estimatedCompletion,
         )
 
-        // Then load Grimmory stats if available
         val grimmoryServer = findGrimmoryServer()
         if (grimmoryServer != null) {
             loadGrimmoryStats(grimmoryServer)
@@ -110,12 +124,21 @@ class StatsViewModel @Inject constructor(
                 val genresDeferred = async {
                     grimmoryClient.getGenreStats(baseUrl, serverId).getOrNull()
                 }
+                val timelineDeferred = async {
+                    val week = LocalDate.now().get(WeekFields.ISO.weekOfWeekBasedYear())
+                    grimmoryClient.getReadingTimeline(baseUrl, serverId, currentYear, week).getOrNull()
+                }
+                val scatterDeferred = async {
+                    grimmoryClient.getSessionScatter(baseUrl, serverId, currentYear).getOrNull()
+                }
 
                 val grimmoryStreak = streakDeferred.await()
                 val peakHours = peakHoursDeferred.await()
                 val favoriteDays = favoriteDaysDeferred.await()
                 val distributions = distributionsDeferred.await()
                 val genres = genresDeferred.await()
+                val timeline = timelineDeferred.await()
+                val scatter = scatterDeferred.await()
 
                 _stats.value = _stats.value.copy(
                     isGrimmoryConnected = true,
@@ -124,6 +147,9 @@ class StatsViewModel @Inject constructor(
                     favoriteDays = favoriteDays,
                     bookDistributions = distributions,
                     genreStats = genres?.sortedByDescending { it.totalDurationSeconds }?.take(8),
+                    timeline = timeline,
+                    sessionScatter = scatter,
+                    grimmoryServerUrl = server.url,
                 )
             }
         } catch (e: Exception) {
@@ -170,14 +196,7 @@ data class StatsData(
     val favoriteDays: List<GrimmoryFavoriteDay>? = null,
     val bookDistributions: GrimmoryBookDistributions? = null,
     val genreStats: List<GrimmoryGenreStat>? = null,
+    val timeline: List<GrimmoryTimelineEntry>? = null,
+    val sessionScatter: List<GrimmorySessionScatter>? = null,
+    val grimmoryServerUrl: String? = null,
 )
-
-fun Long.formatDuration(): String {
-    val hours = this / 3600
-    val minutes = (this % 3600) / 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "<1m"
-    }
-}

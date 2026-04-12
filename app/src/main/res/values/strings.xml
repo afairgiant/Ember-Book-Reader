@@ -279,6 +279,16 @@
     <string name="no_sessions_yet">No reading sessions yet. Open a book and start reading!</string>
     <string name="estimated_time_to_finish">Estimated time to finish current book:</string>
     <string name="grimmory_stats">Cross-device stats from Grimmory</string>
+    <string name="stats_reading_patterns">Reading Patterns</string>
+    <string name="stats_session_patterns">Session Patterns</string>
+    <string name="stats_reading_timeline">Reading Timeline</string>
+    <string name="stats_week_label">W%1$d, %2$d</string>
+    <string name="stats_previous_week">Previous week</string>
+    <string name="stats_next_week">Next week</string>
+    <string name="stats_no_reading_this_week">No reading this week</string>
+    <string name="stats_view_on_grimmory">View full stats on Grimmory</string>
+    <string name="stats_show_all">Show all</string>
+    <string name="stats_show_less">Show less</string>
 
     <!-- Storage -->
     <string name="manage_storage">Manage Storage</string>

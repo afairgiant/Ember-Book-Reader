@@ -16,6 +16,8 @@ import com.ember.reader.core.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,9 +55,9 @@ class ServerListViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             // Load local stats immediately as fallback
-            val todaySeconds = readingSessionRepository.getTotalDurationToday()
+            val weekSeconds = readingSessionRepository.getTotalDurationThisWeek()
             val localStreak = readingSessionRepository.getCurrentStreak()
-            _quickStats.value = QuickStats(todaySeconds = todaySeconds, currentStreak = localStreak)
+            _quickStats.value = QuickStats(weekSeconds = weekSeconds, currentStreak = localStreak)
         }
         viewModelScope.launch {
             serverRepository.observeAll()
@@ -99,15 +101,33 @@ class ServerListViewModel @Inject constructor(
     }
 
     private suspend fun loadGrimmoryStats(server: Server) {
-        grimmoryClient.getReadingStreak(server.url, server.id)
-            .onSuccess { streak ->
+        val currentYear = java.time.Year.now().value
+        val currentWeek = java.time.LocalDate.now()
+            .get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear())
+
+        coroutineScope {
+            val streakDeferred = async {
+                grimmoryClient.getReadingStreak(server.url, server.id).getOrNull()
+            }
+            val timelineDeferred = async {
+                grimmoryClient.getReadingTimeline(server.url, server.id, currentYear, currentWeek)
+                    .getOrNull()
+            }
+
+            val streak = streakDeferred.await()
+            val timeline = timelineDeferred.await()
+
+            val grimmoryWeekSeconds = timeline?.sumOf { it.totalDurationSeconds } ?: 0L
+
+            if (streak != null || grimmoryWeekSeconds > 0L) {
                 val current = _quickStats.value
                 _quickStats.value = QuickStats(
-                    todaySeconds = current?.todaySeconds ?: 0L,
-                    currentStreak = streak.currentStreak,
+                    weekSeconds = if (grimmoryWeekSeconds > 0L) grimmoryWeekSeconds
+                        else current?.weekSeconds ?: 0L,
+                    currentStreak = streak?.currentStreak ?: current?.currentStreak ?: 0,
                 )
             }
-            .onFailure { Timber.w(it, "Failed to load Grimmory streak") }
+        }
     }
 
     private suspend fun loadRecentlyAdded(server: Server) {
@@ -180,7 +200,7 @@ class ServerListViewModel @Inject constructor(
 }
 
 data class QuickStats(
-    val todaySeconds: Long,
+    val weekSeconds: Long,
     val currentStreak: Int,
 )
 

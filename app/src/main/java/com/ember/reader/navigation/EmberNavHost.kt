@@ -174,6 +174,9 @@ fun EmberNavHost(
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
                     },
+                    onOpenStats = {
+                        navController.navigate(Routes.STATS)
+                    },
                 )
             }
 
@@ -383,7 +386,7 @@ fun EmberNavHost(
             }
 
             composable(Routes.STATS) {
-                com.ember.reader.ui.settings.StatsScreen(
+                com.ember.reader.ui.settings.stats.StatsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
