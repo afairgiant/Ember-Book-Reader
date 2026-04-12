@@ -96,6 +96,54 @@ class GrimmoryAppClient @Inject constructor(
             response.body<List<GrimmoryAppShelf>>()
         }
 
+    /**
+     * Full Grimmory library list including [GrimmoryLibraryFull.paths] and
+     * [GrimmoryLibraryFull.fileNamingPattern], via the regular (non-app) libraries
+     * endpoint. Used by Organize Files to offer a destination picker and drive the
+     * filename preview.
+     */
+    suspend fun getFullLibraries(baseUrl: String, serverId: Long): Result<List<GrimmoryLibraryFull>> =
+        withAuth(baseUrl, serverId) { token ->
+            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/libraries") {
+                header("Authorization", "Bearer $token")
+            }
+            if (!response.status.isSuccess()) error("Get full libraries failed: ${response.status}")
+            response.body<List<GrimmoryLibraryFull>>()
+        }
+
+    /**
+     * Posts a bulk file-move request to Grimmory. The server physically moves files
+     * between library paths and updates DB foreign keys so the books appear under
+     * their new libraries. Returns [Unit] on 2xx; wraps non-success status codes in
+     * the [Result] failure with the status text in the exception message.
+     */
+    suspend fun moveFiles(
+        baseUrl: String,
+        serverId: Long,
+        request: FileMoveRequest,
+    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/files/move") {
+            header("Authorization", "Bearer $token")
+            header("Content-Type", "application/json")
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) error("Move files failed: ${response.status}")
+    }
+
+    /**
+     * Fetches the currently-authenticated user's [GrimmoryUser] record, including the
+     * nested [GrimmoryUserPermissions] used to gate admin-only actions like Organize
+     * Files.
+     */
+    suspend fun getCurrentUser(baseUrl: String, serverId: Long): Result<GrimmoryUser> =
+        withAuth(baseUrl, serverId) { token ->
+            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/users/me") {
+                header("Authorization", "Bearer $token")
+            }
+            if (!response.status.isSuccess()) error("Get current user failed: ${response.status}")
+            response.body<GrimmoryUser>()
+        }
+
     suspend fun getMagicShelves(
         baseUrl: String,
         serverId: Long
