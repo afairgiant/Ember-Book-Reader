@@ -521,9 +521,11 @@ fun BookDetailScreen(
                 }
 
                 // Server Info card
-                val subjectList: List<String> = gd?.categories?.toList()
-                    ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
-                    ?: emptyList()
+                val subjectList: List<String> =
+                    grimmoryFullBook?.metadata?.categoryNames?.toList()
+                        ?: gd?.categories?.toList()
+                        ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                        ?: emptyList()
                 val primaryFileName = gd?.primaryFile?.fileName
                 if (currentServer != null) {
                     Spacer(modifier = Modifier.height(12.dp))
