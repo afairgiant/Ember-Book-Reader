@@ -78,6 +78,15 @@ class ReaderViewModelTest {
     @MockK
     private lateinit var appPreferencesRepository: AppPreferencesRepository
 
+    @MockK(relaxed = true)
+    private lateinit var bookReaderPreferencesRepository: com.ember.reader.core.repository.BookReaderPreferencesRepository
+
+    @MockK(relaxed = true)
+    private lateinit var progressSyncManager: com.ember.reader.core.sync.ProgressSyncManager
+
+    @MockK(relaxed = true)
+    private lateinit var dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository
+
     private val testDispatcher = StandardTestDispatcher()
 
     @BeforeEach
@@ -104,12 +113,15 @@ class ReaderViewModelTest {
             bookmarkRepository = bookmarkRepository,
             highlightRepository = highlightRepository,
             readerPreferencesRepository = readerPreferencesRepository,
+            bookReaderPreferencesRepository = bookReaderPreferencesRepository,
             serverRepository = serverRepository,
             syncPreferencesRepository = syncPreferencesRepository,
             grimmoryClient = grimmoryClient,
             grimmoryTokenManager = grimmoryTokenManager,
             readingSessionRepository = readingSessionRepository,
-            appPreferencesRepository = appPreferencesRepository
+            appPreferencesRepository = appPreferencesRepository,
+            progressSyncManager = progressSyncManager,
+            dictionaryRepository = dictionaryRepository,
         )
     }
 
@@ -181,7 +193,7 @@ class ReaderViewModelTest {
         } returns Unit
 
         viewModel.onLocatorChanged(testLocator)
-        viewModel.addBookmark()
+        viewModel.addBookmark("Chapter 1")
         advanceUntilIdle()
 
         coVerify {

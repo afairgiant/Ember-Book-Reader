@@ -2,8 +2,8 @@ package com.ember.reader.ui.library
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
-import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
@@ -50,7 +50,7 @@ class LibraryViewModelTest {
     private lateinit var grimmoryClient: GrimmoryClient
 
     @MockK
-    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
+    private lateinit var grimmoryAppClient: GrimmoryAppClient
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -85,7 +85,7 @@ class LibraryViewModelTest {
         val savedStateHandle = SavedStateHandle(
             mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog")
         )
-        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryTokenManager)
+        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryAppClient)
     }
 
     @Test
