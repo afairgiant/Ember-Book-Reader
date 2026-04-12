@@ -163,6 +163,22 @@ class GrimmoryAppClient @Inject constructor(
             response.body<GrimmoryUser>()
         }
 
+    suspend fun getMagicShelfBooks(
+        baseUrl: String,
+        serverId: Long,
+        magicShelfId: Long,
+        page: Int = 0,
+        size: Int = 50,
+    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves/magic/$magicShelfId/books") {
+            header("Authorization", "Bearer $token")
+            parameter("page", page)
+            parameter("size", size)
+        }
+        if (!response.status.isSuccess()) error("Get magic shelf books failed: ${response.status}")
+        response.body<GrimmoryAppPage<GrimmoryAppBook>>()
+    }
+
     suspend fun getMagicShelves(
         baseUrl: String,
         serverId: Long
@@ -250,11 +266,13 @@ class GrimmoryAppClient @Inject constructor(
         serverId: Long,
         libraryId: Long? = null,
         shelfId: Long? = null,
+        magicShelfId: Long? = null,
     ): Result<GrimmoryAppFilterOptions> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/filter-options") {
             header("Authorization", "Bearer $token")
             libraryId?.let { parameter("libraryId", it) }
             shelfId?.let { parameter("shelfId", it) }
+            magicShelfId?.let { parameter("magicShelfId", it) }
         }
         if (!response.status.isSuccess()) error("Get filter options failed: ${response.status}")
         response.body<GrimmoryAppFilterOptions>()

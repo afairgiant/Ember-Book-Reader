@@ -5,10 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.CatalogEntryType
+import com.ember.reader.core.model.GrimmoryCatalog
+import com.ember.reader.core.model.GrimmoryCatalogEntry
+import com.ember.reader.core.model.GrimmoryCatalogLibrary
+import com.ember.reader.core.model.GrimmoryCatalogMagicShelf
+import com.ember.reader.core.model.GrimmoryCatalogMeta
+import com.ember.reader.core.model.GrimmoryCatalogShelf
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
+import com.ember.reader.core.repository.CatalogPreferencesRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +24,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -24,7 +35,8 @@ class CatalogViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager
+    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val catalogPreferencesRepository: CatalogPreferencesRepository,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -36,12 +48,125 @@ class CatalogViewModel @Inject constructor(
     private val _seriesSort = MutableStateFlow(SeriesSortOption.NAME)
     val seriesSort: StateFlow<SeriesSortOption> = _seriesSort.asStateFlow()
 
+    private val _editMode = MutableStateFlow(false)
+    val editMode: StateFlow<Boolean> = _editMode.asStateFlow()
+
     val isSeriesView: Boolean get() = path == "grimmory:series"
+    val isGrimmoryCatalogRoot: Boolean get() = path.isEmpty() && server?.isGrimmory == true
 
     private var server: Server? = null
 
+    /** Raw entries from the API before preferences are applied. */
+    private val _rawGrimmoryEntries = MutableStateFlow<List<GrimmoryCatalogEntry>>(emptyList())
+
     init {
         viewModelScope.launch { loadCatalog() }
+
+        // Combine raw entries with preferences for the Grimmory catalog root
+        combine(
+            _rawGrimmoryEntries,
+            catalogPreferencesRepository.observePreferences(serverId),
+            _editMode,
+        ) { entries, prefs, editing ->
+            if (entries.isEmpty()) return@combine null
+            val prefsMap = prefs.associateBy { it.entryId }
+            val filtered = if (editing) {
+                // In edit mode, show all entries (including hidden) so user can unhide
+                entries.sortedBy { prefsMap[it.id]?.sortOrder ?: defaultOrderFor(it) }
+            } else {
+                entries
+                    .filter { !(prefsMap[it.id]?.hidden ?: false) }
+                    .sortedBy { prefsMap[it.id]?.sortOrder ?: defaultOrderFor(it) }
+            }
+            val serverName = server?.name ?: "Catalog"
+            Triple(filtered, serverName, prefsMap.mapValues { it.value.hidden })
+        }.onEach { result ->
+            if (result != null) {
+                val (filtered, serverName, hiddenMap) = result
+                _uiState.value = CatalogUiState.GrimmorySuccess(
+                    catalog = GrimmoryCatalog(serverName = serverName, entries = filtered),
+                    hiddenEntryIds = hiddenMap.filter { it.value }.keys,
+                )
+            }
+        }.launchIn(viewModelScope)
+    }
+
+    fun toggleEditMode() {
+        _editMode.value = !_editMode.value
+    }
+
+    fun hideEntry(entryId: String) {
+        viewModelScope.launch {
+            catalogPreferencesRepository.hideEntry(serverId, entryId)
+        }
+    }
+
+    fun unhideEntry(entryId: String) {
+        viewModelScope.launch {
+            catalogPreferencesRepository.unhideEntry(serverId, entryId)
+        }
+    }
+
+    fun moveEntryUp(entryId: String) {
+        val current = (_uiState.value as? CatalogUiState.GrimmorySuccess)?.catalog?.entries ?: return
+        val sectionEntries = entriesInSameSection(current, entryId)
+        val index = sectionEntries.indexOfFirst { it.id == entryId }
+        if (index <= 0) return
+        val reordered = sectionEntries.toMutableList().apply {
+            val item = removeAt(index)
+            add(index - 1, item)
+        }
+        viewModelScope.launch {
+            catalogPreferencesRepository.reorder(serverId, reordered.map { it.id })
+        }
+    }
+
+    fun moveEntryDown(entryId: String) {
+        val current = (_uiState.value as? CatalogUiState.GrimmorySuccess)?.catalog?.entries ?: return
+        val sectionEntries = entriesInSameSection(current, entryId)
+        val index = sectionEntries.indexOfFirst { it.id == entryId }
+        if (index < 0 || index >= sectionEntries.lastIndex) return
+        val reordered = sectionEntries.toMutableList().apply {
+            val item = removeAt(index)
+            add(index + 1, item)
+        }
+        viewModelScope.launch {
+            catalogPreferencesRepository.reorder(serverId, reordered.map { it.id })
+        }
+    }
+
+    fun resetPreferences() {
+        viewModelScope.launch {
+            catalogPreferencesRepository.resetForServer(serverId)
+        }
+    }
+
+    private fun entriesInSameSection(
+        entries: List<GrimmoryCatalogEntry>,
+        entryId: String,
+    ): List<GrimmoryCatalogEntry> {
+        val target = entries.find { it.id == entryId } ?: return emptyList()
+        val sectionType = sectionGroupFor(target.type)
+        return entries.filter { sectionGroupFor(it.type) == sectionType }
+    }
+
+    private fun sectionGroupFor(type: CatalogEntryType): String = when (type) {
+        CatalogEntryType.CONTINUE_READING, CatalogEntryType.RECENTLY_ADDED -> "quick"
+        CatalogEntryType.LIBRARY -> "libraries"
+        CatalogEntryType.SHELF -> "shelves"
+        CatalogEntryType.MAGIC_SHELF -> "magic"
+        CatalogEntryType.SERIES, CatalogEntryType.AUTHORS, CatalogEntryType.ALL_BOOKS -> "browse"
+    }
+
+    private fun defaultOrderFor(entry: GrimmoryCatalogEntry): Int = when (entry.type) {
+        CatalogEntryType.CONTINUE_READING -> 0
+        CatalogEntryType.RECENTLY_ADDED -> 1
+        CatalogEntryType.LIBRARY -> 100
+        CatalogEntryType.SHELF -> 200
+        CatalogEntryType.MAGIC_SHELF -> 300
+        CatalogEntryType.SERIES -> 400
+        CatalogEntryType.AUTHORS -> 401
+        CatalogEntryType.ALL_BOOKS -> 402
     }
 
     private suspend fun loadCatalog() {
@@ -113,25 +238,25 @@ class CatalogViewModel @Inject constructor(
     }
 
     private suspend fun fetchGrimmoryCatalogInner(server: Server) {
-        val entries = mutableListOf<OpdsFeedEntry>()
+        val entries = mutableListOf<GrimmoryCatalogEntry>()
 
-        // Continue Reading
+        // Quick Access
         entries.add(
-            OpdsFeedEntry(
+            GrimmoryCatalogMeta(
                 id = "grimmory:continue-reading",
                 title = "Continue Reading",
+                subtitle = "Books you're currently reading",
                 href = "grimmory:status=READING",
-                content = "Books you're currently reading"
+                type = CatalogEntryType.CONTINUE_READING,
             )
         )
-
-        // Recently Added
         entries.add(
-            OpdsFeedEntry(
+            GrimmoryCatalogMeta(
                 id = "grimmory:recent",
                 title = "Recently Added",
+                subtitle = "Latest additions to your library",
                 href = "grimmory:sort=addedOn&dir=desc",
-                content = "Latest additions to your library"
+                type = CatalogEntryType.RECENTLY_ADDED,
             )
         )
 
@@ -139,11 +264,11 @@ class CatalogViewModel @Inject constructor(
         grimmoryAppClient.getLibraries(server.url, server.id).onSuccess { libraries ->
             for (lib in libraries) {
                 entries.add(
-                    OpdsFeedEntry(
-                        id = "grimmory:library:${lib.id}",
+                    GrimmoryCatalogLibrary(
+                        libraryId = lib.id,
                         title = lib.name,
-                        href = "grimmory:libraryId=${lib.id}",
-                        content = "${lib.bookCount} books"
+                        bookCount = lib.bookCount,
+                        serverIcon = lib.icon,
                     )
                 )
             }
@@ -151,56 +276,65 @@ class CatalogViewModel @Inject constructor(
 
         // Shelves
         grimmoryAppClient.getShelves(server.url, server.id).onSuccess { shelves ->
-            if (shelves.isNotEmpty()) {
-                for (shelf in shelves) {
-                    entries.add(
-                        OpdsFeedEntry(
-                            id = "grimmory:shelf:${shelf.id}",
-                            title = shelf.name,
-                            href = "grimmory:shelfId=${shelf.id}",
-                            content = "${shelf.bookCount} books"
-                        )
+            for (shelf in shelves) {
+                entries.add(
+                    GrimmoryCatalogShelf(
+                        shelfId = shelf.id,
+                        title = shelf.name,
+                        bookCount = shelf.bookCount,
+                        publicShelf = shelf.publicShelf,
+                        serverIcon = shelf.icon,
                     )
-                }
+                )
             }
         }
 
-        // Series
+        // Magic Shelves
+        grimmoryAppClient.getMagicShelves(server.url, server.id).onSuccess { magicShelves ->
+            for (magicShelf in magicShelves) {
+                entries.add(
+                    GrimmoryCatalogMagicShelf(
+                        magicShelfId = magicShelf.id,
+                        title = magicShelf.name,
+                        publicShelf = magicShelf.publicShelf,
+                        serverIcon = magicShelf.icon,
+                        iconType = magicShelf.iconType,
+                    )
+                )
+            }
+        }
+
+        // Browse
         entries.add(
-            OpdsFeedEntry(
+            GrimmoryCatalogMeta(
                 id = "grimmory:series",
                 title = "Series",
+                subtitle = "Browse books by series",
                 href = "grimmory:series",
-                content = "Browse books by series"
+                type = CatalogEntryType.SERIES,
             )
         )
-
-        // Authors
         entries.add(
-            OpdsFeedEntry(
+            GrimmoryCatalogMeta(
                 id = "grimmory:authors",
                 title = "Authors",
+                subtitle = "Browse books by author",
                 href = "grimmory:authors",
-                content = "Browse books by author"
+                type = CatalogEntryType.AUTHORS,
             )
         )
-
-        // All Books
         entries.add(
-            OpdsFeedEntry(
+            GrimmoryCatalogMeta(
                 id = "grimmory:all",
                 title = "All Books",
+                subtitle = "Browse the full catalog",
                 href = "grimmory:all",
-                content = "Browse the full catalog"
+                type = CatalogEntryType.ALL_BOOKS,
             )
         )
 
-        _uiState.value = CatalogUiState.Success(
-            feed = OpdsFeed(
-                title = "${server.name} Catalog",
-                entries = entries
-            )
-        )
+        // Emit raw entries — the combine flow applies preferences and updates uiState
+        _rawGrimmoryEntries.value = entries
     }
 
     private suspend fun fetchGrimmorySeries(server: Server) {
@@ -228,7 +362,7 @@ class CatalogViewModel @Inject constructor(
                 page++
             } while (result.hasNext)
 
-            _uiState.value = CatalogUiState.Success(
+            _uiState.value = CatalogUiState.OpdsSuccess(
                 feed = OpdsFeed(title = "Series", entries = allEntries)
             )
         } catch (e: Exception) {
@@ -255,7 +389,7 @@ class CatalogViewModel @Inject constructor(
                 page++
             } while (result.hasNext)
 
-            _uiState.value = CatalogUiState.Success(
+            _uiState.value = CatalogUiState.OpdsSuccess(
                 feed = OpdsFeed(title = "Authors", entries = allEntries)
             )
         } catch (e: Exception) {
@@ -272,7 +406,7 @@ class CatalogViewModel @Inject constructor(
         )
         result.fold(
             onSuccess = { feed ->
-                _uiState.value = CatalogUiState.Success(feed = feed)
+                _uiState.value = CatalogUiState.OpdsSuccess(feed = feed)
             },
             onFailure = { error ->
                 _uiState.value = CatalogUiState.Error(friendlyErrorMessage(error))
@@ -283,7 +417,11 @@ class CatalogViewModel @Inject constructor(
 
 sealed interface CatalogUiState {
     data object Loading : CatalogUiState
-    data class Success(val feed: OpdsFeed) : CatalogUiState
+    data class OpdsSuccess(val feed: OpdsFeed) : CatalogUiState
+    data class GrimmorySuccess(
+        val catalog: GrimmoryCatalog,
+        val hiddenEntryIds: Set<String> = emptySet(),
+    ) : CatalogUiState
     data class Error(val message: String) : CatalogUiState
 }
 

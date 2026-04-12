@@ -163,6 +163,7 @@ class BookRepository @Inject constructor(
         size: Int = 100,
         libraryId: Long? = null,
         shelfId: Long? = null,
+        magicShelfId: Long? = null,
         seriesName: String? = null,
         status: String? = null,
         search: String? = null,
@@ -173,10 +174,11 @@ class BookRepository @Inject constructor(
         authors: String? = null,
         language: String? = null,
     ): Result<OpdsBookPage> {
-        Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId status='$status' sort='$sort' dir='$dir' minRating=$minRating maxRating=$maxRating authors='$authors' language='$language'")
+        Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId magicShelfId=$magicShelfId status='$status' sort='$sort' dir='$dir' minRating=$minRating maxRating=$maxRating authors='$authors' language='$language'")
         val appPage = when {
             seriesName != null -> grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
             search != null -> grimmoryAppClient.searchBooks(server.url, server.id, search, page, size)
+            magicShelfId != null -> grimmoryAppClient.getMagicShelfBooks(server.url, server.id, magicShelfId, page, size)
             else -> grimmoryAppClient.getBooks(
                 baseUrl = server.url,
                 serverId = server.id,

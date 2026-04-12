@@ -9,6 +9,7 @@ import com.ember.reader.core.database.converter.Converters
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.BookReaderPreferencesDao
 import com.ember.reader.core.database.dao.BookmarkDao
+import com.ember.reader.core.database.dao.CatalogEntryPreferenceDao
 import com.ember.reader.core.database.dao.DictionaryDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
@@ -17,6 +18,7 @@ import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookReaderPreferencesEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
+import com.ember.reader.core.database.entity.CatalogEntryPreferenceEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
 import com.ember.reader.core.database.entity.DictionaryEntryEntity
@@ -33,8 +35,9 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingSessionEntity::class,
         DictionaryEntryEntity::class,
         BookReaderPreferencesEntity::class,
+        CatalogEntryPreferenceEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -137,6 +140,22 @@ abstract class EmberDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE catalog_entry_preferences (
+                        serverId INTEGER NOT NULL,
+                        entryId TEXT NOT NULL,
+                        hidden INTEGER NOT NULL DEFAULT 0,
+                        sortOrder INTEGER NOT NULL DEFAULT ${Int.MAX_VALUE},
+                        PRIMARY KEY (serverId, entryId)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         /**
          * Migration 1→2: Change books foreign key from CASCADE to SET_NULL
          * so deleting a server doesn't destroy downloaded books.
@@ -182,4 +201,5 @@ abstract class EmberDatabase : RoomDatabase() {
     abstract fun readingSessionDao(): ReadingSessionDao
     abstract fun dictionaryDao(): DictionaryDao
     abstract fun bookReaderPreferencesDao(): BookReaderPreferencesDao
+    abstract fun catalogEntryPreferenceDao(): CatalogEntryPreferenceDao
 }

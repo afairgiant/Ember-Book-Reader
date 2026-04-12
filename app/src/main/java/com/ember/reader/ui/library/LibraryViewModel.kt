@@ -211,6 +211,7 @@ class LibraryViewModel @Inject constructor(
             serverId = currentServer.id,
             libraryId = params["libraryId"]?.toLongOrNull(),
             shelfId = params["shelfId"]?.toLongOrNull(),
+            magicShelfId = params["magicShelfId"]?.toLongOrNull(),
         ).onSuccess { options ->
             _grimmoryFilterOptions.value = options
             timber.log.Timber.d(
@@ -232,7 +233,7 @@ class LibraryViewModel @Inject constructor(
             if (params.isEmpty() || params == "all") return true
             // grimmory:sort=... with no libraryId/shelfId/seriesName/status/search is still root
             val keys = params.split("&").mapNotNull { it.substringBefore("=", "").takeIf { k -> k.isNotEmpty() } }.toSet()
-            val filterKeys = setOf("libraryId", "shelfId", "seriesName", "status", "search")
+            val filterKeys = setOf("libraryId", "shelfId", "magicShelfId", "seriesName", "status", "search")
             return keys.none { it in filterKeys }
         }
         // OPDS: root path has no query string
@@ -350,6 +351,7 @@ class LibraryViewModel @Inject constructor(
             page = page,
             libraryId = params["libraryId"]?.toLongOrNull(),
             shelfId = params["shelfId"]?.toLongOrNull(),
+            magicShelfId = params["magicShelfId"]?.toLongOrNull(),
             seriesName = params["seriesName"],
             status = params["status"] ?: filter.status?.name,
             search = params["search"],
