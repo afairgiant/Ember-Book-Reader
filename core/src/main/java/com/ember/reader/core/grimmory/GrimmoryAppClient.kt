@@ -107,12 +107,12 @@ class GrimmoryAppClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long,
-    ): Result<GrimmoryBookDetail> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryFullBook> = withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId") {
             header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) error("Get book detail failed: ${response.status}")
-        response.body<GrimmoryBookDetail>()
+        response.body<GrimmoryFullBook>()
     }
 
     /**

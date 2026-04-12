@@ -3,8 +3,7 @@ package com.ember.reader.ui.organize
 import com.ember.reader.core.grimmory.FileMoveItem
 import com.ember.reader.core.grimmory.FileMoveRequest
 import com.ember.reader.core.grimmory.GrimmoryAppClient
-import com.ember.reader.core.grimmory.GrimmoryBookDetail
-// GrimmoryClient no longer used — full book detail comes from GrimmoryAppClient.getBookDetailFull()
+import com.ember.reader.core.grimmory.GrimmoryFullBook
 import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.util.FileNamingPatternResolver
@@ -50,7 +49,7 @@ class OrganizeFilesViewModel(
     private val viewModelScope: CoroutineScope = scope
 
     private var loadedLibraries: List<GrimmoryLibraryFull> = emptyList()
-    private var loadedBooks: List<GrimmoryBookDetail> = emptyList()
+    private var loadedBooks: List<GrimmoryFullBook> = emptyList()
     private var loadJob: Job? = null
     private var submitJob: Job? = null
 
@@ -172,7 +171,7 @@ class OrganizeFilesViewModel(
 
     private fun buildPreviews(
         libraries: List<GrimmoryLibraryFull>,
-        books: List<GrimmoryBookDetail>,
+        books: List<GrimmoryFullBook>,
         targetLibraryId: Long?,
         targetPathId: Long?,
     ): List<BookMovePreview> {
@@ -220,23 +219,26 @@ class OrganizeFilesViewModel(
     }
 
     private fun buildNewRelativePath(
-        book: GrimmoryBookDetail,
+        book: GrimmoryFullBook,
         fileName: String,
         pattern: String?,
     ): String {
         if (pattern.isNullOrBlank()) return fileName
+        val meta = book.metadata
         val values = mapOf(
             "authors" to FileNamingPatternResolver.sanitize(
-                book.authors.joinToString(", ").ifEmpty { "Unknown Author" }
+                meta?.authors?.joinToString(", ")?.ifEmpty { "Unknown Author" } ?: "Unknown Author"
             ),
-            "title" to FileNamingPatternResolver.sanitize(book.title.ifEmpty { "Untitled" }),
-            "subtitle" to FileNamingPatternResolver.sanitize(book.subtitle.orEmpty()),
-            "year" to FileNamingPatternResolver.formatYear(book.publishedDate),
-            "series" to FileNamingPatternResolver.sanitize(book.seriesName.orEmpty()),
-            "seriesIndex" to FileNamingPatternResolver.formatSeriesIndex(book.seriesNumber),
-            "language" to FileNamingPatternResolver.sanitize(book.language.orEmpty()),
-            "publisher" to FileNamingPatternResolver.sanitize(book.publisher.orEmpty()),
-            "isbn" to FileNamingPatternResolver.sanitize(book.isbn13.orEmpty()),
+            "title" to FileNamingPatternResolver.sanitize(
+                (meta?.title ?: book.title).ifEmpty { "Untitled" }
+            ),
+            "subtitle" to FileNamingPatternResolver.sanitize(meta?.subtitle.orEmpty()),
+            "year" to FileNamingPatternResolver.formatYear(meta?.publishedDate),
+            "series" to FileNamingPatternResolver.sanitize(meta?.seriesName.orEmpty()),
+            "seriesIndex" to FileNamingPatternResolver.formatSeriesIndex(meta?.seriesNumber),
+            "language" to FileNamingPatternResolver.sanitize(meta?.language.orEmpty()),
+            "publisher" to FileNamingPatternResolver.sanitize(meta?.publisher.orEmpty()),
+            "isbn" to FileNamingPatternResolver.sanitize(meta?.isbn13 ?: meta?.isbn10 ?: ""),
             "currentFilename" to FileNamingPatternResolver.sanitize(fileName),
         )
         val resolved = FileNamingPatternResolver.resolve(pattern, values)

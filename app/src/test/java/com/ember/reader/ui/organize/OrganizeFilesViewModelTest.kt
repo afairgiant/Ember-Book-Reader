@@ -2,8 +2,10 @@ package com.ember.reader.ui.organize
 
 import com.ember.reader.core.grimmory.FileMoveRequest
 import com.ember.reader.core.grimmory.GrimmoryAppClient
-import com.ember.reader.core.grimmory.GrimmoryBookDetail
-import com.ember.reader.core.grimmory.GrimmoryBookFile
+import com.ember.reader.core.grimmory.GrimmoryFullBook
+import com.ember.reader.core.grimmory.GrimmoryFullBookFile
+import com.ember.reader.core.grimmory.GrimmoryFullBookLibraryPath
+import com.ember.reader.core.grimmory.GrimmoryFullBookMetadata
 import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryLibraryPath
 import com.ember.reader.core.repository.ServerRepository
@@ -79,14 +81,17 @@ class OrganizeFilesViewModelTest {
         title: String = "Dune",
         authors: List<String> = listOf("Frank Herbert"),
         year: String = "1965",
-    ): GrimmoryBookDetail = GrimmoryBookDetail(
+    ): GrimmoryFullBook = GrimmoryFullBook(
         id = id,
         title = title,
-        authors = authors,
-        publishedDate = "$year-08-01",
         libraryId = libraryId,
-        libraryPath = GrimmoryLibraryPath(pathId, libraryId, libraryPath),
-        primaryFile = GrimmoryBookFile(id = 100L + id, fileName = fileName),
+        libraryPath = GrimmoryFullBookLibraryPath(id = pathId, libraryId = libraryId, path = libraryPath),
+        primaryFile = GrimmoryFullBookFile(id = 100L + id, fileName = fileName),
+        metadata = GrimmoryFullBookMetadata(
+            title = title,
+            authors = authors,
+            publishedDate = "$year-08-01",
+        ),
     )
 
     private fun makeVm(bookIds: List<Long> = listOf(101L), testScope: TestScope): OrganizeFilesViewModel =
