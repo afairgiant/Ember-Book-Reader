@@ -66,6 +66,7 @@ object Routes {
     const val STORAGE = "storage"
     const val STATS = "stats"
     const val DEV_LOG = "dev_log"
+    const val LICENSES = "licenses"
 
     fun audiobookReader(bookId: String): String = "reader/audiobook/$bookId"
     fun bookDetail(bookId: String): String = "book_detail/$bookId"
@@ -213,6 +214,7 @@ fun EmberNavHost(
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                     onOpenBookdrop = { navController.navigate(Routes.BOOKDROP) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
+                    onOpenLicenses = { navController.navigate(Routes.LICENSES) },
                 )
             }
 
@@ -383,6 +385,12 @@ fun EmberNavHost(
 
             composable(Routes.DEV_LOG) {
                 DevLogScreen(onNavigateBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.LICENSES) {
+                com.ember.reader.ui.settings.LicensesScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                )
             }
 
             composable(Routes.STATS) {

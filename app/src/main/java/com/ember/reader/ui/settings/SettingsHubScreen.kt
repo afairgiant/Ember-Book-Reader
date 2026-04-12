@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Info
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +71,7 @@ fun SettingsHubScreen(
     onOpenHardcover: () -> Unit,
     onOpenBookdrop: () -> Unit,
     onOpenDevLog: () -> Unit,
+    onOpenLicenses: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
@@ -282,6 +285,23 @@ fun SettingsHubScreen(
                         )
                     }
                 }
+                com.ember.reader.ui.settings.components.SettingsDivider()
+                val uriHandler = LocalUriHandler.current
+                SettingsNavRow(
+                    icon = Icons.Default.Code,
+                    title = "Source Code",
+                    subtitle = "View on GitHub",
+                    onClick = {
+                        uriHandler.openUri("https://github.com/afairgiant/Ember-Book-Reader")
+                    },
+                )
+                com.ember.reader.ui.settings.components.SettingsDivider()
+                SettingsNavRow(
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    title = "Open Source Licenses",
+                    subtitle = "Third-party libraries used in this app",
+                    onClick = onOpenLicenses,
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.aboutlibraries)
 }
 
 fun gitVersionName(): String {
@@ -164,6 +165,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+
+    // AboutLibraries (OSS Licenses)
+    implementation(libs.aboutlibraries.compose)
 
     // Logging
     implementation(libs.timber)
