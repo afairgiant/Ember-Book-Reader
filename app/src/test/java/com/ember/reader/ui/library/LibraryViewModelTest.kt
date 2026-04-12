@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
@@ -52,6 +53,9 @@ class LibraryViewModelTest {
     @MockK
     private lateinit var grimmoryAppClient: GrimmoryAppClient
 
+    @MockK(relaxed = true)
+    private lateinit var organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
+
     private val testDispatcher = StandardTestDispatcher()
 
     private val testServer = Server(
@@ -74,6 +78,7 @@ class LibraryViewModelTest {
         coEvery { bookRepository.refreshFromServer(any(), any(), any()) } returns Result.success(
             OpdsBookPage(books = emptyList())
         )
+        coEvery { bookRepository.reconcileOpdsLibrary(any(), any()) } returns Result.success(0)
     }
 
     @AfterEach
@@ -85,7 +90,7 @@ class LibraryViewModelTest {
         val savedStateHandle = SavedStateHandle(
             mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog")
         )
-        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryAppClient)
+        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryAppClient, organizeFilesViewModelFactory)
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.download.DownloadService
+import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -36,6 +37,7 @@ class LibraryViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
+    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
