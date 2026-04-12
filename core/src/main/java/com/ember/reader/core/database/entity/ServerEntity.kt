@@ -14,5 +14,6 @@ data class ServerEntity(
     val kosyncUsername: String,
     val grimmoryUsername: String = "",
     val isGrimmory: Boolean = false,
-    val lastConnected: Instant? = null
+    val lastConnected: Instant? = null,
+    val canMoveOrganizeFiles: Boolean = false,
 )

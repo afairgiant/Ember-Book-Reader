@@ -28,7 +28,8 @@ fun ServerEntity.toDomain(
     grimmoryUsername = grimmoryUsername,
     grimmoryPassword = grimmoryPassword,
     isGrimmory = isGrimmory,
-    lastConnected = lastConnected
+    lastConnected = lastConnected,
+    canMoveOrganizeFiles = canMoveOrganizeFiles,
 )
 
 fun Server.toEntity(): ServerEntity = ServerEntity(
@@ -39,7 +40,8 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     kosyncUsername = kosyncUsername,
     grimmoryUsername = grimmoryUsername,
     isGrimmory = isGrimmory,
-    lastConnected = lastConnected
+    lastConnected = lastConnected,
+    canMoveOrganizeFiles = canMoveOrganizeFiles,
 )
 
 fun BookEntity.toDomain(): Book = Book(

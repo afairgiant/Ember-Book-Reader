@@ -38,4 +38,7 @@ interface ServerDao {
 
     @Query("UPDATE servers SET lastConnected = :timestamp WHERE id = :id")
     suspend fun updateLastConnected(id: Long, timestamp: java.time.Instant)
+
+    @Query("UPDATE servers SET canMoveOrganizeFiles = :canMove WHERE id = :id")
+    suspend fun updateCanMoveOrganizeFiles(id: Long, canMove: Boolean)
 }

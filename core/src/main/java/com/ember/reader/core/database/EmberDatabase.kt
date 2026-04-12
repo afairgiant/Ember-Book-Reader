@@ -34,7 +34,7 @@ import com.ember.reader.core.database.entity.ServerEntity
         DictionaryEntryEntity::class,
         BookReaderPreferencesEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -125,6 +125,14 @@ abstract class EmberDatabase : RoomDatabase() {
                         updatedAt INTEGER NOT NULL
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE servers ADD COLUMN canMoveOrganizeFiles INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }
