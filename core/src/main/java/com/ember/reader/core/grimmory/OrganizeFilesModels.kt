@@ -20,7 +20,7 @@ data class GrimmoryLibraryFull(
 @Serializable
 data class GrimmoryLibraryPath(
     val id: Long,
-    val libraryId: Long,
+    val libraryId: Long? = null,
     val path: String,
 )
 
