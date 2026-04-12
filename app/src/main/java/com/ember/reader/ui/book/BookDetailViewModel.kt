@@ -79,9 +79,6 @@ class BookDetailViewModel @Inject constructor(
         _message.value = null
     }
 
-    private val _coverAuthHeader = MutableStateFlow<String?>(null)
-    val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
-
     val progress: StateFlow<ReadingProgress?> = readingProgressRepository
         .observeByBookId(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -118,18 +115,6 @@ class BookDetailViewModel @Inject constructor(
     private suspend fun loadServer(serverId: Long) {
         val srv = serverRepository.getById(serverId) ?: return
         _server.value = srv
-
-        // Build cover auth header
-        if (srv.isGrimmory && grimmoryTokenManager.isLoggedIn(srv.id)) {
-            val token = grimmoryTokenManager.getAccessToken(srv.id)
-            _coverAuthHeader.value = token?.let { "jwt:$it" }
-        } else if (srv.opdsUsername.isNotBlank()) {
-            val credentials = android.util.Base64.encodeToString(
-                "${srv.opdsUsername}:${srv.opdsPassword}".toByteArray(),
-                android.util.Base64.NO_WRAP
-            )
-            _coverAuthHeader.value = "Basic $credentials"
-        }
 
         // Fetch full detail from Grimmory if available
         val grimmoryBookId = _book.value?.grimmoryBookId

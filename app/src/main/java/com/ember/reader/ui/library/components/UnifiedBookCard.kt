@@ -39,18 +39,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.ember.reader.core.network.appendQueryParam
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
+import com.ember.reader.ui.common.BookCoverImage
 import kotlin.math.roundToInt
 
 data class CardInfoToggles(
@@ -65,7 +60,6 @@ data class CardInfoToggles(
 fun UnifiedBookCard(
     book: Book,
     progress: Float? = null,
-    coverAuthHeader: String? = null,
     isSelected: Boolean = false,
     isSelecting: Boolean = false,
     info: CardInfoToggles = CardInfoToggles(),
@@ -77,7 +71,6 @@ fun UnifiedBookCard(
     onPushProgress: (() -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val colorIndex = bookCoverColorIndex(book.title)
     val isFromServer = book.serverId != null
 
     Card(
@@ -96,46 +89,12 @@ fun UnifiedBookCard(
                     .fillMaxWidth()
                     .aspectRatio(0.67f),
             ) {
-                val bookCoverUrl = book.coverUrl
-                if (bookCoverUrl != null) {
-                    val context = LocalContext.current
-                    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-                        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                            val token = coverAuthHeader.removePrefix("jwt:")
-                            bookCoverUrl.appendQueryParam("token", token)
-                        } else bookCoverUrl
-                        ImageRequest.Builder(context)
-                            .data(url)
-                            .apply {
-                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                    addHeader("Authorization", coverAuthHeader)
-                                }
-                            }
-                            .crossfade(true)
-                            .build()
-                    }
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = book.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(BookCoverPlaceholderColors[colorIndex]),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = book.title.take(2).uppercase(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFF5D4037),
-                        )
-                    }
-                }
+                BookCoverImage(
+                    book = book,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                )
 
                 if (isSelecting) {
                     Checkbox(
@@ -289,7 +248,6 @@ fun UnifiedBookCard(
 fun UnifiedBookListRow(
     book: Book,
     progress: Float? = null,
-    coverAuthHeader: String? = null,
     isSelected: Boolean = false,
     isSelecting: Boolean = false,
     compact: Boolean = false,
@@ -323,46 +281,12 @@ fun UnifiedBookListRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (!compact) {
-                val bookCoverUrl = book.coverUrl
-                if (bookCoverUrl != null) {
-                    val context = LocalContext.current
-                    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-                        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                            bookCoverUrl.appendQueryParam("token", coverAuthHeader.removePrefix("jwt:"))
-                        } else bookCoverUrl
-                        ImageRequest.Builder(context)
-                            .data(url)
-                            .apply {
-                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                    addHeader("Authorization", coverAuthHeader)
-                                }
-                            }
-                            .crossfade(true)
-                            .build()
-                    }
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = book.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(width = coverWidth, height = coverHeight)
-                            .clip(RoundedCornerShape(6.dp)),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(width = coverWidth, height = coverHeight)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = book.title.take(2).uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF5D4037),
-                        )
-                    }
-                }
+                BookCoverImage(
+                    book = book,
+                    modifier = Modifier
+                        .size(width = coverWidth, height = coverHeight)
+                        .clip(RoundedCornerShape(6.dp)),
+                )
                 Spacer(modifier = Modifier.width(12.dp))
             }
 

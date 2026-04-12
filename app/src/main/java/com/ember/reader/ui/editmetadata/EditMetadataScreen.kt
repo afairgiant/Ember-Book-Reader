@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.grimmory.GrimmoryBookMetadata
 import com.ember.reader.core.grimmory.MetadataProvider
 import com.ember.reader.core.grimmory.searchableProviders
+import com.ember.reader.ui.common.BookCoverImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,11 +143,15 @@ fun EditMetadataScreen(
 
             // Fullscreen cover overlay
             enlargedCoverUrl?.let { url ->
-                val applyingCoverUrl = (state as? EditMetadataUiState.Success)?.state?.applyingCoverUrl
+                val successState = (state as? EditMetadataUiState.Success)?.state
+                val applyingCoverUrl = successState?.applyingCoverUrl
+                // When zooming the book's current cover, hide the "Use this cover" button —
+                // it would just re-upload the cover to itself.
+                val isCurrentCover = url == successState?.book?.coverUrl
                 CoverOverlay(
                     coverUrl = url,
                     applyingCoverUrl = applyingCoverUrl,
-                    onApplyCover = { viewModel.applyCover(url) },
+                    onApplyCover = if (isCurrentCover) null else { { viewModel.applyCover(url) } },
                     onDismiss = { enlargedCoverUrl = null },
                 )
             }
@@ -259,6 +265,21 @@ private fun EditMetadataContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Current book cover as a header. Tap to zoom.
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            BookCoverImage(
+                book = state.book,
+                modifier = Modifier
+                    .width(140.dp)
+                    .aspectRatio(0.67f)
+                    .clip(RoundedCornerShape(8.dp)),
+                onClick = state.book.coverUrl?.let { url -> { onCoverClick(url) } },
+            )
+        }
+
         if (state.isLocal) {
             Card(
                 colors = CardDefaults.cardColors(
@@ -667,7 +688,7 @@ private fun CandidateRow(
 private fun CoverOverlay(
     coverUrl: String,
     applyingCoverUrl: String?,
-    onApplyCover: () -> Unit,
+    onApplyCover: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     var resolution by remember(coverUrl) { mutableStateOf<IntSize?>(null) }
@@ -719,26 +740,28 @@ private fun CoverOverlay(
                     )
                 }
             }
-            Button(
-                onClick = onApplyCover,
-                enabled = !anyUploading,
-            ) {
-                if (uploadingThis) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Applying…")
-                } else {
-                    Icon(
-                        Icons.Outlined.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Use this cover")
+            if (onApplyCover != null) {
+                Button(
+                    onClick = onApplyCover,
+                    enabled = !anyUploading,
+                ) {
+                    if (uploadingThis) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Applying…")
+                    } else {
+                        Icon(
+                            Icons.Outlined.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Use this cover")
+                    }
                 }
             }
         }

@@ -86,7 +86,6 @@ fun LocalLibraryScreen(
     val prefs by viewModel.prefs.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
-    val coverAuthHeaders by viewModel.coverAuthHeaders.collectAsStateWithLifecycle()
     val progressMap by viewModel.progressMap.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     val operationResult by viewModel.operationResult.collectAsStateWithLifecycle()
@@ -279,7 +278,6 @@ fun LocalLibraryScreen(
                     viewMode = prefs.viewMode,
                     gridMinSize = gridMinSize,
                     showContinueReading = prefs.showContinueReading,
-                    coverAuthHeaders = coverAuthHeaders,
                     progressMap = progressMap,
                     cardInfo = cardInfo,
                     selectedIds = selectedIds,
@@ -402,7 +400,6 @@ private fun LibraryContent(
     viewMode: LibraryViewMode,
     gridMinSize: androidx.compose.ui.unit.Dp,
     showContinueReading: Boolean,
-    coverAuthHeaders: Map<Long, String>,
     progressMap: Map<String, Float>,
     cardInfo: CardInfoToggles,
     selectedIds: Set<String>,
@@ -432,7 +429,6 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            coverAuthHeaders = coverAuthHeaders,
                             onBookClick = onBookClick,
                         )
                     }
@@ -450,7 +446,6 @@ private fun LibraryContent(
                                 UnifiedBookCard(
                                     book = book,
                                     progress = progressMap[book.id],
-                                    coverAuthHeader = book.serverId?.let { coverAuthHeaders[it] },
                                     isSelected = book.id in selectedIds,
                                     isSelecting = isSelecting,
                                     info = cardInfo,
@@ -485,7 +480,6 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            coverAuthHeaders = coverAuthHeaders,
                             onBookClick = onBookClick,
                         )
                     }
@@ -503,7 +497,6 @@ private fun LibraryContent(
                                 UnifiedBookListRow(
                                     book = book,
                                     progress = progressMap[book.id],
-                                    coverAuthHeader = book.serverId?.let { coverAuthHeaders[it] },
                                     isSelected = book.id in selectedIds,
                                     isSelecting = isSelecting,
                                     compact = compact,

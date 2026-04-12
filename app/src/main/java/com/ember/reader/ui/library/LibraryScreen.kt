@@ -55,20 +55,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.ember.reader.core.network.appendQueryParam
+import com.ember.reader.ui.common.BookCoverImage
 import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +78,6 @@ fun LibraryScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
-    val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val grimmoryFilter by viewModel.grimmoryFilter.collectAsStateWithLifecycle()
@@ -177,7 +171,6 @@ fun LibraryScreen(
                             BookGrid(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
-                                coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
                                     onOpenBookDetail(book.id)
                                 },
@@ -189,7 +182,6 @@ fun LibraryScreen(
                             BookList(
                                 books = state.books,
                                 downloadingIds = state.downloadingBookIds,
-                                coverAuthHeader = coverAuthHeader,
                                 onBookClick = { book ->
                                     onOpenBookDetail(book.id)
                                 },
@@ -219,7 +211,6 @@ fun LibraryScreen(
 private fun BookGrid(
     books: List<Book>,
     downloadingIds: Set<String>,
-    coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
     loadingMore: Boolean = false,
@@ -251,7 +242,6 @@ private fun BookGrid(
             BookGridItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
-                coverAuthHeader = coverAuthHeader,
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) }
             )
@@ -273,12 +263,9 @@ private fun BookGrid(
 private fun BookGridItem(
     book: Book,
     isDownloading: Boolean,
-    coverAuthHeader: String?,
     onClick: () -> Unit,
     onDownload: () -> Unit
 ) {
-    val placeholderColor = BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -294,48 +281,12 @@ private fun BookGridItem(
                     .fillMaxWidth()
                     .aspectRatio(0.67f)
             ) {
-                val bookCoverUrl = book.coverUrl
-                if (bookCoverUrl != null) {
-                    val context = LocalContext.current
-                    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-                        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                            val token = coverAuthHeader.removePrefix("jwt:")
-                            bookCoverUrl.appendQueryParam("token", token)
-                        } else {
-                            bookCoverUrl
-                        }
-                        ImageRequest.Builder(context)
-                            .data(url)
-                            .apply {
-                                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                    addHeader("Authorization", coverAuthHeader)
-                                }
-                            }
-                            .crossfade(true)
-                            .build()
-                    }
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = book.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(placeholderColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = book.title.take(2).uppercase(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFF5D4037)
-                        )
-                    }
-                }
+                BookCoverImage(
+                    book = book,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                )
 
                 if (!book.isDownloaded) {
                     IconButton(
@@ -383,7 +334,6 @@ private fun BookGridItem(
 private fun BookList(
     books: List<Book>,
     downloadingIds: Set<String>,
-    coverAuthHeader: String?,
     onBookClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
     loadingMore: Boolean = false,
@@ -412,7 +362,6 @@ private fun BookList(
             BookListItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
-                coverAuthHeader = coverAuthHeader,
                 onClick = { onBookClick(book) },
                 onDownload = { onDownloadClick(book) }
             )
@@ -434,7 +383,6 @@ private fun BookList(
 private fun BookListItem(
     book: Book,
     isDownloading: Boolean,
-    coverAuthHeader: String?,
     onClick: () -> Unit,
     onDownload: () -> Unit
 ) {
@@ -449,33 +397,12 @@ private fun BookListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val bookCoverUrl = book.coverUrl
-            if (bookCoverUrl != null) {
-                val context = LocalContext.current
-                val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-                    val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                        val token = coverAuthHeader.removePrefix("jwt:")
-                        bookCoverUrl.appendQueryParam("token", token)
-                    } else {
-                        bookCoverUrl
-                    }
-                    ImageRequest.Builder(context)
-                        .data(url)
-                        .apply {
-                            if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                addHeader("Authorization", coverAuthHeader)
-                            }
-                        }
-                        .crossfade(true)
-                        .build()
-                }
-                AsyncImage(
-                    model = imageModel,
-                    contentDescription = book.title,
-                    contentScale = ContentScale.Crop,
+            if (book.coverUrl != null) {
+                BookCoverImage(
+                    book = book,
                     modifier = Modifier
                         .size(width = 48.dp, height = 72.dp)
-                        .clip(MaterialTheme.shapes.small)
+                        .clip(MaterialTheme.shapes.small),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }

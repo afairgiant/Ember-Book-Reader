@@ -138,6 +138,8 @@ enum class SearchPhase { Idle, Running, Done, Error }
 
 data class EditMetadataSuccess(
     val bookId: String,
+    /** The book from Room, including the current cover URL. Refreshed after cover apply. */
+    val book: Book,
     val server: Server? = null,
     val grimmoryBookId: Long? = null,
     val original: GrimmoryBookMetadata,
@@ -220,6 +222,7 @@ class EditMetadataViewModel @Inject constructor(
                 _uiState.value = EditMetadataUiState.Success(
                     EditMetadataSuccess(
                         bookId = bookId,
+                        book = book,
                         server = server,
                         grimmoryBookId = grimmoryBookId,
                         original = metadata,
@@ -259,6 +262,7 @@ class EditMetadataViewModel @Inject constructor(
         _uiState.value = EditMetadataUiState.Success(
             EditMetadataSuccess(
                 bookId = bookId,
+                book = book,
                 original = metadata,
                 originalEditable = editable,
                 edited = editable,
@@ -360,9 +364,15 @@ class EditMetadataViewModel @Inject constructor(
                 val origin = serverOrigin(current.server.url)
                 val newUrl = "$origin/api/v1/media/book/${current.grimmoryBookId}/cover?v=${java.time.Instant.now().epochSecond}"
                 bookRepository.updateBookCoverUrl(current.bookId, newUrl)
+                val refreshed = bookRepository.getById(current.bookId)
                 _message.value = "Cover applied"
                 _coverAppliedTicker.value = _coverAppliedTicker.value + 1
-                updateSuccess { it.copy(applyingCoverUrl = null) }
+                updateSuccess {
+                    it.copy(
+                        applyingCoverUrl = null,
+                        book = refreshed ?: it.book,
+                    )
+                }
             }.onFailure { e ->
                 Timber.e(e, "Apply cover failed")
                 _message.value = friendlyErrorMessage(e)

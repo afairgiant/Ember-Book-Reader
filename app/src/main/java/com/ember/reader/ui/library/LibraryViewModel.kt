@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
-import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
@@ -37,7 +36,6 @@ class LibraryViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -90,9 +88,6 @@ class LibraryViewModel @Inject constructor(
     private val isGrimmoryPath = catalogPath.startsWith("grimmory:")
 
     private var server: Server? = null
-
-    private val _coverAuthHeader = MutableStateFlow<String?>(null)
-    val coverAuthHeader: StateFlow<String?> = _coverAuthHeader.asStateFlow()
 
     private val _nextPagePath = MutableStateFlow<String?>(null)
     val hasMore: StateFlow<Boolean> = _nextPagePath.asStateFlow()
@@ -155,17 +150,6 @@ class LibraryViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
-            server?.let { s ->
-                // Grimmory media covers use ?token= query param, not Authorization header
-                // For OPDS covers, use Basic Auth header as before
-                _coverAuthHeader.value = if (s.isGrimmory && grimmoryTokenManager.isLoggedIn(s.id)) {
-                    // Special marker: "jwt:<token>" — the UI will append ?token= to the URL
-                    grimmoryTokenManager.getAccessToken(s.id)?.let { "jwt:$it" }
-                        ?: com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
-                } else {
-                    com.ember.reader.core.network.basicAuthHeader(s.opdsUsername, s.opdsPassword)
-                }
-            }
             refresh()
             loadGrimmoryFilterOptions()
         }

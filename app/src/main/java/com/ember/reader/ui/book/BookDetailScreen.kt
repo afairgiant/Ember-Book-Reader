@@ -71,7 +71,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.ember.reader.core.network.appendQueryParam
 import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.ReadStatus
@@ -80,8 +79,7 @@ import com.ember.reader.core.hardcover.HardcoverStatus
 import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
+import com.ember.reader.ui.common.BookCoverImage
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -100,7 +98,6 @@ fun BookDetailScreen(
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val readStatus by viewModel.readStatus.collectAsStateWithLifecycle()
     val downloading by viewModel.downloading.collectAsStateWithLifecycle()
-    val coverAuthHeader by viewModel.coverAuthHeader.collectAsStateWithLifecycle()
     val grimmoryDetail by viewModel.grimmoryDetail.collectAsStateWithLifecycle()
     val hardcoverMatch by viewModel.hardcoverMatch.collectAsStateWithLifecycle()
     val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
@@ -210,19 +207,17 @@ fun BookDetailScreen(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    BookCover(
+                    BookCoverImage(
                         book = currentBook,
-                        coverAuthHeader = coverAuthHeader,
                         modifier = Modifier
                             .width(180.dp)
                             .aspectRatio(0.67f)
-                            .then(
-                                if (currentBook.coverUrl != null) {
-                                    Modifier.clickable { coverZoomed = true }
-                                } else {
-                                    Modifier
-                                }
-                            ),
+                            .clip(RoundedCornerShape(12.dp)),
+                        onClick = if (currentBook.coverUrl != null) {
+                            { coverZoomed = true }
+                        } else {
+                            null
+                        },
                     )
                 }
 
@@ -591,7 +586,6 @@ fun BookDetailScreen(
         if (coverZoomed && currentBook != null) {
             FullscreenCoverOverlay(
                 book = currentBook,
-                coverAuthHeader = coverAuthHeader,
                 onDismiss = { coverZoomed = false },
             )
         }
@@ -646,75 +640,11 @@ private fun SeriesBookCard(item: SeriesBookItem, onClick: () -> Unit) {
 }
 
 @Composable
-private fun BookCover(book: Book, coverAuthHeader: String?, modifier: Modifier = Modifier) {
-    val bookCoverUrl = book.coverUrl
-    if (bookCoverUrl != null) {
-        val context = LocalContext.current
-        val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-            val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                val token = coverAuthHeader.removePrefix("jwt:")
-                bookCoverUrl.appendQueryParam("token", token)
-            } else {
-                bookCoverUrl
-            }
-            ImageRequest.Builder(context)
-                .data(url)
-                .apply {
-                    if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                        addHeader("Authorization", coverAuthHeader)
-                    }
-                }
-                .crossfade(true)
-                .build()
-        }
-        AsyncImage(
-            model = imageModel,
-            contentDescription = book.title,
-            contentScale = ContentScale.Crop,
-            modifier = modifier.clip(RoundedCornerShape(12.dp))
-        )
-    } else {
-        val colorIndex = bookCoverColorIndex(book.title)
-        Box(
-            modifier = modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(BookCoverPlaceholderColors[colorIndex]),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = book.title.take(2).uppercase(),
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color(0xFF5D4037)
-            )
-        }
-    }
-}
-
-@Composable
 private fun FullscreenCoverOverlay(
     book: Book,
-    coverAuthHeader: String?,
     onDismiss: () -> Unit,
 ) {
-    val bookCoverUrl = book.coverUrl ?: return
-    val context = LocalContext.current
-    val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-        val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-            val token = coverAuthHeader.removePrefix("jwt:")
-            bookCoverUrl.appendQueryParam("token", token)
-        } else {
-            bookCoverUrl
-        }
-        ImageRequest.Builder(context)
-            .data(url)
-            .apply {
-                if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                    addHeader("Authorization", coverAuthHeader)
-                }
-            }
-            .crossfade(true)
-            .build()
-    }
+    if (book.coverUrl == null) return
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -722,9 +652,8 @@ private fun FullscreenCoverOverlay(
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = imageModel,
-            contentDescription = book.title,
+        BookCoverImage(
+            book = book,
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth(0.85f)

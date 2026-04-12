@@ -3,7 +3,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
@@ -65,7 +64,6 @@ class LocalLibraryViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
     private val progressSyncManager: ProgressSyncManager,
     private val prefsRepo: LibraryPreferencesRepository,
 ) : ViewModel() {
@@ -89,9 +87,6 @@ class LocalLibraryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _coverAuthHeaders = MutableStateFlow<Map<Long, String>>(emptyMap())
-    val coverAuthHeaders: StateFlow<Map<Long, String>> = _coverAuthHeaders.asStateFlow()
-
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing.asStateFlow()
 
@@ -113,21 +108,6 @@ class LocalLibraryViewModel @Inject constructor(
         buildViewState(books, progress, prefs, query)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryViewState())
-
-    init {
-        viewModelScope.launch {
-            serverRepository.observeAll().collect { servers ->
-                _coverAuthHeaders.value = servers.associate { server ->
-                    val auth = if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-                        grimmoryTokenManager.getAccessToken(server.id)?.let { "jwt:$it" }
-                    } else {
-                        null
-                    }
-                    server.id to (auth ?: com.ember.reader.core.network.basicAuthHeader(server.opdsUsername, server.opdsPassword))
-                }
-            }
-        }
-    }
 
     private fun buildViewState(
         books: List<Book>,

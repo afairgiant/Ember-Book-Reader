@@ -1,6 +1,5 @@
 package com.ember.reader.ui.library.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,31 +19,21 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.ember.reader.core.network.appendQueryParam
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
+import com.ember.reader.ui.common.BookCoverImage
 import kotlin.math.roundToInt
 
 @Composable
 fun ContinueReadingCarousel(
     books: List<Book>,
     progressMap: Map<String, Float>,
-    coverAuthHeaders: Map<Long, String>,
     onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,7 +53,6 @@ fun ContinueReadingCarousel(
                 ContinueReadingCard(
                     book = book,
                     progress = progressMap[book.id] ?: 0f,
-                    coverAuthHeader = book.serverId?.let { coverAuthHeaders[it] },
                     onClick = { onBookClick(book) },
                 )
             }
@@ -77,7 +65,6 @@ fun ContinueReadingCarousel(
 private fun ContinueReadingCard(
     book: Book,
     progress: Float,
-    coverAuthHeader: String?,
     onClick: () -> Unit,
 ) {
     Column(
@@ -91,43 +78,10 @@ private fun ContinueReadingCard(
                 .aspectRatio(0.67f)
                 .clip(RoundedCornerShape(10.dp)),
         ) {
-            val bookCoverUrl = book.coverUrl
-            if (bookCoverUrl != null) {
-                val context = LocalContext.current
-                val imageModel = remember(bookCoverUrl, coverAuthHeader) {
-                    val url = if (coverAuthHeader?.startsWith("jwt:") == true) {
-                        bookCoverUrl.appendQueryParam("token", coverAuthHeader.removePrefix("jwt:"))
-                    } else bookCoverUrl
-                    ImageRequest.Builder(context)
-                        .data(url)
-                        .apply {
-                            if (coverAuthHeader != null && !coverAuthHeader.startsWith("jwt:")) {
-                                addHeader("Authorization", coverAuthHeader)
-                            }
-                        }
-                        .crossfade(true)
-                        .build()
-                }
-                AsyncImage(
-                    model = imageModel,
-                    contentDescription = book.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = book.title.take(2).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF5D4037),
-                    )
-                }
-            }
+            BookCoverImage(
+                book = book,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
         Spacer(modifier = Modifier.height(6.dp))
         LinearProgressIndicator(
