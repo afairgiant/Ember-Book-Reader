@@ -134,7 +134,7 @@ class ProgressSyncManager @Inject constructor(
         return runCatching {
             val pct = percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
-            val fileId = detail?.files?.firstOrNull()?.id
+            val fileId = detail?.primaryFile?.id
 
             grimmoryClient.pushProgress(
                 baseUrl = server.url,

@@ -65,7 +65,9 @@ data class GrimmoryFileProgress(
 data class GrimmoryBookFile(
     val id: Long,
     val fileName: String? = null,
-    val fileType: String? = null
+    val fileType: String? = null,
+    val fileSubPath: String? = null,
+    val filePath: String? = null,
 )
 
 @Serializable
@@ -89,14 +91,16 @@ data class GrimmoryBookDetail(
     val goodreadsReviewCount: Int? = null,
     val seriesName: String? = null,
     val seriesNumber: Float? = null,
+    val libraryId: Long? = null,
     val libraryName: String? = null,
+    val libraryPath: GrimmoryLibraryPath? = null,
+    val primaryFile: GrimmoryBookFile? = null,
     val primaryFileType: String? = null,
     val fileTypes: List<String>? = null,
     val addedOn: String? = null,
     val lastReadTime: String? = null,
     val epubProgress: GrimmoryEpubProgress? = null,
     val koreaderProgress: GrimmoryKoreaderProgress? = null,
-    val files: List<GrimmoryBookFile> = emptyList(),
     val shelves: List<GrimmoryShelfSummary>? = null,
     val hardcoverBookId: Long? = null,
 )

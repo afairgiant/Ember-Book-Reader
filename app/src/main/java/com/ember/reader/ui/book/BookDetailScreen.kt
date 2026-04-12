@@ -503,7 +503,7 @@ fun BookDetailScreen(
 
                 // Server Info card
                 val subjects = currentBook.subjects ?: gd?.categories?.joinToString(", ")
-                val fileNames = gd?.files?.mapNotNull { it.fileName }
+                val primaryFileName = gd?.primaryFile?.fileName
                 if (currentServer != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
@@ -516,7 +516,7 @@ fun BookDetailScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             InfoRow(stringResource(R.string.info_server), currentServer.name)
                             gd?.libraryName?.let { InfoRow(stringResource(R.string.info_library), it) }
-                            fileNames?.firstOrNull()?.let { InfoRow("File", it) }
+                            primaryFileName?.let { InfoRow("File", it) }
                             subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
                             gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
                                 InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
