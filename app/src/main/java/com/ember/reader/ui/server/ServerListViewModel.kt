@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,6 +42,12 @@ class ServerListViewModel @Inject constructor(
     private val _quickStats = MutableStateFlow<QuickStats?>(null)
     val quickStats: StateFlow<QuickStats?> = _quickStats.asStateFlow()
 
+    private val _hasGrimmoryServer = MutableStateFlow(false)
+    val hasGrimmoryServer: StateFlow<Boolean> = _hasGrimmoryServer.asStateFlow()
+
+    private val _recentlyAddedLoading = MutableStateFlow(false)
+    val recentlyAddedLoading: StateFlow<Boolean> = _recentlyAddedLoading.asStateFlow()
+
     private var grimmoryContentJob: Job? = null
 
     init {
@@ -55,7 +62,10 @@ class ServerListViewModel @Inject constructor(
                 .map { servers -> servers.firstOrNull { it.isGrimmory } }
                 .distinctUntilChanged { old, new -> old?.id == new?.id }
                 .collect { grimmoryServer ->
+                    _hasGrimmoryServer.value = grimmoryServer != null
                     if (grimmoryServer != null) {
+                        // Load cached recently added books from Room immediately
+                        loadCachedRecentlyAdded(grimmoryServer)
                         grimmoryContentJob?.cancel()
                         grimmoryContentJob = launch { loadGrimmoryContent(grimmoryServer) }
                     }
@@ -64,22 +74,27 @@ class ServerListViewModel @Inject constructor(
     }
 
     private suspend fun loadGrimmoryContent(grimmoryServer: Server) {
-        if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
-            serverRepository.tryGrimmoryRelogin(grimmoryServer)
-        }
-        if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
-            loadRecentlyAdded(grimmoryServer)
-            loadGrimmoryStats(grimmoryServer)
-        } else {
-            // Token may not be ready yet — retry once after a short delay
-            kotlinx.coroutines.delay(2000)
+        _recentlyAddedLoading.value = true
+        try {
             if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
                 serverRepository.tryGrimmoryRelogin(grimmoryServer)
             }
             if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
                 loadRecentlyAdded(grimmoryServer)
                 loadGrimmoryStats(grimmoryServer)
+            } else {
+                // Token may not be ready yet — retry once after a short delay
+                kotlinx.coroutines.delay(2000)
+                if (!grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                    serverRepository.tryGrimmoryRelogin(grimmoryServer)
+                }
+                if (grimmoryTokenManager.isLoggedIn(grimmoryServer.id)) {
+                    loadRecentlyAdded(grimmoryServer)
+                    loadGrimmoryStats(grimmoryServer)
+                }
             }
+        } finally {
+            _recentlyAddedLoading.value = false
         }
     }
 
@@ -98,7 +113,7 @@ class ServerListViewModel @Inject constructor(
     private suspend fun loadRecentlyAdded(server: Server) {
         grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = 10)
             .onSuccess { books ->
-                _recentlyAdded.value = books.map { summary ->
+                val result = books.map { summary ->
                     val opdsEntryId = "urn:booklore:book:${summary.id}"
                     val localBook = bookRepository.getByOpdsEntryId(opdsEntryId, server.id)
                     val localId = localBook?.id ?: bookRepository.ensureBookExists(
@@ -119,8 +134,35 @@ class ServerListViewModel @Inject constructor(
                         localBookId = localId,
                     )
                 }
+                _recentlyAdded.value = result
+                // Cache the book IDs for instant display on next launch
+                val ids = result.mapNotNull { it.localBookId }
+                bookRepository.cacheRecentlyAddedIds(ids)
             }
             .onFailure { Timber.w(it, "Failed to load recently added books") }
+    }
+
+    private suspend fun loadCachedRecentlyAdded(server: Server) {
+        if (_recentlyAdded.value.isNotEmpty()) return
+        val cachedIds = bookRepository.getCachedRecentlyAddedIds()
+        if (cachedIds.isEmpty()) return
+        val cached = cachedIds.mapNotNull { id ->
+            val book = bookRepository.getById(id) ?: return@mapNotNull null
+            RecentlyAddedBook(
+                summary = GrimmoryBookSummary(
+                    id = 0,
+                    title = book.title,
+                    authors = listOfNotNull(book.author),
+                    coverUpdatedOn = null,
+                ),
+                coverUrl = book.coverUrl ?: "",
+                serverId = server.id,
+                localBookId = book.id,
+            )
+        }
+        if (cached.isNotEmpty() && _recentlyAdded.value.isEmpty()) {
+            _recentlyAdded.value = cached
+        }
     }
 
     private val _recentlyAdded = MutableStateFlow<List<RecentlyAddedBook>>(emptyList())

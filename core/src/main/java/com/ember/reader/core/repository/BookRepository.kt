@@ -49,6 +49,19 @@ class BookRepository @Inject constructor(
         File(context.filesDir, "covers").also { it.mkdirs() }
     }
 
+    private val cachePrefs by lazy {
+        context.getSharedPreferences("book_cache", android.content.Context.MODE_PRIVATE)
+    }
+
+    fun cacheRecentlyAddedIds(ids: List<String>) {
+        cachePrefs.edit().putString("recently_added_ids", ids.joinToString(",")).apply()
+    }
+
+    fun getCachedRecentlyAddedIds(): List<String> {
+        val raw = cachePrefs.getString("recently_added_ids", null) ?: return emptyList()
+        return raw.split(",").filter { it.isNotBlank() }
+    }
+
     fun observeByServer(serverId: Long): Flow<List<Book>> =
         bookDao.observeByServer(serverId).map { entities -> entities.map { it.toDomain() } }
 

@@ -1,4 +1,9 @@
 package com.ember.reader.ui.server
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +69,8 @@ fun ServerListScreen(
 ) {
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
+    val hasGrimmoryServer by viewModel.hasGrimmoryServer.collectAsStateWithLifecycle()
+    val recentlyAddedLoading by viewModel.recentlyAddedLoading.collectAsStateWithLifecycle()
     val quickStats by viewModel.quickStats.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
@@ -133,7 +140,7 @@ fun ServerListScreen(
                 }
 
                 // Recently Added from Grimmory
-                if (recentlyAdded.isNotEmpty()) {
+                if (recentlyAdded.isNotEmpty() || (hasGrimmoryServer && recentlyAddedLoading)) {
                     item {
                         Text(
                             text = "Recently Added",
@@ -145,15 +152,21 @@ fun ServerListScreen(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(recentlyAdded, key = { it.summary.id }) { recent ->
-                                RecentlyAddedCard(
-                                    title = recent.summary.title,
-                                    authors = recent.summary.authors.joinToString(", "),
-                                    coverUrl = recent.coverUrl,
-                                    onClick = {
-                                        recent.localBookId?.let { onOpenBookDetail(it) }
-                                    }
-                                )
+                            if (recentlyAdded.isNotEmpty()) {
+                                items(recentlyAdded, key = { it.localBookId ?: "grimmory-${it.summary.id}" }) { recent ->
+                                    RecentlyAddedCard(
+                                        title = recent.summary.title,
+                                        authors = recent.summary.authors.joinToString(", "),
+                                        coverUrl = recent.coverUrl,
+                                        onClick = {
+                                            recent.localBookId?.let { onOpenBookDetail(it) }
+                                        }
+                                    )
+                                }
+                            } else {
+                                items(4) {
+                                    RecentlyAddedPlaceholderCard()
+                                }
                             }
                         }
                     }
@@ -304,6 +317,56 @@ private fun RecentlyAddedCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentlyAddedPlaceholderCard() {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by transition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "shimmerAlpha",
+    )
+    val shimmerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+
+    Card(
+        modifier = Modifier.width(130.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        shape = RoundedCornerShape(14.dp),
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                    .background(shimmerColor),
+            )
+            Column(modifier = Modifier.padding(10.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(shimmerColor),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(shimmerColor),
+                )
             }
         }
     }
