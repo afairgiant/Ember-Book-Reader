@@ -4,7 +4,7 @@ import com.ember.reader.core.grimmory.FileMoveItem
 import com.ember.reader.core.grimmory.FileMoveRequest
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
-import com.ember.reader.core.grimmory.GrimmoryClient
+// GrimmoryClient no longer used — full book detail comes from GrimmoryAppClient.getBookDetailFull()
 import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.util.FileNamingPatternResolver
@@ -37,7 +37,6 @@ import timber.log.Timber
  */
 class OrganizeFilesViewModel(
     private val appClient: GrimmoryAppClient,
-    private val grimmoryClient: GrimmoryClient,
     private val serverRepository: ServerRepository,
     private val baseUrl: String,
     private val serverId: Long,
@@ -69,7 +68,7 @@ class OrganizeFilesViewModel(
                 coroutineScope {
                     val libs = async { appClient.getFullLibraries(baseUrl, serverId).getOrThrow() }
                     val books = bookIds.map { id ->
-                        async { grimmoryClient.getBookDetail(baseUrl, serverId, id).getOrThrow() }
+                        async { appClient.getBookDetailFull(baseUrl, serverId, id).getOrThrow() }
                     }
                     libs.await() to books.awaitAll()
                 }
@@ -259,7 +258,6 @@ class OrganizeFilesViewModel(
      */
     class Factory @Inject constructor(
         private val appClient: GrimmoryAppClient,
-        private val grimmoryClient: GrimmoryClient,
         private val serverRepository: ServerRepository,
     ) {
         fun create(
@@ -269,7 +267,6 @@ class OrganizeFilesViewModel(
             scope: CoroutineScope = MainScope(),
         ): OrganizeFilesViewModel = OrganizeFilesViewModel(
             appClient = appClient,
-            grimmoryClient = grimmoryClient,
             serverRepository = serverRepository,
             baseUrl = baseUrl,
             serverId = serverId,

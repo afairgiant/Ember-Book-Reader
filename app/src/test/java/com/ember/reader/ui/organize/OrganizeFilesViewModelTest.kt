@@ -4,7 +4,6 @@ import com.ember.reader.core.grimmory.FileMoveRequest
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryBookFile
-import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryLibraryPath
 import com.ember.reader.core.repository.ServerRepository
@@ -37,9 +36,6 @@ class OrganizeFilesViewModelTest {
 
     @MockK
     private lateinit var appClient: GrimmoryAppClient
-
-    @MockK
-    private lateinit var grimmoryClient: GrimmoryClient
 
     @MockK(relaxed = true)
     private lateinit var serverRepository: ServerRepository
@@ -96,7 +92,6 @@ class OrganizeFilesViewModelTest {
     private fun makeVm(bookIds: List<Long> = listOf(101L), testScope: TestScope): OrganizeFilesViewModel =
         OrganizeFilesViewModel(
             appClient = appClient,
-            grimmoryClient = grimmoryClient,
             serverRepository = serverRepository,
             baseUrl = "http://grimmory.test",
             serverId = 1L,
@@ -107,7 +102,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `init loads libraries and book details then transitions to Ready`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()
@@ -123,7 +118,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `selecting a single-path library auto-picks the path and does not show path picker`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()
@@ -139,7 +134,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `selecting a multi-path library shows path picker and auto-picks first`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()
@@ -155,7 +150,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `preview recomputes when target library changes`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()
@@ -174,7 +169,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `row is marked isNoChange when target equals source`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()
@@ -189,7 +184,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `submit posts the expected FileMoveRequest and transitions to Success`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
         val captured = slot<FileMoveRequest>()
         coEvery { appClient.moveFiles(any(), any(), capture(captured)) } returns Result.success(Unit)
 
@@ -214,7 +209,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `submit 403 transitions to Error Permission and refreshes server permissions`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
         coEvery { appClient.moveFiles(any(), any(), any()) } returns
             Result.failure(IllegalStateException("Move files failed: 403 Forbidden"))
         coEvery { serverRepository.refreshGrimmoryPermissions(1L) } returns Unit
@@ -235,7 +230,7 @@ class OrganizeFilesViewModelTest {
     @Test
     fun `submit 500 transitions to Error Server`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns Result.success(sampleLibraries())
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
         coEvery { appClient.moveFiles(any(), any(), any()) } returns
             Result.failure(IllegalStateException("Move files failed: 500 Internal Server Error"))
 
@@ -255,7 +250,7 @@ class OrganizeFilesViewModelTest {
     fun `libraries fetch failure transitions to Error Loading`() = runTest(dispatcher) {
         coEvery { appClient.getFullLibraries(any(), any()) } returns
             Result.failure(IllegalStateException("Network down"))
-        coEvery { grimmoryClient.getBookDetail(any(), any(), 101L) } returns Result.success(sampleBook())
+        coEvery { appClient.getBookDetailFull(any(), any(), 101L) } returns Result.success(sampleBook())
 
         val vm = makeVm(testScope = this)
         advanceUntilIdle()

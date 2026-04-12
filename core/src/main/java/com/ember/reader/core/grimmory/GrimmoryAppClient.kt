@@ -97,6 +97,25 @@ class GrimmoryAppClient @Inject constructor(
         }
 
     /**
+     * Full book detail from the regular (non-app) endpoint `/api/v1/books/{id}`.
+     * Unlike [GrimmoryClient.getBookDetail] which hits `/api/v1/app/books/{id}`
+     * and returns a lightweight DTO, this includes [GrimmoryBookDetail.primaryFile],
+     * [GrimmoryBookDetail.libraryPath], and other fields the Organize Files preview
+     * needs to render the current and new file paths.
+     */
+    suspend fun getBookDetailFull(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+    ): Result<GrimmoryBookDetail> = withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) error("Get book detail failed: ${response.status}")
+        response.body<GrimmoryBookDetail>()
+    }
+
+    /**
      * Full Grimmory library list including [GrimmoryLibraryFull.paths] and
      * [GrimmoryLibraryFull.fileNamingPattern], via the regular (non-app) libraries
      * endpoint. Used by Organize Files to offer a destination picker and drive the
