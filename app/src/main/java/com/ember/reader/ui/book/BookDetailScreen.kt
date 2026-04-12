@@ -92,6 +92,7 @@ fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
     onOpenBookDetail: (bookId: String) -> Unit = {},
+    onOpenLibrary: (serverId: Long, libraryId: Long) -> Unit = { _, _ -> },
     onEditMetadata: (bookId: String) -> Unit = {},
     metadataSaved: Boolean = false,
     onMetadataSavedConsumed: () -> Unit = {},
@@ -520,7 +521,9 @@ fun BookDetailScreen(
                 }
 
                 // Server Info card
-                val subjects = currentBook.subjects ?: gd?.categories?.joinToString(", ")
+                val subjectList: List<String> = gd?.categories?.toList()
+                    ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                    ?: emptyList()
                 val primaryFileName = gd?.primaryFile?.fileName
                 if (currentServer != null) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -533,14 +536,64 @@ fun BookDetailScreen(
                             Text("Server", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                             InfoRow(stringResource(R.string.info_server), currentServer.name)
-                            gd?.libraryName?.let { InfoRow(stringResource(R.string.info_library), it) }
+                            gd?.libraryName?.let { libraryName ->
+                                val libraryId = gd?.libraryId
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .then(
+                                            if (libraryId != null) Modifier.clickable {
+                                                onOpenLibrary(currentServer.id, libraryId)
+                                            } else Modifier
+                                        ),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.info_library),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = libraryName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (libraryId != null) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
                             primaryFileName?.let { InfoRow("File", it) }
                             grimmoryFullBook?.metadataMatchScore?.let { score ->
                                 MetadataScoreRow(score)
                             }
-                            subjects?.let { InfoRow(stringResource(R.string.info_subjects), it) }
                             gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
                                 InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
+                            }
+                            if (subjectList.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(R.string.info_subjects),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    subjectList.forEach { subject ->
+                                        Text(
+                                            text = subject,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

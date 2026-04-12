@@ -345,6 +345,9 @@ fun EmberNavHost(
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
                     },
+                    onOpenLibrary = { serverId, libraryId ->
+                        navController.navigate(Routes.library(serverId, "grimmory:libraryId=$libraryId"))
+                    },
                     onEditMetadata = { bookId ->
                         navController.navigate(Routes.editMetadata(bookId))
                     },
