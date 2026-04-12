@@ -4,6 +4,7 @@ import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
+import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
@@ -50,6 +51,9 @@ class ServerRepositoryTest {
     private lateinit var grimmoryClient: GrimmoryClient
 
     @MockK
+    private lateinit var grimmoryAppClient: GrimmoryAppClient
+
+    @MockK
     private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
     @MockK
@@ -59,7 +63,7 @@ class ServerRepositoryTest {
 
     @BeforeEach
     fun setUp() {
-        repository = ServerRepository(context, serverDao, bookDao, bookOpener, opdsClient, kosyncClient, grimmoryClient, grimmoryTokenManager, credentialEncryption)
+        repository = ServerRepository(context, serverDao, bookDao, bookOpener, opdsClient, kosyncClient, grimmoryClient, grimmoryAppClient, grimmoryTokenManager, credentialEncryption)
     }
 
     @Test

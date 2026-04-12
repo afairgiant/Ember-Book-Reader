@@ -7,6 +7,7 @@ import com.ember.reader.core.database.dao.ServerDao
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
+import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
@@ -36,6 +37,7 @@ class ServerRepository @Inject constructor(
     private val opdsClient: OpdsClient,
     private val kosyncClient: KosyncClient,
     private val grimmoryClient: GrimmoryClient,
+    private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val credentialEncryption: CredentialEncryption
 ) {
@@ -71,11 +73,39 @@ class ServerRepository @Inject constructor(
                         serverDao.update(server.copy(id = id, isGrimmory = true).toEntity())
                     }
                     Timber.d("Grimmory auto-login: tokens stored for server $id")
+                    // Fetch the user's permission flags so admin-only actions (e.g.
+                    // Organize Files) show up without the user having to configure
+                    // anything. Failing closed: on error the flag stays at its default.
+                    refreshGrimmoryPermissions(id, server.url)
                 }
                 .onFailure { Timber.w(it, "Grimmory auto-login failed for server $id") }
         }
 
         return id
+    }
+
+    /**
+     * Re-fetches the current user's [com.ember.reader.core.grimmory.GrimmoryUserPermissions]
+     * for a single Grimmory server and persists the `canMoveOrganizeFiles` flag to the
+     * server record. Silent — any network or auth failure is logged and swallowed, and
+     * the flag is left at its previous value.
+     *
+     * Call this on app start for each Grimmory server, after login, and on a 403 from
+     * a write operation that depends on this permission.
+     */
+    suspend fun refreshGrimmoryPermissions(serverId: Long) {
+        val entity = serverDao.getById(serverId) ?: return
+        if (!entity.isGrimmory) return
+        refreshGrimmoryPermissions(serverId, entity.url)
+    }
+
+    private suspend fun refreshGrimmoryPermissions(serverId: Long, baseUrl: String) {
+        runCatching {
+            val user = grimmoryAppClient.getCurrentUser(baseUrl, serverId).getOrNull() ?: return
+            serverDao.updateCanMoveOrganizeFiles(serverId, user.permissions.canMoveOrganizeFiles)
+        }.onFailure { e ->
+            Timber.w(e, "Failed to refresh Grimmory permissions for server $serverId")
+        }
     }
 
     suspend fun delete(serverId: Long) {

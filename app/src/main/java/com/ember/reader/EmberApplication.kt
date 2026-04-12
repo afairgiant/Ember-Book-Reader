@@ -67,6 +67,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         initializeSync()
         runAutoCleanup()
         observeServersForCoverAuth()
+        refreshGrimmoryPermissions()
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -112,6 +113,24 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
             val enabled = appPreferencesRepository.autoCleanupFlow.first()
             if (enabled) {
                 bookRepository.cleanupOldDownloads()
+            }
+        }
+    }
+
+    /**
+     * Refresh per-user permission flags (e.g. [ServerRepository.refreshGrimmoryPermissions])
+     * for every Grimmory server. Runs in the background so it doesn't delay startup, and
+     * silently tolerates any network failure — the cached flag value is kept on error.
+     */
+    private fun refreshGrimmoryPermissions() {
+        applicationScope.launch {
+            runCatching {
+                val servers = serverRepository.getAll()
+                servers.filter { it.isGrimmory }.forEach { server ->
+                    serverRepository.refreshGrimmoryPermissions(server.id)
+                }
+            }.onFailure { e ->
+                Timber.w(e, "Failed to refresh Grimmory permissions on startup")
             }
         }
     }
