@@ -89,6 +89,25 @@ class LibraryViewModel @Inject constructor(
 
     private var server: Server? = null
 
+    private val _currentServer = MutableStateFlow<Server?>(null)
+    /** Reactive snapshot of the current [Server], exposing [Server.canMoveOrganizeFiles]. */
+    val currentServer: StateFlow<Server?> = _currentServer.asStateFlow()
+
+    // Multi-select state — used by the library screen's long-press selection mode
+    // to drive bulk actions like Organize Files.
+    private val _selectedBookIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedBookIds: StateFlow<Set<String>> = _selectedBookIds.asStateFlow()
+
+    /** True when the user is in multi-select mode (at least one book is selected). */
+    val isSelecting: StateFlow<Boolean> = _selectedBookIds
+        .let { flow ->
+            MutableStateFlow(false).also { out ->
+                viewModelScope.launch {
+                    flow.collect { out.value = it.isNotEmpty() }
+                }
+            }
+        }
+
     private val _nextPagePath = MutableStateFlow<String?>(null)
     val hasMore: StateFlow<Boolean> = _nextPagePath.asStateFlow()
         .let { flow ->
@@ -150,9 +169,24 @@ class LibraryViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
+            _currentServer.value = server
             refresh()
             loadGrimmoryFilterOptions()
         }
+    }
+
+    fun toggleSelection(bookId: String) {
+        _selectedBookIds.update { current ->
+            if (current.contains(bookId)) current - bookId else current + bookId
+        }
+    }
+
+    fun enterSelectionWith(bookId: String) {
+        _selectedBookIds.value = setOf(bookId)
+    }
+
+    fun clearSelection() {
+        _selectedBookIds.value = emptySet()
     }
 
     /**
