@@ -54,15 +54,13 @@ object FileNamingPatternResolver {
         return matches.all { m -> values[m.groupValues[1]]?.trim().orEmpty().isNotBlank() }
     }
 
-    private fun resolveModifierPlaceholders(
-        block: String,
-        values: Map<String, String>,
-    ): String = MODIFIER_PLACEHOLDER_REGEX.replace(block) { match ->
-        val fieldName = match.groupValues[1]
-        val modifier = match.groupValues[2].takeIf { it.isNotEmpty() }
-        val raw = values[fieldName].orEmpty()
-        if (modifier != null) applyModifier(raw, modifier, fieldName) else raw
-    }
+    private fun resolveModifierPlaceholders(block: String, values: Map<String, String>): String =
+        MODIFIER_PLACEHOLDER_REGEX.replace(block) { match ->
+            val fieldName = match.groupValues[1]
+            val modifier = match.groupValues[2].takeIf { it.isNotEmpty() }
+            val raw = values[fieldName].orEmpty()
+            if (modifier != null) applyModifier(raw, modifier, fieldName) else raw
+        }
 
     private fun applyModifier(value: String, modifier: String, fieldName: String): String {
         if (value.isEmpty()) return value

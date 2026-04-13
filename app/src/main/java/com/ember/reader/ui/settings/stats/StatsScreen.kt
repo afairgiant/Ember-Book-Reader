@@ -34,10 +34,7 @@ import com.ember.reader.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: StatsViewModel = hiltViewModel(),
-) {
+fun StatsScreen(onNavigateBack: () -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -47,29 +44,29 @@ fun StatsScreen(
                 title = {
                     Text(
                         stringResource(R.string.stats_title),
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. Hero summary
             item { HeroSummarySection(stats) }
@@ -97,7 +94,7 @@ fun StatsScreen(
                 item {
                     TimelineSection(
                         stats = stats,
-                        onLoadTimeline = viewModel::loadTimeline,
+                        onLoadTimeline = viewModel::loadTimeline
                     )
                 }
             }
@@ -122,12 +119,12 @@ fun StatsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.no_sessions_yet),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -138,16 +135,16 @@ fun StatsScreen(
                 item {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         FilledTonalButton(
                             onClick = {
                                 val intent = Intent(
                                     Intent.ACTION_VIEW,
-                                    Uri.parse("$serverUrl/reading-stats"),
+                                    Uri.parse("$serverUrl/reading-stats")
                                 )
                                 context.startActivity(intent)
-                            },
+                            }
                         ) {
                             Text(stringResource(R.string.stats_view_on_grimmory))
                         }

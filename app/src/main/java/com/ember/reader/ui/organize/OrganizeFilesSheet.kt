@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 fun OrganizeFilesSheet(
     viewModel: OrganizeFilesViewModel,
     onDismiss: () -> Unit,
-    onSuccess: (movedCount: Int, targetLibraryName: String) -> Unit,
+    onSuccess: (movedCount: Int, targetLibraryName: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -80,22 +80,22 @@ fun OrganizeFilesSheet(
             val ready = state as? OrganizeFilesUiState.Ready
             if (ready?.submitting != true) onDismiss()
         },
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp, vertical = 8.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     "Organize Files",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close")
@@ -109,12 +109,12 @@ fun OrganizeFilesSheet(
                     onLibrarySelected = viewModel::onLibrarySelected,
                     onPathSelected = viewModel::onPathSelected,
                     onConfirm = viewModel::onConfirm,
-                    onCancel = onDismiss,
+                    onCancel = onDismiss
                 )
                 is OrganizeFilesUiState.Error -> ErrorContent(
                     state = s,
                     onRetry = { viewModel.retryLoad() },
-                    onCancel = onDismiss,
+                    onCancel = onDismiss
                 )
                 is OrganizeFilesUiState.Success -> Unit // dismissed in LaunchedEffect
             }
@@ -128,7 +128,7 @@ private fun LoadingContent() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator()
         Spacer(Modifier.padding(start = 16.dp))
@@ -142,19 +142,19 @@ private fun ReadyContent(
     onLibrarySelected: (Long) -> Unit,
     onPathSelected: (Long) -> Unit,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit,
+    onCancel: () -> Unit
 ) {
     Text(
         "Move to library",
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.height(4.dp))
     LibraryPickerButton(
         label = state.selectedLibrary?.name ?: "Choose a library",
         libraries = state.libraries,
         enabled = !state.submitting,
-        onSelected = onLibrarySelected,
+        onSelected = onLibrarySelected
     )
 
     if (state.showPathPicker) {
@@ -162,14 +162,14 @@ private fun ReadyContent(
         Text(
             "Path",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(4.dp))
         PathPickerButton(
             label = state.selectedPath?.path ?: "",
             paths = state.selectedLibrary?.paths.orEmpty(),
             enabled = !state.submitting,
-            onSelected = onPathSelected,
+            onSelected = onPathSelected
         )
     }
 
@@ -177,14 +177,14 @@ private fun ReadyContent(
     Text(
         "${state.previews.size} book${if (state.previews.size == 1) "" else "s"}",
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.height(8.dp))
 
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 80.dp, max = 320.dp),
+            .heightIn(min = 80.dp, max = 320.dp)
     ) {
         items(state.previews, key = { it.bookId }) { preview ->
             PreviewRow(preview)
@@ -195,7 +195,7 @@ private fun ReadyContent(
     Row(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         TextButton(onClick = onCancel, enabled = !state.submitting) {
             Text("Cancel")
@@ -203,10 +203,10 @@ private fun ReadyContent(
         Spacer(Modifier.padding(start = 8.dp))
         Button(
             onClick = onConfirm,
-            enabled = state.anythingToMove
-                && state.selectedLibraryId != null
-                && state.selectedPathId != null
-                && !state.submitting,
+            enabled = state.anythingToMove &&
+                state.selectedLibraryId != null &&
+                state.selectedPathId != null &&
+                !state.submitting
         ) {
             Text(
                 when {
@@ -227,25 +227,25 @@ private fun LibraryPickerButton(
     label: String,
     libraries: List<com.ember.reader.core.grimmory.GrimmoryLibraryFull>,
     enabled: Boolean,
-    onSelected: (Long) -> Unit,
+    onSelected: (Long) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(
             onClick = { expanded = true },
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 label,
                 modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Start
             )
             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = { expanded = false }
         ) {
             libraries.forEach { lib ->
                 DropdownMenuItem(
@@ -256,7 +256,7 @@ private fun LibraryPickerButton(
                                 Text(
                                     "No paths configured",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -265,7 +265,7 @@ private fun LibraryPickerButton(
                     onClick = {
                         onSelected(lib.id)
                         expanded = false
-                    },
+                    }
                 )
             }
         }
@@ -277,27 +277,27 @@ private fun PathPickerButton(
     label: String,
     paths: List<com.ember.reader.core.grimmory.GrimmoryLibraryPath>,
     enabled: Boolean,
-    onSelected: (Long) -> Unit,
+    onSelected: (Long) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(
             onClick = { expanded = true },
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 label,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = { expanded = false }
         ) {
             paths.forEach { path ->
                 DropdownMenuItem(
@@ -305,7 +305,7 @@ private fun PathPickerButton(
                     onClick = {
                         onSelected(path.id)
                         expanded = false
-                    },
+                    }
                 )
             }
         }
@@ -326,21 +326,21 @@ private fun PreviewRow(preview: BookMovePreview) {
             fontWeight = FontWeight.Medium,
             color = titleColor,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Ellipsis
         )
         Text(
             preview.currentPath,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            overflow = TextOverflow.Ellipsis
         )
         if (preview.isNoChange) {
             Text(
                 "No change",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Medium
             )
         } else {
             Text(
@@ -348,7 +348,7 @@ private fun PreviewRow(preview: BookMovePreview) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -358,13 +358,13 @@ private fun PreviewRow(preview: BookMovePreview) {
 private fun ErrorContent(
     state: OrganizeFilesUiState.Error,
     onRetry: () -> Unit,
-    onCancel: () -> Unit,
+    onCancel: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
         Text(
             state.message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.error
         )
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {

@@ -31,7 +31,7 @@ enum class StorageSortMode(val displayName: String) {
 class StorageViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
-    private val dictionaryDao: DictionaryDao,
+    private val dictionaryDao: DictionaryDao
 ) : ViewModel() {
 
     private val _sortMode = MutableStateFlow(StorageSortMode.LATEST_FIRST)

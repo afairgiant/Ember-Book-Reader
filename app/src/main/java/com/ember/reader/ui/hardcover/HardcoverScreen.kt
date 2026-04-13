@@ -4,12 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,10 +32,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 fun HardcoverScreen(
     onNavigateBack: () -> Unit,
     onSearchGrimmory: (serverId: Long, query: String) -> Unit = { _, _ -> },
-    viewModel: HardcoverViewModel = hiltViewModel(),
+    viewModel: HardcoverViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
@@ -111,11 +111,11 @@ fun HardcoverScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         when (val state = uiState) {
             HardcoverUiState.Loading -> {
@@ -123,7 +123,7 @@ fun HardcoverScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
@@ -132,7 +132,7 @@ fun HardcoverScreen(
             HardcoverUiState.NotConnected -> {
                 ConnectView(
                     modifier = Modifier.padding(padding),
-                    onConnect = viewModel::connect,
+                    onConnect = viewModel::connect
                 )
             }
 
@@ -140,7 +140,7 @@ fun HardcoverScreen(
                 ConnectedView(
                     state = state,
                     modifier = Modifier.padding(padding),
-                    onBookClick = viewModel::selectBook,
+                    onBookClick = viewModel::selectBook
                 )
             }
         }
@@ -150,11 +150,11 @@ fun HardcoverScreen(
     val detail = selectedBookDetail
     if (detail != null) {
         val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
+            skipPartiallyExpanded = true
         )
         ModalBottomSheet(
             onDismissRequest = viewModel::clearSelectedBook,
-            sheetState = sheetState,
+            sheetState = sheetState
         ) {
             BookDetailSheet(
                 detail = detail,
@@ -169,17 +169,14 @@ fun HardcoverScreen(
                             onSearchGrimmory(serverId, detail.title)
                         }
                     }
-                },
+                }
             )
         }
     }
 }
 
 @Composable
-private fun ConnectView(
-    modifier: Modifier = Modifier,
-    onConnect: (String) -> Unit,
-) {
+private fun ConnectView(modifier: Modifier = Modifier, onConnect: (String) -> Unit) {
     var token by remember { mutableStateOf("") }
 
     Column(
@@ -187,18 +184,18 @@ private fun ConnectView(
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = "Connect to Hardcover",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Enter your API token from hardcover.app settings",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
         OutlinedTextField(
@@ -206,14 +203,14 @@ private fun ConnectView(
             onValueChange = { token = it },
             label = { Text("API Token") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
+            singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = { onConnect(token) },
             enabled = token.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text("Connect")
         }
@@ -224,7 +221,7 @@ private fun ConnectView(
 private fun ConnectedView(
     state: HardcoverUiState.Connected,
     modifier: Modifier = Modifier,
-    onBookClick: (Int) -> Unit = {},
+    onBookClick: (Int) -> Unit = {}
 ) {
     val pagerState = rememberPagerState(pageCount = { state.tabs.size })
     val scope = rememberCoroutineScope()
@@ -233,27 +230,27 @@ private fun ConnectedView(
         // User info header
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         text = state.user.name ?: state.user.username,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "@${state.user.username} \u00B7 ${state.user.booksCount} books",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -262,7 +259,7 @@ private fun ConnectedView(
         // Tabs
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
-            edgePadding = 16.dp,
+            edgePadding = 16.dp
         ) {
             state.tabs.forEachIndexed { index, statusId ->
                 val books = state.booksByStatus[statusId]
@@ -273,9 +270,9 @@ private fun ConnectedView(
                     text = {
                         Text(
                             text = if (count > 0) "${tabLabel(statusId)} ($count)" else tabLabel(statusId),
-                            maxLines = 1,
+                            maxLines = 1
                         )
-                    },
+                    }
                 )
             }
         }
@@ -283,7 +280,7 @@ private fun ConnectedView(
         // Pager content
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         ) { page ->
             val statusId = state.tabs[page]
             val books = state.booksByStatus[statusId]
@@ -291,31 +288,31 @@ private fun ConnectedView(
             if (books == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
             } else if (books.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "No books",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(books, key = { it.id }) { book ->
                         BookRow(
                             book = book,
-                            onClick = { onBookClick(book.bookId) },
+                            onClick = { onBookClick(book.bookId) }
                         )
                     }
                 }
@@ -328,16 +325,16 @@ private fun ConnectedView(
 private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.Top
         ) {
             if (book.coverUrl != null) {
                 AsyncImage(
@@ -349,7 +346,7 @@ private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(width = 50.dp, height = 75.dp)
-                        .clip(RoundedCornerShape(6.dp)),
+                        .clip(RoundedCornerShape(6.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }
@@ -359,7 +356,7 @@ private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 val author = book.author
                 if (author != null) {
@@ -368,7 +365,7 @@ private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 val rating = book.rating
@@ -394,7 +391,7 @@ private fun RatingStars(rating: Float) {
                 icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = Color(0xFFFFB300),
+                tint = Color(0xFFFFB300)
             )
         }
     }
@@ -404,13 +401,13 @@ private fun RatingStars(rating: Float) {
 private fun BookDetailSheet(
     detail: HardcoverBookDetail,
     onViewOnHardcover: () -> Unit,
-    onSearchGrimmory: () -> Unit,
+    onSearchGrimmory: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp),
+            .padding(bottom = 32.dp)
     ) {
         // Cover + info
         Row {
@@ -425,7 +422,7 @@ private fun BookDetailSheet(
                     modifier = Modifier
                         .width(100.dp)
                         .aspectRatio(2f / 3f)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(8.dp))
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             }
@@ -433,21 +430,21 @@ private fun BookDetailSheet(
                 Text(
                     text = detail.title,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Bold
                 )
                 val subtitle = detail.subtitle
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (detail.authors.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = detail.authors.joinToString(", "),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 val series = detail.seriesName
@@ -461,7 +458,7 @@ private fun BookDetailSheet(
                     Text(
                         text = seriesText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -473,7 +470,7 @@ private fun BookDetailSheet(
                         Text(
                             text = "(${detail.ratingsCount})",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -485,7 +482,7 @@ private fun BookDetailSheet(
                     Text(
                         text = meta,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -500,7 +497,7 @@ private fun BookDetailSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -510,7 +507,7 @@ private fun BookDetailSheet(
         Button(
             onClick = onSearchGrimmory,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text("Search in Grimmory")
         }
@@ -521,8 +518,8 @@ private fun BookDetailSheet(
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ),
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
         ) {
             Text("View on Hardcover")
         }

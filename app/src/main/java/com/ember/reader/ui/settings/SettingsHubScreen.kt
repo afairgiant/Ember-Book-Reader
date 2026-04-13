@@ -72,7 +72,7 @@ fun SettingsHubScreen(
     onOpenBookdrop: () -> Unit,
     onOpenDevLog: () -> Unit,
     onOpenLicenses: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
 
@@ -81,47 +81,47 @@ fun SettingsHubScreen(
             TopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
         ) {
             // Header card
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     androidx.compose.foundation.Image(
                         painter = painterResource(R.mipmap.ic_launcher_foreground),
                         contentDescription = null,
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(56.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = stringResource(R.string.ember_reader),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Customize your reading experience",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val hasGrimmory = servers.any {
                             it.isGrimmory && viewModel.isGrimmoryLoggedIn(it.id)
@@ -132,15 +132,15 @@ fun SettingsHubScreen(
                                 modifier = Modifier
                                     .background(
                                         Color(0xFF2E7D32),
-                                        RoundedCornerShape(12.dp),
+                                        RoundedCornerShape(12.dp)
                                     )
-                                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     text = "Grimmory connected",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -153,7 +153,7 @@ fun SettingsHubScreen(
             // Connected Servers
             SettingsGroup(
                 title = "Connected Servers",
-                subtitle = "Manage your book server connections",
+                subtitle = "Manage your book server connections"
             ) {
                 servers.forEachIndexed { index, server ->
                     if (index > 0) {
@@ -162,12 +162,12 @@ fun SettingsHubScreen(
                     ServerRow(
                         server = server,
                         isGrimmoryLoggedIn = viewModel.isGrimmoryLoggedIn(server.id),
-                        onClick = { onEditServer(server.id) },
+                        onClick = { onEditServer(server.id) }
                     )
                 }
                 if (servers.isNotEmpty()) {
                     androidx.compose.material3.HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
                 Row(
@@ -175,19 +175,19 @@ fun SettingsHubScreen(
                         .fillMaxWidth()
                         .clickable(onClick = onAddServer)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = stringResource(R.string.add_server),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -197,58 +197,58 @@ fun SettingsHubScreen(
             // App Settings
             SettingsGroup(
                 title = "App Settings",
-                subtitle = "Appearance, sync, and storage options",
+                subtitle = "Appearance, sync, and storage options"
             ) {
                 SettingsNavRow(
                     icon = Icons.Default.Palette,
                     title = "Appearance",
                     subtitle = "Theme, keep screen on",
-                    onClick = onOpenAppearance,
+                    onClick = onOpenAppearance
                 )
                 androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsNavRow(
                     icon = Icons.Default.Sync,
                     title = "Sync",
                     subtitle = "Frequency, highlights, bookmarks",
-                    onClick = onOpenSync,
+                    onClick = onOpenSync
                 )
                 androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsNavRow(
                     icon = Icons.Default.Download,
                     title = "Downloads & Storage",
                     subtitle = "Auto download, cleanup, manage files",
-                    onClick = onOpenDownloads,
+                    onClick = onOpenDownloads
                 )
                 androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsNavRow(
                     icon = Icons.Default.BarChart,
                     title = "Reading Statistics",
                     subtitle = "History, streaks, and Grimmory stats",
-                    onClick = onOpenStats,
+                    onClick = onOpenStats
                 )
                 androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsNavRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = "Hardcover",
                     subtitle = "View your reading lists",
-                    onClick = onOpenHardcover,
+                    onClick = onOpenHardcover
                 )
                 androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsNavRow(
                     icon = Icons.Default.Inbox,
                     title = "Book Drop",
                     subtitle = "Review and import pending books",
-                    onClick = onOpenBookdrop,
+                    onClick = onOpenBookdrop
                 )
             }
 
@@ -261,27 +261,27 @@ fun SettingsHubScreen(
                         .fillMaxWidth()
                         .combinedClickable(
                             onClick = {},
-                            onLongClick = onOpenDevLog,
+                            onLongClick = onOpenDevLog
                         )
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
                             text = "Ember Reader",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
                             text = "v${com.ember.reader.BuildConfig.VERSION_NAME} \u00B7 Long press for dev logs",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -293,14 +293,14 @@ fun SettingsHubScreen(
                     subtitle = "View on GitHub",
                     onClick = {
                         uriHandler.openUri("https://github.com/afairgiant/Ember-Book-Reader")
-                    },
+                    }
                 )
                 com.ember.reader.ui.settings.components.SettingsDivider()
                 SettingsNavRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = "Open Source Licenses",
                     subtitle = "Third-party libraries used in this app",
-                    onClick = onOpenLicenses,
+                    onClick = onOpenLicenses
                 )
             }
 
@@ -310,31 +310,27 @@ fun SettingsHubScreen(
 }
 
 @Composable
-private fun ServerRow(
-    server: Server,
-    isGrimmoryLoggedIn: Boolean,
-    onClick: () -> Unit,
-) {
+private fun ServerRow(server: Server, isGrimmoryLoggedIn: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         if (server.isGrimmory) {
             Icon(
                 painter = painterResource(R.drawable.ic_grimmory),
                 contentDescription = null,
                 tint = Color.Unspecified,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(22.dp)
             )
         } else {
             Icon(
                 Icons.Default.CloudQueue,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(22.dp)
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
@@ -343,7 +339,7 @@ private fun ServerRow(
                 text = server.name,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -360,7 +356,7 @@ private fun ServerRow(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -373,16 +369,22 @@ private fun StatusDot(label: String, active: Boolean) {
                 .size(8.dp)
                 .clip(CircleShape)
                 .background(
-                    if (active) Color(0xFF4CAF50)
-                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                ),
+                    if (active) {
+                        Color(0xFF4CAF50)
+                    } else {
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    }
+                )
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (active) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (active) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }

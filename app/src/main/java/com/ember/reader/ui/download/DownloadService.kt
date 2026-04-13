@@ -28,13 +28,14 @@ import timber.log.Timber
 
 data class DownloadRequest(
     val bookId: String,
-    val serverId: Long,
+    val serverId: Long
 )
 
 @AndroidEntryPoint
 class DownloadService : Service() {
 
     @Inject lateinit var bookRepository: BookRepository
+
     @Inject lateinit var serverRepository: ServerRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -84,7 +85,7 @@ class DownloadService : Service() {
             currentBookTitle = book.title
             startForeground(
                 NotificationHelper.NOTIFICATION_ID_DOWNLOAD_PROGRESS,
-                NotificationHelper.buildDownloadProgressNotification(this, book.title, cancelIntent()),
+                NotificationHelper.buildDownloadProgressNotification(this, book.title, cancelIntent())
             )
 
             currentJob = scope.launch {
@@ -115,7 +116,7 @@ class DownloadService : Service() {
 
                 val progressText = buildProgressText(progress)
                 NotificationHelper.updateDownloadProgress(
-                    this, book.title, percent, progressText, cancelIntent(),
+                    this, book.title, percent, progressText, cancelIntent()
                 )
             }
 
@@ -166,7 +167,7 @@ class DownloadService : Service() {
         }
         return PendingIntent.getService(
             this, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 

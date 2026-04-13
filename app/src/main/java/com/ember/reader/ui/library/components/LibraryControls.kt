@@ -52,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +66,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
 import com.ember.reader.R
 import com.ember.reader.core.repository.LibraryDensity
 import com.ember.reader.core.repository.LibraryFormat
@@ -93,22 +93,22 @@ fun LibraryToolbar(
     onSortClick: () -> Unit,
     onLayoutClick: () -> Unit,
     viewMode: LibraryViewMode,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
+        color = MaterialTheme.colorScheme.background
     ) {
         AnimatedContent(
             targetState = searchActive,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "toolbar-search-morph",
+            label = "toolbar-search-morph"
         ) { isSearching ->
             if (isSearching) {
                 InlineSearchRow(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
-                    onClose = onSearchToggle,
+                    onClose = onSearchToggle
                 )
             } else {
                 Row(
@@ -116,12 +116,12 @@ fun LibraryToolbar(
                         .fillMaxWidth()
                         .heightIn(min = 44.dp)
                         .padding(horizontal = 12.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = stringResource(R.string.library_count, resultCount),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Row(
@@ -129,7 +129,7 @@ fun LibraryToolbar(
                             .weight(1f)
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         activeChips.forEach { chip ->
                             AssistChip(
@@ -139,12 +139,12 @@ fun LibraryToolbar(
                                     Icon(
                                         Icons.Default.Clear,
                                         contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 },
                                 colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                ),
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             )
                         }
                     }
@@ -164,7 +164,7 @@ fun LibraryToolbar(
                                 LibraryViewMode.LIST -> Icons.Default.ViewList
                                 LibraryViewMode.COMPACT_LIST -> Icons.Default.ViewAgenda
                             },
-                            contentDescription = stringResource(R.string.layout),
+                            contentDescription = stringResource(R.string.layout)
                         )
                     }
                 }
@@ -175,11 +175,7 @@ fun LibraryToolbar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InlineSearchRow(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClose: () -> Unit,
-) {
+private fun InlineSearchRow(query: String, onQueryChange: (String) -> Unit, onClose: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
@@ -190,7 +186,7 @@ private fun InlineSearchRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
             value = query,
@@ -201,7 +197,7 @@ private fun InlineSearchRow(
                 .weight(1f)
                 .focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(12.dp)
         )
         IconButton(onClick = onClose) {
             Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.close_search))
@@ -219,7 +215,7 @@ fun LibrarySortMenu(
     prefs: LibraryPrefs,
     onDismiss: () -> Unit,
     onSortSelected: (LibrarySortKey) -> Unit,
-    onGroupSelected: (LibraryGroupBy) -> Unit,
+    onGroupSelected: (LibraryGroupBy) -> Unit
 ) {
     var groupSubExpanded by remember { mutableStateOf(false) }
 
@@ -228,7 +224,7 @@ fun LibrarySortMenu(
             text = stringResource(R.string.sort_by),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         LibrarySortKey.values().forEach { key ->
             val selected = prefs.sortKey == key
@@ -239,21 +235,21 @@ fun LibrarySortMenu(
                     if (selected) {
                         Icon(
                             if (prefs.sortReversed) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                            contentDescription = null,
+                            contentDescription = null
                         )
                     }
-                },
+                }
             )
         }
         HorizontalDivider()
         DropdownMenuItem(
             text = { Text(stringResource(R.string.group_by) + ": " + groupLabel(prefs.groupBy)) },
             onClick = { groupSubExpanded = true },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
         )
         DropdownMenu(
             expanded = groupSubExpanded,
-            onDismissRequest = { groupSubExpanded = false },
+            onDismissRequest = { groupSubExpanded = false }
         ) {
             LibraryGroupBy.values().forEach { g ->
                 DropdownMenuItem(
@@ -265,7 +261,7 @@ fun LibrarySortMenu(
                     },
                     trailingIcon = {
                         if (prefs.groupBy == g) Icon(Icons.Default.Check, contentDescription = null)
-                    },
+                    }
                 )
             }
         }
@@ -307,14 +303,14 @@ fun LibraryLayoutSheet(
     onCardShowProgressChange: (Boolean) -> Unit,
     onCardShowAuthorChange: (Boolean) -> Unit,
     onCardShowSourceBadgeChange: (Boolean) -> Unit,
-    onCardShowFormatBadgeChange: (Boolean) -> Unit,
+    onCardShowFormatBadgeChange: (Boolean) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Text(stringResource(R.string.layout), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(12.dp))
@@ -332,7 +328,7 @@ fun LibraryLayoutSheet(
                         LibraryViewMode.LIST -> stringResource(R.string.view_list)
                         LibraryViewMode.COMPACT_LIST -> stringResource(R.string.view_compact)
                     }
-                },
+                }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -349,7 +345,7 @@ fun LibraryLayoutSheet(
                         LibraryDensity.MEDIUM -> "M"
                         LibraryDensity.LARGE -> "L"
                     }
-                },
+                }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -359,32 +355,32 @@ fun LibraryLayoutSheet(
             ToggleRow(
                 label = stringResource(R.string.show_continue_reading),
                 checked = prefs.showContinueReading,
-                onCheckedChange = onShowContinueReadingChange,
+                onCheckedChange = onShowContinueReadingChange
             )
             Text(
                 stringResource(R.string.card_info),
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 8.dp)
             )
             ToggleRow(
                 label = stringResource(R.string.card_progress),
                 checked = prefs.cardShowProgress,
-                onCheckedChange = onCardShowProgressChange,
+                onCheckedChange = onCardShowProgressChange
             )
             ToggleRow(
                 label = stringResource(R.string.card_author),
                 checked = prefs.cardShowAuthor,
-                onCheckedChange = onCardShowAuthorChange,
+                onCheckedChange = onCardShowAuthorChange
             )
             ToggleRow(
                 label = stringResource(R.string.card_source_badge),
                 checked = prefs.cardShowSourceBadge,
-                onCheckedChange = onCardShowSourceBadgeChange,
+                onCheckedChange = onCardShowSourceBadgeChange
             )
             ToggleRow(
                 label = stringResource(R.string.card_format_badge),
                 checked = prefs.cardShowFormatBadge,
-                onCheckedChange = onCardShowFormatBadgeChange,
+                onCheckedChange = onCardShowFormatBadgeChange
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -396,13 +392,13 @@ private fun <T> SegmentedRow(
     options: List<T>,
     selected: T,
     onSelect: (T) -> Unit,
-    labelOf: @Composable (T) -> String,
+    labelOf: @Composable (T) -> String
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         options.forEach { opt ->
             val isSelected = opt == selected
@@ -411,17 +407,23 @@ private fun <T> SegmentedRow(
                     .weight(1f)
                     .clickable { onSelect(opt) }
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                        else MaterialTheme.colorScheme.surfaceVariant
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
                     )
                     .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = labelOf(opt),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
         }
@@ -435,7 +437,7 @@ private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -458,20 +460,20 @@ fun LibraryFilterSheet(
     onFormatChange: (LibraryFormat) -> Unit,
     onStatusChange: (LibraryStatus) -> Unit,
     onApplyPreset: (LibraryPreset) -> Unit,
-    onClearAll: () -> Unit,
+    onClearAll: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.filter),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = {
                     onClearAll()
@@ -485,7 +487,7 @@ fun LibraryFilterSheet(
             Spacer(modifier = Modifier.height(6.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(LibraryPreset.values().toList()) { preset ->
                     AssistChip(
@@ -493,7 +495,7 @@ fun LibraryFilterSheet(
                             onApplyPreset(preset)
                             onDismiss()
                         },
-                        label = { Text(presetLabel(preset)) },
+                        label = { Text(presetLabel(preset)) }
                     )
                 }
             }
@@ -512,7 +514,7 @@ fun LibraryFilterSheet(
                         LibraryFormat.AUDIOBOOKS -> stringResource(R.string.filter_audiobooks)
                     }
                 },
-                countOf = { formatCounts[it] ?: 0 },
+                countOf = { formatCounts[it] ?: 0 }
             )
 
             // Source
@@ -528,7 +530,7 @@ fun LibraryFilterSheet(
                         LibrarySource.LOCAL -> stringResource(R.string.filter_local)
                     }
                 },
-                countOf = { sourceCounts[it] ?: 0 },
+                countOf = { sourceCounts[it] ?: 0 }
             )
 
             // Status
@@ -545,7 +547,7 @@ fun LibraryFilterSheet(
                         LibraryStatus.FINISHED -> stringResource(R.string.status_finished)
                     }
                 },
-                countOf = { statusCounts[it] ?: 0 },
+                countOf = { statusCounts[it] ?: 0 }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -560,7 +562,7 @@ private fun <T> FilterSection(
     selected: T,
     onSelect: (T) -> Unit,
     labelOf: @Composable (T) -> String,
-    countOf: (T) -> Int,
+    countOf: (T) -> Int
 ) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge)
@@ -573,26 +575,29 @@ private fun <T> FilterSection(
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { onSelect(opt) }
                     .padding(vertical = 10.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = null,
                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = labelOf(opt),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
-                    color = if (isSelected) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
                 Text(
                     text = countOf(opt).toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -619,7 +624,7 @@ fun GrimmoryFilterSheet(
     filterOptions: com.ember.reader.core.grimmory.GrimmoryAppFilterOptions?,
     onApply: (com.ember.reader.ui.library.GrimmoryFilter) -> Unit,
     onReset: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -630,13 +635,13 @@ fun GrimmoryFilterSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Sort & filter",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = {
                     onReset()
@@ -656,14 +661,17 @@ fun GrimmoryFilterSheet(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { draft = draft.copy(sort = key) }
                         .padding(vertical = 10.dp, horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Default.Check,
                         contentDescription = null,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(18.dp),
+                        tint = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
@@ -673,8 +681,11 @@ fun GrimmoryFilterSheet(
                             com.ember.reader.ui.library.GrimmorySortKey.SERIES -> "Series"
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -683,7 +694,7 @@ fun GrimmoryFilterSheet(
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("Direction", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.weight(1f))
@@ -696,17 +707,17 @@ fun GrimmoryFilterSheet(
                                 when (dir) {
                                     com.ember.reader.ui.library.SortDirection.ASC -> "Asc"
                                     com.ember.reader.ui.library.SortDirection.DESC -> "Desc"
-                                },
+                                }
                             )
                         },
                         colors = if (isSelected) {
                             AssistChipDefaults.assistChipColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         } else {
                             AssistChipDefaults.assistChipColors()
-                        },
+                        }
                     )
                 }
             }
@@ -726,11 +737,11 @@ fun GrimmoryFilterSheet(
                 com.ember.reader.core.grimmory.ReadStatus.READ,
                 com.ember.reader.core.grimmory.ReadStatus.ABANDONED,
                 com.ember.reader.core.grimmory.ReadStatus.WONT_READ,
-                com.ember.reader.core.grimmory.ReadStatus.UNSET,
+                com.ember.reader.core.grimmory.ReadStatus.UNSET
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(statusOptions) { status ->
                     val isSelected = draft.status == status
@@ -749,17 +760,17 @@ fun GrimmoryFilterSheet(
                                     com.ember.reader.core.grimmory.ReadStatus.WONT_READ -> "Won't read"
                                     com.ember.reader.core.grimmory.ReadStatus.ABANDONED -> "Abandoned"
                                     com.ember.reader.core.grimmory.ReadStatus.UNSET -> "Unset"
-                                },
+                                }
                             )
                         },
                         colors = if (isSelected) {
                             AssistChipDefaults.assistChipColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         } else {
                             AssistChipDefaults.assistChipColors()
-                        },
+                        }
                     )
                 }
             }
@@ -770,31 +781,31 @@ fun GrimmoryFilterSheet(
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = draft.minRating?.toString().orEmpty(),
                     onValueChange = { text ->
                         draft = draft.copy(
-                            minRating = text.toIntOrNull()?.coerceIn(0, 5),
+                            minRating = text.toIntOrNull()?.coerceIn(0, 5)
                         )
                     },
                     label = { Text("Min") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
                 OutlinedTextField(
                     value = draft.maxRating?.toString().orEmpty(),
                     onValueChange = { text ->
                         draft = draft.copy(
-                            maxRating = text.toIntOrNull()?.coerceIn(0, 5),
+                            maxRating = text.toIntOrNull()?.coerceIn(0, 5)
                         )
                     },
                     label = { Text("Max") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -812,30 +823,30 @@ fun GrimmoryFilterSheet(
                         trailingIcon = {
                             Icon(
                                 if (authorMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                contentDescription = null,
+                                contentDescription = null
                             )
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { authorMenuOpen = true },
+                            .clickable { authorMenuOpen = true }
                     )
                     // Invisible click overlay — OutlinedTextField in readOnly still blocks clicks.
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .clickable { authorMenuOpen = true },
+                            .clickable { authorMenuOpen = true }
                     )
                     DropdownMenu(
                         expanded = authorMenuOpen,
                         onDismissRequest = { authorMenuOpen = false },
-                        modifier = Modifier.heightIn(max = 320.dp),
+                        modifier = Modifier.heightIn(max = 320.dp)
                     ) {
                         DropdownMenuItem(
                             text = { Text("Any") },
                             onClick = {
                                 draft = draft.copy(authors = null)
                                 authorMenuOpen = false
-                            },
+                            }
                         )
                         authors.forEach { author ->
                             DropdownMenuItem(
@@ -843,7 +854,7 @@ fun GrimmoryFilterSheet(
                                 onClick = {
                                     draft = draft.copy(authors = author.name)
                                     authorMenuOpen = false
-                                },
+                                }
                             )
                         }
                     }
@@ -854,7 +865,7 @@ fun GrimmoryFilterSheet(
                     onValueChange = { draft = draft.copy(authors = it.takeIf { s -> s.isNotBlank() }) },
                     label = { Text("Author (exact)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -878,27 +889,27 @@ fun GrimmoryFilterSheet(
                         trailingIcon = {
                             Icon(
                                 if (langMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                contentDescription = null,
+                                contentDescription = null
                             )
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .clickable { langMenuOpen = true },
+                            .clickable { langMenuOpen = true }
                     )
                     DropdownMenu(
                         expanded = langMenuOpen,
                         onDismissRequest = { langMenuOpen = false },
-                        modifier = Modifier.heightIn(max = 320.dp),
+                        modifier = Modifier.heightIn(max = 320.dp)
                     ) {
                         DropdownMenuItem(
                             text = { Text("Any") },
                             onClick = {
                                 draft = draft.copy(language = null)
                                 langMenuOpen = false
-                            },
+                            }
                         )
                         languages.forEach { lang ->
                             DropdownMenuItem(
@@ -906,7 +917,7 @@ fun GrimmoryFilterSheet(
                                 onClick = {
                                     draft = draft.copy(language = lang.code)
                                     langMenuOpen = false
-                                },
+                                }
                             )
                         }
                     }
@@ -917,7 +928,7 @@ fun GrimmoryFilterSheet(
                     onValueChange = { draft = draft.copy(language = it.takeIf { s -> s.isNotBlank() }) },
                     label = { Text("Language code (e.g. en)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -925,18 +936,17 @@ fun GrimmoryFilterSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 ) { Text("Cancel") }
                 androidx.compose.material3.Button(
                     onClick = {
                         onApply(draft)
                         onDismiss()
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 ) { Text("Apply") }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
-

@@ -19,7 +19,7 @@ data class BookMovePreview(
     val title: String,
     val currentPath: String,
     val newPath: String,
-    val isNoChange: Boolean,
+    val isNoChange: Boolean
 )
 
 sealed interface OrganizeFilesUiState {
@@ -30,7 +30,7 @@ sealed interface OrganizeFilesUiState {
         val selectedLibraryId: Long?,
         val selectedPathId: Long?,
         val previews: List<BookMovePreview>,
-        val submitting: Boolean = false,
+        val submitting: Boolean = false
     ) : OrganizeFilesUiState {
         val selectedLibrary: GrimmoryLibraryFull?
             get() = libraries.firstOrNull { it.id == selectedLibraryId }
@@ -47,13 +47,13 @@ sealed interface OrganizeFilesUiState {
 
     data class Error(
         val kind: Kind,
-        val message: String,
+        val message: String
     ) : OrganizeFilesUiState {
         enum class Kind { Loading, Permission, Server, Network }
     }
 
     data class Success(
         val movedCount: Int,
-        val targetLibraryName: String,
+        val targetLibraryName: String
     ) : OrganizeFilesUiState
 }

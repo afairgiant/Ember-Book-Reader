@@ -21,7 +21,7 @@ import com.ember.reader.R
 fun TimePeriodSection(stats: StatsData, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         TimeCard(stringResource(R.string.today), stats.todaySeconds, Modifier.weight(1f))
         TimeCard(stringResource(R.string.this_week), stats.weekSeconds, Modifier.weight(1f))
@@ -33,27 +33,27 @@ fun TimePeriodSection(stats: StatsData, modifier: Modifier = Modifier) {
 fun EstimatedCompletionCard(minutes: Long, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = stringResource(R.string.estimated_time_to_finish),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             )
             Text(
                 text = (minutes * 60).formatDuration(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

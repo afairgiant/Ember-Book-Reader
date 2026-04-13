@@ -12,7 +12,9 @@ import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import com.ember.reader.ui.common.friendlyErrorMessage
-import javax.inject.Inject
 
 data class BookdropFileState(
     val file: BookdropFile,
@@ -29,7 +29,7 @@ data class BookdropFileState(
     val isExpanded: Boolean = false,
     val isChecked: Boolean = false,
     val libraryId: Long? = null,
-    val pathId: Long? = null,
+    val pathId: Long? = null
 )
 
 sealed interface BookdropUiState {
@@ -37,7 +37,7 @@ sealed interface BookdropUiState {
     data object NoServer : BookdropUiState
     data class Success(
         val files: List<BookdropFileState>,
-        val libraries: List<GrimmoryAppLibraryWithPaths>,
+        val libraries: List<GrimmoryAppLibraryWithPaths>
     ) : BookdropUiState
     data class Error(val message: String) : BookdropUiState
 }
@@ -46,7 +46,7 @@ sealed interface BookdropUiState {
 class BookdropViewModel @Inject constructor(
     private val bookdropClient: BookdropClient,
     private val serverRepository: ServerRepository,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<BookdropUiState>(BookdropUiState.Loading)
@@ -179,7 +179,11 @@ class BookdropViewModel @Inject constructor(
                     "isbn10" -> current.copy(isbn10 = value.ifBlank { null })
                     "asin" -> current.copy(asin = value.ifBlank { null })
                     "pageCount" -> current.copy(pageCount = value.toIntOrNull())
-                    "categories" -> current.copy(categories = value.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet())
+                    "categories" -> current.copy(
+                        categories = value.split(",").map {
+                            it.trim()
+                        }.filter { it.isNotEmpty() }.toSet()
+                    )
                     "description" -> current.copy(description = value.ifBlank { null })
                     "googleId" -> current.copy(googleId = value.ifBlank { null })
                     "goodreadsId" -> current.copy(goodreadsId = value.ifBlank { null })
@@ -219,9 +223,9 @@ class BookdropViewModel @Inject constructor(
                         fileId = fileState.file.id,
                         libraryId = fileState.libraryId!!,
                         pathId = fileState.pathId,
-                        metadata = fileState.editedMetadata,
+                        metadata = fileState.editedMetadata
                     )
-                },
+                }
             )
             bookdropClient.finalizeImport(s.url, s.id, request)
                 .onSuccess { result ->
@@ -246,7 +250,7 @@ class BookdropViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             val request = BookdropDiscardRequest(
-                selectedIds = checked.map { it.file.id },
+                selectedIds = checked.map { it.file.id }
             )
             bookdropClient.discardFiles(s.url, s.id, request)
                 .onSuccess {
@@ -284,13 +288,13 @@ class BookdropViewModel @Inject constructor(
             val fileStates = page.content.map { file ->
                 BookdropFileState(
                     file = file,
-                    editedMetadata = file.originalMetadata ?: BookdropMetadata(),
+                    editedMetadata = file.originalMetadata ?: BookdropMetadata()
                 )
             }
             val libraries = librariesResult.getOrDefault(emptyList())
             _uiState.value = BookdropUiState.Success(
                 files = fileStates,
-                libraries = libraries,
+                libraries = libraries
             )
         }.onFailure { error ->
             _uiState.value = BookdropUiState.Error(friendlyErrorMessage(error))

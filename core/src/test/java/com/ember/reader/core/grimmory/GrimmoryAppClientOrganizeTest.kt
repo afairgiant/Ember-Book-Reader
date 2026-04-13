@@ -41,7 +41,7 @@ class GrimmoryAppClientOrganizeTest {
     private val serverId = 1L
 
     private fun client(
-        responder: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+        responder: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData
     ): Pair<GrimmoryAppClient, MutableList<HttpRequestData>> {
         val captured = mutableListOf<HttpRequestData>()
         val engine = MockEngine { request ->
@@ -81,7 +81,7 @@ class GrimmoryAppClientOrganizeTest {
             respond(
                 content = ByteReadChannel(body),
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
 
@@ -109,8 +109,8 @@ class GrimmoryAppClientOrganizeTest {
             bookIds = setOf(101L, 102L),
             moves = listOf(
                 FileMoveItem(bookId = 101L, targetLibraryId = 2L, targetLibraryPathId = 20L),
-                FileMoveItem(bookId = 102L, targetLibraryId = 2L, targetLibraryPathId = 20L),
-            ),
+                FileMoveItem(bookId = 102L, targetLibraryId = 2L, targetLibraryPathId = 20L)
+            )
         )
         val result = client.moveFiles(baseUrl, serverId, request)
         assertTrue(result.isSuccess)
@@ -160,7 +160,7 @@ class GrimmoryAppClientOrganizeTest {
             respond(
                 content = ByteReadChannel(body),
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
 
@@ -181,7 +181,7 @@ class GrimmoryAppClientOrganizeTest {
             respond(
                 content = ByteReadChannel(body),
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
         val user = client.getCurrentUser(baseUrl, serverId).getOrNull()!!

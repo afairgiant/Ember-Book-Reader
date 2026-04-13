@@ -27,8 +27,8 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,11 +48,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
@@ -152,9 +152,9 @@ fun ServerFormScreen(
                     viewModel.saveGrimmory(
                         useGrimmoryLoginForOpds = useGrimmoryLoginForOpds,
                         useGrimmoryLoginForKosync = useGrimmoryLoginForKosync,
-                        onSuccess = onNavigateBack,
+                        onSuccess = onNavigateBack
                     )
-                },
+                }
             )
         } else {
             // Step 2b: Generic OPDS form
@@ -273,7 +273,7 @@ private fun GrimmoryForm(
     useGrimmoryLoginForKosync: Boolean,
     onUseGrimmoryLoginForKosyncChanged: (Boolean) -> Unit,
     viewModel: ServerFormViewModel,
-    onSave: () -> Unit,
+    onSave: () -> Unit
 ) {
     Column(modifier = modifier) {
         // Server info
@@ -345,7 +345,7 @@ private fun GrimmoryForm(
         SameLoginCheckbox(
             checked = useGrimmoryLoginForOpds,
             onCheckedChange = onUseGrimmoryLoginForOpdsChanged,
-            label = stringResource(R.string.use_grimmory_login_for_opds),
+            label = stringResource(R.string.use_grimmory_login_for_opds)
         )
         AnimatedVisibility(visible = !useGrimmoryLoginForOpds) {
             Column {
@@ -375,10 +375,13 @@ private fun GrimmoryForm(
         TestConnectionButton(
             result = uiState.opdsTestResult,
             onClick = {
-                if (useGrimmoryLoginForOpds) viewModel.testOpdsWithGrimmoryCredentials()
-                else viewModel.testOpdsConnection()
+                if (useGrimmoryLoginForOpds) {
+                    viewModel.testOpdsWithGrimmoryCredentials()
+                } else {
+                    viewModel.testOpdsConnection()
+                }
             },
-            label = stringResource(R.string.test_opds),
+            label = stringResource(R.string.test_opds)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -388,13 +391,13 @@ private fun GrimmoryForm(
         Text(
             text = stringResource(R.string.kosync_sync_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         SameLoginCheckbox(
             checked = useGrimmoryLoginForKosync,
             onCheckedChange = onUseGrimmoryLoginForKosyncChanged,
-            label = stringResource(R.string.use_grimmory_login_for_kosync),
+            label = stringResource(R.string.use_grimmory_login_for_kosync)
         )
         AnimatedVisibility(visible = !useGrimmoryLoginForKosync) {
             Column {
@@ -424,10 +427,13 @@ private fun GrimmoryForm(
         TestConnectionButton(
             result = uiState.kosyncTestResult,
             onClick = {
-                if (useGrimmoryLoginForKosync) viewModel.testKosyncWithGrimmoryCredentials()
-                else viewModel.testKosyncConnection()
+                if (useGrimmoryLoginForKosync) {
+                    viewModel.testKosyncWithGrimmoryCredentials()
+                } else {
+                    viewModel.testKosyncConnection()
+                }
             },
-            label = stringResource(R.string.test_kosync),
+            label = stringResource(R.string.test_kosync)
         )
 
         uiState.validationError?.let { error ->
@@ -659,27 +665,23 @@ private fun SectionHeader(icon: androidx.compose.ui.graphics.vector.ImageVector,
 }
 
 @Composable
-private fun SameLoginCheckbox(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    label: String,
-) {
+private fun SameLoginCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = onCheckedChange
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

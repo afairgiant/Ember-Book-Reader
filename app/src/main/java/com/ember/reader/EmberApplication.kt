@@ -13,7 +13,6 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
-import okhttp3.OkHttpClient
 import com.ember.reader.ui.common.DevLog
 import com.ember.reader.ui.common.NotificationHelper
 import dagger.hilt.android.HiltAndroidApp
@@ -23,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import timber.log.Timber
 
 @HiltAndroidApp

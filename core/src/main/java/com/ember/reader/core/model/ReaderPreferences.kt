@@ -28,13 +28,13 @@ data class ReaderPreferences(
     val rightZoneWidth: Float = 0.33f,
     val volumePageTurn: Boolean = false,
     val pdfFitMode: PdfFitMode = PdfFitMode.WIDTH,
-    val pdfPageSpacing: Float = 8f,
+    val pdfPageSpacing: Float = 8f
 )
 
 @Serializable
 enum class PdfFitMode(val displayName: String) {
     WIDTH("Fit Width"),
-    CONTAIN("Fit Page"),
+    CONTAIN("Fit Page")
 }
 
 @Serializable

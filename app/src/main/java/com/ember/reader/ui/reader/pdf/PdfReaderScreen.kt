@@ -2,11 +2,7 @@ package com.ember.reader.ui.reader.pdf
 
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -15,10 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.readium.toLocator
@@ -31,13 +28,13 @@ import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
-import org.readium.adapter.pdfium.navigator.PdfiumDocumentFragment
+import kotlinx.coroutines.launch
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.adapter.pdfium.navigator.PdfiumPreferences
 import org.readium.adapter.pdfium.navigator.PdfiumSettings
-import org.readium.r2.navigator.preferences.Fit
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
+import org.readium.r2.navigator.preferences.Fit
 import org.readium.r2.shared.ExperimentalReadiumApi
 
 private const val FRAGMENT_TAG = "pdf_navigator"
@@ -120,7 +117,9 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     var showBookmarks by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
-    var navigator by remember { mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null) }
+    var navigator by remember {
+        mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null)
+    }
     val scope = rememberCoroutineScope()
 
     // Volume button page turning
@@ -171,8 +170,11 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 } else {
                     kotlin.math.ceil(totalProg * totalPages).toInt().coerceIn(1, totalPages)
                 }
-                val pageBasedProgression = if (totalPages <= 1) 1.0
-                    else ((currentPage - 1).toDouble() / (totalPages - 1)).coerceIn(0.0, 1.0)
+                val pageBasedProgression = if (totalPages <= 1) {
+                    1.0
+                } else {
+                    ((currentPage - 1).toDouble() / (totalPages - 1)).coerceIn(0.0, 1.0)
+                }
                 loc.copy(
                     locations = loc.locations.copy(
                         totalProgression = pageBasedProgression
@@ -197,7 +199,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 onOpenTableOfContents = {},
                 onOpenPreferences = { showPreferences = true },
                 brightness = preferences.brightness,
-                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
+                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) }
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -212,8 +214,10 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         initialPreferences = preferences.toPdfiumPreferences()
                     ),
                     locatorFlow = { fragment ->
-                        (@Suppress("UNCHECKED_CAST")
-                        (fragment as? PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>))?.currentLocator
+                        (
+                            @Suppress("UNCHECKED_CAST")
+                            (fragment as? PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>)
+                            )?.currentLocator
                     },
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onNavigatorReady = { fragment ->
@@ -255,7 +259,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                                     pageTitle,
                                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
                             androidx.compose.material3.OutlinedTextField(
@@ -263,7 +267,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                                 onValueChange = { bookmarkName = it },
                                 label = { androidx.compose.material3.Text("Name (optional)") },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     },
@@ -277,7 +281,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         androidx.compose.material3.TextButton(onClick = {
                             showBookmarkDialog = false
                         }) { androidx.compose.material3.Text("Cancel") }
-                    },
+                    }
                 )
             }
 
@@ -302,7 +306,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     onDismiss = { showPreferences = false },
                     isPdf = true,
                     hasOverride = hasBookOverride,
-                    onResetToDefaults = viewModel::resetPreferencesToDefaults,
+                    onResetToDefaults = viewModel::resetPreferencesToDefaults
                 )
             }
 
@@ -325,7 +329,7 @@ private fun com.ember.reader.core.model.ReaderPreferences.toPdfiumPreferences():
     return runCatching {
         PdfiumPreferences(
             fit = fit,
-            pageSpacing = pdfPageSpacing.toDouble(),
+            pageSpacing = pdfPageSpacing.toDouble()
         )
     }.getOrElse {
         timber.log.Timber.w(it, "PdfiumPreferences creation failed, using defaults")

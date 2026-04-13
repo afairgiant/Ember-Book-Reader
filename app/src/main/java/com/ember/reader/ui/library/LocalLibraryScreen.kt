@@ -80,7 +80,7 @@ fun LocalLibraryScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
     onOpenBookDetail: (bookId: String) -> Unit = {},
-    viewModel: LocalLibraryViewModel = hiltViewModel(),
+    viewModel: LocalLibraryViewModel = hiltViewModel()
 ) {
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val prefs by viewModel.prefs.collectAsStateWithLifecycle()
@@ -140,14 +140,14 @@ fun LocalLibraryScreen(
     val hasActiveFilters = activeChips.isNotEmpty() || searchQuery.isNotBlank()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> uri?.let { viewModel.importBook(it) } }
 
     val cardInfo = CardInfoToggles(
         showProgress = prefs.cardShowProgress,
         showAuthor = prefs.cardShowAuthor,
         showSourceBadge = prefs.cardShowSourceBadge,
-        showFormatBadge = prefs.cardShowFormatBadge,
+        showFormatBadge = prefs.cardShowFormatBadge
     )
 
     val gridMinSize = when (prefs.density) {
@@ -162,8 +162,8 @@ fun LocalLibraryScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.library_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         floatingActionButton = {
@@ -171,13 +171,13 @@ fun LocalLibraryScreen(
                 FloatingActionButton(
                     onClick = {
                         filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
-                    },
+                    }
                 ) {
                     if (importing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     } else {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.import_book))
@@ -191,14 +191,14 @@ fun LocalLibraryScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = {
                             viewModel.selectAll(viewState.items.filterIsInstance<LibraryListItem.BookEntry>().map { it.book })
@@ -209,7 +209,7 @@ fun LocalLibraryScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         OutlinedButton(
                             onClick = viewModel::syncSelectedProgress,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -218,7 +218,7 @@ fun LocalLibraryScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { showBatchDeleteConfirm = true },
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -227,12 +227,12 @@ fun LocalLibraryScreen(
                     }
                 }
             }
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
         ) {
             Box {
                 LibraryToolbar(
@@ -248,7 +248,7 @@ fun LocalLibraryScreen(
                     onFilterClick = { filterSheetVisible = true },
                     onSortClick = { sortMenuExpanded = true },
                     onLayoutClick = { layoutSheetVisible = true },
-                    viewMode = prefs.viewMode,
+                    viewMode = prefs.viewMode
                 )
                 // Sort menu anchored under the toolbar (right side); DropdownMenu auto-positions
                 LibrarySortMenu(
@@ -256,7 +256,7 @@ fun LocalLibraryScreen(
                     prefs = prefs,
                     onDismiss = { sortMenuExpanded = false },
                     onSortSelected = { viewModel.setSort(it) },
-                    onGroupSelected = { viewModel.setGroupBy(it) },
+                    onGroupSelected = { viewModel.setGroupBy(it) }
                 )
             }
 
@@ -270,7 +270,7 @@ fun LocalLibraryScreen(
                             searchActive = false
                         }
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             } else {
                 LibraryContent(
@@ -283,8 +283,11 @@ fun LocalLibraryScreen(
                     selectedIds = selectedIds,
                     isSelecting = isSelecting,
                     onBookClick = { book ->
-                        if (isSelecting) viewModel.toggleSelection(book.id)
-                        else onOpenBookDetail(book.id)
+                        if (isSelecting) {
+                            viewModel.toggleSelection(book.id)
+                        } else {
+                            onOpenBookDetail(book.id)
+                        }
                     },
                     onBookLongClick = { book -> viewModel.toggleSelection(book.id) },
                     onBookDelete = { book -> deleteBookId = book.id },
@@ -294,7 +297,7 @@ fun LocalLibraryScreen(
                     canRelink = { book -> book.serverId == null && servers.isNotEmpty() },
                     onPullProgress = { book -> viewModel.pullBookProgress(book) },
                     onPushProgress = { book -> viewModel.pushBookProgress(book) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -310,7 +313,7 @@ fun LocalLibraryScreen(
                 onFormatChange = viewModel::setFormat,
                 onStatusChange = viewModel::setStatus,
                 onApplyPreset = viewModel::applyPreset,
-                onClearAll = viewModel::clearAllFilters,
+                onClearAll = viewModel::clearAllFilters
             )
         }
 
@@ -324,7 +327,7 @@ fun LocalLibraryScreen(
                 onCardShowProgressChange = viewModel::setCardShowProgress,
                 onCardShowAuthorChange = viewModel::setCardShowAuthor,
                 onCardShowSourceBadgeChange = viewModel::setCardShowSourceBadge,
-                onCardShowFormatBadgeChange = viewModel::setCardShowFormatBadge,
+                onCardShowFormatBadgeChange = viewModel::setCardShowFormatBadge
             )
         }
 
@@ -342,7 +345,7 @@ fun LocalLibraryScreen(
                                     viewModel.relinkBook(bookId, server.id)
                                     relinkBookId = null
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             ) { Text(server.name) }
                         }
                     }
@@ -350,7 +353,7 @@ fun LocalLibraryScreen(
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { relinkBookId = null }) { Text(stringResource(R.string.cancel)) }
-                },
+                }
             )
         }
 
@@ -370,7 +373,7 @@ fun LocalLibraryScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteBookId = null }) { Text(stringResource(R.string.cancel)) }
-                },
+                }
             )
         }
 
@@ -387,7 +390,7 @@ fun LocalLibraryScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showBatchDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) }
-                },
+                }
             )
         }
     }
@@ -411,7 +414,7 @@ private fun LibraryContent(
     canRelink: (com.ember.reader.core.model.Book) -> Boolean,
     onPullProgress: (com.ember.reader.core.model.Book) -> Unit,
     onPushProgress: (com.ember.reader.core.model.Book) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     when (viewMode) {
         LibraryViewMode.GRID -> {
@@ -422,14 +425,14 @@ private fun LibraryContent(
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = modifier,
+                modifier = modifier
             ) {
                 if (showContinueReading && viewState.inProgress.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "continue-reading") {
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            onBookClick = onBookClick,
+                            onBookClick = onBookClick
                         )
                     }
                 }
@@ -454,13 +457,19 @@ private fun LibraryContent(
                                     onDelete = { onBookDelete(book) },
                                     onRelink = if (canRelink(book)) {
                                         { onBookRelink(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    },
                                     onPullProgress = if (book.serverId != null) {
                                         { onPullProgress(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    },
                                     onPushProgress = if (book.serverId != null) {
                                         { onPushProgress(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    }
                                 )
                             }
                         }
@@ -473,14 +482,14 @@ private fun LibraryContent(
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
-                modifier = modifier,
+                modifier = modifier
             ) {
                 if (showContinueReading && viewState.inProgress.isNotEmpty()) {
                     item(key = "continue-reading") {
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            onBookClick = onBookClick,
+                            onBookClick = onBookClick
                         )
                     }
                 }
@@ -506,13 +515,19 @@ private fun LibraryContent(
                                     onDelete = { onBookDelete(book) },
                                     onRelink = if (canRelink(book)) {
                                         { onBookRelink(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    },
                                     onPullProgress = if (book.serverId != null) {
                                         { onPullProgress(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    },
                                     onPushProgress = if (book.serverId != null) {
                                         { onPushProgress(book) }
-                                    } else null,
+                                    } else {
+                                        null
+                                    }
                                 )
                             }
                         }
@@ -529,18 +544,18 @@ private fun GroupHeader(label: String, count: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, bottom = 4.dp, start = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -549,7 +564,7 @@ private fun GroupHeader(label: String, count: Int) {
 private fun EmptyState(
     hasActiveFilters: Boolean,
     onClearFilters: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -557,7 +572,7 @@ private fun EmptyState(
                 Text(
                     text = stringResource(R.string.no_matches),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onClearFilters) {
@@ -567,12 +582,12 @@ private fun EmptyState(
                 Text(
                     text = stringResource(R.string.no_books_yet),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.no_books_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

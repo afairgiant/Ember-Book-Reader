@@ -7,19 +7,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -46,17 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
-import kotlin.math.abs
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.readium.r2.shared.publication.Locator
 
@@ -98,7 +97,7 @@ fun ReaderScaffold(
                         val rect = android.graphics.Rect(
                             0, 0,
                             coordinates.size.width,
-                            coordinates.size.height,
+                            coordinates.size.height
                         )
                         view.systemGestureExclusionRects = listOf(rect)
                     }
@@ -131,7 +130,7 @@ fun ReaderScaffold(
                                 }
                             }
                         }
-                    },
+                    }
             )
         }
 
@@ -146,7 +145,7 @@ fun ReaderScaffold(
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
                     .padding(vertical = 8.dp),
-                contentAlignment = Alignment.BottomCenter,
+                contentAlignment = Alignment.BottomCenter
             ) {
                 // Background track
                 Box(
@@ -154,7 +153,7 @@ fun ReaderScaffold(
                         .width(4.dp)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
                 )
                 // Fill level
                 Box(
@@ -162,7 +161,7 @@ fun ReaderScaffold(
                         .width(4.dp)
                         .fillMaxHeight(displayBrightness)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(MaterialTheme.colorScheme.primary)
                 )
                 // Percentage label
                 Text(
@@ -172,7 +171,7 @@ fun ReaderScaffold(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .offset(y = (-4).dp),
+                        .offset(y = (-4).dp)
                 )
             }
         }
@@ -189,9 +188,9 @@ fun ReaderScaffold(
                         MaterialTheme.colorScheme.primary,
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(
                             bottomStart = 4.dp,
-                            bottomEnd = 4.dp,
-                        ),
-                    ),
+                            bottomEnd = 4.dp
+                        )
+                    )
             )
         }
 
@@ -241,7 +240,7 @@ private fun ReaderTopBar(
     onOpenHighlights: () -> Unit,
     onOpenBookmarks: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit,
+    onOpenSearch: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -273,10 +272,10 @@ private fun ReaderTopBar(
             modifier = Modifier
                 .combinedClickable(
                     onClick = onToggleBookmark,
-                    onLongClick = onOpenBookmarks,
+                    onLongClick = onOpenBookmarks
                 )
                 .padding(12.dp)
-                .size(24.dp),
+                .size(24.dp)
         )
         IconButton(onClick = onOpenHighlights) {
             Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.highlights_cd))

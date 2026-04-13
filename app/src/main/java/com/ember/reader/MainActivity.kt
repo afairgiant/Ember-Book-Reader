@@ -67,10 +67,16 @@ class MainActivity : FragmentActivity() {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    volumeKeyHandler?.let { it(true); return true }
+                    volumeKeyHandler?.let {
+                        it(true)
+                        return true
+                    }
                 }
                 KeyEvent.KEYCODE_VOLUME_UP -> {
-                    volumeKeyHandler?.let { it(false); return true }
+                    volumeKeyHandler?.let {
+                        it(false)
+                        return true
+                    }
                 }
             }
         }

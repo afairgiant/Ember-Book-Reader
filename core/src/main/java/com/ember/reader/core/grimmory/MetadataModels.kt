@@ -123,23 +123,30 @@ data class GrimmoryBookMetadata(
     val narratorLocked: Boolean? = null,
     val abridgedLocked: Boolean? = null,
     val ageRatingLocked: Boolean? = null,
-    val contentRatingLocked: Boolean? = null,
+    val contentRatingLocked: Boolean? = null
 )
 
 /** Matches backend `MetadataProvider` enum. Only the providers Ember surfaces in search. */
 @Serializable
 enum class MetadataProvider {
     @SerialName("Amazon") Amazon,
+
     @SerialName("GoodReads") GoodReads,
+
     @SerialName("Google") Google,
+
     @SerialName("Hardcover") Hardcover,
 
     // Catch-all for providers that come back in results but aren't offered in the search UI.
     @SerialName("Comicvine") Comicvine,
+
     @SerialName("Douban") Douban,
+
     @SerialName("Lubimyczytac") Lubimyczytac,
+
     @SerialName("Ranobedb") Ranobedb,
-    @SerialName("Audible") Audible,
+
+    @SerialName("Audible") Audible
 }
 
 /** Providers Ember exposes in the search form. Order matches UI. */
@@ -147,7 +154,7 @@ val searchableProviders: List<MetadataProvider> = listOf(
     MetadataProvider.Amazon,
     MetadataProvider.GoodReads,
     MetadataProvider.Google,
-    MetadataProvider.Hardcover,
+    MetadataProvider.Hardcover
 )
 
 @Serializable
@@ -156,19 +163,20 @@ data class FetchMetadataRequest(
     val title: String? = null,
     val author: String? = null,
     val isbn: String? = null,
-    val asin: String? = null,
+    val asin: String? = null
 )
 
 @Serializable
 enum class MetadataReplaceMode {
     @SerialName("REPLACE_ALL") REPLACE_ALL,
-    @SerialName("REPLACE_WHEN_PROVIDED") REPLACE_WHEN_PROVIDED,
+
+    @SerialName("REPLACE_WHEN_PROVIDED") REPLACE_WHEN_PROVIDED
 }
 
 @Serializable
 data class MetadataUpdateWrapper(
     val metadata: GrimmoryBookMetadata,
-    val clearFlags: MetadataClearFlags = MetadataClearFlags(),
+    val clearFlags: MetadataClearFlags = MetadataClearFlags()
 )
 
 /** Set flags to true to null-out the corresponding field on save. */
@@ -219,7 +227,7 @@ data class MetadataClearFlags(
     val audibleRating: Boolean = false,
     val audibleReviewCount: Boolean = false,
     val reviews: Boolean = false,
-    val audiobookCover: Boolean = false,
+    val audiobookCover: Boolean = false
 )
 
 /** Streaming search event emitted by [MetadataClient.searchProviders]. */

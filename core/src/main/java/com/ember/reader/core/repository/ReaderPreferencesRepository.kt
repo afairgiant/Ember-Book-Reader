@@ -100,7 +100,7 @@ class ReaderPreferencesRepository @Inject constructor(
                 pdfFitMode = prefs[Keys.PDF_FIT_MODE]?.let {
                     runCatching { com.ember.reader.core.model.PdfFitMode.valueOf(it) }.getOrNull()
                 } ?: com.ember.reader.core.model.PdfFitMode.WIDTH,
-                pdfPageSpacing = prefs[Keys.PDF_PAGE_SPACING] ?: 8f,
+                pdfPageSpacing = prefs[Keys.PDF_PAGE_SPACING] ?: 8f
             )
         }
 

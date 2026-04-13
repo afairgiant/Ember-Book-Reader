@@ -25,10 +25,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ember.reader.ui.book.BookDetailScreen
-import com.ember.reader.ui.reader.audiobook.AudiobookPlayerScreen
 import com.ember.reader.ui.catalog.CatalogScreen
 import com.ember.reader.ui.library.LibraryScreen
 import com.ember.reader.ui.library.LocalLibraryScreen
+import com.ember.reader.ui.reader.audiobook.AudiobookPlayerScreen
 import com.ember.reader.ui.reader.epub.EpubReaderScreen
 import com.ember.reader.ui.reader.pdf.PdfReaderScreen
 import com.ember.reader.ui.server.ServerFormScreen
@@ -103,7 +103,8 @@ private enum class BottomNavTab(
 }
 
 // Routes where the bottom nav should be visible
-private val bottomNavRoutes = setOf(Routes.HOME, Routes.BROWSE, Routes.LOCAL_LIBRARY, Routes.APP_SETTINGS)
+private val bottomNavRoutes =
+    setOf(Routes.HOME, Routes.BROWSE, Routes.LOCAL_LIBRARY, Routes.APP_SETTINGS)
 
 @Composable
 fun EmberNavHost(
@@ -120,9 +121,9 @@ fun EmberNavHost(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute in bottomNavRoutes
-        || currentRoute?.startsWith("catalog/") == true
-        || currentRoute?.startsWith("library/") == true
+    val showBottomBar = currentRoute in bottomNavRoutes ||
+        currentRoute?.startsWith("catalog/") == true ||
+        currentRoute?.startsWith("library/") == true
 
     Scaffold(
         bottomBar = {
@@ -177,7 +178,7 @@ fun EmberNavHost(
                     },
                     onOpenStats = {
                         navController.navigate(Routes.STATS)
-                    },
+                    }
                 )
             }
 
@@ -185,7 +186,7 @@ fun EmberNavHost(
             composable(Routes.BROWSE) {
                 com.ember.reader.ui.browse.BrowseScreen(
                     onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
-                    onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
+                    onOpenHardcover = { navController.navigate(Routes.HARDCOVER) }
                 )
             }
 
@@ -214,25 +215,25 @@ fun EmberNavHost(
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                     onOpenBookdrop = { navController.navigate(Routes.BOOKDROP) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
-                    onOpenLicenses = { navController.navigate(Routes.LICENSES) },
+                    onOpenLicenses = { navController.navigate(Routes.LICENSES) }
                 )
             }
 
             // Settings sub-pages
             composable(Routes.SETTINGS_APPEARANCE) {
                 com.ember.reader.ui.settings.AppearanceSettingsScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(Routes.SETTINGS_SYNC) {
                 com.ember.reader.ui.settings.SyncSettingsScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(Routes.SETTINGS_DOWNLOADS) {
                 com.ember.reader.ui.settings.DownloadSettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenStorage = { navController.navigate(Routes.STORAGE) },
+                    onOpenStorage = { navController.navigate(Routes.STORAGE) }
                 )
             }
             composable(Routes.HARDCOVER) {
@@ -241,12 +242,12 @@ fun EmberNavHost(
                     onSearchGrimmory = { serverId, query ->
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
                         navController.navigate(Routes.library(serverId, "grimmory:search=$encodedQuery"))
-                    },
+                    }
                 )
             }
             composable(Routes.BOOKDROP) {
                 com.ember.reader.ui.bookdrop.BookdropScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -359,7 +360,7 @@ fun EmberNavHost(
                     metadataSaved = metadataSaved,
                     onMetadataSavedConsumed = {
                         it.savedStateHandle["metadata_saved"] = false
-                    },
+                    }
                 )
             }
 
@@ -374,7 +375,7 @@ fun EmberNavHost(
                                 ?.savedStateHandle?.set("metadata_saved", true)
                         }
                         navController.popBackStack()
-                    },
+                    }
                 )
             }
 
@@ -389,7 +390,7 @@ fun EmberNavHost(
 
             composable(Routes.LICENSES) {
                 com.ember.reader.ui.settings.LicensesScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

@@ -17,7 +17,7 @@ import okhttp3.Response
  */
 @Singleton
 class CoverAuthInterceptor @Inject constructor(
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) : Interceptor {
 
     @Volatile
@@ -33,7 +33,7 @@ class CoverAuthInterceptor @Inject constructor(
                     basicAuthHeader(server.opdsUsername, server.opdsPassword)
                 } else {
                     null
-                },
+                }
             )
         }
     }
@@ -43,7 +43,8 @@ class CoverAuthInterceptor @Inject constructor(
         val url = request.url.toString()
 
         if (request.url.queryParameter("token") != null ||
-            request.header("Authorization") != null) {
+            request.header("Authorization") != null
+        ) {
             return chain.proceed(request)
         }
 
@@ -72,6 +73,6 @@ class CoverAuthInterceptor @Inject constructor(
         val origin: String,
         val isGrimmory: Boolean,
         val token: String?,
-        val basicAuth: String?,
+        val basicAuth: String?
     )
 }

@@ -6,5 +6,5 @@ data class DownloadProgress(
     val trackIndex: Int? = null,
     val trackCount: Int? = null,
     val trackBytesDownloaded: Long? = null,
-    val trackTotalBytes: Long? = null,
+    val trackTotalBytes: Long? = null
 )

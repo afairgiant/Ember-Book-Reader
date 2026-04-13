@@ -34,29 +34,67 @@ private fun String.parseCommaSeparated(): List<String>? =
 /** Fields Ember exposes for editing. Keep in sync with [EditableMetadata]. */
 enum class MetadataFieldKey {
     // Basic
-    Title, Subtitle, Authors, Publisher, PublishedDate, Description,
+    Title,
+    Subtitle,
+    Authors,
+    Publisher,
+    PublishedDate,
+    Description,
+
     // Series
-    SeriesName, SeriesNumber, SeriesTotal,
+    SeriesName,
+    SeriesNumber,
+    SeriesTotal,
+
     // Book details
-    Language, Isbn13, Isbn10, PageCount,
+    Language,
+    Isbn13,
+    Isbn10,
+    PageCount,
+
     // Arrays
-    Categories, Moods, Tags,
+    Categories,
+    Moods,
+    Tags,
+
     // Audiobook
-    Narrator, Abridged,
+    Narrator,
+    Abridged,
+
     // Content rating
-    AgeRating, ContentRating,
+    AgeRating,
+    ContentRating,
+
     // Provider IDs — common
-    Asin, GoodreadsId, GoogleId, HardcoverId, HardcoverBookId, ExternalUrl,
+    Asin,
+    GoodreadsId,
+    GoogleId,
+    HardcoverId,
+    HardcoverBookId,
+    ExternalUrl,
+
     // Provider ratings — common
-    AmazonRating, AmazonReviewCount,
-    GoodreadsRating, GoodreadsReviewCount,
-    HardcoverRating, HardcoverReviewCount,
+    AmazonRating,
+    AmazonReviewCount,
+    GoodreadsRating,
+    GoodreadsReviewCount,
+    HardcoverRating,
+    HardcoverReviewCount,
+
     // Provider IDs — niche (bottom of form)
-    ComicvineId, DoubanId, LubimyczytacId, RanobedbId, AudibleId,
+    ComicvineId,
+    DoubanId,
+    LubimyczytacId,
+    RanobedbId,
+    AudibleId,
+
     // Provider ratings — niche
-    DoubanRating, DoubanReviewCount,
-    LubimyczytacRating, RanobedbRating,
-    AudibleRating, AudibleReviewCount,
+    DoubanRating,
+    DoubanReviewCount,
+    LubimyczytacRating,
+    RanobedbRating,
+    AudibleRating,
+    AudibleReviewCount
 }
 
 /**
@@ -121,7 +159,7 @@ data class EditableMetadata(private val fields: Map<MetadataFieldKey, String> = 
                 put(MetadataFieldKey.RanobedbRating, fmtDouble(m.ranobedbRating))
                 put(MetadataFieldKey.AudibleRating, fmtDouble(m.audibleRating))
                 put(MetadataFieldKey.AudibleReviewCount, fmtInt(m.audibleReviewCount))
-            },
+            }
         )
     }
 }
@@ -131,7 +169,7 @@ data class SearchForm(
     val author: String = "",
     val isbn: String = "",
     val asin: String = "",
-    val providers: Set<MetadataProvider> = searchableProviders.toSet(),
+    val providers: Set<MetadataProvider> = searchableProviders.toSet()
 )
 
 enum class SearchPhase { Idle, Running, Done, Error }
@@ -154,7 +192,7 @@ data class EditMetadataSuccess(
     val saving: Boolean = false,
     val readOnly: Boolean = false,
     /** URL of the cover currently being uploaded, null when idle. Used for per-button spinners. */
-    val applyingCoverUrl: String? = null,
+    val applyingCoverUrl: String? = null
 ) {
     val isLocal: Boolean get() = server == null
     val isDirty: Boolean get() = edited != originalEditable || clearFlags.isNotEmpty()
@@ -171,7 +209,7 @@ class EditMetadataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
-    private val metadataClient: MetadataClient,
+    private val metadataClient: MetadataClient
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -195,7 +233,9 @@ class EditMetadataViewModel @Inject constructor(
         load()
     }
 
-    fun dismissMessage() { _message.value = null }
+    fun dismissMessage() {
+        _message.value = null
+    }
 
     private fun load() {
         viewModelScope.launch {
@@ -232,10 +272,10 @@ class EditMetadataViewModel @Inject constructor(
                             title = metadata.title.orEmpty(),
                             author = metadata.authors?.firstOrNull().orEmpty(),
                             isbn = metadata.isbn13.orEmpty(),
-                            asin = metadata.asin.orEmpty(),
+                            asin = metadata.asin.orEmpty()
                         ),
-                        readOnly = metadata.allMetadataLocked == true,
-                    ),
+                        readOnly = metadata.allMetadataLocked == true
+                    )
                 )
             }
             .onFailure { e ->
@@ -256,7 +296,7 @@ class EditMetadataViewModel @Inject constructor(
             seriesNumber = book.seriesIndex,
             language = book.language,
             pageCount = book.pageCount,
-            categories = book.subjects?.parseCommaSeparated()?.toSet(),
+            categories = book.subjects?.parseCommaSeparated()?.toSet()
         )
         val editable = EditableMetadata.from(metadata)
         _uiState.value = EditMetadataUiState.Success(
@@ -265,8 +305,8 @@ class EditMetadataViewModel @Inject constructor(
                 book = book,
                 original = metadata,
                 originalEditable = editable,
-                edited = editable,
-            ),
+                edited = editable
+            )
         )
     }
 
@@ -292,7 +332,9 @@ class EditMetadataViewModel @Inject constructor(
         val current = currentSuccess() ?: return
         if (current.isLocal || current.server == null || current.grimmoryBookId == null) return
         searchJob?.cancel()
-        updateSuccess { it.copy(searchPhase = SearchPhase.Running, searchResults = emptyList(), searchError = null) }
+        updateSuccess {
+            it.copy(searchPhase = SearchPhase.Running, searchResults = emptyList(), searchError = null)
+        }
         searchJob = viewModelScope.launch {
             try {
                 val req = FetchMetadataRequest(
@@ -300,13 +342,13 @@ class EditMetadataViewModel @Inject constructor(
                     title = current.searchForm.title.ifBlank { null },
                     author = current.searchForm.author.ifBlank { null },
                     isbn = current.searchForm.isbn.ifBlank { null },
-                    asin = current.searchForm.asin.ifBlank { null },
+                    asin = current.searchForm.asin.ifBlank { null }
                 )
                 metadataClient.searchProviders(
                     baseUrl = current.server!!.url,
                     serverId = current.server.id,
                     bookId = current.grimmoryBookId!!,
-                    request = req,
+                    request = req
                 ).collect { event ->
                     when (event) {
                         is MetadataSearchEvent.Candidate -> updateSuccess {
@@ -359,7 +401,7 @@ class EditMetadataViewModel @Inject constructor(
                 baseUrl = current.server!!.url,
                 serverId = current.server.id,
                 bookId = current.grimmoryBookId!!,
-                url = url,
+                url = url
             ).onSuccess {
                 val origin = serverOrigin(current.server.url)
                 val newUrl = "$origin/api/v1/media/book/${current.grimmoryBookId}/cover?v=${java.time.Instant.now().epochSecond}"
@@ -370,7 +412,7 @@ class EditMetadataViewModel @Inject constructor(
                 updateSuccess {
                     it.copy(
                         applyingCoverUrl = null,
-                        book = refreshed ?: it.book,
+                        book = refreshed ?: it.book
                     )
                 }
             }.onFailure { e ->
@@ -388,7 +430,7 @@ class EditMetadataViewModel @Inject constructor(
         if (fetched.isBlank()) return@updateSuccess s
         s.copy(
             edited = s.edited.set(key, fetched),
-            clearFlags = s.clearFlags - key,
+            clearFlags = s.clearFlags - key
         )
     }
 
@@ -429,7 +471,7 @@ class EditMetadataViewModel @Inject constructor(
             serverId = s.server.id,
             bookId = s.grimmoryBookId!!,
             wrapper = wrapper,
-            replaceMode = MetadataReplaceMode.REPLACE_WHEN_PROVIDED,
+            replaceMode = MetadataReplaceMode.REPLACE_WHEN_PROVIDED
         ).onSuccess { updated ->
             _message.value = "Metadata saved"
             val editable = EditableMetadata.from(updated)
@@ -440,7 +482,7 @@ class EditMetadataViewModel @Inject constructor(
                     originalEditable = editable,
                     edited = editable,
                     clearFlags = emptySet(),
-                    selectedCandidate = null,
+                    selectedCandidate = null
                 )
             }
             _saved.value = true
@@ -465,7 +507,7 @@ class EditMetadataViewModel @Inject constructor(
                 language = e.get(MetadataFieldKey.Language).ifBlank { null },
                 subjects = e.get(MetadataFieldKey.Categories).ifBlank { null },
                 pageCount = e.get(MetadataFieldKey.PageCount).toIntOrNull(),
-                publishedDate = e.get(MetadataFieldKey.PublishedDate).ifBlank { null },
+                publishedDate = e.get(MetadataFieldKey.PublishedDate).ifBlank { null }
             )
             val updated = GrimmoryBookMetadata(
                 title = e.get(MetadataFieldKey.Title).ifBlank { "Untitled" },
@@ -477,7 +519,7 @@ class EditMetadataViewModel @Inject constructor(
                 language = e.get(MetadataFieldKey.Language).ifBlank { null },
                 categories = e.get(MetadataFieldKey.Categories).parseCommaSeparated()?.toSet()?.ifEmpty { null },
                 pageCount = e.get(MetadataFieldKey.PageCount).toIntOrNull(),
-                publishedDate = e.get(MetadataFieldKey.PublishedDate).ifBlank { null },
+                publishedDate = e.get(MetadataFieldKey.PublishedDate).ifBlank { null }
             )
             val editable = EditableMetadata.from(updated)
             _message.value = "Metadata saved"
@@ -487,7 +529,7 @@ class EditMetadataViewModel @Inject constructor(
                     original = updated,
                     originalEditable = editable,
                     edited = editable,
-                    clearFlags = emptySet(),
+                    clearFlags = emptySet()
                 )
             }
             _saved.value = true
@@ -553,7 +595,7 @@ class EditMetadataViewModel @Inject constructor(
             lubimyczytacRating = dbl(MetadataFieldKey.LubimyczytacRating),
             ranobedbRating = dbl(MetadataFieldKey.RanobedbRating),
             audibleRating = dbl(MetadataFieldKey.AudibleRating),
-            audibleReviewCount = int(MetadataFieldKey.AudibleReviewCount),
+            audibleReviewCount = int(MetadataFieldKey.AudibleReviewCount)
         )
         fun c(key: MetadataFieldKey) = key in cl
         val flags = MetadataClearFlags(
@@ -599,7 +641,7 @@ class EditMetadataViewModel @Inject constructor(
             lubimyczytacRating = c(MetadataFieldKey.LubimyczytacRating),
             ranobedbRating = c(MetadataFieldKey.RanobedbRating),
             audibleRating = c(MetadataFieldKey.AudibleRating),
-            audibleReviewCount = c(MetadataFieldKey.AudibleReviewCount),
+            audibleReviewCount = c(MetadataFieldKey.AudibleReviewCount)
         )
         return MetadataUpdateWrapper(metadata = metadata, clearFlags = flags)
     }
@@ -611,7 +653,9 @@ class EditMetadataViewModel @Inject constructor(
         _uiState.update { current ->
             if (current is EditMetadataUiState.Success) {
                 EditMetadataUiState.Success(transform(current.state))
-            } else current
+            } else {
+                current
+            }
         }
     }
 

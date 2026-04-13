@@ -20,13 +20,13 @@ data class BookMetadata(
     val subjects: String? = null,
     val pageCount: Int? = null,
     val publishedDate: String? = null,
-    val description: String? = null,
+    val description: String? = null
 )
 
 @Singleton
 class BookMetadataExtractor @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bookOpener: BookOpener,
+    private val bookOpener: BookOpener
 ) {
 
     private val coversDir: File by lazy {

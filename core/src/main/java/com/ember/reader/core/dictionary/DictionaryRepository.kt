@@ -2,11 +2,11 @@ package com.ember.reader.core.dictionary
 
 import com.ember.reader.core.database.dao.DictionaryDao
 import com.ember.reader.core.database.entity.DictionaryEntryEntity
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Coordinates dictionary lookups: checks local cache first, then delegates
@@ -15,7 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class DictionaryRepository @Inject constructor(
     private val dictionaryDao: DictionaryDao,
-    private val provider: DictionaryProvider,
+    private val provider: DictionaryProvider
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -106,7 +106,7 @@ class DictionaryRepository @Inject constructor(
         private val FORM_INDICATORS = listOf(
             "plural", "singular", "past tense", "past participle", "present participle",
             "gerund", "comparative", "superlative", "inflection", "third-person", "third person",
-            "simple past", "alternative form", "alternative spelling", "obsolete form",
+            "simple past", "alternative form", "alternative spelling", "obsolete form"
         )
         private val TRAILING_OF_WORD = Regex("\\bof\\s+([a-z][a-z'\\-]*)$")
     }
@@ -154,11 +154,15 @@ class DictionaryRepository @Inject constructor(
     }
 
     private fun toEntity(result: DictionaryResult): DictionaryEntryEntity {
-        val defsJson = json.encodeToString(result.definitions.map { SerializableDefinition(it.partOfSpeech, it.meaning, it.example) })
+        val defsJson = json.encodeToString(
+            result.definitions.map {
+                SerializableDefinition(it.partOfSpeech, it.meaning, it.example)
+            }
+        )
         return DictionaryEntryEntity(
             word = result.word.lowercase(),
             phonetic = result.phonetic,
-            definitions = defsJson,
+            definitions = defsJson
         )
     }
 
@@ -167,7 +171,7 @@ class DictionaryRepository @Inject constructor(
         return DictionaryResult(
             word = entity.word,
             phonetic = entity.phonetic,
-            definitions = defs.map { Definition(it.partOfSpeech, it.meaning, it.example) },
+            definitions = defs.map { Definition(it.partOfSpeech, it.meaning, it.example) }
         )
     }
 
@@ -175,6 +179,6 @@ class DictionaryRepository @Inject constructor(
     private data class SerializableDefinition(
         val partOfSpeech: String,
         val meaning: String,
-        val example: String? = null,
+        val example: String? = null
     )
 }

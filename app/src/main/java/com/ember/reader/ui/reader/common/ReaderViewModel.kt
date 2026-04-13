@@ -62,7 +62,7 @@ class ReaderViewModel @Inject constructor(
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
-    val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
+    val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -196,7 +196,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun pullRemoteProgressOnOpen(
         loadedBook: Book,
-        localProgress: ReadingProgress?,
+        localProgress: ReadingProgress?
     ) {
         val server = getSyncServer() ?: return
         val localPercentage = localProgress?.percentage ?: 0f
@@ -207,7 +207,7 @@ class ReaderViewModel @Inject constructor(
                 remotePercentage = remote.progress.percentage,
                 localPercentage = localPercentage,
                 remoteSource = remote.source,
-                remoteProgress = remote.progress,
+                remoteProgress = remote.progress
             )
         } else {
             Timber.d("Sync: remote not ahead enough to show conflict")
@@ -263,7 +263,7 @@ class ReaderViewModel @Inject constructor(
             bookmarkRepository.addBookmark(
                 bookId = bookId,
                 locatorJson = locator.toJsonString(),
-                title = title.ifBlank { locator.title ?: "Bookmark" },
+                title = title.ifBlank { locator.title ?: "Bookmark" }
             )
         }
     }
@@ -387,8 +387,11 @@ class ReaderViewModel @Inject constructor(
                         kotlin.math.ceil(totalProg.toFloat() * totalPages)
                             .toInt().coerceIn(1, totalPages)
                     }
-                    if (totalPages <= 1) 1f
-                    else ((currentPage - 1).toFloat() / (totalPages - 1)).coerceIn(0f, 1f)
+                    if (totalPages <= 1) {
+                        1f
+                    } else {
+                        ((currentPage - 1).toFloat() / (totalPages - 1)).coerceIn(0f, 1f)
+                    }
                 }
                 // Last resort
                 else -> locator.toPercentage()
@@ -445,7 +448,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun recordReadingSessionSegment(
         startTime: java.time.Instant,
-        endTime: java.time.Instant,
+        endTime: java.time.Instant
     ) {
         val loadedBook = book ?: return
 
@@ -522,5 +525,5 @@ data class SyncConflict(
     val remotePercentage: Float,
     val localPercentage: Float,
     val remoteSource: String?,
-    val remoteProgress: com.ember.reader.core.model.ReadingProgress,
+    val remoteProgress: com.ember.reader.core.model.ReadingProgress
 )

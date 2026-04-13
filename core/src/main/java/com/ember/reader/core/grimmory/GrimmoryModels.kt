@@ -30,7 +30,7 @@ enum class ReadStatus {
     PAUSED,
     WONT_READ,
     ABANDONED,
-    UNSET,
+    UNSET
 }
 
 @Serializable
@@ -42,7 +42,7 @@ data class GrimmoryBookSummary(
     val readProgress: Float? = null,
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
-    val coverUpdatedOn: String? = null,
+    val coverUpdatedOn: String? = null
 )
 
 @Serializable
@@ -67,7 +67,7 @@ data class GrimmoryBookFile(
     val fileName: String? = null,
     val fileType: String? = null,
     val fileSubPath: String? = null,
-    val filePath: String? = null,
+    val filePath: String? = null
 )
 
 @Serializable
@@ -102,7 +102,7 @@ data class GrimmoryBookDetail(
     val epubProgress: GrimmoryEpubProgress? = null,
     val koreaderProgress: GrimmoryKoreaderProgress? = null,
     val shelves: List<GrimmoryShelfSummary>? = null,
-    val hardcoverBookId: Long? = null,
+    val hardcoverBookId: Long? = null
 )
 
 @Serializable
@@ -110,7 +110,7 @@ data class GrimmoryKoreaderProgress(
     val percentage: Float? = null,
     val device: String? = null,
     val deviceId: String? = null,
-    val lastSyncTime: String? = null,
+    val lastSyncTime: String? = null
 )
 
 @Serializable
@@ -157,7 +157,7 @@ data class GrimmoryAnnotation(
     val note: String? = null,
     val chapterTitle: String? = null,
     val createdAt: String? = null,
-    val updatedAt: String? = null,
+    val updatedAt: String? = null
 )
 
 @Serializable
@@ -168,14 +168,14 @@ data class CreateAnnotationRequest(
     val color: String? = null,
     val style: String = "highlight",
     val note: String? = null,
-    val chapterTitle: String? = null,
+    val chapterTitle: String? = null
 )
 
 @Serializable
 data class UpdateAnnotationRequest(
     val color: String? = null,
     val style: String? = null,
-    val note: String? = null,
+    val note: String? = null
 )
 
 // Bookmark sync
@@ -187,21 +187,21 @@ data class GrimmoryBookmark(
     val color: String? = null,
     val notes: String? = null,
     val createdAt: String? = null,
-    val updatedAt: String? = null,
+    val updatedAt: String? = null
 )
 
 @Serializable
 data class CreateBookmarkRequest(
     val bookId: Long,
     val cfi: String,
-    val title: String? = null,
+    val title: String? = null
 )
 
 @Serializable
 data class UpdateBookmarkRequest(
     val title: String? = null,
     val color: String? = null,
-    val notes: String? = null,
+    val notes: String? = null
 )
 
 // Reading stats responses
@@ -211,26 +211,26 @@ data class GrimmoryStreakResponse(
     val currentStreak: Int,
     val longestStreak: Int,
     val totalReadingDays: Int,
-    val last52Weeks: List<GrimmoryStreakDay>,
+    val last52Weeks: List<GrimmoryStreakDay>
 )
 
 @Serializable
 data class GrimmoryStreakDay(
     val date: String,
-    val active: Boolean,
+    val active: Boolean
 )
 
 @Serializable
 data class GrimmoryDateCount(
     val date: String,
-    val count: Int,
+    val count: Int
 )
 
 @Serializable
 data class GrimmoryPeakHour(
     val hourOfDay: Int,
     val sessionCount: Int,
-    val totalDurationSeconds: Long,
+    val totalDurationSeconds: Long
 )
 
 @Serializable
@@ -238,20 +238,20 @@ data class GrimmoryFavoriteDay(
     val dayOfWeek: Int,
     val dayName: String,
     val sessionCount: Int,
-    val totalDurationSeconds: Long,
+    val totalDurationSeconds: Long
 )
 
 @Serializable
 data class GrimmoryBookDistributions(
     val ratingDistribution: List<GrimmoryRatingEntry>,
     val progressDistribution: List<GrimmoryProgressEntry>,
-    val statusDistribution: List<GrimmoryStatusEntry>,
+    val statusDistribution: List<GrimmoryStatusEntry>
 )
 
 @Serializable
 data class GrimmoryRatingEntry(
     val rating: Int,
-    val count: Int,
+    val count: Int
 )
 
 @Serializable
@@ -259,13 +259,13 @@ data class GrimmoryProgressEntry(
     val range: String,
     val min: Int,
     val max: Int,
-    val count: Int,
+    val count: Int
 )
 
 @Serializable
 data class GrimmoryStatusEntry(
     val status: String,
-    val count: Int,
+    val count: Int
 )
 
 @Serializable
@@ -274,7 +274,7 @@ data class GrimmoryGenreStat(
     val bookCount: Int,
     val totalSessions: Int,
     val totalDurationSeconds: Long,
-    val averageSessionsPerBook: Double,
+    val averageSessionsPerBook: Double
 )
 
 @Serializable
@@ -285,7 +285,7 @@ data class GrimmoryTimelineEntry(
     val startDate: String,
     val endDate: String,
     val totalSessions: Int,
-    val totalDurationSeconds: Long,
+    val totalDurationSeconds: Long
 )
 
 @Serializable
@@ -300,12 +300,12 @@ data class GrimmoryPageTurnerScore(
     val avgSessionDurationSeconds: Double,
     val sessionAcceleration: Double,
     val gapReduction: Double,
-    val finishBurst: Boolean,
+    val finishBurst: Boolean
 )
 
 @Serializable
 data class GrimmorySessionScatter(
     val hourOfDay: Double,
     val durationMinutes: Double,
-    val dayOfWeek: Int,
+    val dayOfWeek: Int
 )

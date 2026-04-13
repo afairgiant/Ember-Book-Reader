@@ -36,7 +36,7 @@ class StatsViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val serverRepository: ServerRepository,
-    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryClient: GrimmoryClient
 ) : ViewModel() {
 
     private val _stats = MutableStateFlow(StatsData())
@@ -57,7 +57,7 @@ class StatsViewModel @Inject constructor(
                 server.url,
                 server.id,
                 year,
-                week,
+                week
             ).getOrNull()
             _stats.value = _stats.value.copy(timeline = result)
         }
@@ -90,7 +90,7 @@ class StatsViewModel @Inject constructor(
             recentSessions = recentSessions,
             bookTitles = bookTitles,
             readingDays = readingDays,
-            estimatedMinutesToFinish = estimatedCompletion,
+            estimatedMinutesToFinish = estimatedCompletion
         )
 
         val grimmoryServer = findGrimmoryServer()
@@ -149,7 +149,7 @@ class StatsViewModel @Inject constructor(
                     genreStats = genres?.sortedByDescending { it.totalDurationSeconds }?.take(8),
                     timeline = timeline,
                     sessionScatter = scatter,
-                    grimmoryServerUrl = server.url,
+                    grimmoryServerUrl = server.url
                 )
             }
         } catch (e: Exception) {
@@ -198,5 +198,5 @@ data class StatsData(
     val genreStats: List<GrimmoryGenreStat>? = null,
     val timeline: List<GrimmoryTimelineEntry>? = null,
     val sessionScatter: List<GrimmorySessionScatter>? = null,
-    val grimmoryServerUrl: String? = null,
+    val grimmoryServerUrl: String? = null
 )

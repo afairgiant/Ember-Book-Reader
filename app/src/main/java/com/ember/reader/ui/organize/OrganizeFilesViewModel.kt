@@ -40,7 +40,7 @@ class OrganizeFilesViewModel(
     private val baseUrl: String,
     private val serverId: Long,
     private val bookIds: List<Long>,
-    scope: CoroutineScope = MainScope(),
+    scope: CoroutineScope = MainScope()
 ) {
 
     private val _state = MutableStateFlow<OrganizeFilesUiState>(OrganizeFilesUiState.Loading)
@@ -79,13 +79,13 @@ class OrganizeFilesViewModel(
                     libraries = libs,
                     selectedLibraryId = null,
                     selectedPathId = null,
-                    previews = buildPreviews(libs, books, targetLibraryId = null, targetPathId = null),
+                    previews = buildPreviews(libs, books, targetLibraryId = null, targetPathId = null)
                 )
             }.onFailure { e ->
                 Timber.w(e, "OrganizeFiles load failed")
                 _state.value = OrganizeFilesUiState.Error(
                     kind = OrganizeFilesUiState.Error.Kind.Loading,
-                    message = "Couldn't load book details.",
+                    message = "Couldn't load book details."
                 )
             }
         }
@@ -98,7 +98,7 @@ class OrganizeFilesViewModel(
         _state.value = ready.copy(
             selectedLibraryId = libraryId,
             selectedPathId = pathId,
-            previews = buildPreviews(loadedLibraries, loadedBooks, libraryId, pathId),
+            previews = buildPreviews(loadedLibraries, loadedBooks, libraryId, pathId)
         )
     }
 
@@ -106,7 +106,7 @@ class OrganizeFilesViewModel(
         val ready = _state.value as? OrganizeFilesUiState.Ready ?: return
         _state.value = ready.copy(
             selectedPathId = pathId,
-            previews = buildPreviews(loadedLibraries, loadedBooks, ready.selectedLibraryId, pathId),
+            previews = buildPreviews(loadedLibraries, loadedBooks, ready.selectedLibraryId, pathId)
         )
     }
 
@@ -121,14 +121,14 @@ class OrganizeFilesViewModel(
         submitJob = viewModelScope.launch {
             val request = FileMoveRequest(
                 bookIds = bookIds.toSet(),
-                moves = bookIds.map { FileMoveItem(it, libId, pathId) },
+                moves = bookIds.map { FileMoveItem(it, libId, pathId) }
             )
             val result = appClient.moveFiles(baseUrl, serverId, request)
             result.fold(
                 onSuccess = {
                     _state.value = OrganizeFilesUiState.Success(
                         movedCount = bookIds.size,
-                        targetLibraryName = targetLibrary.name,
+                        targetLibraryName = targetLibrary.name
                     )
                 },
                 onFailure = { e ->
@@ -139,15 +139,15 @@ class OrganizeFilesViewModel(
                         "403" in msg -> OrganizeFilesUiState.Error(
                             OrganizeFilesUiState.Error.Kind.Permission,
                             "You don't have permission to organize files on this server. " +
-                                "Ask your Grimmory admin to grant Manage Library permission.",
+                                "Ask your Grimmory admin to grant Manage Library permission."
                         )
                         Regex("""\b5\d\d\b""").containsMatchIn(msg) -> OrganizeFilesUiState.Error(
                             OrganizeFilesUiState.Error.Kind.Server,
-                            "Grimmory couldn't complete the move. Try again in a moment.",
+                            "Grimmory couldn't complete the move. Try again in a moment."
                         )
                         else -> OrganizeFilesUiState.Error(
                             OrganizeFilesUiState.Error.Kind.Network,
-                            "No connection to Grimmory.",
+                            "No connection to Grimmory."
                         )
                     }
                     // If we hit 403, refresh the stored permission flag so the action
@@ -156,7 +156,7 @@ class OrganizeFilesViewModel(
                         runCatching { serverRepository.refreshGrimmoryPermissions(serverId) }
                             .onFailure { Timber.w(it, "Permission refresh after 403 failed") }
                     }
-                },
+                }
             )
         }
     }
@@ -173,7 +173,7 @@ class OrganizeFilesViewModel(
         libraries: List<GrimmoryLibraryFull>,
         books: List<GrimmoryFullBook>,
         targetLibraryId: Long?,
-        targetPathId: Long?,
+        targetPathId: Long?
     ): List<BookMovePreview> {
         val targetLibrary = libraries.firstOrNull { it.id == targetLibraryId }
         val targetPath = targetLibrary?.paths?.firstOrNull { it.id == targetPathId }
@@ -195,16 +195,16 @@ class OrganizeFilesViewModel(
                 else -> newRelative
             }
 
-            val isNoChange = targetLibrary != null
-                && book.libraryId == targetLibrary.id
-                && book.libraryPath?.id == targetPathId
+            val isNoChange = targetLibrary != null &&
+                book.libraryId == targetLibrary.id &&
+                book.libraryPath?.id == targetPathId
 
             BookMovePreview(
                 bookId = book.id,
                 title = book.title,
                 currentPath = currentFullPath.ifBlank { "(no file)" },
                 newPath = newFullPath.ifBlank { "(no file)" },
-                isNoChange = isNoChange,
+                isNoChange = isNoChange
             )
         }
     }
@@ -221,7 +221,7 @@ class OrganizeFilesViewModel(
     private fun buildNewRelativePath(
         book: GrimmoryFullBook,
         fileName: String,
-        pattern: String?,
+        pattern: String?
     ): String {
         if (pattern.isNullOrBlank()) return fileName
         val meta = book.metadata
@@ -239,7 +239,7 @@ class OrganizeFilesViewModel(
             "language" to FileNamingPatternResolver.sanitize(meta?.language.orEmpty()),
             "publisher" to FileNamingPatternResolver.sanitize(meta?.publisher.orEmpty()),
             "isbn" to FileNamingPatternResolver.sanitize(meta?.isbn13 ?: meta?.isbn10 ?: ""),
-            "currentFilename" to FileNamingPatternResolver.sanitize(fileName),
+            "currentFilename" to FileNamingPatternResolver.sanitize(fileName)
         )
         val resolved = FileNamingPatternResolver.resolve(pattern, values)
         val extension = Regex("""\.[^.]+$""").find(fileName)?.value.orEmpty()
@@ -260,20 +260,20 @@ class OrganizeFilesViewModel(
      */
     class Factory @Inject constructor(
         private val appClient: GrimmoryAppClient,
-        private val serverRepository: ServerRepository,
+        private val serverRepository: ServerRepository
     ) {
         fun create(
             baseUrl: String,
             serverId: Long,
             bookIds: List<Long>,
-            scope: CoroutineScope = MainScope(),
+            scope: CoroutineScope = MainScope()
         ): OrganizeFilesViewModel = OrganizeFilesViewModel(
             appClient = appClient,
             serverRepository = serverRepository,
             baseUrl = baseUrl,
             serverId = serverId,
             bookIds = bookIds,
-            scope = scope,
+            scope = scope
         )
     }
 }

@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class HighlightRepository @Inject constructor(
     private val highlightDao: HighlightDao,
-    private val appPreferencesRepository: AppPreferencesRepository,
+    private val appPreferencesRepository: AppPreferencesRepository
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Highlight>> =
@@ -37,7 +37,7 @@ class HighlightRepository @Inject constructor(
                 annotation = annotation,
                 selectedText = selectedText,
                 createdAt = now,
-                updatedAt = now,
+                updatedAt = now
             )
         )
     }

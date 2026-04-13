@@ -37,12 +37,12 @@ data class LibraryPrefs(
     val cardShowProgress: Boolean = true,
     val cardShowAuthor: Boolean = true,
     val cardShowSourceBadge: Boolean = true,
-    val cardShowFormatBadge: Boolean = false,
+    val cardShowFormatBadge: Boolean = false
 )
 
 @Singleton
 class LibraryPreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) {
     private object Keys {
         val SORT_KEY = stringPreferencesKey("sort_key")
@@ -81,7 +81,7 @@ class LibraryPreferencesRepository @Inject constructor(
             cardShowProgress = p[Keys.CARD_PROGRESS] ?: true,
             cardShowAuthor = p[Keys.CARD_AUTHOR] ?: true,
             cardShowSourceBadge = p[Keys.CARD_SOURCE_BADGE] ?: true,
-            cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false,
+            cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false
         )
     }
 
@@ -107,7 +107,7 @@ class LibraryPreferencesRepository @Inject constructor(
                 cardShowProgress = p[Keys.CARD_PROGRESS] ?: true,
                 cardShowAuthor = p[Keys.CARD_AUTHOR] ?: true,
                 cardShowSourceBadge = p[Keys.CARD_SOURCE_BADGE] ?: true,
-                cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false,
+                cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false
             )
             val next = transform(current)
             p[Keys.SORT_KEY] = next.sortKey.name

@@ -25,9 +25,9 @@ object DictionaryModule {
     @Singleton
     fun provideDictionaryProvider(
         wiktionary: WiktionaryProvider,
-        freeDictionary: FreeDictionaryApiProvider,
+        freeDictionary: FreeDictionaryApiProvider
     ): DictionaryProvider = ChainedDictionaryProvider(
-        providers = listOf(wiktionary, freeDictionary),
+        providers = listOf(wiktionary, freeDictionary)
     )
 
     @Provides

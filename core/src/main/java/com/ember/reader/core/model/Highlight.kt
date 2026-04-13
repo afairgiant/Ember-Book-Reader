@@ -12,5 +12,5 @@ data class Highlight(
     val createdAt: Instant = Instant.now(),
     val remoteId: Long? = null,
     val updatedAt: Instant = Instant.now(),
-    val deletedAt: Instant? = null,
+    val deletedAt: Instant? = null
 )

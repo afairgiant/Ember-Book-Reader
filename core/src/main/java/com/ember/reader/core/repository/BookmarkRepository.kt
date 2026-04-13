@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class BookmarkRepository @Inject constructor(
     private val bookmarkDao: BookmarkDao,
-    private val appPreferencesRepository: AppPreferencesRepository,
+    private val appPreferencesRepository: AppPreferencesRepository
 ) {
 
     fun observeByBookId(bookId: String): Flow<List<Bookmark>> =
@@ -27,7 +27,7 @@ class BookmarkRepository @Inject constructor(
                 locatorJson = locatorJson,
                 title = title,
                 createdAt = now,
-                updatedAt = now,
+                updatedAt = now
             )
         )
     }

@@ -34,7 +34,7 @@ fun NavigatorContainer(
     fragmentFactory: FragmentFactory,
     locatorFlow: (Fragment) -> StateFlow<Locator>?,
     onLocatorChanged: (Locator) -> Unit,
-    onNavigatorReady: (Fragment) -> Unit = {},
+    onNavigatorReady: (Fragment) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity ?: return
@@ -47,12 +47,12 @@ fun NavigatorContainer(
                 id = containerId
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 containerView = this
             }
         },
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
     )
 
     DisposableEffect(key, containerView) {

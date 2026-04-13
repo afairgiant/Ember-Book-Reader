@@ -10,17 +10,15 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.ember.reader.core.grimmory.GrimmoryBookSummary
+import com.ember.reader.core.database.dao.BookmarkDao
+import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
-import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
-import com.ember.reader.core.database.dao.BookmarkDao
-import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.core.sync.HighlightSyncManager
 import com.ember.reader.core.sync.ProgressSyncManager
@@ -43,7 +41,7 @@ class SyncWorker @AssistedInject constructor(
     private val bookmarkSyncManager: BookmarkSyncManager,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
-    private val bookDao: com.ember.reader.core.database.dao.BookDao,
+    private val bookDao: com.ember.reader.core.database.dao.BookDao
 ) : CoroutineWorker(context, params) {
 
     private var syncPushed = 0
@@ -215,7 +213,7 @@ class SyncWorker @AssistedInject constructor(
                         coverUrl = buildString {
                             append("${com.ember.reader.core.network.serverOrigin(server.url)}/api/v1/media/book/${summary.id}/cover")
                             summary.coverUpdatedOn?.let { append("?v=${java.net.URLEncoder.encode(it, "UTF-8")}") }
-                        },
+                        }
                     )
                     bookRepository.addLocalBook(newBook)
                     newBook

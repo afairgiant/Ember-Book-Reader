@@ -353,13 +353,13 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                         pendingSingleDelete = null
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingSingleDelete = null }) { Text("Cancel") }
-            },
+            }
         )
     }
 
@@ -378,13 +378,13 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                         pendingBatchDelete = false
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(onClick = { pendingBatchDelete = false }) { Text("Cancel") }
-            },
+            }
         )
     }
 }

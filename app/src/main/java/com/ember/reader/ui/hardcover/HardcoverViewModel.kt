@@ -21,7 +21,7 @@ import timber.log.Timber
 class HardcoverViewModel @Inject constructor(
     private val hardcoverClient: HardcoverClient,
     private val tokenManager: HardcoverTokenManager,
-    private val serverRepository: ServerRepository,
+    private val serverRepository: ServerRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HardcoverUiState>(HardcoverUiState.Loading)
@@ -83,8 +83,8 @@ class HardcoverViewModel @Inject constructor(
                             HardcoverStatus.CURRENTLY_READING,
                             HardcoverStatus.WANT_TO_READ,
                             HardcoverStatus.READ,
-                            HardcoverStatus.DID_NOT_FINISH,
-                        ),
+                            HardcoverStatus.DID_NOT_FINISH
+                        )
                     )
                     loadAllTabs(user.id)
                 }
@@ -102,7 +102,7 @@ class HardcoverViewModel @Inject constructor(
             HardcoverStatus.CURRENTLY_READING,
             HardcoverStatus.WANT_TO_READ,
             HardcoverStatus.READ,
-            HardcoverStatus.DID_NOT_FINISH,
+            HardcoverStatus.DID_NOT_FINISH
         )
         statusIds.forEach { statusId ->
             viewModelScope.launch {
@@ -111,7 +111,7 @@ class HardcoverViewModel @Inject constructor(
                         val current = _uiState.value
                         if (current is HardcoverUiState.Connected) {
                             _uiState.value = current.copy(
-                                booksByStatus = current.booksByStatus + (statusId to books),
+                                booksByStatus = current.booksByStatus + (statusId to books)
                             )
                         }
                     }
@@ -127,6 +127,6 @@ sealed interface HardcoverUiState {
     data class Connected(
         val user: HardcoverUser,
         val tabs: List<Int>,
-        val booksByStatus: Map<Int, List<HardcoverBook>> = emptyMap(),
+        val booksByStatus: Map<Int, List<HardcoverBook>> = emptyMap()
     ) : HardcoverUiState
 }

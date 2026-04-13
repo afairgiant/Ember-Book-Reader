@@ -5,12 +5,12 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.isSuccess
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Dictionary provider backed by Wiktionary's REST API.
@@ -23,7 +23,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class WiktionaryProvider @Inject constructor(
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient
 ) : DictionaryProvider {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -75,7 +75,7 @@ class WiktionaryProvider @Inject constructor(
         DictionaryResult(
             word = word,
             phonetic = null,
-            definitions = definitions,
+            definitions = definitions
         )
     }
 

@@ -4,18 +4,17 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.http.isSuccess
-import kotlinx.serialization.Serializable
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class FreeDictionaryApiProvider @Inject constructor(
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient
 ) : DictionaryProvider {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -51,7 +50,7 @@ class FreeDictionaryApiProvider @Inject constructor(
         DictionaryResult(
             word = entry["word"]?.jsonPrimitive?.content ?: word,
             phonetic = phonetic,
-            definitions = definitions,
+            definitions = definitions
         )
     }
 }

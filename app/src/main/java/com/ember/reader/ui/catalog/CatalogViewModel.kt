@@ -36,7 +36,7 @@ class CatalogViewModel @Inject constructor(
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val catalogPreferencesRepository: CatalogPreferencesRepository,
+    private val catalogPreferencesRepository: CatalogPreferencesRepository
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -66,7 +66,7 @@ class CatalogViewModel @Inject constructor(
         combine(
             _rawGrimmoryEntries,
             catalogPreferencesRepository.observePreferences(serverId),
-            _editMode,
+            _editMode
         ) { entries, prefs, editing ->
             if (entries.isEmpty()) return@combine null
             val prefsMap = prefs.associateBy { it.entryId }
@@ -85,7 +85,7 @@ class CatalogViewModel @Inject constructor(
                 val (filtered, serverName, hiddenMap) = result
                 _uiState.value = CatalogUiState.GrimmorySuccess(
                     catalog = GrimmoryCatalog(serverName = serverName, entries = filtered),
-                    hiddenEntryIds = hiddenMap.filter { it.value }.keys,
+                    hiddenEntryIds = hiddenMap.filter { it.value }.keys
                 )
             }
         }.launchIn(viewModelScope)
@@ -143,7 +143,7 @@ class CatalogViewModel @Inject constructor(
 
     private fun entriesInSameSection(
         entries: List<GrimmoryCatalogEntry>,
-        entryId: String,
+        entryId: String
     ): List<GrimmoryCatalogEntry> {
         val target = entries.find { it.id == entryId } ?: return emptyList()
         val sectionType = sectionGroupFor(target.type)
@@ -247,7 +247,7 @@ class CatalogViewModel @Inject constructor(
                 title = "Continue Reading",
                 subtitle = "Books you're currently reading",
                 href = "grimmory:status=READING",
-                type = CatalogEntryType.CONTINUE_READING,
+                type = CatalogEntryType.CONTINUE_READING
             )
         )
         entries.add(
@@ -256,7 +256,7 @@ class CatalogViewModel @Inject constructor(
                 title = "Recently Added",
                 subtitle = "Latest additions to your library",
                 href = "grimmory:sort=addedOn&dir=desc",
-                type = CatalogEntryType.RECENTLY_ADDED,
+                type = CatalogEntryType.RECENTLY_ADDED
             )
         )
 
@@ -268,7 +268,7 @@ class CatalogViewModel @Inject constructor(
                         libraryId = lib.id,
                         title = lib.name,
                         bookCount = lib.bookCount,
-                        serverIcon = lib.icon,
+                        serverIcon = lib.icon
                     )
                 )
             }
@@ -283,7 +283,7 @@ class CatalogViewModel @Inject constructor(
                         title = shelf.name,
                         bookCount = shelf.bookCount,
                         publicShelf = shelf.publicShelf,
-                        serverIcon = shelf.icon,
+                        serverIcon = shelf.icon
                     )
                 )
             }
@@ -298,7 +298,7 @@ class CatalogViewModel @Inject constructor(
                         title = magicShelf.name,
                         publicShelf = magicShelf.publicShelf,
                         serverIcon = magicShelf.icon,
-                        iconType = magicShelf.iconType,
+                        iconType = magicShelf.iconType
                     )
                 )
             }
@@ -311,7 +311,7 @@ class CatalogViewModel @Inject constructor(
                 title = "Series",
                 subtitle = "Browse books by series",
                 href = "grimmory:series",
-                type = CatalogEntryType.SERIES,
+                type = CatalogEntryType.SERIES
             )
         )
         entries.add(
@@ -320,7 +320,7 @@ class CatalogViewModel @Inject constructor(
                 title = "Authors",
                 subtitle = "Browse books by author",
                 href = "grimmory:authors",
-                type = CatalogEntryType.AUTHORS,
+                type = CatalogEntryType.AUTHORS
             )
         )
         entries.add(
@@ -329,7 +329,7 @@ class CatalogViewModel @Inject constructor(
                 title = "All Books",
                 subtitle = "Browse the full catalog",
                 href = "grimmory:all",
-                type = CatalogEntryType.ALL_BOOKS,
+                type = CatalogEntryType.ALL_BOOKS
             )
         )
 
@@ -420,7 +420,7 @@ sealed interface CatalogUiState {
     data class OpdsSuccess(val feed: OpdsFeed) : CatalogUiState
     data class GrimmorySuccess(
         val catalog: GrimmoryCatalog,
-        val hiddenEntryIds: Set<String> = emptySet(),
+        val hiddenEntryIds: Set<String> = emptySet()
     ) : CatalogUiState
     data class Error(val message: String) : CatalogUiState
 }
@@ -429,5 +429,5 @@ enum class SeriesSortOption(val key: String, val dir: String, val label: String)
     NAME("name", "asc", "A-Z"),
     BOOK_COUNT("bookcount", "desc", "Most Books"),
     READ_PROGRESS("readprogress", "desc", "Most Read"),
-    RECENTLY_ADDED("recentlyAdded", "desc", "Recent"),
+    RECENTLY_ADDED("recentlyAdded", "desc", "Recent")
 }

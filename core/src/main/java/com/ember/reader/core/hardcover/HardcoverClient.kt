@@ -12,22 +12,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.float
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import timber.log.Timber
 
 @Singleton
 class HardcoverClient @Inject constructor(
     private val httpClient: HttpClient,
-    private val tokenManager: HardcoverTokenManager,
+    private val tokenManager: HardcoverTokenManager
 ) {
 
     suspend fun fetchMe(): Result<HardcoverUser> = runCatching {
@@ -50,13 +47,14 @@ class HardcoverClient @Inject constructor(
             id = me.int("id"),
             username = me.str("username"),
             name = me.strOrNull("name"),
-            booksCount = me.intOrDefault("books_count", 0),
+            booksCount = me.intOrDefault("books_count", 0)
         )
     }
 
-    suspend fun fetchBooksByStatus(userId: Int, statusId: Int): Result<List<HardcoverBook>> = runCatching {
-        val json = query(
-            """
+    suspend fun fetchBooksByStatus(userId: Int, statusId: Int): Result<List<HardcoverBook>> =
+        runCatching {
+            val json = query(
+                """
             query {
                 user_books(
                     where: {user_id: {_eq: $userId}, status_id: {_eq: $statusId}}
@@ -79,32 +77,35 @@ class HardcoverClient @Inject constructor(
                     }
                 }
             }
-            """.trimIndent()
-        )
-        val userBooks = json.obj("data").arr("user_books")
-        userBooks.map { entry ->
-            val obj = entry.jsonObject
-            val book = obj.obj("book")
-            val author = book.arr("contributions")
-                .firstOrNull()?.jsonObject
-                ?.obj("author")?.strOrNull("name")
-            val coverUrl = book.objOrNull("image")?.strOrNull("url")
-            HardcoverBook(
-                id = obj.int("id"),
-                bookId = obj.int("book_id"),
-                title = book.str("title"),
-                author = author,
-                coverUrl = coverUrl,
-                statusId = obj.int("status_id"),
-                rating = obj.floatOrNull("rating"),
-                dateAdded = obj.strOrNull("date_added"),
-                pages = book.intOrNull("pages"),
-                slug = book.strOrNull("slug"),
+                """.trimIndent()
             )
+            val userBooks = json.obj("data").arr("user_books")
+            userBooks.map { entry ->
+                val obj = entry.jsonObject
+                val book = obj.obj("book")
+                val author = book.arr("contributions")
+                    .firstOrNull()?.jsonObject
+                    ?.obj("author")?.strOrNull("name")
+                val coverUrl = book.objOrNull("image")?.strOrNull("url")
+                HardcoverBook(
+                    id = obj.int("id"),
+                    bookId = obj.int("book_id"),
+                    title = book.str("title"),
+                    author = author,
+                    coverUrl = coverUrl,
+                    statusId = obj.int("status_id"),
+                    rating = obj.floatOrNull("rating"),
+                    dateAdded = obj.strOrNull("date_added"),
+                    pages = book.intOrNull("pages"),
+                    slug = book.strOrNull("slug")
+                )
+            }
         }
-    }
 
-    suspend fun searchBooks(searchQuery: String, limit: Int = 3): Result<List<HardcoverSearchResult>> = runCatching {
+    suspend fun searchBooks(
+        searchQuery: String,
+        limit: Int = 3
+    ): Result<List<HardcoverSearchResult>> = runCatching {
         val escaped = searchQuery.replace("\"", "\\\"")
         val json = query(
             """
@@ -129,14 +130,15 @@ class HardcoverClient @Inject constructor(
                     slug = doc.str("slug"),
                     averageRating = doc.floatOrNull("rating"),
                     ratingsCount = doc.intOrDefault("ratings_count", 0),
-                    authors = doc["author_names"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    authors = doc["author_names"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
                 )
             }
     }
 
-    suspend fun fetchUserBookEntry(userId: Int, bookId: Int): Result<HardcoverUserBookEntry?> = runCatching {
-        val json = query(
-            """
+    suspend fun fetchUserBookEntry(userId: Int, bookId: Int): Result<HardcoverUserBookEntry?> =
+        runCatching {
+            val json = query(
+                """
             query {
                 user_books(
                     where: {user_id: {_eq: $userId}, book_id: {_eq: $bookId}}
@@ -147,17 +149,17 @@ class HardcoverClient @Inject constructor(
                     date_added
                 }
             }
-            """.trimIndent()
-        )
-        val entries = json.obj("data").arr("user_books")
-        if (entries.isEmpty()) return@runCatching null
-        val entry = entries.first().jsonObject
-        HardcoverUserBookEntry(
-            statusId = entry.int("status_id"),
-            rating = entry.floatOrNull("rating"),
-            dateAdded = entry.strOrNull("date_added"),
-        )
-    }
+                """.trimIndent()
+            )
+            val entries = json.obj("data").arr("user_books")
+            if (entries.isEmpty()) return@runCatching null
+            val entry = entries.first().jsonObject
+            HardcoverUserBookEntry(
+                statusId = entry.int("status_id"),
+                rating = entry.floatOrNull("rating"),
+                dateAdded = entry.strOrNull("date_added")
+            )
+        }
 
     suspend fun fetchBookDetail(bookId: Int): Result<HardcoverBookDetail> = runCatching {
         val json = query(
@@ -205,7 +207,7 @@ class HardcoverClient @Inject constructor(
             coverUrl = book.objOrNull("image")?.strOrNull("url"),
             authors = authors,
             seriesName = seriesEntry?.objOrNull("series")?.strOrNull("name"),
-            seriesPosition = seriesEntry?.floatOrNull("position"),
+            seriesPosition = seriesEntry?.floatOrNull("position")
         )
     }
 
@@ -237,16 +239,24 @@ class HardcoverClient @Inject constructor(
 
 @Serializable
 private data class GraphqlRequest(
-    val query: String,
+    val query: String
 )
 
 // JSON helpers
 private fun JsonObject.obj(key: String): JsonObject = getValue(key).jsonObject
-private fun JsonObject.objOrNull(key: String): JsonObject? = get(key)?.takeIf { it !is kotlinx.serialization.json.JsonNull }?.jsonObject
+private fun JsonObject.objOrNull(key: String): JsonObject? = get(key)?.takeIf {
+    it !is kotlinx.serialization.json.JsonNull
+}?.jsonObject
 private fun JsonObject.arr(key: String): JsonArray = getValue(key).jsonArray
 private fun JsonObject.str(key: String): String = getValue(key).jsonPrimitive.content
-private fun JsonObject.strOrNull(key: String): String? = get(key)?.takeIf { it is JsonPrimitive }?.jsonPrimitive?.content
+private fun JsonObject.strOrNull(key: String): String? = get(key)?.takeIf {
+    it is JsonPrimitive
+}?.jsonPrimitive?.content
 private fun JsonObject.int(key: String): Int = getValue(key).jsonPrimitive.int
-private fun JsonObject.intOrNull(key: String): Int? = get(key)?.takeIf { it is JsonPrimitive }?.jsonPrimitive?.intOrNull
+private fun JsonObject.intOrNull(key: String): Int? = get(key)?.takeIf {
+    it is JsonPrimitive
+}?.jsonPrimitive?.intOrNull
 private fun JsonObject.intOrDefault(key: String, default: Int): Int = intOrNull(key) ?: default
-private fun JsonObject.floatOrNull(key: String): Float? = get(key)?.takeIf { it is JsonPrimitive }?.jsonPrimitive?.floatOrNull
+private fun JsonObject.floatOrNull(key: String): Float? = get(key)?.takeIf {
+    it is JsonPrimitive
+}?.jsonPrimitive?.floatOrNull

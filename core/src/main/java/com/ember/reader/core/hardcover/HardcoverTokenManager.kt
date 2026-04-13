@@ -6,7 +6,7 @@ import javax.inject.Singleton
 
 @Singleton
 class HardcoverTokenManager @Inject constructor(
-    private val credentialEncryption: CredentialEncryption,
+    private val credentialEncryption: CredentialEncryption
 ) {
 
     fun getToken(): String? = credentialEncryption.getPassword(TOKEN_KEY)

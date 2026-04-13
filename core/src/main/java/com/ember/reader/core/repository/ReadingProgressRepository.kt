@@ -49,7 +49,11 @@ class ReadingProgressRepository @Inject constructor(
         readingProgressDao.upsert(progress.toEntity())
     }
 
-    suspend fun pushKosyncProgress(server: Server, bookId: String, documentHash: String): Result<Unit> {
+    suspend fun pushKosyncProgress(
+        server: Server,
+        bookId: String,
+        documentHash: String
+    ): Result<Unit> {
         val progress = getByBookId(bookId) ?: return Result.success(Unit)
         val request = KosyncProgressRequest(
             document = documentHash,
@@ -133,7 +137,10 @@ class ReadingProgressRepository @Inject constructor(
         }
     }
 
-    suspend fun pushUnsyncedKosyncProgress(server: Server, getDocumentHash: suspend (String) -> String?) {
+    suspend fun pushUnsyncedKosyncProgress(
+        server: Server,
+        getDocumentHash: suspend (String) -> String?
+    ) {
         val unsynced = readingProgressDao.getUnsyncedProgress(server.id)
         for (entity in unsynced) {
             val hash = getDocumentHash(entity.bookId) ?: continue

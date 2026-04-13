@@ -26,7 +26,7 @@ data class GrimmoryAppBook(
     val coverUpdatedOn: String? = null,
     val addedOn: String? = null,
     val seriesName: String? = null,
-    val seriesNumber: Float? = null,
+    val seriesNumber: Float? = null
 )
 
 @Serializable

@@ -52,15 +52,14 @@ object NotificationHelper {
         manager.createNotificationChannels(listOf(downloadChannel, syncChannel, activityChannel))
     }
 
-    private fun openAppIntent(context: Context): PendingIntent =
-        PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    private fun openAppIntent(context: Context): PendingIntent = PendingIntent.getActivity(
+        context,
+        0,
+        Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     fun showDownloadComplete(context: Context, bookTitle: String, bookId: String) {
         if (!hasPermission(context)) return
@@ -172,7 +171,7 @@ object NotificationHelper {
     fun buildDownloadProgressNotification(
         context: Context,
         bookTitle: String,
-        cancelIntent: PendingIntent,
+        cancelIntent: PendingIntent
     ): android.app.Notification {
         return NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
             .setSmallIcon(android.R.drawable.stat_sys_download)
@@ -190,7 +189,7 @@ object NotificationHelper {
         bookTitle: String,
         progress: Int,
         progressText: String,
-        cancelIntent: PendingIntent,
+        cancelIntent: PendingIntent
     ) {
         if (!hasPermission(context)) return
 

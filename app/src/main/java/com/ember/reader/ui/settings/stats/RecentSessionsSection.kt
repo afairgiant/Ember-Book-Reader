@@ -41,7 +41,7 @@ fun RecentSessionsSection(stats: StatsData, modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SectionHeader(
             title = stringResource(R.string.recent_sessions),
@@ -55,16 +55,16 @@ fun RecentSessionsSection(stats: StatsData, modifier: Modifier = Modifier) {
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { expanded = !expanded },
+                        modifier = Modifier.clickable { expanded = !expanded }
                     )
                 }
-            },
+            }
         )
 
         for (session in visibleSessions) {
             SessionCard(
                 session = session,
-                bookTitle = stats.bookTitles[session.bookId] ?: "Unknown",
+                bookTitle = stats.bookTitles[session.bookId] ?: "Unknown"
             )
         }
     }
@@ -74,16 +74,16 @@ fun RecentSessionsSection(stats: StatsData, modifier: Modifier = Modifier) {
 private fun SessionCard(session: ReadingSession, bookTitle: String) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -91,14 +91,14 @@ private fun SessionCard(session: ReadingSession, bookTitle: String) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = session.startTime
                         .atZone(ZoneId.systemDefault())
                         .format(sessionDateFormatter),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -106,14 +106,14 @@ private fun SessionCard(session: ReadingSession, bookTitle: String) {
                 Text(
                     text = session.durationSeconds.formatDuration(),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 val delta = ((session.endProgress - session.startProgress) * 100).roundToInt()
                 if (delta > 0) {
                     Text(
                         text = "+$delta%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

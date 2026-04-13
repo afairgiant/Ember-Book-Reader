@@ -15,7 +15,7 @@ import timber.log.Timber
 @Singleton
 class HighlightSyncManager @Inject constructor(
     private val highlightDao: HighlightDao,
-    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryClient: GrimmoryClient
 ) {
 
     suspend fun syncHighlightsForBook(server: Server, bookId: String, grimmoryBookId: Long) {
@@ -41,7 +41,9 @@ class HighlightSyncManager @Inject constructor(
                     // Local tombstoned → delete on server
                     grimmoryClient.deleteAnnotation(server.url, server.id, serverAnnotation.id)
                         .onSuccess { Timber.d("HighlightSync: deleted remote annotation %d", serverAnnotation.id) }
-                        .onFailure { Timber.w(it, "HighlightSync: failed to delete remote annotation %d", serverAnnotation.id) }
+                        .onFailure {
+                            Timber.w(it, "HighlightSync: failed to delete remote annotation %d", serverAnnotation.id)
+                        }
                 } else {
                     // Always refresh color and locator from server data
                     val cfi = serverAnnotation.cfi
@@ -52,7 +54,7 @@ class HighlightSyncManager @Inject constructor(
                         val fixedLocator = CfiLocatorConverter.buildLocatorJson(
                             cfi = cfi,
                             selectedText = serverAnnotation.text ?: local.selectedText,
-                            chapterTitle = serverAnnotation.chapterTitle,
+                            chapterTitle = serverAnnotation.chapterTitle
                         )
                         updated = updated.copy(locatorJson = fixedLocator)
                     }
@@ -68,18 +70,21 @@ class HighlightSyncManager @Inject constructor(
                     val serverTime = parseTimestamp(serverAnnotation.updatedAt)
                     if (serverTime != null && serverTime.isAfter(local.updatedAt)) {
                         // Server is newer → update local
-                        highlightDao.update(updated.copy(
-                            annotation = serverAnnotation.note,
-                            selectedText = serverAnnotation.text ?: local.selectedText,
-                            updatedAt = serverTime,
-                        ))
+                        highlightDao.update(
+                            updated.copy(
+                                annotation = serverAnnotation.note,
+                                selectedText = serverAnnotation.text ?: local.selectedText,
+                                updatedAt = serverTime
+                            )
+                        )
                         Timber.d("HighlightSync: updated local highlight %d from server", local.id)
                     } else if (serverTime != null && local.updatedAt.isAfter(serverTime)) {
                         // Local is newer → update server
-                        grimmoryClient.updateAnnotation(server.url, server.id, serverAnnotation.id,
+                        grimmoryClient.updateAnnotation(
+                            server.url, server.id, serverAnnotation.id,
                             UpdateAnnotationRequest(
                                 color = local.color.hex,
-                                note = local.annotation,
+                                note = local.annotation
                             )
                         ).onSuccess { Timber.d("HighlightSync: updated remote annotation %d", serverAnnotation.id) }
                     }
@@ -90,19 +95,21 @@ class HighlightSyncManager @Inject constructor(
                 val locatorJson = CfiLocatorConverter.buildLocatorJson(
                     cfi = cfi,
                     selectedText = serverAnnotation.text,
-                    chapterTitle = serverAnnotation.chapterTitle,
+                    chapterTitle = serverAnnotation.chapterTitle
                 )
                 val now = Instant.now()
-                highlightDao.insert(HighlightEntity(
-                    bookId = bookId,
-                    locatorJson = locatorJson,
-                    color = HighlightColor.fromHex(serverAnnotation.color),
-                    annotation = serverAnnotation.note,
-                    selectedText = serverAnnotation.text,
-                    createdAt = parseTimestamp(serverAnnotation.createdAt) ?: now,
-                    remoteId = serverAnnotation.id,
-                    updatedAt = parseTimestamp(serverAnnotation.updatedAt) ?: now,
-                ))
+                highlightDao.insert(
+                    HighlightEntity(
+                        bookId = bookId,
+                        locatorJson = locatorJson,
+                        color = HighlightColor.fromHex(serverAnnotation.color),
+                        annotation = serverAnnotation.note,
+                        selectedText = serverAnnotation.text,
+                        createdAt = parseTimestamp(serverAnnotation.createdAt) ?: now,
+                        remoteId = serverAnnotation.id,
+                        updatedAt = parseTimestamp(serverAnnotation.updatedAt) ?: now
+                    )
+                )
                 Timber.d("HighlightSync: created local highlight from remote %d", serverAnnotation.id)
             }
         }
@@ -130,14 +137,15 @@ class HighlightSyncManager @Inject constructor(
                 }
 
                 val chapterTitle = CfiLocatorConverter.extractTitle(local.locatorJson)
-                grimmoryClient.createAnnotation(server.url, server.id,
+                grimmoryClient.createAnnotation(
+                    server.url, server.id,
                     CreateAnnotationRequest(
                         bookId = grimmoryBookId,
                         cfi = cfi,
                         text = local.selectedText,
                         color = local.color.hex,
                         note = local.annotation,
-                        chapterTitle = chapterTitle,
+                        chapterTitle = chapterTitle
                     )
                 ).onSuccess { created ->
                     highlightDao.update(local.copy(remoteId = created.id))

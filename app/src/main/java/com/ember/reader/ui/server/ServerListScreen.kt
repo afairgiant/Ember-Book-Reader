@@ -53,10 +53,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ember.reader.R
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.ui.common.BookCoverPlaceholderColors
+import com.ember.reader.ui.common.bookCoverColorIndex
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,7 +83,7 @@ fun ServerListScreen(
                         androidx.compose.foundation.Image(
                             painter = painterResource(R.mipmap.ic_launcher_foreground),
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -186,11 +186,7 @@ fun ServerListScreen(
 }
 
 @Composable
-private fun ContinueReadingCard(
-    book: Book,
-    percentage: Float,
-    onClick: () -> Unit
-) {
+private fun ContinueReadingCard(book: Book, percentage: Float, onClick: () -> Unit) {
     val colorIndex = bookCoverColorIndex(book.title)
 
     Card(
@@ -271,7 +267,7 @@ private fun RecentlyAddedCard(
     title: String,
     authors: String,
     coverUrl: String,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -331,18 +327,18 @@ private fun RecentlyAddedPlaceholderCard() {
         targetValue = 0.35f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 800),
-            repeatMode = RepeatMode.Reverse,
+            repeatMode = RepeatMode.Reverse
         ),
-        label = "shimmerAlpha",
+        label = "shimmerAlpha"
     )
     val shimmerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
 
     Card(
         modifier = Modifier.width(130.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column {
             Box(
@@ -350,7 +346,7 @@ private fun RecentlyAddedPlaceholderCard() {
                     .fillMaxWidth()
                     .height(160.dp)
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    .background(shimmerColor),
+                    .background(shimmerColor)
             )
             Column(modifier = Modifier.padding(10.dp)) {
                 Box(
@@ -358,7 +354,7 @@ private fun RecentlyAddedPlaceholderCard() {
                         .fillMaxWidth(0.8f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(shimmerColor),
+                        .background(shimmerColor)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Box(
@@ -366,7 +362,7 @@ private fun RecentlyAddedPlaceholderCard() {
                         .fillMaxWidth(0.5f)
                         .height(10.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(shimmerColor),
+                        .background(shimmerColor)
                 )
             }
         }
@@ -378,16 +374,16 @@ private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val hours = stats.weekSeconds / 3600
@@ -396,12 +392,12 @@ private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
                     text = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = "This week",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -409,12 +405,12 @@ private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
                     text = "${stats.currentStreak}",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = if (stats.currentStreak == 1) "Day streak" else "Day streak",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

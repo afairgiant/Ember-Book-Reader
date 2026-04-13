@@ -59,10 +59,7 @@ import com.ember.reader.ui.settings.components.SettingsToggleRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SyncSettingsScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
-) {
+fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
     val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
     val syncHighlights by viewModel.syncHighlights.collectAsStateWithLifecycle()
@@ -80,17 +77,17 @@ fun SyncSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SettingsGroup(title = "Sync Settings") {
                 var showFrequencyMenu by remember { mutableStateOf(false) }
@@ -99,11 +96,11 @@ fun SyncSettingsScreen(
                     icon = Icons.Default.Cloud,
                     title = "Sync Frequency",
                     subtitle = syncFrequency.displayName,
-                    modifier = Modifier.clickable { showFrequencyMenu = true },
+                    modifier = Modifier.clickable { showFrequencyMenu = true }
                 ) {
                     DropdownMenu(
                         expanded = showFrequencyMenu,
-                        onDismissRequest = { showFrequencyMenu = false },
+                        onDismissRequest = { showFrequencyMenu = false }
                     ) {
                         SyncFrequency.entries.forEach { frequency ->
                             DropdownMenuItem(
@@ -111,7 +108,7 @@ fun SyncSettingsScreen(
                                 onClick = {
                                     viewModel.updateSyncFrequency(frequency)
                                     showFrequencyMenu = false
-                                },
+                                }
                             )
                         }
                     }
@@ -124,7 +121,7 @@ fun SyncSettingsScreen(
                     title = stringResource(R.string.sync_notifications_label),
                     subtitle = stringResource(R.string.sync_notifications_hint),
                     checked = syncNotifications,
-                    onCheckedChange = { viewModel.updateSyncNotifications(it) },
+                    onCheckedChange = { viewModel.updateSyncNotifications(it) }
                 )
 
                 SettingsDivider()
@@ -134,7 +131,7 @@ fun SyncSettingsScreen(
                     title = "Sync highlights",
                     subtitle = "Sync highlights with Grimmory",
                     checked = syncHighlights,
-                    onCheckedChange = { viewModel.updateSyncHighlights(it) },
+                    onCheckedChange = { viewModel.updateSyncHighlights(it) }
                 )
 
                 SettingsDivider()
@@ -144,7 +141,7 @@ fun SyncSettingsScreen(
                     title = "Sync bookmarks",
                     subtitle = "Sync bookmarks with Grimmory",
                     checked = syncBookmarks,
-                    onCheckedChange = { viewModel.updateSyncBookmarks(it) },
+                    onCheckedChange = { viewModel.updateSyncBookmarks(it) }
                 )
 
                 SettingsDivider()
@@ -154,7 +151,7 @@ fun SyncSettingsScreen(
                     title = stringResource(R.string.auto_download_reading),
                     subtitle = stringResource(R.string.auto_download_reading_hint),
                     checked = autoDownloadReading,
-                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
+                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) }
                 )
             }
 
@@ -164,7 +161,7 @@ fun SyncSettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 if (isSyncing) {
                     val transition = rememberInfiniteTransition(label = "sync_rotation")
@@ -173,16 +170,16 @@ fun SyncSettingsScreen(
                         targetValue = -360f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(durationMillis = 1000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
+                            repeatMode = RepeatMode.Restart
                         ),
-                        label = "rotation",
+                        label = "rotation"
                     )
                     Icon(
                         Icons.Default.Sync,
                         contentDescription = null,
                         modifier = Modifier
                             .size(18.dp)
-                            .graphicsLayer { rotationZ = rotation },
+                            .graphicsLayer { rotationZ = rotation }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Syncing...")

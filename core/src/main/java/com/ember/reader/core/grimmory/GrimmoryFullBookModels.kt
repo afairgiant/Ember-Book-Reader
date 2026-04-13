@@ -20,14 +20,14 @@ data class GrimmoryFullBook(
     val libraryPath: GrimmoryFullBookLibraryPath? = null,
     val primaryFile: GrimmoryFullBookFile? = null,
     val metadata: GrimmoryFullBookMetadata? = null,
-    val metadataMatchScore: Float? = null,
+    val metadataMatchScore: Float? = null
 )
 
 @Serializable
 data class GrimmoryFullBookLibraryPath(
     val id: Long? = null,
     val libraryId: Long? = null,
-    val path: String? = null,
+    val path: String? = null
 )
 
 @Serializable
@@ -35,7 +35,7 @@ data class GrimmoryFullBookFile(
     val id: Long? = null,
     val fileName: String? = null,
     val fileSubPath: String? = null,
-    val filePath: String? = null,
+    val filePath: String? = null
 )
 
 @Serializable
@@ -52,7 +52,7 @@ data class GrimmoryFullBookMetadata(
     val language: String? = null,
     val categories: List<String>? = null,
     val moods: List<String>? = null,
-    val tags: List<String>? = null,
+    val tags: List<String>? = null
 ) {
     val categoryNames: Set<String>
         get() = categories?.toSet() ?: emptySet()

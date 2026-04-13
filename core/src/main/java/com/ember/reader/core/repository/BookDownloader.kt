@@ -25,7 +25,7 @@ class BookDownloader @Inject constructor(
     private val opdsClient: OpdsClient,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val metadataExtractor: BookMetadataExtractor,
+    private val metadataExtractor: BookMetadataExtractor
 ) {
 
     private val booksDir: File by lazy {
@@ -35,7 +35,7 @@ class BookDownloader @Inject constructor(
     suspend fun downloadBook(
         book: Book,
         server: Server,
-        onProgress: ((DownloadProgress) -> Unit)? = null,
+        onProgress: ((DownloadProgress) -> Unit)? = null
     ): Result<Book> = runCatching {
         val grimmoryBookId = book.grimmoryBookId
         Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId format=${book.format}")
@@ -68,7 +68,7 @@ class BookDownloader @Inject constructor(
                     { bytesRead, totalBytes ->
                         callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                     }
-                },
+                }
             ).getOrThrow()
         } else {
             opdsClient.downloadBookToFile(
@@ -81,7 +81,7 @@ class BookDownloader @Inject constructor(
                     { bytesRead, totalBytes ->
                         callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                     }
-                },
+                }
             ).getOrThrow()
         }
 
@@ -103,7 +103,7 @@ class BookDownloader @Inject constructor(
             localPath = file.absolutePath,
             fileHash = fileHash,
             coverUrl = metadata.coverUrl ?: book.coverUrl,
-            downloadedAt = Instant.now(),
+            downloadedAt = Instant.now()
         )
     }
 
@@ -115,7 +115,7 @@ class BookDownloader @Inject constructor(
         book: Book,
         server: Server,
         grimmoryBookId: Long,
-        onProgress: ((DownloadProgress) -> Unit)? = null,
+        onProgress: ((DownloadProgress) -> Unit)? = null
     ): Book {
         val infoResult = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
         infoResult.onFailure { error ->
@@ -137,7 +137,7 @@ class BookDownloader @Inject constructor(
         server: Server,
         grimmoryBookId: Long,
         tracks: List<AudiobookTrack>,
-        onProgress: ((DownloadProgress) -> Unit)?,
+        onProgress: ((DownloadProgress) -> Unit)?
     ): Book {
         val audiobookDir = File(booksDir, "audiobook_${book.id}").also { it.mkdirs() }
         Timber.d("Downloading folder-based audiobook: ${tracks.size} tracks to ${audiobookDir.name}")
@@ -146,7 +146,8 @@ class BookDownloader @Inject constructor(
         var completedBytes = 0L
 
         for (track in tracks) {
-            val trackFile = File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
+            val trackFile =
+                File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
             if (trackFile.exists() && trackFile.length() > 0) {
                 Timber.d("Track ${track.index} already downloaded, skipping")
                 completedBytes += trackFile.length()
@@ -164,7 +165,7 @@ class BookDownloader @Inject constructor(
                         trackIndex = track.index,
                         trackCount = tracks.size,
                         trackBytesDownloaded = bytesRead,
-                        trackTotalBytes = trackTotalBytes,
+                        trackTotalBytes = trackTotalBytes
                     )
                 )
             }.getOrThrow()
@@ -174,7 +175,7 @@ class BookDownloader @Inject constructor(
         bookDao.updateLocalPath(book.id, audiobookDir.absolutePath, Instant.now())
         return book.copy(
             localPath = audiobookDir.absolutePath,
-            downloadedAt = Instant.now(),
+            downloadedAt = Instant.now()
         )
     }
 
@@ -182,7 +183,7 @@ class BookDownloader @Inject constructor(
         book: Book,
         server: Server,
         grimmoryBookId: Long,
-        onProgress: ((DownloadProgress) -> Unit)?,
+        onProgress: ((DownloadProgress) -> Unit)?
     ): Book {
         val file = File(booksDir, "${book.id}.m4b")
         grimmoryClient.downloadBook(
@@ -191,7 +192,7 @@ class BookDownloader @Inject constructor(
                 { bytesRead, totalBytes ->
                     callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                 }
-            },
+            }
         ).getOrThrow()
 
         Timber.d("Download complete: file=${file.name} size=${file.length()}")
@@ -204,7 +205,7 @@ class BookDownloader @Inject constructor(
         return book.copy(
             localPath = file.absolutePath,
             fileHash = fileHash,
-            downloadedAt = Instant.now(),
+            downloadedAt = Instant.now()
         )
     }
 

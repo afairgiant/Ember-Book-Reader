@@ -68,7 +68,7 @@ class HighlightDecorationManager(
                 href = href,
                 mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
                 locations = Locator.Locations(fragments = listOf(fragment)),
-                text = Locator.Text(highlight = highlightText),
+                text = Locator.Text(highlight = highlightText)
             )
         }.onFailure {
             Timber.w(it, "HighlightDecoration: failed to build locator for highlight %d", highlight.id)

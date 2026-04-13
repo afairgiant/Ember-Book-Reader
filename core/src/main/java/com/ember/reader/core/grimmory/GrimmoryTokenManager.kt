@@ -4,7 +4,6 @@ import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.network.serverOrigin
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -17,7 +16,7 @@ import timber.log.Timber
 @Singleton
 class GrimmoryTokenManager @Inject constructor(
     private val credentialEncryption: CredentialEncryption,
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient
 ) {
 
     fun getAccessToken(serverId: Long): String? =
@@ -46,7 +45,7 @@ class GrimmoryTokenManager @Inject constructor(
     suspend fun <T> withAuth(
         baseUrl: String,
         serverId: Long,
-        block: suspend (token: String) -> T,
+        block: suspend (token: String) -> T
     ): Result<T> = runCatching {
         val token = getAccessToken(serverId)
             ?: error("Not logged in to Grimmory")

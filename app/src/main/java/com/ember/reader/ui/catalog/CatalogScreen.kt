@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoStories
@@ -29,8 +31,6 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Person
@@ -97,13 +97,16 @@ fun CatalogScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (editMode) "Edit Catalog"
-                        else when (val state = uiState) {
-                            is CatalogUiState.OpdsSuccess -> state.feed.title
-                            is CatalogUiState.GrimmorySuccess -> state.catalog.serverName
-                            else -> stringResource(R.string.catalog_title)
+                        if (editMode) {
+                            "Edit Catalog"
+                        } else {
+                            when (val state = uiState) {
+                                is CatalogUiState.OpdsSuccess -> state.feed.title
+                                is CatalogUiState.GrimmorySuccess -> state.catalog.serverName
+                                else -> stringResource(R.string.catalog_title)
+                            }
                         },
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -125,14 +128,14 @@ fun CatalogScreen(
                             }
                             DropdownMenu(
                                 expanded = showOverflowMenu,
-                                onDismissRequest = { showOverflowMenu = false },
+                                onDismissRequest = { showOverflowMenu = false }
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Reset to Default") },
                                     onClick = {
                                         viewModel.resetPreferences()
                                         showOverflowMenu = false
-                                    },
+                                    }
                                 )
                             }
                         }
@@ -148,8 +151,8 @@ fun CatalogScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -181,7 +184,7 @@ fun CatalogScreen(
                     onRefresh = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
                 )
             }
             is CatalogUiState.GrimmorySuccess -> {
@@ -211,15 +214,18 @@ fun CatalogScreen(
                         }
                     },
                     onToggleHidden = { entryId, isHidden ->
-                        if (isHidden) viewModel.unhideEntry(entryId)
-                        else viewModel.hideEntry(entryId)
+                        if (isHidden) {
+                            viewModel.unhideEntry(entryId)
+                        } else {
+                            viewModel.hideEntry(entryId)
+                        }
                     },
                     onMoveUp = viewModel::moveEntryUp,
                     onMoveDown = viewModel::moveEntryDown,
                     onRefresh = viewModel::refresh,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(padding)
                 )
             }
         }
@@ -242,19 +248,19 @@ private fun OpdsCatalogContent(
     onNavigateToFeed: (String) -> Unit,
     onNavigateToBooks: (String) -> Unit,
     onRefresh: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     PullToRefreshBox(
         isRefreshing = false,
         onRefresh = onRefresh,
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (searchActive) {
                 CatalogSearchField(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
-                    onSearchSubmit = onSearchSubmit,
+                    onSearchSubmit = onSearchSubmit
                 )
             }
             if (isSeriesView) {
@@ -262,14 +268,14 @@ private fun OpdsCatalogContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(SeriesSortOption.entries, key = { it.name }) { option ->
                         FilterChip(
                             selected = seriesSort == option,
                             onClick = { onSeriesSortChange(option) },
                             label = { Text(option.label, style = MaterialTheme.typography.labelMedium) },
-                            modifier = Modifier.height(32.dp),
+                            modifier = Modifier.height(32.dp)
                         )
                     }
                 }
@@ -277,7 +283,7 @@ private fun OpdsCatalogContent(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(16.dp)
             ) {
                 items(feed.entries, key = { it.id }) { entry ->
                     OpdsCatalogEntryCard(
@@ -301,7 +307,7 @@ private fun OpdsCatalogContent(
                                     onNavigateToFeed(entry.href)
                                 }
                             }
-                        },
+                        }
                     )
                 }
             }
@@ -328,41 +334,41 @@ private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     iconForOpdsFeedEntry(entry.title),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp)
             ) {
                 Text(
                     text = entry.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 entry.content?.let {
                     Text(
@@ -370,14 +376,14 @@ private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, onClick: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
             Icon(
                 Icons.AutoMirrored.Filled.NavigateNext,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -387,7 +393,7 @@ private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, onClick: () -> Unit) {
 
 private data class CatalogSection(
     val label: String?,
-    val entries: List<GrimmoryCatalogEntry>,
+    val entries: List<GrimmoryCatalogEntry>
 )
 
 private fun groupIntoSections(entries: List<GrimmoryCatalogEntry>): List<CatalogSection> {
@@ -427,27 +433,27 @@ private fun GrimmoryCatalogContent(
     onMoveUp: (entryId: String) -> Unit,
     onMoveDown: (entryId: String) -> Unit,
     onRefresh: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val sections = groupIntoSections(catalog.entries)
 
     PullToRefreshBox(
         isRefreshing = false,
         onRefresh = onRefresh,
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (searchActive && !editMode) {
                 CatalogSearchField(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
-                    onSearchSubmit = onSearchSubmit,
+                    onSearchSubmit = onSearchSubmit
                 )
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(16.dp)
             ) {
                 for (section in sections) {
                     section.label?.let { label ->
@@ -458,8 +464,8 @@ private fun GrimmoryCatalogContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(
                                     top = if (section == sections.first()) 0.dp else 8.dp,
-                                    bottom = 4.dp,
-                                ),
+                                    bottom = 4.dp
+                                )
                             )
                         }
                     }
@@ -472,7 +478,7 @@ private fun GrimmoryCatalogContent(
                             onClick = { if (!editMode) onEntryClick(entry) },
                             onToggleHidden = { onToggleHidden(entry.id, isHidden) },
                             onMoveUp = { onMoveUp(entry.id) },
-                            onMoveDown = { onMoveDown(entry.id) },
+                            onMoveDown = { onMoveDown(entry.id) }
                         )
                     }
                 }
@@ -489,7 +495,7 @@ private fun GrimmoryCatalogEntryCard(
     onClick: () -> Unit,
     onToggleHidden: () -> Unit,
     onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    onMoveDown: () -> Unit
 ) {
     val (defaultIcon, iconBackground, iconTint) = iconStyleForType(entry.type)
     val resolvedIcon = GrimmoryIconMapper.resolve(entry.serverIcon) ?: defaultIcon
@@ -500,34 +506,34 @@ private fun GrimmoryCatalogEntryCard(
             .fillMaxWidth()
             .then(if (!editMode) Modifier.clickable(onClick = onClick) else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha)
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = if (editMode) 10.dp else 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
                     .background(iconBackground.copy(alpha = contentAlpha)),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     resolvedIcon,
                     contentDescription = null,
                     tint = iconTint.copy(alpha = contentAlpha),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 14.dp),
+                    .padding(start = 14.dp)
             ) {
                 Text(
                     text = entry.title,
@@ -535,7 +541,7 @@ private fun GrimmoryCatalogEntryCard(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
                 )
                 entry.subtitle?.let {
                     Text(
@@ -543,7 +549,7 @@ private fun GrimmoryCatalogEntryCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -552,29 +558,32 @@ private fun GrimmoryCatalogEntryCard(
                     Icon(
                         Icons.Default.KeyboardArrowUp,
                         contentDescription = "Move up",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onMoveDown, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
                         contentDescription = "Move down",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onToggleHidden, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (isHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                         contentDescription = if (isHidden) "Show" else "Hide",
-                        tint = if (isHidden) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (isHidden) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             } else {
                 Icon(
                     Icons.AutoMirrored.Filled.NavigateNext,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -584,7 +593,7 @@ private fun GrimmoryCatalogEntryCard(
 private data class IconStyle(
     val icon: ImageVector,
     val background: Color,
-    val tint: Color,
+    val tint: Color
 )
 
 @Composable
@@ -594,42 +603,42 @@ private fun iconStyleForType(type: CatalogEntryType): IconStyle {
         CatalogEntryType.CONTINUE_READING -> IconStyle(
             icon = Icons.Default.AutoStories,
             background = colorScheme.tertiaryContainer,
-            tint = colorScheme.onTertiaryContainer,
+            tint = colorScheme.onTertiaryContainer
         )
         CatalogEntryType.RECENTLY_ADDED -> IconStyle(
             icon = Icons.Default.NewReleases,
             background = colorScheme.tertiaryContainer,
-            tint = colorScheme.onTertiaryContainer,
+            tint = colorScheme.onTertiaryContainer
         )
         CatalogEntryType.LIBRARY -> IconStyle(
             icon = Icons.AutoMirrored.Filled.LibraryBooks,
             background = colorScheme.primaryContainer,
-            tint = colorScheme.onPrimaryContainer,
+            tint = colorScheme.onPrimaryContainer
         )
         CatalogEntryType.SHELF -> IconStyle(
             icon = Icons.Default.CollectionsBookmark,
             background = colorScheme.secondaryContainer,
-            tint = colorScheme.onSecondaryContainer,
+            tint = colorScheme.onSecondaryContainer
         )
         CatalogEntryType.MAGIC_SHELF -> IconStyle(
             icon = Icons.Default.AutoAwesome,
             background = colorScheme.inversePrimary,
-            tint = colorScheme.onPrimaryContainer,
+            tint = colorScheme.onPrimaryContainer
         )
         CatalogEntryType.SERIES -> IconStyle(
             icon = Icons.Default.CollectionsBookmark,
             background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant,
+            tint = colorScheme.onSurfaceVariant
         )
         CatalogEntryType.AUTHORS -> IconStyle(
             icon = Icons.Default.Person,
             background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant,
+            tint = colorScheme.onSurfaceVariant
         )
         CatalogEntryType.ALL_BOOKS -> IconStyle(
             icon = Icons.AutoMirrored.Filled.MenuBook,
             background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant,
+            tint = colorScheme.onSurfaceVariant
         )
     }
 }
@@ -640,7 +649,7 @@ private fun iconStyleForType(type: CatalogEntryType): IconStyle {
 private fun CatalogSearchField(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onSearchSubmit: () -> Unit,
+    onSearchSubmit: () -> Unit
 ) {
     androidx.compose.material3.OutlinedTextField(
         value = searchQuery,
@@ -652,10 +661,10 @@ private fun CatalogSearchField(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-            onSearch = { onSearchSubmit() },
+            onSearch = { onSearchSubmit() }
         ),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            imeAction = androidx.compose.ui.text.input.ImeAction.Search,
-        ),
+            imeAction = androidx.compose.ui.text.input.ImeAction.Search
+        )
     )
 }

@@ -15,5 +15,5 @@ data class ServerEntity(
     val grimmoryUsername: String = "",
     val isGrimmory: Boolean = false,
     val lastConnected: Instant? = null,
-    val canMoveOrganizeFiles: Boolean = false,
+    val canMoveOrganizeFiles: Boolean = false
 )

@@ -32,7 +32,7 @@ class GrimmoryTokenManagerTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun tokenManager(
-        engine: MockEngine = MockEngine { error("No HTTP expected") },
+        engine: MockEngine = MockEngine { error("No HTTP expected") }
     ): GrimmoryTokenManager {
         val http = HttpClient(engine) {
             install(ContentNegotiation) { json(json) }
@@ -53,14 +53,14 @@ class GrimmoryTokenManagerTest {
     private fun refreshEngine(
         newAccess: String = "new-access",
         newRefresh: String = "new-refresh",
-        status: HttpStatusCode = HttpStatusCode.OK,
+        status: HttpStatusCode = HttpStatusCode.OK
     ): MockEngine = MockEngine {
         respond(
             content = ByteReadChannel(
-                """{"accessToken":"$newAccess","refreshToken":"$newRefresh"}""",
+                """{"accessToken":"$newAccess","refreshToken":"$newRefresh"}"""
             ),
             status = status,
-            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            headers = headersOf(HttpHeaders.ContentType, "application/json")
         )
     }
 

@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -38,7 +37,7 @@ class ServerListViewModel @Inject constructor(
     private val readingSessionRepository: ReadingSessionRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryClient: GrimmoryClient
 ) : ViewModel() {
 
     private val _quickStats = MutableStateFlow<QuickStats?>(null)
@@ -122,9 +121,12 @@ class ServerListViewModel @Inject constructor(
             if (streak != null || grimmoryWeekSeconds > 0L) {
                 val current = _quickStats.value
                 _quickStats.value = QuickStats(
-                    weekSeconds = if (grimmoryWeekSeconds > 0L) grimmoryWeekSeconds
-                        else current?.weekSeconds ?: 0L,
-                    currentStreak = streak?.currentStreak ?: current?.currentStreak ?: 0,
+                    weekSeconds = if (grimmoryWeekSeconds > 0L) {
+                        grimmoryWeekSeconds
+                    } else {
+                        current?.weekSeconds ?: 0L
+                    },
+                    currentStreak = streak?.currentStreak ?: current?.currentStreak ?: 0
                 )
             }
         }
@@ -145,13 +147,13 @@ class ServerListViewModel @Inject constructor(
                         format = when (summary.primaryFileType?.uppercase()) {
                             "PDF" -> BookFormat.PDF
                             else -> BookFormat.EPUB
-                        },
+                        }
                     )
                     RecentlyAddedBook(
                         summary = summary,
                         coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),
                         serverId = server.id,
-                        localBookId = localId,
+                        localBookId = localId
                     )
                 }
                 _recentlyAdded.value = result
@@ -173,11 +175,11 @@ class ServerListViewModel @Inject constructor(
                     id = 0,
                     title = book.title,
                     authors = listOfNotNull(book.author),
-                    coverUpdatedOn = null,
+                    coverUpdatedOn = null
                 ),
                 coverUrl = book.coverUrl ?: "",
                 serverId = server.id,
-                localBookId = book.id,
+                localBookId = book.id
             )
         }
         if (cached.isNotEmpty() && _recentlyAdded.value.isEmpty()) {
@@ -196,12 +198,11 @@ class ServerListViewModel @Inject constructor(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
 }
 
 data class QuickStats(
     val weekSeconds: Long,
-    val currentStreak: Int,
+    val currentStreak: Int
 )
 
 data class RecentBook(
@@ -213,5 +214,5 @@ data class RecentlyAddedBook(
     val summary: GrimmoryBookSummary,
     val coverUrl: String,
     val serverId: Long,
-    val localBookId: String? = null,
+    val localBookId: String? = null
 )

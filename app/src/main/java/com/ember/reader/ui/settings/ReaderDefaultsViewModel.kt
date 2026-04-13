@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  */
 @HiltViewModel
 class ReaderDefaultsViewModel @Inject constructor(
-    private val readerPreferencesRepository: ReaderPreferencesRepository,
+    private val readerPreferencesRepository: ReaderPreferencesRepository
 ) : ViewModel() {
 
     val preferences: StateFlow<ReaderPreferences> =

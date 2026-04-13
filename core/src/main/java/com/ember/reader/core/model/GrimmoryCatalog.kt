@@ -8,7 +8,7 @@ enum class CatalogEntryType {
     MAGIC_SHELF,
     SERIES,
     AUTHORS,
-    ALL_BOOKS,
+    ALL_BOOKS
 }
 
 sealed interface GrimmoryCatalogEntry {
@@ -24,7 +24,7 @@ data class GrimmoryCatalogLibrary(
     val libraryId: Long,
     override val title: String,
     val bookCount: Int,
-    override val serverIcon: String?,
+    override val serverIcon: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:library:$libraryId"
     override val subtitle: String = "$bookCount books"
@@ -37,7 +37,7 @@ data class GrimmoryCatalogShelf(
     override val title: String,
     val bookCount: Int,
     val publicShelf: Boolean,
-    override val serverIcon: String?,
+    override val serverIcon: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:shelf:$shelfId"
     override val subtitle: String = "$bookCount books"
@@ -50,7 +50,7 @@ data class GrimmoryCatalogMagicShelf(
     override val title: String,
     val publicShelf: Boolean,
     override val serverIcon: String?,
-    val iconType: String?,
+    val iconType: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:magicShelf:$magicShelfId"
     override val subtitle: String? = null
@@ -63,12 +63,12 @@ data class GrimmoryCatalogMeta(
     override val title: String,
     override val subtitle: String?,
     override val href: String,
-    override val type: CatalogEntryType,
+    override val type: CatalogEntryType
 ) : GrimmoryCatalogEntry {
     override val serverIcon: String? = null
 }
 
 data class GrimmoryCatalog(
     val serverName: String,
-    val entries: List<GrimmoryCatalogEntry>,
+    val entries: List<GrimmoryCatalogEntry>
 )

@@ -37,7 +37,7 @@ class LibraryViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
-    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
+    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -92,6 +92,7 @@ class LibraryViewModel @Inject constructor(
     private var server: Server? = null
 
     private val _currentServer = MutableStateFlow<Server?>(null)
+
     /** Reactive snapshot of the current [Server], exposing [Server.canMoveOrganizeFiles]. */
     val currentServer: StateFlow<Server?> = _currentServer.asStateFlow()
 
@@ -153,7 +154,7 @@ class LibraryViewModel @Inject constructor(
                 compareBy<Book>(
                     { if (pushNullSeriesLast && it.series.isNullOrBlank()) 1 else 0 },
                     { order[it.id] ?: Int.MAX_VALUE },
-                    { it.title.lowercase() },
+                    { it.title.lowercase() }
                 )
             )
         } else {
@@ -211,7 +212,7 @@ class LibraryViewModel @Inject constructor(
             serverId = currentServer.id,
             libraryId = params["libraryId"]?.toLongOrNull(),
             shelfId = params["shelfId"]?.toLongOrNull(),
-            magicShelfId = params["magicShelfId"]?.toLongOrNull(),
+            magicShelfId = params["magicShelfId"]?.toLongOrNull()
         ).onSuccess { options ->
             _grimmoryFilterOptions.value = options
             timber.log.Timber.d(
@@ -232,8 +233,11 @@ class LibraryViewModel @Inject constructor(
             val params = catalogPath.removePrefix("grimmory:")
             if (params.isEmpty() || params == "all") return true
             // grimmory:sort=... with no libraryId/shelfId/seriesName/status/search is still root
-            val keys = params.split("&").mapNotNull { it.substringBefore("=", "").takeIf { k -> k.isNotEmpty() } }.toSet()
-            val filterKeys = setOf("libraryId", "shelfId", "magicShelfId", "seriesName", "status", "search")
+            val keys = params.split("&").mapNotNull {
+                it.substringBefore("=", "").takeIf { k -> k.isNotEmpty() }
+            }.toSet()
+            val filterKeys =
+                setOf("libraryId", "shelfId", "magicShelfId", "seriesName", "status", "search")
             return keys.none { it in filterKeys }
         }
         // OPDS: root path has no query string
@@ -333,7 +337,7 @@ class LibraryViewModel @Inject constructor(
      */
     private suspend fun refreshFromGrimmoryWithFilter(
         server: com.ember.reader.core.model.Server,
-        page: Int,
+        page: Int
     ): Result<com.ember.reader.core.opds.OpdsBookPage> {
         val paramString = catalogPath.removePrefix("grimmory:")
         val params = paramString.split("&")
@@ -344,7 +348,7 @@ class LibraryViewModel @Inject constructor(
             }
         val filter = _grimmoryFilter.value
         timber.log.Timber.d(
-            "GrimmoryRefresh: catalogPath='$catalogPath' params=$params filter=$filter page=$page",
+            "GrimmoryRefresh: catalogPath='$catalogPath' params=$params filter=$filter page=$page"
         )
         return bookRepository.refreshFromGrimmory(
             server = server,
@@ -360,7 +364,7 @@ class LibraryViewModel @Inject constructor(
             minRating = filter.minRating,
             maxRating = filter.maxRating,
             authors = filter.authors,
-            language = filter.language,
+            language = filter.language
         )
     }
 
@@ -371,7 +375,8 @@ class LibraryViewModel @Inject constructor(
 
     private suspend fun refreshFromGrimmory(
         server: com.ember.reader.core.model.Server
-    ): Result<com.ember.reader.core.opds.OpdsBookPage> = refreshFromGrimmoryWithFilter(server, page = 0)
+    ): Result<com.ember.reader.core.opds.OpdsBookPage> =
+        refreshFromGrimmoryWithFilter(server, page = 0)
 
     /**
      * Updates the Grimmory sort/filter state and reloads. Called from the filter sheet.
@@ -437,7 +442,6 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         DownloadService.start(context, book.id, currentServer.id)
     }
-
 }
 
 sealed interface LibraryUiState {

@@ -35,7 +35,7 @@ fun ContinueReadingCarousel(
     books: List<Book>,
     progressMap: Map<String, Float>,
     onBookClick: (Book) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     if (books.isEmpty()) return
     Column(modifier = modifier.fillMaxWidth()) {
@@ -43,17 +43,17 @@ fun ContinueReadingCarousel(
             text = stringResource(R.string.continue_reading),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 6.dp)
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(books, key = { it.id }) { book ->
                 ContinueReadingCard(
                     book = book,
                     progress = progressMap[book.id] ?: 0f,
-                    onClick = { onBookClick(book) },
+                    onClick = { onBookClick(book) }
                 )
             }
         }
@@ -62,25 +62,21 @@ fun ContinueReadingCarousel(
 }
 
 @Composable
-private fun ContinueReadingCard(
-    book: Book,
-    progress: Float,
-    onClick: () -> Unit,
-) {
+private fun ContinueReadingCard(book: Book, progress: Float, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(110.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.67f)
-                .clip(RoundedCornerShape(10.dp)),
+                .clip(RoundedCornerShape(10.dp))
         ) {
             BookCoverImage(
                 book = book,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize()
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -90,7 +86,7 @@ private fun ContinueReadingCard(
                 .fillMaxWidth()
                 .height(3.dp)
                 .clip(RoundedCornerShape(2.dp)),
-            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
         )
         Text(
             text = book.title,
@@ -98,12 +94,12 @@ private fun ContinueReadingCard(
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = 4.dp)
         )
         Text(
             text = "${(progress * 100).roundToInt()}%",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

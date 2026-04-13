@@ -7,5 +7,5 @@ package com.ember.reader.core.grimmory
  */
 class GrimmoryHttpException(
     val statusCode: Int,
-    message: String,
+    message: String
 ) : Exception(message)

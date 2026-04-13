@@ -10,8 +10,8 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.LibraryDensity
 import com.ember.reader.core.repository.LibraryFormat
 import com.ember.reader.core.repository.LibraryGroupBy
-import com.ember.reader.core.repository.LibraryPrefs
 import com.ember.reader.core.repository.LibraryPreferencesRepository
+import com.ember.reader.core.repository.LibraryPrefs
 import com.ember.reader.core.repository.LibrarySortKey
 import com.ember.reader.core.repository.LibrarySource
 import com.ember.reader.core.repository.LibraryStatus
@@ -55,7 +55,7 @@ data class LibraryViewState(
     val inProgress: List<Book> = emptyList(),
     val formatCounts: Map<LibraryFormat, Int> = emptyMap(),
     val sourceCounts: Map<LibrarySource, Int> = emptyMap(),
-    val statusCounts: Map<LibraryStatus, Int> = emptyMap(),
+    val statusCounts: Map<LibraryStatus, Int> = emptyMap()
 )
 
 @HiltViewModel
@@ -65,7 +65,7 @@ class LocalLibraryViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val progressSyncManager: ProgressSyncManager,
-    private val prefsRepo: LibraryPreferencesRepository,
+    private val prefsRepo: LibraryPreferencesRepository
 ) : ViewModel() {
 
     val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
@@ -103,7 +103,7 @@ class LocalLibraryViewModel @Inject constructor(
         allDownloadedBooks,
         progressInfo,
         prefs,
-        _searchQuery,
+        _searchQuery
     ) { books, progress, prefs, query ->
         buildViewState(books, progress, prefs, query)
     }
@@ -113,24 +113,24 @@ class LocalLibraryViewModel @Inject constructor(
         books: List<Book>,
         progress: Map<String, ProgressInfo>,
         prefs: LibraryPrefs,
-        query: String,
+        query: String
     ): LibraryViewState {
         // Counts always reflect the *unfiltered* set so the filter sheet shows true totals.
         val formatCounts = mapOf(
             LibraryFormat.ALL to books.size,
             LibraryFormat.BOOKS to books.count { it.format == BookFormat.EPUB || it.format == BookFormat.PDF },
-            LibraryFormat.AUDIOBOOKS to books.count { it.format == BookFormat.AUDIOBOOK },
+            LibraryFormat.AUDIOBOOKS to books.count { it.format == BookFormat.AUDIOBOOK }
         )
         val sourceCounts = mapOf(
             LibrarySource.ALL to books.size,
             LibrarySource.SERVER to books.count { it.serverId != null },
-            LibrarySource.LOCAL to books.count { it.serverId == null },
+            LibrarySource.LOCAL to books.count { it.serverId == null }
         )
         val statusCounts = mapOf(
             LibraryStatus.ALL to books.size,
             LibraryStatus.READING to books.count { statusOf(it, progress) == LibraryStatus.READING },
             LibraryStatus.UNREAD to books.count { statusOf(it, progress) == LibraryStatus.UNREAD },
-            LibraryStatus.FINISHED to books.count { statusOf(it, progress) == LibraryStatus.FINISHED },
+            LibraryStatus.FINISHED to books.count { statusOf(it, progress) == LibraryStatus.FINISHED }
         )
 
         val filtered = books.asSequence()
@@ -165,7 +165,7 @@ class LocalLibraryViewModel @Inject constructor(
             inProgress = inProgress,
             formatCounts = formatCounts,
             sourceCounts = sourceCounts,
-            statusCounts = statusCounts,
+            statusCounts = statusCounts
         )
     }
 
@@ -190,8 +190,11 @@ class LocalLibraryViewModel @Inject constructor(
         LibraryFormat.AUDIOBOOKS -> book.format == BookFormat.AUDIOBOOK
     }
 
-    private fun matchesStatus(book: Book, progress: Map<String, ProgressInfo>, filter: LibraryStatus): Boolean =
-        filter == LibraryStatus.ALL || statusOf(book, progress) == filter
+    private fun matchesStatus(
+        book: Book,
+        progress: Map<String, ProgressInfo>,
+        filter: LibraryStatus
+    ): Boolean = filter == LibraryStatus.ALL || statusOf(book, progress) == filter
 
     private fun matchesQuery(book: Book, query: String): Boolean {
         if (query.isBlank()) return true
@@ -202,7 +205,7 @@ class LocalLibraryViewModel @Inject constructor(
     private fun sortBooks(
         books: List<Book>,
         progress: Map<String, ProgressInfo>,
-        sortKey: LibrarySortKey,
+        sortKey: LibrarySortKey
     ): List<Book> = when (sortKey) {
         LibrarySortKey.RECENT -> books.sortedByDescending {
             progress[it.id]?.lastReadAt ?: it.downloadedAt ?: it.addedAt
@@ -211,15 +214,17 @@ class LocalLibraryViewModel @Inject constructor(
         LibrarySortKey.AUTHOR -> books.sortedBy { it.author?.lowercase() ?: "" }
         LibrarySortKey.PROGRESS -> books.sortedByDescending { progress[it.id]?.percentage ?: 0f }
         LibrarySortKey.DATE_ADDED -> books.sortedByDescending { it.addedAt }
-        LibrarySortKey.FILE_SIZE -> books.sortedByDescending { runCatching {
-            it.localPath?.let { p -> File(p).length() } ?: 0L
-        }.getOrDefault(0L) }
+        LibrarySortKey.FILE_SIZE -> books.sortedByDescending {
+            runCatching {
+                it.localPath?.let { p -> File(p).length() } ?: 0L
+            }.getOrDefault(0L)
+        }
     }
 
     private fun buildGrouped(
         sorted: List<Book>,
         progress: Map<String, ProgressInfo>,
-        groupBy: LibraryGroupBy,
+        groupBy: LibraryGroupBy
     ): List<LibraryListItem> {
         val grouped: Map<String, Pair<String, List<Book>>> = when (groupBy) {
             LibraryGroupBy.AUTHOR -> sorted.groupBy { it.author ?: "Unknown" }
@@ -232,7 +237,8 @@ class LocalLibraryViewModel @Inject constructor(
                 .mapValues { it.key to it.value }
                 .toSortedMap()
             LibraryGroupBy.STATUS -> {
-                val order = listOf(LibraryStatus.READING, LibraryStatus.UNREAD, LibraryStatus.FINISHED)
+                val order =
+                    listOf(LibraryStatus.READING, LibraryStatus.UNREAD, LibraryStatus.FINISHED)
                 val byStatus = sorted.groupBy { statusOf(it, progress) }
                 linkedMapOf<String, Pair<String, List<Book>>>().apply {
                     for (s in order) {
@@ -272,8 +278,11 @@ class LocalLibraryViewModel @Inject constructor(
     fun setSort(key: LibrarySortKey) {
         viewModelScope.launch {
             prefsRepo.update {
-                if (it.sortKey == key) it.copy(sortReversed = !it.sortReversed)
-                else it.copy(sortKey = key, sortReversed = false)
+                if (it.sortKey == key) {
+                    it.copy(sortReversed = !it.sortReversed)
+                } else {
+                    it.copy(sortKey = key, sortReversed = false)
+                }
             }
         }
     }
@@ -329,7 +338,7 @@ class LocalLibraryViewModel @Inject constructor(
                 it.copy(
                     sourceFilter = LibrarySource.ALL,
                     formatFilter = LibraryFormat.ALL,
-                    statusFilter = LibraryStatus.ALL,
+                    statusFilter = LibraryStatus.ALL
                 )
             }
         }
@@ -342,27 +351,27 @@ class LocalLibraryViewModel @Inject constructor(
                     LibraryPreset.CURRENTLY_READING -> it.copy(
                         sourceFilter = LibrarySource.ALL,
                         formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.READING,
+                        statusFilter = LibraryStatus.READING
                     )
                     LibraryPreset.UNREAD -> it.copy(
                         sourceFilter = LibrarySource.ALL,
                         formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.UNREAD,
+                        statusFilter = LibraryStatus.UNREAD
                     )
                     LibraryPreset.FINISHED -> it.copy(
                         sourceFilter = LibrarySource.ALL,
                         formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.FINISHED,
+                        statusFilter = LibraryStatus.FINISHED
                     )
                     LibraryPreset.DOWNLOADED -> it.copy(
                         sourceFilter = LibrarySource.LOCAL,
                         formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.ALL,
+                        statusFilter = LibraryStatus.ALL
                     )
                     LibraryPreset.AUDIOBOOKS -> it.copy(
                         sourceFilter = LibrarySource.ALL,
                         formatFilter = LibraryFormat.AUDIOBOOKS,
-                        statusFilter = LibraryStatus.ALL,
+                        statusFilter = LibraryStatus.ALL
                     )
                 }
             }
@@ -378,7 +387,9 @@ class LocalLibraryViewModel @Inject constructor(
         _selectedIds.value = books.map { it.id }.toSet()
     }
 
-    fun clearSelection() { _selectedIds.value = emptySet() }
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
 
     fun deleteSelected() {
         val ids = _selectedIds.value.toList()
@@ -433,7 +444,9 @@ class LocalLibraryViewModel @Inject constructor(
             val pushed = progressSyncManager.pushProgress(server, book)
             _operationResult.value = if (pushed) {
                 "Pushed ${(progress.percentage * 100).roundToInt()}% to server"
-            } else "Failed to push progress"
+            } else {
+                "Failed to push progress"
+            }
         }
     }
 
@@ -459,7 +472,9 @@ class LocalLibraryViewModel @Inject constructor(
         }
     }
 
-    fun dismissOperationResult() { _operationResult.value = null }
+    fun dismissOperationResult() {
+        _operationResult.value = null
+    }
 
     fun importBook(uri: Uri) {
         _importing.value = true
@@ -492,7 +507,9 @@ class LocalLibraryViewModel @Inject constructor(
                     val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                     if (cursor.moveToFirst() && nameIndex >= 0) {
                         cursor.getString(nameIndex)?.substringBeforeLast('.')
-                    } else null
+                    } else {
+                        null
+                    }
                 } ?: "Untitled"
 
                 val book = Book(
@@ -509,7 +526,7 @@ class LocalLibraryViewModel @Inject constructor(
                     pageCount = metadata.pageCount,
                     publishedDate = metadata.publishedDate,
                     addedAt = Instant.now(),
-                    downloadedAt = Instant.now(),
+                    downloadedAt = Instant.now()
                 )
                 bookRepository.addLocalBook(book)
             }.onFailure {

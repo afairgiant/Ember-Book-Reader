@@ -20,7 +20,7 @@ enum class HighlightColor(val argb: Long, val hex: String) {
             "F472B6" to PINK,
             "FFB6C1" to PINK,
             "FB923C" to ORANGE,
-            "FFD580" to ORANGE,
+            "FFD580" to ORANGE
         )
 
         fun fromHex(hex: String?): HighlightColor {

@@ -32,7 +32,6 @@ import com.ember.reader.R
 import com.ember.reader.core.repository.ThemeMode
 import com.ember.reader.ui.reader.common.ReaderPreferencesContent
 import com.ember.reader.ui.settings.components.SettingsDetailRow
-import com.ember.reader.ui.settings.components.SettingsDivider
 import com.ember.reader.ui.settings.components.SettingsGroup
 import com.ember.reader.ui.settings.components.SettingsToggleRow
 
@@ -41,7 +40,7 @@ import com.ember.reader.ui.settings.components.SettingsToggleRow
 fun AppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
-    readerDefaultsViewModel: ReaderDefaultsViewModel = hiltViewModel(),
+    readerDefaultsViewModel: ReaderDefaultsViewModel = hiltViewModel()
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
@@ -57,29 +56,29 @@ fun AppearanceSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SettingsGroup(title = "Theme") {
                 SettingsDetailRow(
                     icon = Icons.Default.DarkMode,
-                    title = "Theme",
+                    title = "Theme"
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ThemeMode.entries.forEach { mode ->
                             FilterChip(
                                 selected = themeMode == mode,
                                 onClick = { viewModel.updateThemeMode(mode) },
-                                label = { Text(mode.displayName) },
+                                label = { Text(mode.displayName) }
                             )
                         }
                     }
@@ -92,7 +91,7 @@ fun AppearanceSettingsScreen(
                     title = stringResource(R.string.keep_screen_on),
                     subtitle = "Prevent screen timeout while reading",
                     checked = keepScreenOn,
-                    onCheckedChange = { viewModel.updateKeepScreenOn(it) },
+                    onCheckedChange = { viewModel.updateKeepScreenOn(it) }
                 )
             }
 
@@ -102,12 +101,12 @@ fun AppearanceSettingsScreen(
                         text = "These settings apply to every book unless that book has its own customizations.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
                     ReaderPreferencesContent(
                         preferences = readerDefaults,
                         onPreferencesChanged = readerDefaultsViewModel::updatePreferences,
-                        isPdf = false,
+                        isPdf = false
                     )
                 }
             }

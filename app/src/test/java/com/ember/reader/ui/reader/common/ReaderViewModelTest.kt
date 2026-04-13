@@ -79,7 +79,8 @@ class ReaderViewModelTest {
     private lateinit var appPreferencesRepository: AppPreferencesRepository
 
     @MockK(relaxed = true)
-    private lateinit var bookReaderPreferencesRepository: com.ember.reader.core.repository.BookReaderPreferencesRepository
+    private lateinit var bookReaderPreferencesRepository:
+        com.ember.reader.core.repository.BookReaderPreferencesRepository
 
     @MockK(relaxed = true)
     private lateinit var progressSyncManager: com.ember.reader.core.sync.ProgressSyncManager
@@ -121,7 +122,7 @@ class ReaderViewModelTest {
             readingSessionRepository = readingSessionRepository,
             appPreferencesRepository = appPreferencesRepository,
             progressSyncManager = progressSyncManager,
-            dictionaryRepository = dictionaryRepository,
+            dictionaryRepository = dictionaryRepository
         )
     }
 

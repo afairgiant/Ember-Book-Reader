@@ -19,9 +19,9 @@ import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookReaderPreferencesEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.CatalogEntryPreferenceEntity
+import com.ember.reader.core.database.entity.DictionaryEntryEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
-import com.ember.reader.core.database.entity.DictionaryEntryEntity
 import com.ember.reader.core.database.entity.ReadingSessionEntity
 import com.ember.reader.core.database.entity.ServerEntity
 
@@ -35,7 +35,7 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingSessionEntity::class,
         DictionaryEntryEntity::class,
         BookReaderPreferencesEntity::class,
-        CatalogEntryPreferenceEntity::class,
+        CatalogEntryPreferenceEntity::class
     ],
     version = 11,
     exportSchema = true

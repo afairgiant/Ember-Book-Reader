@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryClient
@@ -21,9 +20,8 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
-import com.ember.reader.ui.organize.OrganizeFilesViewModel
-import timber.log.Timber
 import com.ember.reader.ui.download.DownloadService
+import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -34,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @HiltViewModel
 class BookDetailViewModel @Inject constructor(
@@ -47,7 +46,7 @@ class BookDetailViewModel @Inject constructor(
     private val hardcoverClient: HardcoverClient,
     private val hardcoverTokenManager: HardcoverTokenManager,
     val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -157,7 +156,8 @@ class BookDetailViewModel @Inject constructor(
                             title = appBook.title,
                             author = appBook.authors.firstOrNull(),
                             coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
-                            localBookId = null, // resolved below
+                            // resolved below
+                            localBookId = null
                         )
                     }
                 // Ensure local book entries exist (same as recently added)
@@ -169,7 +169,7 @@ class BookDetailViewModel @Inject constructor(
                         title = item.title,
                         author = item.author,
                         coverUrl = item.coverUrl,
-                        format = com.ember.reader.core.model.BookFormat.EPUB,
+                        format = com.ember.reader.core.model.BookFormat.EPUB
                     )
                     item.copy(localBookId = localId)
                 }
@@ -250,5 +250,5 @@ data class SeriesBookItem(
     val title: String,
     val author: String?,
     val coverUrl: String,
-    val localBookId: String?,
+    val localBookId: String?
 )

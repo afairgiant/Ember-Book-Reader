@@ -13,5 +13,5 @@ import java.time.Instant
 data class BookReaderPreferencesEntity(
     @PrimaryKey val bookId: String,
     val preferencesJson: String,
-    val updatedAt: Instant,
+    val updatedAt: Instant
 )

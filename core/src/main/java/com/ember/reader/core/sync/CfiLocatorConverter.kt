@@ -41,7 +41,7 @@ object CfiLocatorConverter {
     fun buildLocatorJson(
         cfi: String,
         selectedText: String? = null,
-        chapterTitle: String? = null,
+        chapterTitle: String? = null
     ): String {
         // Normalize: ensure single epubcfi() wrapping
         val normalizedCfi = if (cfi.startsWith("epubcfi(")) cfi else "epubcfi($cfi)"

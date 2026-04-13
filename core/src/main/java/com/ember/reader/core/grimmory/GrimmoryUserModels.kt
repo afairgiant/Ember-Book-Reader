@@ -13,12 +13,12 @@ import kotlinx.serialization.Serializable
 data class GrimmoryUser(
     val id: Long,
     val username: String,
-    val permissions: GrimmoryUserPermissions = GrimmoryUserPermissions(),
+    val permissions: GrimmoryUserPermissions = GrimmoryUserPermissions()
 )
 
 @Serializable
 data class GrimmoryUserPermissions(
     val isAdmin: Boolean = false,
     val canManageLibrary: Boolean = false,
-    val canMoveOrganizeFiles: Boolean = false,
+    val canMoveOrganizeFiles: Boolean = false
 )

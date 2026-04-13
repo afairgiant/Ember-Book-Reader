@@ -1,11 +1,9 @@
 package com.ember.reader.ui.reader.audiobook
 
 import android.content.Intent
-import android.os.IBinder
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
@@ -32,7 +30,8 @@ class AudiobookPlaybackService : MediaSessionService() {
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
                     .build(),
-                true // handleAudioFocus
+                // handleAudioFocus
+                true
             )
             .setHandleAudioBecomingNoisy(true) // pause when headphones disconnected
             .build()

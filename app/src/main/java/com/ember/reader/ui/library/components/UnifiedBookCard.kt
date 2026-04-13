@@ -38,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,7 +51,7 @@ data class CardInfoToggles(
     val showProgress: Boolean = true,
     val showAuthor: Boolean = true,
     val showSourceBadge: Boolean = true,
-    val showFormatBadge: Boolean = false,
+    val showFormatBadge: Boolean = false
 )
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -68,7 +67,7 @@ fun UnifiedBookCard(
     onDelete: () -> Unit = {},
     onRelink: (() -> Unit)? = null,
     onPullProgress: (() -> Unit)? = null,
-    onPushProgress: (() -> Unit)? = null,
+    onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isFromServer = book.serverId != null
@@ -78,22 +77,25 @@ fun UnifiedBookCard(
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.67f),
+                    .aspectRatio(0.67f)
             ) {
                 BookCoverImage(
                     book = book,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                 )
 
                 if (isSelecting) {
@@ -102,50 +104,62 @@ fun UnifiedBookCard(
                         onCheckedChange = { onClick() },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp),
+                            .padding(2.dp)
                     )
                 } else {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp),
+                            .padding(2.dp)
                     ) {
                         IconButton(
                             onClick = { showMenu = true },
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
                                 contentDescription = stringResource(R.string.more_options),
                                 tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         DropdownMenu(
                             expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
+                            onDismissRequest = { showMenu = false }
                         ) {
                             if (onRelink != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.relink_to_server)) },
-                                    onClick = { showMenu = false; onRelink() },
+                                    onClick = {
+                                        showMenu = false
+                                        onRelink()
+                                    }
                                 )
                             }
                             if (onPullProgress != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.pull_progress)) },
-                                    onClick = { showMenu = false; onPullProgress() },
+                                    onClick = {
+                                        showMenu = false
+                                        onPullProgress()
+                                    }
                                 )
                             }
                             if (onPushProgress != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.push_progress)) },
-                                    onClick = { showMenu = false; onPushProgress() },
+                                    onClick = {
+                                        showMenu = false
+                                        onPushProgress()
+                                    }
                                 )
                             }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete)) },
-                                onClick = { showMenu = false; onDelete() },
+                                onClick = {
+                                    showMenu = false
+                                    onDelete()
+                                }
                             )
                         }
                     }
@@ -158,26 +172,29 @@ fun UnifiedBookCard(
                             .padding(6.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(
-                                if (isFromServer) MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                                else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f)
-                            ),
+                                if (isFromServer) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                                } else {
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f)
+                                }
+                            )
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 if (isFromServer) Icons.Default.CloudDone else Icons.Default.PhoneAndroid,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(12.dp),
+                                modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
                                 text = if (isFromServer) stringResource(R.string.source_server) else stringResource(R.string.source_local),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = Color.White
                             )
                         }
                     }
@@ -189,13 +206,13 @@ fun UnifiedBookCard(
                             .align(Alignment.BottomStart)
                             .padding(6.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)),
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
                     ) {
                         Text(
                             text = book.format.name,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            color = Color.White
                         )
                     }
                 }
@@ -207,7 +224,7 @@ fun UnifiedBookCard(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (info.showAuthor) {
                     book.author?.let {
@@ -216,7 +233,7 @@ fun UnifiedBookCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -228,13 +245,13 @@ fun UnifiedBookCard(
                             .fillMaxWidth()
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp)),
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                     Text(
                         text = "${(progress * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }
@@ -257,7 +274,7 @@ fun UnifiedBookListRow(
     onDelete: () -> Unit = {},
     onRelink: (() -> Unit)? = null,
     onPullProgress: (() -> Unit)? = null,
-    onPushProgress: (() -> Unit)? = null,
+    onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isFromServer = book.serverId != null
@@ -269,23 +286,26 @@ fun UnifiedBookListRow(
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         ),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(10.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = if (compact) 8.dp else 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (!compact) {
                 BookCoverImage(
                     book = book,
                     modifier = Modifier
                         .size(width = coverWidth, height = coverHeight)
-                        .clip(RoundedCornerShape(6.dp)),
+                        .clip(RoundedCornerShape(6.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }
@@ -296,7 +316,7 @@ fun UnifiedBookListRow(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = if (compact) 1 else 2,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (info.showAuthor) {
                     book.author?.let {
@@ -305,7 +325,7 @@ fun UnifiedBookListRow(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -317,7 +337,7 @@ fun UnifiedBookListRow(
                             .fillMaxWidth()
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp)),
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                 }
             }
@@ -329,14 +349,14 @@ fun UnifiedBookListRow(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .padding(start = 8.dp)
-                        .size(16.dp),
+                        .size(16.dp)
                 )
             }
 
             if (isSelecting) {
                 Checkbox(
                     checked = isSelected,
-                    onCheckedChange = { onClick() },
+                    onCheckedChange = { onClick() }
                 )
             } else {
                 IconButton(onClick = { showMenu = true }) {
@@ -344,29 +364,41 @@ fun UnifiedBookListRow(
                 }
                 DropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
+                    onDismissRequest = { showMenu = false }
                 ) {
                     if (onRelink != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.relink_to_server)) },
-                            onClick = { showMenu = false; onRelink() },
+                            onClick = {
+                                showMenu = false
+                                onRelink()
+                            }
                         )
                     }
                     if (onPullProgress != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.pull_progress)) },
-                            onClick = { showMenu = false; onPullProgress() },
+                            onClick = {
+                                showMenu = false
+                                onPullProgress()
+                            }
                         )
                     }
                     if (onPushProgress != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.push_progress)) },
-                            onClick = { showMenu = false; onPushProgress() },
+                            onClick = {
+                                showMenu = false
+                                onPushProgress()
+                            }
                         )
                     }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.delete)) },
-                        onClick = { showMenu = false; onDelete() },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        }
                     )
                 }
             }

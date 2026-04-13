@@ -14,7 +14,7 @@ data class Server(
     val grimmoryPassword: String = "",
     val isGrimmory: Boolean = false,
     val lastConnected: Instant? = null,
-    val canMoveOrganizeFiles: Boolean = false,
+    val canMoveOrganizeFiles: Boolean = false
 ) {
     /** Returns the OPDS feed URL — appends the known OPDS path for Grimmory servers. */
     val opdsUrl: String

@@ -27,5 +27,5 @@ data class BookmarkEntity(
     val createdAt: Instant,
     val remoteId: Long? = null,
     val updatedAt: Instant = Instant.now(),
-    val deletedAt: Instant? = null,
+    val deletedAt: Instant? = null
 )

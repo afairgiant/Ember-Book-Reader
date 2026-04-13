@@ -111,7 +111,7 @@ class OpdsClient @Inject constructor(
         password: String,
         downloadPath: String,
         destination: File,
-        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null
     ): Result<Unit> = runCatching {
         val url = resolveUrl(baseUrl, downloadPath)
         httpClient.prepareGet(url) {

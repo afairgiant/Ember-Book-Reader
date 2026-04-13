@@ -2,10 +2,10 @@ package com.ember.reader.ui.settings.stats
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.GrimmoryFavoriteDay
@@ -15,7 +15,7 @@ import com.ember.reader.core.grimmory.GrimmoryPeakHour
 fun PatternsSection(stats: StatsData, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionHeader(title = stringResource(R.string.stats_reading_patterns))
 
@@ -41,7 +41,7 @@ private fun PeakHoursChart(hours: List<GrimmoryPeakHour>) {
             BarChartEntry(
                 label = String.format("%02d:00", hour),
                 value = peakHour.totalDurationSeconds,
-                trailingText = peakHour.totalDurationSeconds.formatDuration(),
+                trailingText = peakHour.totalDurationSeconds.formatDuration()
             )
         } else {
             null
@@ -50,7 +50,7 @@ private fun PeakHoursChart(hours: List<GrimmoryPeakHour>) {
 
     HorizontalBarChart(
         entries = entries,
-        barColor = MaterialTheme.colorScheme.tertiary,
+        barColor = MaterialTheme.colorScheme.tertiary
     )
 }
 
@@ -64,7 +64,7 @@ private fun FavoriteDaysChart(days: List<GrimmoryFavoriteDay>) {
         BarChartEntry(
             label = day.dayName.take(3),
             value = day.totalDurationSeconds,
-            trailingText = day.totalDurationSeconds.formatDuration(),
+            trailingText = day.totalDurationSeconds.formatDuration()
         )
     }
 
@@ -72,6 +72,6 @@ private fun FavoriteDaysChart(days: List<GrimmoryFavoriteDay>) {
         entries = entries,
         barColor = MaterialTheme.colorScheme.tertiary,
         barHeight = 20.dp,
-        labelWidth = 32.dp,
+        labelWidth = 32.dp
     )
 }

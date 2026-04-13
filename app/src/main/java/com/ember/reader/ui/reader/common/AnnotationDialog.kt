@@ -35,8 +35,11 @@ fun AnnotationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (onDelete != null) stringResource(R.string.edit_highlight)
-                else stringResource(R.string.add_note)
+                if (onDelete != null) {
+                    stringResource(R.string.edit_highlight)
+                } else {
+                    stringResource(R.string.add_note)
+                }
             )
         },
         text = {

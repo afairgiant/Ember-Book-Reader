@@ -42,11 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
@@ -61,7 +61,7 @@ fun ReaderPreferencesSheet(
     onDismiss: () -> Unit,
     isPdf: Boolean = false,
     hasOverride: Boolean = false,
-    onResetToDefaults: (() -> Unit)? = null,
+    onResetToDefaults: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -88,13 +88,16 @@ fun ReaderPreferencesSheet(
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (hasOverride) "Custom settings for this book"
-                    else "Using global defaults",
+                    text = if (hasOverride) {
+                        "Custom settings for this book"
+                    } else {
+                        "Using global defaults"
+                    },
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (hasOverride && onResetToDefaults != null) {
                     TextButton(onClick = onResetToDefaults) {
@@ -106,7 +109,7 @@ fun ReaderPreferencesSheet(
             ReaderPreferencesContent(
                 preferences = preferences,
                 onPreferencesChanged = onPreferencesChanged,
-                isPdf = isPdf,
+                isPdf = isPdf
             )
         }
     }
@@ -122,20 +125,20 @@ fun ReaderPreferencesSheet(
 fun ReaderPreferencesContent(
     preferences: ReaderPreferences,
     onPreferencesChanged: (ReaderPreferences) -> Unit,
-    isPdf: Boolean = false,
+    isPdf: Boolean = false
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // PDF-specific controls
         if (isPdf) {
             SectionLabel("Page Fit")
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 com.ember.reader.core.model.PdfFitMode.entries.forEach { mode ->
                     FilterChip(
                         selected = preferences.pdfFitMode == mode,
                         onClick = { onPreferencesChanged(preferences.copy(pdfFitMode = mode)) },
-                        label = { Text(mode.displayName) },
+                        label = { Text(mode.displayName) }
                     )
                 }
             }
@@ -150,12 +153,12 @@ fun ReaderPreferencesContent(
                 },
                 valueRange = 0f..30f,
                 steps = 5,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "${preferences.pdfPageSpacing.toInt()} pt",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -367,14 +370,14 @@ fun ReaderPreferencesContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Volume buttons turn pages", style = MaterialTheme.typography.bodyMedium)
             Switch(
                 checked = preferences.volumePageTurn,
                 onCheckedChange = {
                     onPreferencesChanged(preferences.copy(volumePageTurn = it))
-                },
+                }
             )
         }
 

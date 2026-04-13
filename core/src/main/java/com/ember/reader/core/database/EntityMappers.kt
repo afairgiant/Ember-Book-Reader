@@ -29,7 +29,7 @@ fun ServerEntity.toDomain(
     grimmoryPassword = grimmoryPassword,
     isGrimmory = isGrimmory,
     lastConnected = lastConnected,
-    canMoveOrganizeFiles = canMoveOrganizeFiles,
+    canMoveOrganizeFiles = canMoveOrganizeFiles
 )
 
 fun Server.toEntity(): ServerEntity = ServerEntity(
@@ -41,7 +41,7 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     grimmoryUsername = grimmoryUsername,
     isGrimmory = isGrimmory,
     lastConnected = lastConnected,
-    canMoveOrganizeFiles = canMoveOrganizeFiles,
+    canMoveOrganizeFiles = canMoveOrganizeFiles
 )
 
 fun BookEntity.toDomain(): Book = Book(
@@ -120,7 +120,7 @@ fun BookmarkEntity.toDomain(): Bookmark = Bookmark(
     createdAt = createdAt,
     remoteId = remoteId,
     updatedAt = updatedAt,
-    deletedAt = deletedAt,
+    deletedAt = deletedAt
 )
 
 fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
@@ -131,7 +131,7 @@ fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
     createdAt = createdAt,
     remoteId = remoteId,
     updatedAt = updatedAt,
-    deletedAt = deletedAt,
+    deletedAt = deletedAt
 )
 
 fun HighlightEntity.toDomain(): Highlight = Highlight(
@@ -144,7 +144,7 @@ fun HighlightEntity.toDomain(): Highlight = Highlight(
     createdAt = createdAt,
     remoteId = remoteId,
     updatedAt = updatedAt,
-    deletedAt = deletedAt,
+    deletedAt = deletedAt
 )
 
 fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
@@ -157,7 +157,7 @@ fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
     createdAt = createdAt,
     remoteId = remoteId,
     updatedAt = updatedAt,
-    deletedAt = deletedAt,
+    deletedAt = deletedAt
 )
 
 fun ReadingSessionEntity.toDomain(): ReadingSession = ReadingSession(

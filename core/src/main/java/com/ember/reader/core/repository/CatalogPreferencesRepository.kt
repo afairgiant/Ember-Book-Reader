@@ -2,13 +2,13 @@ package com.ember.reader.core.repository
 
 import com.ember.reader.core.database.dao.CatalogEntryPreferenceDao
 import com.ember.reader.core.database.entity.CatalogEntryPreferenceEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 @Singleton
 class CatalogPreferencesRepository @Inject constructor(
-    private val dao: CatalogEntryPreferenceDao,
+    private val dao: CatalogEntryPreferenceDao
 ) {
 
     fun observePreferences(serverId: Long): Flow<List<CatalogEntryPreferenceEntity>> =
@@ -18,7 +18,7 @@ class CatalogPreferencesRepository @Inject constructor(
         val existing = dao.getByServer(serverId).find { it.entryId == entryId }
         dao.upsert(
             (existing ?: CatalogEntryPreferenceEntity(serverId = serverId, entryId = entryId))
-                .copy(hidden = true),
+                .copy(hidden = true)
         )
     }
 

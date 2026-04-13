@@ -174,7 +174,7 @@ class BookRepositoryTest {
         coEvery { bookDao.insert(any()) } returns Unit
         coEvery { bookDao.updateFileHash(any(), any()) } returns Unit
         coEvery { metadataExtractor.extractMetadata(any()) } returns BookMetadata(
-            title = "Local Book", author = null, coverUrl = null,
+            title = "Local Book", author = null, coverUrl = null
         )
 
         repository.addLocalBook(book)

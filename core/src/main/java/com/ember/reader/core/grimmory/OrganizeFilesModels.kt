@@ -14,14 +14,14 @@ data class GrimmoryLibraryFull(
     val id: Long,
     val name: String,
     val fileNamingPattern: String? = null,
-    val paths: List<GrimmoryLibraryPath> = emptyList(),
+    val paths: List<GrimmoryLibraryPath> = emptyList()
 )
 
 @Serializable
 data class GrimmoryLibraryPath(
     val id: Long,
     val libraryId: Long? = null,
-    val path: String,
+    val path: String
 )
 
 /**
@@ -32,12 +32,12 @@ data class GrimmoryLibraryPath(
 @Serializable
 data class FileMoveRequest(
     val bookIds: Set<Long>,
-    val moves: List<FileMoveItem>,
+    val moves: List<FileMoveItem>
 )
 
 @Serializable
 data class FileMoveItem(
     val bookId: Long,
     val targetLibraryId: Long,
-    val targetLibraryPathId: Long,
+    val targetLibraryPathId: Long
 )

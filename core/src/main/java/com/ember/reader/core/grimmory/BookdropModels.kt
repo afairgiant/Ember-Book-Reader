@@ -11,7 +11,7 @@ data class BookdropFile(
     val originalMetadata: BookdropMetadata? = null,
     val fetchedMetadata: BookdropMetadata? = null,
     val status: String? = null,
-    val createdAt: String? = null,
+    val createdAt: String? = null
 )
 
 @Serializable
@@ -41,13 +41,13 @@ data class BookdropMetadata(
     val hardcoverId: String? = null,
     val hardcoverBookId: String? = null,
     val hardcoverRating: Double? = null,
-    val hardcoverReviewCount: Int? = null,
+    val hardcoverReviewCount: Int? = null
 )
 
 @Serializable
 data class BookdropNotification(
     val pendingCount: Int = 0,
-    val totalCount: Int = 0,
+    val totalCount: Int = 0
 )
 
 @Serializable
@@ -56,7 +56,7 @@ data class BookdropFinalizeRequest(
     val excludedIds: List<Long>? = null,
     val files: List<BookdropFinalizeFile>,
     val defaultLibraryId: Long? = null,
-    val defaultPathId: Long? = null,
+    val defaultPathId: Long? = null
 )
 
 @Serializable
@@ -64,20 +64,20 @@ data class BookdropFinalizeFile(
     val fileId: Long,
     val libraryId: Long,
     val pathId: Long? = null,
-    val metadata: BookdropMetadata? = null,
+    val metadata: BookdropMetadata? = null
 )
 
 @Serializable
 data class BookdropFinalizeResult(
     val totalFiles: Int = 0,
     val successfullyImported: Int = 0,
-    val failed: Int = 0,
+    val failed: Int = 0
 )
 
 @Serializable
 data class BookdropPage<T>(
     val content: List<T> = emptyList(),
-    val page: BookdropPageInfo = BookdropPageInfo(),
+    val page: BookdropPageInfo = BookdropPageInfo()
 )
 
 @Serializable
@@ -85,20 +85,20 @@ data class BookdropPageInfo(
     val size: Int = 20,
     val number: Int = 0,
     val totalElements: Long = 0,
-    val totalPages: Int = 0,
+    val totalPages: Int = 0
 )
 
 @Serializable
 data class BookdropDiscardRequest(
     val selectAll: Boolean = false,
     val excludedIds: List<Long>? = null,
-    val selectedIds: List<Long>? = null,
+    val selectedIds: List<Long>? = null
 )
 
 @Serializable
 data class LibraryPathSummary(
     val id: Long,
-    val path: String,
+    val path: String
 )
 
 @Serializable
@@ -107,5 +107,5 @@ data class GrimmoryAppLibraryWithPaths(
     val name: String,
     val icon: String? = null,
     val bookCount: Int = 0,
-    val paths: List<LibraryPathSummary> = emptyList(),
+    val paths: List<LibraryPathSummary> = emptyList()
 )

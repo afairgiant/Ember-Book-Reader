@@ -1,16 +1,20 @@
 package com.ember.reader.ui.reader.epub
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
 import android.view.WindowManager
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -18,8 +22,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,16 +29,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.view.ActionMode
-import android.view.Menu
-import android.view.MenuItem
 import com.ember.reader.R
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
@@ -48,20 +46,19 @@ import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.AnnotationDialog
 import com.ember.reader.ui.reader.common.BookmarksSheet
+import com.ember.reader.ui.reader.common.DictionarySheet
 import com.ember.reader.ui.reader.common.HighlightColorPicker
 import com.ember.reader.ui.reader.common.HighlightsSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
-import com.ember.reader.core.dictionary.DictionaryRepository
-import com.ember.reader.ui.reader.common.DictionarySheet
 import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
-import org.readium.r2.navigator.Selection
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -238,7 +235,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     }
                 },
                 brightness = preferences.brightness,
-                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
+                onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) }
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -412,7 +409,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         showColorPicker = false
                         pendingSelection = null
                     },
-                    title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.highlight_action)) },
+                    title = {
+                        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.highlight_action))
+                    },
                     text = {
                         HighlightColorPicker(
                             selectedColor = HighlightColor.YELLOW,
@@ -501,7 +500,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                     chapterTitle,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
                             OutlinedTextField(
@@ -509,7 +508,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                 onValueChange = { bookmarkName = it },
                                 label = { Text("Name (optional)") },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     },
@@ -523,7 +522,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         TextButton(onClick = {
                             showBookmarkDialog = false
                         }) { Text("Cancel") }
-                    },
+                    }
                 )
             }
 
@@ -556,7 +555,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 DictionarySheet(
                     word = word,
                     dictionaryRepository = viewModel.dictionaryRepository,
-                    onDismiss = { dictionaryWord = null },
+                    onDismiss = { dictionaryWord = null }
                 )
             }
 
@@ -566,7 +565,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     onPreferencesChanged = viewModel::updatePreferences,
                     onDismiss = { showPreferences = false },
                     hasOverride = hasBookOverride,
-                    onResetToDefaults = viewModel::resetPreferencesToDefaults,
+                    onResetToDefaults = viewModel::resetPreferencesToDefaults
                 )
             }
 
@@ -605,10 +604,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 }
 
 @Composable
-private fun TapZoneHintOverlay(
-    preferences: ReaderPreferences,
-    onDismiss: () -> Unit
-) {
+private fun TapZoneHintOverlay(preferences: ReaderPreferences, onDismiss: () -> Unit) {
     androidx.compose.foundation.layout.Box(
         modifier = androidx.compose.ui.Modifier
             .fillMaxSize()
@@ -729,4 +725,3 @@ private fun android.content.Context.launchIntentOrFallback(intent: Intent, fallb
         startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(fallbackUrl)))
     }
 }
-

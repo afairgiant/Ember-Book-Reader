@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 @HiltViewModel
 class BrowseViewModel @Inject constructor(
     serverRepository: ServerRepository,
-    private val hardcoverTokenManager: HardcoverTokenManager,
+    private val hardcoverTokenManager: HardcoverTokenManager
 ) : ViewModel() {
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

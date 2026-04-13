@@ -29,17 +29,17 @@ import androidx.compose.ui.unit.dp
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
-    trailing: @Composable (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.SemiBold
         )
         trailing?.invoke()
     }
@@ -50,28 +50,28 @@ fun StatMiniCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -82,28 +82,28 @@ fun TimeCard(
     label: String,
     seconds: Long,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier,
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = seconds.formatDuration(),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -112,7 +112,7 @@ fun TimeCard(
 data class BarChartEntry(
     val label: String,
     val value: Long,
-    val trailingText: String = "",
+    val trailingText: String = ""
 )
 
 @Composable
@@ -122,25 +122,25 @@ fun HorizontalBarChart(
     barColor: Color = MaterialTheme.colorScheme.primary,
     barHeight: Dp = 16.dp,
     labelWidth: Dp = 44.dp,
-    trailingWidth: Dp = 48.dp,
+    trailingWidth: Dp = 48.dp
 ) {
     val maxValue = entries.maxOfOrNull { it.value } ?: 1L
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             for (entry in entries) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = entry.label,
@@ -148,12 +148,12 @@ fun HorizontalBarChart(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(labelWidth),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(barHeight),
+                            .height(barHeight)
                     ) {
                         val fraction = entry.value.toFloat() / maxValue
                         Box(
@@ -161,7 +161,7 @@ fun HorizontalBarChart(
                                 .fillMaxWidth(fraction)
                                 .height(barHeight)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(barColor.copy(alpha = 0.7f)),
+                                .background(barColor.copy(alpha = 0.7f))
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -169,7 +169,7 @@ fun HorizontalBarChart(
                         text = entry.trailingText,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(trailingWidth),
+                        modifier = Modifier.width(trailingWidth)
                     )
                 }
             }

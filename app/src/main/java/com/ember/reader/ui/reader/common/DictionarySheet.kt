@@ -35,16 +35,16 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import java.net.URLEncoder
 import com.ember.reader.core.dictionary.DictionaryRepository
 import com.ember.reader.core.dictionary.DictionaryResult
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DictionarySheet(
     word: String,
     dictionaryRepository: DictionaryRepository,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -56,36 +56,42 @@ fun DictionarySheet(
         isLoading = true
         error = null
         dictionaryRepository.lookup(word)
-            .onSuccess { result = it; isLoading = false }
-            .onFailure { error = it.message ?: "Definition not found"; isLoading = false }
+            .onSuccess {
+                result = it
+                isLoading = false
+            }
+            .onFailure {
+                error = it.message ?: "Definition not found"
+                isLoading = false
+            }
     }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 16.dp)
         ) {
             // Word header with Wiktionary link
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = word.trim(),
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                     result?.phonetic?.let { phonetic ->
                         Text(
                             text = phonetic,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -94,14 +100,14 @@ fun DictionarySheet(
                         val encoded = URLEncoder.encode(word.trim(), "UTF-8")
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            "https://en.wiktionary.org/wiki/$encoded".toUri(),
+                            "https://en.wiktionary.org/wiki/$encoded".toUri()
                         )
                         context.startActivity(intent)
-                    },
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = "Open in Wiktionary",
+                        contentDescription = "Open in Wiktionary"
                     )
                 }
             }
@@ -114,7 +120,7 @@ fun DictionarySheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 24.dp),
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     }
@@ -125,13 +131,13 @@ fun DictionarySheet(
                         text = "No definition found",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp),
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
 
                 result != null -> {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val defs = result!!.definitions
                         itemsIndexed(defs) { index, definition ->
@@ -141,18 +147,18 @@ fun DictionarySheet(
                                         text = "${index + 1}. ",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Column {
                                         Text(
                                             text = definition.partOfSpeech,
                                             style = MaterialTheme.typography.labelMedium,
                                             fontStyle = FontStyle.Italic,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                         Text(
                                             text = definition.meaning,
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            style = MaterialTheme.typography.bodyMedium
                                         )
                                         definition.example?.let { example ->
                                             Text(
@@ -160,7 +166,7 @@ fun DictionarySheet(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontStyle = FontStyle.Italic,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.padding(top = 4.dp),
+                                                modifier = Modifier.padding(top = 4.dp)
                                             )
                                         }
                                     }
@@ -168,7 +174,7 @@ fun DictionarySheet(
                                 if (index < defs.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(top = 8.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant,
+                                        color = MaterialTheme.colorScheme.outlineVariant
                                     )
                                 }
                             }

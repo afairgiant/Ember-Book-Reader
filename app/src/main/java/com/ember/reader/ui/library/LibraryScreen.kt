@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,8 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
@@ -63,22 +62,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import com.ember.reader.ui.organize.OrganizeFilesSheet
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ember.reader.ui.common.BookCoverImage
-import androidx.compose.ui.res.stringResource
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.ui.common.BookCoverImage
+import com.ember.reader.ui.organize.OrganizeFilesSheet
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,7 +124,7 @@ fun LibraryScreen(
                         }
                         DropdownMenu(
                             expanded = actionMenuOpen,
-                            onDismissRequest = { actionMenuOpen = false },
+                            onDismissRequest = { actionMenuOpen = false }
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Organize files…") },
@@ -134,10 +132,10 @@ fun LibraryScreen(
                                 onClick = {
                                     actionMenuOpen = false
                                     showOrganizeSheet = true
-                                },
+                                }
                             )
                         }
-                    },
+                    }
                 )
             } else {
                 TopAppBar(
@@ -159,7 +157,7 @@ fun LibraryScreen(
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurface
-                                },
+                                }
                             )
                         }
                         IconButton(onClick = viewModel::toggleViewMode) {
@@ -228,8 +226,11 @@ fun LibraryScreen(
                                 isSelecting = isSelecting,
                                 selectedIds = selectedBookIds,
                                 onBookClick = { book ->
-                                    if (isSelecting) viewModel.toggleSelection(book.id)
-                                    else onOpenBookDetail(book.id)
+                                    if (isSelecting) {
+                                        viewModel.toggleSelection(book.id)
+                                    } else {
+                                        onOpenBookDetail(book.id)
+                                    }
                                 },
                                 onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
                                 onDownloadClick = viewModel::downloadBook,
@@ -243,8 +244,11 @@ fun LibraryScreen(
                                 isSelecting = isSelecting,
                                 selectedIds = selectedBookIds,
                                 onBookClick = { book ->
-                                    if (isSelecting) viewModel.toggleSelection(book.id)
-                                    else onOpenBookDetail(book.id)
+                                    if (isSelecting) {
+                                        viewModel.toggleSelection(book.id)
+                                    } else {
+                                        onOpenBookDetail(book.id)
+                                    }
                                 },
                                 onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
                                 onDownloadClick = viewModel::downloadBook,
@@ -264,7 +268,7 @@ fun LibraryScreen(
             filterOptions = grimmoryFilterOptions,
             onApply = viewModel::updateGrimmoryFilter,
             onReset = viewModel::resetGrimmoryFilter,
-            onDismiss = { filterSheetOpen = false },
+            onDismiss = { filterSheetOpen = false }
         )
     }
 
@@ -284,7 +288,7 @@ fun LibraryScreen(
                 viewModel.organizeFilesViewModelFactory.create(
                     baseUrl = server.url,
                     serverId = server.id,
-                    bookIds = grimmoryBookIds,
+                    bookIds = grimmoryBookIds
                 )
             }
             OrganizeFilesSheet(
@@ -298,7 +302,7 @@ fun LibraryScreen(
                     viewModel.clearSelection()
                     viewModel.refresh()
                     showOrganizeSheet = false
-                },
+                }
             )
         } else {
             // Nothing movable — just close the sheet silently.
@@ -397,7 +401,7 @@ private fun BookGridItem(
                     book = book,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                 )
 
                 if (!book.isDownloaded && !isSelecting) {
@@ -427,18 +431,21 @@ private fun BookGridItem(
                             .padding(8.dp)
                             .size(28.dp)
                             .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else Color.Black.copy(alpha = 0.35f),
-                                shape = RoundedCornerShape(14.dp),
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    Color.Black.copy(alpha = 0.35f)
+                                },
+                                shape = RoundedCornerShape(14.dp)
                             ),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         if (isSelected) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -549,9 +556,12 @@ private fun BookListItem(
                 Icon(
                     imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.Check,
                     contentDescription = if (isSelected) "Selected" else "Not selected",
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }
@@ -561,7 +571,7 @@ private fun BookListItem(
                     book = book,
                     modifier = Modifier
                         .size(width = 48.dp, height = 72.dp)
-                        .clip(MaterialTheme.shapes.small),
+                        .clip(MaterialTheme.shapes.small)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             }

@@ -17,7 +17,7 @@ class FileNamingPatternResolverTest {
     fun `plain field substitution`() {
         assertEquals(
             "Dune.epub",
-            FileNamingPatternResolver.resolve("{title}.epub", mapOf("title" to "Dune")),
+            FileNamingPatternResolver.resolve("{title}.epub", mapOf("title" to "Dune"))
         )
     }
 
@@ -27,8 +27,8 @@ class FileNamingPatternResolverTest {
             "Frank Herbert/Dune",
             FileNamingPatternResolver.resolve(
                 "{authors}/{title}",
-                mapOf("authors" to "Frank Herbert", "title" to "Dune"),
-            ),
+                mapOf("authors" to "Frank Herbert", "title" to "Dune")
+            )
         )
     }
 
@@ -40,8 +40,8 @@ class FileNamingPatternResolverTest {
             "Frank Herbert/Dune",
             FileNamingPatternResolver.resolve(
                 "{authors:first}/{title}",
-                mapOf("authors" to "Frank Herbert, Brian Herbert", "title" to "Dune"),
-            ),
+                mapOf("authors" to "Frank Herbert, Brian Herbert", "title" to "Dune")
+            )
         )
     }
 
@@ -51,8 +51,8 @@ class FileNamingPatternResolverTest {
             "Herbert, Frank/Dune",
             FileNamingPatternResolver.resolve(
                 "{authors:sort}/{title}",
-                mapOf("authors" to "Frank Herbert", "title" to "Dune"),
-            ),
+                mapOf("authors" to "Frank Herbert", "title" to "Dune")
+            )
         )
     }
 
@@ -62,8 +62,8 @@ class FileNamingPatternResolverTest {
             "Homer/Iliad",
             FileNamingPatternResolver.resolve(
                 "{authors:sort}/{title}",
-                mapOf("authors" to "Homer", "title" to "Iliad"),
-            ),
+                mapOf("authors" to "Homer", "title" to "Iliad")
+            )
         )
     }
 
@@ -73,8 +73,8 @@ class FileNamingPatternResolverTest {
             "H/Dune",
             FileNamingPatternResolver.resolve(
                 "{authors:initial}/{title}",
-                mapOf("authors" to "Frank Herbert", "title" to "Dune"),
-            ),
+                mapOf("authors" to "Frank Herbert", "title" to "Dune")
+            )
         )
     }
 
@@ -84,8 +84,8 @@ class FileNamingPatternResolverTest {
             "D",
             FileNamingPatternResolver.resolve(
                 "{title:initial}",
-                mapOf("title" to "Dune"),
-            ),
+                mapOf("title" to "Dune")
+            )
         )
     }
 
@@ -93,7 +93,7 @@ class FileNamingPatternResolverTest {
     fun `upper modifier uppercases`() {
         assertEquals(
             "DUNE",
-            FileNamingPatternResolver.resolve("{title:upper}", mapOf("title" to "Dune")),
+            FileNamingPatternResolver.resolve("{title:upper}", mapOf("title" to "Dune"))
         )
     }
 
@@ -101,7 +101,7 @@ class FileNamingPatternResolverTest {
     fun `lower modifier lowercases`() {
         assertEquals(
             "dune",
-            FileNamingPatternResolver.resolve("{title:lower}", mapOf("title" to "DUNE")),
+            FileNamingPatternResolver.resolve("{title:lower}", mapOf("title" to "DUNE"))
         )
     }
 
@@ -109,7 +109,7 @@ class FileNamingPatternResolverTest {
     fun `unknown modifier returns value unchanged`() {
         assertEquals(
             "Dune",
-            FileNamingPatternResolver.resolve("{title:bogus}", mapOf("title" to "Dune")),
+            FileNamingPatternResolver.resolve("{title:bogus}", mapOf("title" to "Dune"))
         )
     }
 
@@ -121,8 +121,8 @@ class FileNamingPatternResolverTest {
             "Dune.Dune Chronicles",
             FileNamingPatternResolver.resolve(
                 "{title}<.{series}>",
-                mapOf("title" to "Dune", "series" to "Dune Chronicles"),
-            ),
+                mapOf("title" to "Dune", "series" to "Dune Chronicles")
+            )
         )
     }
 
@@ -132,8 +132,8 @@ class FileNamingPatternResolverTest {
             "Dune",
             FileNamingPatternResolver.resolve(
                 "{title}<.{series}>",
-                mapOf("title" to "Dune"),
-            ),
+                mapOf("title" to "Dune")
+            )
         )
     }
 
@@ -143,8 +143,8 @@ class FileNamingPatternResolverTest {
             "DuneNO_SERIES",
             FileNamingPatternResolver.resolve(
                 "{title}<.{series}|NO_SERIES>",
-                mapOf("title" to "Dune"),
-            ),
+                mapOf("title" to "Dune")
+            )
         )
     }
 
@@ -154,8 +154,8 @@ class FileNamingPatternResolverTest {
             "Dune1965",
             FileNamingPatternResolver.resolve(
                 "{title}<.{series}|{year}>",
-                mapOf("title" to "Dune", "year" to "1965"),
-            ),
+                mapOf("title" to "Dune", "year" to "1965")
+            )
         )
     }
 
@@ -181,8 +181,8 @@ class FileNamingPatternResolverTest {
                 "authors" to "Frank Herbert",
                 "series" to "Dune Chronicles",
                 "title" to "Dune",
-                "seriesIndex" to "01",
-            ),
+                "seriesIndex" to "01"
+            )
         )
         assertEquals("Herbert, Frank/Dune Chronicles/Dune #01", result)
     }
@@ -193,8 +193,8 @@ class FileNamingPatternResolverTest {
             "{authors:sort}/<{series}/>{title}< #{seriesIndex}>",
             mapOf(
                 "authors" to "Cormac McCarthy",
-                "title" to "Blood Meridian",
-            ),
+                "title" to "Blood Meridian"
+            )
         )
         assertEquals("McCarthy, Cormac/Blood Meridian", result)
     }

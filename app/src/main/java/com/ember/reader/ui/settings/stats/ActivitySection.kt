@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +37,7 @@ import java.time.ZoneId
 fun ActivitySection(stats: StatsData, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionHeader(title = stringResource(R.string.reading_activity))
 
@@ -70,27 +69,27 @@ private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             // Day-of-week labels on the left
             Column(
                 modifier = Modifier.padding(end = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (label in dayLabelsShort) {
                     Box(
                         modifier = Modifier.size(14.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         if (label.isNotEmpty()) {
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -102,9 +101,9 @@ private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
                 modifier = Modifier
                     .weight(1f)
                     .horizontalScroll(
-                        state = rememberScrollState(Int.MAX_VALUE),
+                        state = rememberScrollState(Int.MAX_VALUE)
                     ),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (weekDays in daysByWeek) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -114,8 +113,8 @@ private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
                                     .size(14.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(
-                                        if (day.active) activeColor else inactiveColor,
-                                    ),
+                                        if (day.active) activeColor else inactiveColor
+                                    )
                             )
                         }
                     }
@@ -135,27 +134,27 @@ private fun StreakCalendar(readingDays: Set<Long>) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             // Day-of-week labels on the left
             Column(
                 modifier = Modifier.padding(end = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (label in dayLabelsShort) {
                     Box(
                         modifier = Modifier.size(14.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         if (label.isNotEmpty()) {
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -165,12 +164,12 @@ private fun StreakCalendar(readingDays: Set<Long>) {
             // Grid — 12 weeks fits without scrolling on most phones
             Row(
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (weekIdx in (numWeeks - 1) downTo 0) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         for (dayOfWeek in 0 until 7) {
                             val daysAgo = weekIdx * 7 + (6 - dayOfWeek)
@@ -187,8 +186,8 @@ private fun StreakCalendar(readingDays: Set<Long>) {
                                     .size(14.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(
-                                        if (hasActivity) activeColor else inactiveColor,
-                                    ),
+                                        if (hasActivity) activeColor else inactiveColor
+                                    )
                             )
                         }
                     }
@@ -211,8 +210,8 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
         for (point in scatter) {
             // Grimmory dayOfWeek: 1=Sun, 2=Mon ... 7=Sat
             val dayIndex = when (point.dayOfWeek) {
-                1 -> 6    // Sun → row 6
-                else -> point.dayOfWeek - 2  // Mon=0, Tue=1, ..., Sat=5
+                1 -> 6 // Sun → row 6
+                else -> point.dayOfWeek - 2 // Mon=0, Tue=1, ..., Sat=5
             }
             val bucketIndex = (point.hourOfDay.toInt() / 4).coerceIn(0, 5)
             if (dayIndex in 0..6) {
@@ -231,17 +230,17 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.stats_session_patterns),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -252,12 +251,12 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
                 for (label in bucketLabels) {
                     Box(
                         modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -269,13 +268,13 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
             for (dayIndex in 0 until 7) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = dayLabels[dayIndex],
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(32.dp),
+                        modifier = Modifier.width(32.dp)
                     )
                     for (bucketIndex in 0 until 6) {
                         val value = grid[dayIndex][bucketIndex]
@@ -292,7 +291,7 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
                                 .padding(1.dp)
                                 .height(28.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(cellColor),
+                                .background(cellColor)
                         )
                     }
                 }
@@ -304,12 +303,12 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Less",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 for (i in 0..4) {
@@ -323,7 +322,7 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
                         modifier = Modifier
                             .size(12.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(color),
+                            .background(color)
                     )
                     if (i < 4) Spacer(modifier = Modifier.width(2.dp))
                 }
@@ -331,7 +330,7 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
                 Text(
                     text = "More",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

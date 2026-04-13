@@ -34,7 +34,7 @@ class BookRepository @Inject constructor(
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val bookDownloader: BookDownloader,
-    private val metadataExtractor: BookMetadataExtractor,
+    private val metadataExtractor: BookMetadataExtractor
 ) {
 
     private val booksDir: File by lazy {
@@ -89,7 +89,7 @@ class BookRepository @Inject constructor(
         title: String,
         author: String?,
         coverUrl: String?,
-        format: BookFormat,
+        format: BookFormat
     ): String {
         val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
         if (existing != null) return existing.id
@@ -100,7 +100,7 @@ class BookRepository @Inject constructor(
             title = title,
             author = author,
             coverUrl = coverUrl,
-            format = format,
+            format = format
         )
         bookDao.insert(book.toEntity())
         return book.id
@@ -164,7 +164,7 @@ class BookRepository @Inject constructor(
         minRating: Int? = null,
         maxRating: Int? = null,
         authors: String? = null,
-        language: String? = null,
+        language: String? = null
     ): Result<OpdsBookPage> {
         Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId magicShelfId=$magicShelfId status='$status' sort='$sort' dir='$dir' minRating=$minRating maxRating=$maxRating authors='$authors' language='$language'")
         val appPage = when {
@@ -184,7 +184,7 @@ class BookRepository @Inject constructor(
                 minRating = minRating,
                 maxRating = maxRating,
                 authors = authors,
-                language = language,
+                language = language
             )
         }
 
@@ -231,7 +231,7 @@ class BookRepository @Inject constructor(
                 baseUrl = server.url,
                 serverId = server.id,
                 page = page,
-                size = pageSize,
+                size = pageSize
             ).getOrElse { throw it }
 
             for (appBook in appPage.content) {
@@ -263,7 +263,7 @@ class BookRepository @Inject constructor(
                 password = server.opdsPassword,
                 serverId = server.id,
                 path = currentPath,
-                page = page,
+                page = page
             ).getOrElse { throw it }
 
             for (book in bookPage.books) {
@@ -277,7 +277,7 @@ class BookRepository @Inject constructor(
                             author = book.author,
                             description = book.description,
                             coverUrl = book.coverUrl,
-                            downloadUrl = book.downloadUrl,
+                            downloadUrl = book.downloadUrl
                         )
                     )
                 } else {
@@ -297,7 +297,7 @@ class BookRepository @Inject constructor(
         serverId: Long,
         origin: String,
         opdsEntryId: String,
-        appBook: GrimmoryAppBook,
+        appBook: GrimmoryAppBook
     ): String {
         val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
         val format = appBook.toBookFormat()
@@ -312,7 +312,7 @@ class BookRepository @Inject constructor(
                     coverUrl = coverUrl,
                     downloadUrl = downloadUrl,
                     series = appBook.seriesName,
-                    seriesIndex = appBook.seriesNumber,
+                    seriesIndex = appBook.seriesNumber
                 )
             )
             return existing.id
@@ -328,7 +328,7 @@ class BookRepository @Inject constructor(
                 format = format,
                 series = appBook.seriesName,
                 seriesIndex = appBook.seriesNumber,
-                addedAt = Instant.now(),
+                addedAt = Instant.now()
             )
             bookDao.insert(book.toEntity())
             return book.id
@@ -366,7 +366,7 @@ class BookRepository @Inject constructor(
     suspend fun downloadBook(
         book: Book,
         server: Server,
-        onProgress: ((DownloadProgress) -> Unit)? = null,
+        onProgress: ((DownloadProgress) -> Unit)? = null
     ): Result<Book> = bookDownloader.downloadBook(book, server, onProgress)
 
     suspend fun addLocalBook(book: Book) {
@@ -488,7 +488,8 @@ class BookRepository @Inject constructor(
                             book.title.contains(appBook.title, ignoreCase = true)
                         if (titleMatch) {
                             val opdsEntryId = grimmoryOpdsEntryId(appBook.id)
-                            val matchId = upsertGrimmoryBook(server.id, origin, opdsEntryId, appBook)
+                            val matchId =
+                                upsertGrimmoryBook(server.id, origin, opdsEntryId, appBook)
                             if (matchId != book.id) {
                                 Timber.d("Relink: found match via Grimmory search: '${appBook.title}' (${appBook.id})")
                                 return@withContext RelinkMatch(matchId, server.name, server.id)
@@ -602,7 +603,7 @@ class BookRepository @Inject constructor(
         language: String?,
         subjects: String?,
         pageCount: Int?,
-        publishedDate: String?,
+        publishedDate: String?
     ) {
         val entity = bookDao.getById(bookId) ?: return
         bookDao.update(
@@ -616,8 +617,8 @@ class BookRepository @Inject constructor(
                 language = language,
                 subjects = subjects,
                 pageCount = pageCount,
-                publishedDate = publishedDate,
-            ),
+                publishedDate = publishedDate
+            )
         )
     }
 
@@ -645,12 +646,15 @@ class BookRepository @Inject constructor(
     private fun grimmoryDownloadUrl(grimmoryBookId: Long): String =
         "/api/v1/opds/$grimmoryBookId/download"
 
-    private fun resolvedCoverUrl(baseUrl: String, appBook: GrimmoryAppBook, format: BookFormat): String =
-        if (format == BookFormat.AUDIOBOOK) {
-            grimmoryAppClient.audiobookCoverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
-        } else {
-            grimmoryAppClient.coverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
-        }
+    private fun resolvedCoverUrl(
+        baseUrl: String,
+        appBook: GrimmoryAppBook,
+        format: BookFormat
+    ): String = if (format == BookFormat.AUDIOBOOK) {
+        grimmoryAppClient.audiobookCoverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
+    } else {
+        grimmoryAppClient.coverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
+    }
 }
 
 private fun GrimmoryAppBook.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {

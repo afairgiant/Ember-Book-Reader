@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.media3.common.PlaybackException
 import com.ember.reader.core.grimmory.AudiobookChapter
 import com.ember.reader.core.grimmory.AudiobookInfo
 import com.ember.reader.core.grimmory.AudiobookTrack
@@ -116,7 +116,13 @@ class AudiobookViewModel @Inject constructor(
                 Timber.e(error, "Audiobook: failed to fetch audiobook info")
             }
         } else {
-            Timber.w("Audiobook: skipping info fetch server=%s isGrimmory=%s loggedIn=%s grimmoryBookId=%s", server?.id, server?.isGrimmory, server?.let { grimmoryTokenManager.isLoggedIn(it.id) }, grimmoryBookId)
+            Timber.w(
+                "Audiobook: skipping info fetch server=%s isGrimmory=%s loggedIn=%s grimmoryBookId=%s", server?.id, server?.isGrimmory,
+                server?.let {
+                    grimmoryTokenManager.isLoggedIn(it.id)
+                },
+                grimmoryBookId
+            )
         }
 
         audiobookInfo = info
@@ -130,8 +136,13 @@ class AudiobookViewModel @Inject constructor(
         connectToService(loadedBook, server, info)
     }
 
-    private fun connectToService(book: Book, server: com.ember.reader.core.model.Server?, info: AudiobookInfo?) {
-        val sessionToken = SessionToken(context, ComponentName(context, AudiobookPlaybackService::class.java))
+    private fun connectToService(
+        book: Book,
+        server: com.ember.reader.core.model.Server?,
+        info: AudiobookInfo?
+    ) {
+        val sessionToken =
+            SessionToken(context, ComponentName(context, AudiobookPlaybackService::class.java))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
 
         controllerFuture.addListener({
@@ -178,7 +189,7 @@ class AudiobookViewModel @Inject constructor(
     private suspend fun buildMediaItems(
         book: Book,
         server: com.ember.reader.core.model.Server?,
-        info: AudiobookInfo?,
+        info: AudiobookInfo?
     ): List<MediaItem> {
         // Build authenticated artwork URI for media notification
         val artworkUri = book.coverUrl?.let { rawUrl ->
@@ -237,7 +248,7 @@ class AudiobookViewModel @Inject constructor(
             Timber.d("Audiobook: building %d track stream URLs", tracks.size)
             return tracks.map { track ->
                 val trackUrl = grimmoryClient.audiobookStreamUrl(
-                    server.url, server.id, book.grimmoryBookId!!, track.index,
+                    server.url, server.id, book.grimmoryBookId!!, track.index
                 )
                 Timber.d("Audiobook: track %d url=%s", track.index, trackUrl?.take(80))
                 MediaItem.Builder()
@@ -318,9 +329,15 @@ class AudiobookViewModel @Inject constructor(
         }
     }
 
-    fun play() { controller?.play() }
-    fun pause() { controller?.pause() }
-    fun seekTo(positionMs: Long) { controller?.seekTo(positionMs) }
+    fun play() {
+        controller?.play()
+    }
+    fun pause() {
+        controller?.pause()
+    }
+    fun seekTo(positionMs: Long) {
+        controller?.seekTo(positionMs)
+    }
 
     fun skipForward() {
         val ctrl = controller ?: return
@@ -347,8 +364,9 @@ class AudiobookViewModel @Inject constructor(
         val ctrl = controller ?: return
         val pos = ctrl.currentPosition
         val next = _chapters.value.firstOrNull { it.startTimeMs > pos }
-        if (next != null) ctrl.seekTo(next.startTimeMs)
-        else if (ctrl.mediaItemCount > 1 && ctrl.currentMediaItemIndex < ctrl.mediaItemCount - 1) {
+        if (next != null) {
+            ctrl.seekTo(next.startTimeMs)
+        } else if (ctrl.mediaItemCount > 1 && ctrl.currentMediaItemIndex < ctrl.mediaItemCount - 1) {
             ctrl.seekToNextMediaItem()
         }
     }
@@ -364,8 +382,9 @@ class AudiobookViewModel @Inject constructor(
             val idx = _chapters.value.indexOf(currentChapter)
             if (idx > 0) _chapters.value[idx - 1] else null
         }
-        if (prevChapter != null) ctrl.seekTo(prevChapter.startTimeMs)
-        else if (ctrl.mediaItemCount > 1 && ctrl.currentMediaItemIndex > 0) {
+        if (prevChapter != null) {
+            ctrl.seekTo(prevChapter.startTimeMs)
+        } else if (ctrl.mediaItemCount > 1 && ctrl.currentMediaItemIndex > 0) {
             ctrl.seekToPreviousMediaItem()
         } else {
             ctrl.seekTo(0)
@@ -415,7 +434,7 @@ class AudiobookViewModel @Inject constructor(
             bookId = bookId,
             serverId = book?.serverId,
             percentage = percentage,
-            locatorJson = locatorJson,
+            locatorJson = locatorJson
         )
     }
 
@@ -450,7 +469,7 @@ class AudiobookViewModel @Inject constructor(
         position: Long,
         trackIndex: Int,
         duration: Long,
-        trackCount: Int,
+        trackCount: Int
     ) {
         if (duration <= 0) return
 
@@ -481,7 +500,7 @@ class AudiobookViewModel @Inject constructor(
             bookId = bookId,
             serverId = book?.serverId,
             percentage = percentage,
-            locatorJson = locatorJson,
+            locatorJson = locatorJson
         )
     }
 }

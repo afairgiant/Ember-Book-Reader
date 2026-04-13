@@ -8,7 +8,6 @@ import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
-import com.ember.reader.core.model.normalizeGrimmoryPercentage
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.repository.ReadingProgressRepository
 import javax.inject.Inject
@@ -19,14 +18,14 @@ import timber.log.Timber
 
 data class RemoteSyncResult(
     val progress: ReadingProgress,
-    val source: String,
+    val source: String
 )
 
 @Singleton
 class ProgressSyncManager @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val grimmoryTokenManager: GrimmoryTokenManager
 ) {
 
     /**
@@ -105,7 +104,7 @@ class ProgressSyncManager @Inject constructor(
             if (pct == null || pct <= 0f) return@runCatching null
             RemoteSyncResult(
                 progress = ReadingProgress.fromRemote(book.id, server.id, pct),
-                source = detail.koreaderProgress?.device ?: "Grimmory",
+                source = detail.koreaderProgress?.device ?: "Grimmory"
             )
         }.onFailure {
             Timber.w(it, "Failed to pull Grimmory progress for ${book.title}")
@@ -142,10 +141,10 @@ class ProgressSyncManager @Inject constructor(
                 request = GrimmoryProgressRequest(
                     bookId = grimmoryBookId,
                     fileProgress = fileId?.let { GrimmoryFileProgress(bookFileId = it, progressPercent = pct) },
-                    epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct),
-                ),
+                    epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
+                )
             ).getOrThrow()
-            Timber.d("Pushed Grimmory progress for ${book.title}: ${pct}%")
+            Timber.d("Pushed Grimmory progress for ${book.title}: $pct%")
         }.onFailure {
             Timber.w(it, "Failed to push Grimmory progress for ${book.title}")
         }.isSuccess

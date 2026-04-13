@@ -70,10 +70,7 @@ import com.ember.reader.ui.common.LoadingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookdropScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: BookdropViewModel = hiltViewModel(),
-) {
+fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -101,7 +98,7 @@ fun BookdropScreen(
                             modifier = Modifier
                                 .size(24.dp)
                                 .padding(end = 4.dp),
-                            strokeWidth = 2.dp,
+                            strokeWidth = 2.dp
                         )
                     }
                     IconButton(onClick = viewModel::rescan) {
@@ -109,24 +106,24 @@ fun BookdropScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         when (val state = uiState) {
             is BookdropUiState.Loading -> LoadingScreen(Modifier.padding(padding))
 
             is BookdropUiState.NoServer -> ErrorScreen(
                 message = "No Grimmory server connected",
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.padding(padding)
             )
 
             is BookdropUiState.Error -> ErrorScreen(
                 message = state.message,
                 modifier = Modifier.padding(padding),
-                onRetry = viewModel::refresh,
+                onRetry = viewModel::refresh
             )
 
             is BookdropUiState.Success -> {
@@ -142,7 +139,7 @@ fun BookdropScreen(
                     onApplyFetchedField = viewModel::applyFetchedField,
                     onUpdateField = viewModel::updateField,
                     onFinalize = viewModel::finalizeSelected,
-                    onDiscard = viewModel::discardSelected,
+                    onDiscard = viewModel::discardSelected
                 )
             }
         }
@@ -162,7 +159,7 @@ private fun BookdropContent(
     onApplyFetchedField: (Long, String) -> Unit,
     onUpdateField: (Long, String, String) -> Unit,
     onFinalize: () -> Unit,
-    onDiscard: () -> Unit,
+    onDiscard: () -> Unit
 ) {
     val checkedCount = state.files.count { it.isChecked }
     val allCheckedHaveLibrary = state.files.filter { it.isChecked }.all { it.libraryId != null }
@@ -171,27 +168,27 @@ private fun BookdropContent(
         // Controls bar
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             shape = RoundedCornerShape(0.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = onSelectAll,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text("All", style = MaterialTheme.typography.labelMedium)
                 }
                 OutlinedButton(
                     onClick = onDeselectAll,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text("None", style = MaterialTheme.typography.labelMedium)
                 }
@@ -203,13 +200,13 @@ private fun BookdropContent(
                     enabled = checkedCount > 0,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Icon(
                         Icons.Default.DeleteOutline,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Discard", style = MaterialTheme.typography.labelMedium)
@@ -217,11 +214,11 @@ private fun BookdropContent(
                 Button(
                     onClick = onFinalize,
                     enabled = checkedCount > 0 && allCheckedHaveLibrary,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
                         if (checkedCount > 0) "Finalize ($checkedCount)" else "Finalize",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
@@ -232,19 +229,19 @@ private fun BookdropContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(32.dp),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     "No pending files",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.files, key = { it.file.id }) { fileState ->
                     BookdropFileCard(
@@ -255,7 +252,7 @@ private fun BookdropContent(
                         onSelectLibrary = { libraryId -> onSelectFileLibrary(fileState.file.id, libraryId) },
                         onSelectPath = { pathId -> onSelectFilePath(fileState.file.id, pathId) },
                         onApplyFetchedField = { field -> onApplyFetchedField(fileState.file.id, field) },
-                        onUpdateField = { field, value -> onUpdateField(fileState.file.id, field, value) },
+                        onUpdateField = { field, value -> onUpdateField(fileState.file.id, field, value) }
                     )
                 }
             }
@@ -272,7 +269,7 @@ private fun BookdropFileCard(
     onSelectLibrary: (Long?) -> Unit,
     onSelectPath: (Long?) -> Unit,
     onApplyFetchedField: (String) -> Unit,
-    onUpdateField: (String, String) -> Unit,
+    onUpdateField: (String, String) -> Unit
 ) {
     val file = fileState.file
     val metadata = fileState.editedMetadata
@@ -281,10 +278,10 @@ private fun BookdropFileCard(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column {
             // Collapsed header
@@ -293,19 +290,25 @@ private fun BookdropFileCard(
                     .fillMaxWidth()
                     .clickable(onClick = onToggleExpanded)
                     .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onToggleChecked,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        if (fileState.isChecked) Icons.Default.CheckBox
-                        else Icons.Default.CheckBoxOutlineBlank,
+                        if (fileState.isChecked) {
+                            Icons.Default.CheckBox
+                        } else {
+                            Icons.Default.CheckBoxOutlineBlank
+                        },
                         contentDescription = if (fileState.isChecked) "Deselect" else "Select",
-                        tint = if (fileState.isChecked) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
+                        tint = if (fileState.isChecked) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -317,18 +320,18 @@ private fun BookdropFileCard(
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (authors.isNotEmpty() || format.isNotEmpty()) {
                         Text(
                             listOfNotNull(
                                 authors.ifEmpty { null },
-                                format.ifEmpty { null },
+                                format.ifEmpty { null }
                             ).joinToString(" \u00B7 "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -337,7 +340,7 @@ private fun BookdropFileCard(
                     if (fileState.isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (fileState.isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -345,7 +348,7 @@ private fun BookdropFileCard(
             AnimatedVisibility(
                 visible = fileState.isExpanded,
                 enter = expandVertically(),
-                exit = shrinkVertically(),
+                exit = shrinkVertically()
             ) {
                 Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
                     HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
@@ -356,20 +359,20 @@ private fun BookdropFileCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         LibraryDropdown(
                             libraries = libraries,
                             selectedLibraryId = fileState.libraryId,
                             onSelect = onSelectLibrary,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
                         )
                         if (selectedLibrary != null && selectedLibrary.paths.isNotEmpty()) {
                             PathDropdown(
                                 paths = selectedLibrary.paths,
                                 selectedPathId = fileState.pathId,
                                 onSelect = onSelectPath,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -378,7 +381,7 @@ private fun BookdropFileCard(
                         editedMetadata = metadata,
                         fetchedMetadata = file.fetchedMetadata,
                         onApplyFetched = onApplyFetchedField,
-                        onUpdateField = onUpdateField,
+                        onUpdateField = onUpdateField
                     )
                 }
             }
@@ -391,42 +394,44 @@ private fun MetadataSection(
     editedMetadata: BookdropMetadata,
     fetchedMetadata: BookdropMetadata?,
     onApplyFetched: (String) -> Unit,
-    onUpdateField: (String, String) -> Unit,
+    onUpdateField: (String, String) -> Unit
 ) {
-    val fields = remember(editedMetadata, fetchedMetadata) { listOf(
-        MetadataField("title", "Title", editedMetadata.title, fetchedMetadata?.title),
-        MetadataField("subtitle", "Subtitle", editedMetadata.subtitle, fetchedMetadata?.subtitle),
-        MetadataField("authors", "Authors", editedMetadata.authors?.joinToString(", "), fetchedMetadata?.authors?.joinToString(", ")),
-        MetadataField("publisher", "Publisher", editedMetadata.publisher, fetchedMetadata?.publisher),
-        MetadataField("publishedDate", "Published", editedMetadata.publishedDate, fetchedMetadata?.publishedDate),
-        MetadataField("seriesName", "Series", editedMetadata.seriesName, fetchedMetadata?.seriesName),
-        MetadataField("seriesNumber", "Book #", editedMetadata.seriesNumber?.toString(), fetchedMetadata?.seriesNumber?.toString()),
-        MetadataField("seriesTotal", "Total Books", editedMetadata.seriesTotal?.toString(), fetchedMetadata?.seriesTotal?.toString()),
-        MetadataField("language", "Language", editedMetadata.language, fetchedMetadata?.language),
-        MetadataField("isbn10", "ISBN-10", editedMetadata.isbn10, fetchedMetadata?.isbn10),
-        MetadataField("isbn13", "ISBN-13", editedMetadata.isbn13, fetchedMetadata?.isbn13),
-        MetadataField("pageCount", "Pages", editedMetadata.pageCount?.toString(), fetchedMetadata?.pageCount?.toString()),
-        MetadataField("asin", "ASIN", editedMetadata.asin, fetchedMetadata?.asin),
-        MetadataField("googleId", "Google ID", editedMetadata.googleId, fetchedMetadata?.googleId),
-        MetadataField("amazonRating", "Amazon \u2605", editedMetadata.amazonRating?.toString(), fetchedMetadata?.amazonRating?.toString()),
-        MetadataField("amazonReviewCount", "Amazon #", editedMetadata.amazonReviewCount?.toString(), fetchedMetadata?.amazonReviewCount?.toString()),
-        MetadataField("goodreadsId", "Goodreads ID", editedMetadata.goodreadsId, fetchedMetadata?.goodreadsId),
-        MetadataField("goodreadsRating", "Goodreads \u2605", editedMetadata.goodreadsRating?.toString(), fetchedMetadata?.goodreadsRating?.toString()),
-        MetadataField("goodreadsReviewCount", "Goodreads #", editedMetadata.goodreadsReviewCount?.toString(), fetchedMetadata?.goodreadsReviewCount?.toString()),
-        MetadataField("hardcoverBookId", "HC Book ID", editedMetadata.hardcoverBookId, fetchedMetadata?.hardcoverBookId),
-        MetadataField("hardcoverId", "Hardcover ID", editedMetadata.hardcoverId, fetchedMetadata?.hardcoverId),
-        MetadataField("hardcoverRating", "Hardcover \u2605", editedMetadata.hardcoverRating?.toString(), fetchedMetadata?.hardcoverRating?.toString()),
-        MetadataField("hardcoverReviewCount", "Hardcover #", editedMetadata.hardcoverReviewCount?.toString(), fetchedMetadata?.hardcoverReviewCount?.toString()),
-        MetadataField("categories", "Genres", editedMetadata.categories?.joinToString(", "), fetchedMetadata?.categories?.joinToString(", ")),
-        MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description, isMultiLine = true),
-    ) }
+    val fields = remember(editedMetadata, fetchedMetadata) {
+        listOf(
+            MetadataField("title", "Title", editedMetadata.title, fetchedMetadata?.title),
+            MetadataField("subtitle", "Subtitle", editedMetadata.subtitle, fetchedMetadata?.subtitle),
+            MetadataField("authors", "Authors", editedMetadata.authors?.joinToString(", "), fetchedMetadata?.authors?.joinToString(", ")),
+            MetadataField("publisher", "Publisher", editedMetadata.publisher, fetchedMetadata?.publisher),
+            MetadataField("publishedDate", "Published", editedMetadata.publishedDate, fetchedMetadata?.publishedDate),
+            MetadataField("seriesName", "Series", editedMetadata.seriesName, fetchedMetadata?.seriesName),
+            MetadataField("seriesNumber", "Book #", editedMetadata.seriesNumber?.toString(), fetchedMetadata?.seriesNumber?.toString()),
+            MetadataField("seriesTotal", "Total Books", editedMetadata.seriesTotal?.toString(), fetchedMetadata?.seriesTotal?.toString()),
+            MetadataField("language", "Language", editedMetadata.language, fetchedMetadata?.language),
+            MetadataField("isbn10", "ISBN-10", editedMetadata.isbn10, fetchedMetadata?.isbn10),
+            MetadataField("isbn13", "ISBN-13", editedMetadata.isbn13, fetchedMetadata?.isbn13),
+            MetadataField("pageCount", "Pages", editedMetadata.pageCount?.toString(), fetchedMetadata?.pageCount?.toString()),
+            MetadataField("asin", "ASIN", editedMetadata.asin, fetchedMetadata?.asin),
+            MetadataField("googleId", "Google ID", editedMetadata.googleId, fetchedMetadata?.googleId),
+            MetadataField("amazonRating", "Amazon \u2605", editedMetadata.amazonRating?.toString(), fetchedMetadata?.amazonRating?.toString()),
+            MetadataField("amazonReviewCount", "Amazon #", editedMetadata.amazonReviewCount?.toString(), fetchedMetadata?.amazonReviewCount?.toString()),
+            MetadataField("goodreadsId", "Goodreads ID", editedMetadata.goodreadsId, fetchedMetadata?.goodreadsId),
+            MetadataField("goodreadsRating", "Goodreads \u2605", editedMetadata.goodreadsRating?.toString(), fetchedMetadata?.goodreadsRating?.toString()),
+            MetadataField("goodreadsReviewCount", "Goodreads #", editedMetadata.goodreadsReviewCount?.toString(), fetchedMetadata?.goodreadsReviewCount?.toString()),
+            MetadataField("hardcoverBookId", "HC Book ID", editedMetadata.hardcoverBookId, fetchedMetadata?.hardcoverBookId),
+            MetadataField("hardcoverId", "Hardcover ID", editedMetadata.hardcoverId, fetchedMetadata?.hardcoverId),
+            MetadataField("hardcoverRating", "Hardcover \u2605", editedMetadata.hardcoverRating?.toString(), fetchedMetadata?.hardcoverRating?.toString()),
+            MetadataField("hardcoverReviewCount", "Hardcover #", editedMetadata.hardcoverReviewCount?.toString(), fetchedMetadata?.hardcoverReviewCount?.toString()),
+            MetadataField("categories", "Genres", editedMetadata.categories?.joinToString(", "), fetchedMetadata?.categories?.joinToString(", ")),
+            MetadataField("description", "Description", editedMetadata.description, fetchedMetadata?.description, isMultiLine = true)
+        )
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         fields.forEach { field ->
             MetadataComparisonRow(
                 field = field,
                 onApplyFetched = { onApplyFetched(field.key) },
-                onUpdate = { value -> onUpdateField(field.key, value) },
+                onUpdate = { value -> onUpdateField(field.key, value) }
             )
         }
     }
@@ -437,14 +442,14 @@ private data class MetadataField(
     val label: String,
     val currentValue: String?,
     val fetchedValue: String?,
-    val isMultiLine: Boolean = false,
+    val isMultiLine: Boolean = false
 )
 
 @Composable
 private fun MetadataComparisonRow(
     field: MetadataField,
     onApplyFetched: () -> Unit,
-    onUpdate: (String) -> Unit,
+    onUpdate: (String) -> Unit
 ) {
     val current = field.currentValue ?: ""
     val fetched = field.fetchedValue ?: ""
@@ -452,20 +457,20 @@ private fun MetadataComparisonRow(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
             // Label
             Text(
                 field.label,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -479,17 +484,17 @@ private fun MetadataComparisonRow(
                     value = editText,
                     onValueChange = { editText = it },
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(4.dp))
                         .padding(vertical = 2.dp),
-                    singleLine = !field.isMultiLine,
+                    singleLine = !field.isMultiLine
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(
                         "Save",
@@ -498,7 +503,7 @@ private fun MetadataComparisonRow(
                         modifier = Modifier.clickable {
                             onUpdate(editText)
                             isEditing = false
-                        },
+                        }
                     )
                     Text(
                         "Cancel",
@@ -507,18 +512,21 @@ private fun MetadataComparisonRow(
                         modifier = Modifier.clickable {
                             editText = current
                             isEditing = false
-                        },
+                        }
                     )
                 }
             } else {
                 Text(
                     current.ifEmpty { "(empty)" },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (current.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = if (current.isEmpty()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                     maxLines = if (field.isMultiLine) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable { isEditing = true },
+                    modifier = Modifier.clickable { isEditing = true }
                 )
             }
 
@@ -526,7 +534,7 @@ private fun MetadataComparisonRow(
             if (hasFetched) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Icon(
                         Icons.Default.ChevronLeft,
@@ -534,7 +542,7 @@ private fun MetadataComparisonRow(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(18.dp)
-                            .clickable(onClick = onApplyFetched),
+                            .clickable(onClick = onApplyFetched)
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
@@ -543,7 +551,7 @@ private fun MetadataComparisonRow(
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = if (field.isMultiLine) 2 else 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable(onClick = onApplyFetched),
+                        modifier = Modifier.clickable(onClick = onApplyFetched)
                     )
                 }
             }
@@ -556,7 +564,7 @@ private fun LibraryDropdown(
     libraries: List<GrimmoryAppLibraryWithPaths>,
     selectedLibraryId: Long?,
     onSelect: (Long?) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedName = libraries.firstOrNull { it.id == selectedLibraryId }?.name ?: "Library"
@@ -569,13 +577,13 @@ private fun LibraryDropdown(
                 Text(
                     selectedName,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
-            },
+            }
         )
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = { expanded = false }
         ) {
             libraries.forEach { library ->
                 DropdownMenuItem(
@@ -583,7 +591,7 @@ private fun LibraryDropdown(
                     onClick = {
                         onSelect(library.id)
                         expanded = false
-                    },
+                    }
                 )
             }
         }
@@ -595,10 +603,12 @@ private fun PathDropdown(
     paths: List<com.ember.reader.core.grimmory.LibraryPathSummary>,
     selectedPathId: Long?,
     onSelect: (Long?) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedPath = paths.firstOrNull { it.id == selectedPathId }?.path?.substringAfterLast("/") ?: "Path"
+    val selectedPath = paths.firstOrNull {
+        it.id == selectedPathId
+    }?.path?.substringAfterLast("/") ?: "Path"
 
     Box(modifier = modifier) {
         FilterChip(
@@ -608,20 +618,20 @@ private fun PathDropdown(
                 Text(
                     selectedPath,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis
                 )
-            },
+            }
         )
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
                 text = { Text("Default") },
                 onClick = {
                     onSelect(null)
                     expanded = false
-                },
+                }
             )
             paths.forEach { path ->
                 DropdownMenuItem(
@@ -629,7 +639,7 @@ private fun PathDropdown(
                     onClick = {
                         onSelect(path.id)
                         expanded = false
-                    },
+                    }
                 )
             }
         }

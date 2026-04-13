@@ -3,10 +3,10 @@ package com.ember.reader.core.grimmory
 import com.ember.reader.core.network.serverOrigin
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.get
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -38,14 +38,14 @@ import timber.log.Timber
 @Singleton
 class MetadataClient @Inject constructor(
     private val httpClient: HttpClient,
-    private val tokenManager: GrimmoryTokenManager,
+    private val tokenManager: GrimmoryTokenManager
 ) {
 
     /** Fetch the current metadata (with lock flags) for a book. */
     suspend fun getBookMetadata(
         baseUrl: String,
         serverId: Long,
-        bookId: Long,
+        bookId: Long
     ): Result<GrimmoryBookMetadata> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/books/$bookId") {
             header("Authorization", "Bearer $token")
@@ -63,7 +63,7 @@ class MetadataClient @Inject constructor(
         bookId: Long,
         wrapper: MetadataUpdateWrapper,
         replaceMode: MetadataReplaceMode = MetadataReplaceMode.REPLACE_WHEN_PROVIDED,
-        mergeCategories: Boolean = false,
+        mergeCategories: Boolean = false
     ): Result<GrimmoryBookMetadata> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata") {
             header("Authorization", "Bearer $token")
@@ -81,7 +81,7 @@ class MetadataClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-        url: String,
+        url: String
     ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata/cover/from-url") {
             header("Authorization", "Bearer $token")
@@ -98,7 +98,7 @@ class MetadataClient @Inject constructor(
         bookId: Long,
         bytes: ByteArray,
         fileName: String,
-        mimeType: String,
+        mimeType: String
     ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata/cover/upload") {
             header("Authorization", "Bearer $token")
@@ -111,10 +111,10 @@ class MetadataClient @Inject constructor(
                             headers = Headers.build {
                                 append(HttpHeaders.ContentType, mimeType)
                                 append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
-                            },
+                            }
                         )
-                    },
-                ),
+                    }
+                )
             )
         }
         if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Cover upload failed: ${response.status}")
@@ -131,7 +131,7 @@ class MetadataClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-        request: FetchMetadataRequest,
+        request: FetchMetadataRequest
     ): Flow<MetadataSearchEvent> = flow {
         val token = tokenManager.getAccessToken(serverId)
             ?: throw IllegalStateException("Not logged in to Grimmory")
@@ -158,7 +158,7 @@ class MetadataClient @Inject constructor(
                 try {
                     val metadata = sseJson.decodeFromString(
                         GrimmoryBookMetadata.serializer(),
-                        payload,
+                        payload
                     )
                     emit(MetadataSearchEvent.Candidate(metadata))
                 } catch (e: Exception) {
@@ -171,7 +171,10 @@ class MetadataClient @Inject constructor(
     }
 
     private companion object {
-        val sseJson = Json { ignoreUnknownKeys = true; isLenient = true }
+        val sseJson = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
     }
 }
 

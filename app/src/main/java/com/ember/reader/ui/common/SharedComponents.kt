@@ -104,7 +104,7 @@ fun BookCoverImage(
     book: Book,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    onClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
 ) {
     val clickableModifier = if (onClick != null) {
         Modifier.clickable(onClick = onClick)
@@ -117,14 +117,14 @@ fun BookCoverImage(
             model = coverUrl,
             contentDescription = book.title,
             contentScale = contentScale,
-            modifier = modifier.then(clickableModifier),
+            modifier = modifier.then(clickableModifier)
         )
     } else {
         BoxWithConstraints(
             modifier = modifier
                 .then(clickableModifier)
                 .background(BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.Center
         ) {
             // Scale font with box width so one composable works for tiny thumbnails
             // and hero covers alike. ~28% of width reads well across sizes.
@@ -132,7 +132,7 @@ fun BookCoverImage(
             Text(
                 text = book.title.take(2).uppercase(),
                 fontSize = fontSize,
-                color = Color(0xFF5D4037),
+                color = Color(0xFF5D4037)
             )
         }
     }

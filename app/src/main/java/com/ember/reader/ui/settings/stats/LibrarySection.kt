@@ -32,7 +32,7 @@ import com.ember.reader.core.grimmory.GrimmoryGenreStat
 fun LibrarySection(stats: StatsData, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SectionHeader(title = stringResource(R.string.library_overview))
 
@@ -48,7 +48,7 @@ fun LibrarySection(stats: StatsData, modifier: Modifier = Modifier) {
                     readCount = readCount,
                     readingCount = readingCount,
                     unreadCount = unreadCount,
-                    total = total,
+                    total = total
                 )
             }
         }
@@ -68,7 +68,7 @@ private fun StatusSegmentedBar(
     readingCount: Int,
     unreadCount: Int,
     total: Int,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val readFraction = readCount.toFloat() / total
     val readingFraction = readingCount.toFloat() / total
@@ -80,10 +80,10 @@ private fun StatusSegmentedBar(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Segmented bar
@@ -91,14 +91,14 @@ private fun StatusSegmentedBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(24.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp))
             ) {
                 if (readFraction > 0f) {
                     Box(
                         modifier = Modifier
                             .weight(readFraction)
                             .height(24.dp)
-                            .background(readColor),
+                            .background(readColor)
                     )
                 }
                 if (readingFraction > 0f) {
@@ -106,7 +106,7 @@ private fun StatusSegmentedBar(
                         modifier = Modifier
                             .weight(readingFraction)
                             .height(24.dp)
-                            .background(readingColor),
+                            .background(readingColor)
                     )
                 }
                 if (unreadFraction > 0f) {
@@ -114,7 +114,7 @@ private fun StatusSegmentedBar(
                         modifier = Modifier
                             .weight(unreadFraction)
                             .height(24.dp)
-                            .background(unreadColor),
+                            .background(unreadColor)
                     )
                 }
             }
@@ -124,22 +124,22 @@ private fun StatusSegmentedBar(
             // Legend
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 LegendItem(
                     color = readColor,
                     label = stringResource(R.string.books_read),
-                    count = readCount,
+                    count = readCount
                 )
                 LegendItem(
                     color = readingColor,
                     label = stringResource(R.string.books_reading),
-                    count = readingCount,
+                    count = readingCount
                 )
                 LegendItem(
                     color = unreadColor,
                     label = stringResource(R.string.books_unread),
-                    count = unreadCount,
+                    count = unreadCount
                 )
             }
         }
@@ -153,13 +153,13 @@ private fun LegendItem(color: androidx.compose.ui.graphics.Color, label: String,
             modifier = Modifier
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(color),
+                .background(color)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = "$label ($count)",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -170,20 +170,20 @@ private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             for (genre in genres) {
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
                             text = genre.genre,
@@ -191,19 +191,19 @@ private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = "${genre.bookCount} books",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(12.dp),
+                            .height(12.dp)
                     ) {
                         val fraction = genre.totalDurationSeconds.toFloat() / maxDuration
                         Box(
@@ -212,8 +212,8 @@ private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
                                 .height(12.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
-                                ),
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                                )
                         )
                     }
                 }

@@ -14,7 +14,7 @@ import timber.log.Timber
 @Singleton
 class BookmarkSyncManager @Inject constructor(
     private val bookmarkDao: BookmarkDao,
-    private val grimmoryClient: GrimmoryClient,
+    private val grimmoryClient: GrimmoryClient
 ) {
 
     suspend fun syncBookmarksForBook(server: Server, bookId: String, grimmoryBookId: Long) {
@@ -45,14 +45,17 @@ class BookmarkSyncManager @Inject constructor(
                     val serverTime = parseTimestamp(serverBookmark.updatedAt)
                     if (serverTime != null && serverTime.isAfter(local.updatedAt)) {
                         // Server is newer → update local
-                        bookmarkDao.update(local.copy(
-                            title = serverBookmark.title ?: local.title,
-                            updatedAt = serverTime,
-                        ))
+                        bookmarkDao.update(
+                            local.copy(
+                                title = serverBookmark.title ?: local.title,
+                                updatedAt = serverTime
+                            )
+                        )
                         Timber.d("BookmarkSync: updated local bookmark %d from server", local.id)
                     } else if (serverTime != null && local.updatedAt.isAfter(serverTime)) {
                         // Local is newer → update server
-                        grimmoryClient.updateBookmark(server.url, server.id, serverBookmark.id,
+                        grimmoryClient.updateBookmark(
+                            server.url, server.id, serverBookmark.id,
                             UpdateBookmarkRequest(title = local.title)
                         ).onSuccess { Timber.d("BookmarkSync: updated remote bookmark %d", serverBookmark.id) }
                     }
@@ -62,17 +65,19 @@ class BookmarkSyncManager @Inject constructor(
                 val cfi = serverBookmark.cfi ?: continue
                 val locatorJson = CfiLocatorConverter.buildLocatorJson(
                     cfi = cfi,
-                    chapterTitle = serverBookmark.title,
+                    chapterTitle = serverBookmark.title
                 )
                 val now = Instant.now()
-                bookmarkDao.insert(BookmarkEntity(
-                    bookId = bookId,
-                    locatorJson = locatorJson,
-                    title = serverBookmark.title,
-                    createdAt = parseTimestamp(serverBookmark.createdAt) ?: now,
-                    remoteId = serverBookmark.id,
-                    updatedAt = parseTimestamp(serverBookmark.updatedAt) ?: now,
-                ))
+                bookmarkDao.insert(
+                    BookmarkEntity(
+                        bookId = bookId,
+                        locatorJson = locatorJson,
+                        title = serverBookmark.title,
+                        createdAt = parseTimestamp(serverBookmark.createdAt) ?: now,
+                        remoteId = serverBookmark.id,
+                        updatedAt = parseTimestamp(serverBookmark.updatedAt) ?: now
+                    )
+                )
                 Timber.d("BookmarkSync: created local bookmark from remote %d", serverBookmark.id)
             }
         }
@@ -92,11 +97,12 @@ class BookmarkSyncManager @Inject constructor(
                     continue
                 }
 
-                grimmoryClient.createBookmark(server.url, server.id,
+                grimmoryClient.createBookmark(
+                    server.url, server.id,
                     CreateBookmarkRequest(
                         bookId = grimmoryBookId,
                         cfi = cfi,
-                        title = local.title,
+                        title = local.title
                     )
                 ).onSuccess { created ->
                     bookmarkDao.update(local.copy(remoteId = created.id))

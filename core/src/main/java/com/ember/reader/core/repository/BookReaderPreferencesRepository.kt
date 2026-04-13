@@ -27,7 +27,7 @@ import timber.log.Timber
 @Singleton
 class BookReaderPreferencesRepository @Inject constructor(
     private val dao: BookReaderPreferencesDao,
-    private val globalRepo: ReaderPreferencesRepository,
+    private val globalRepo: ReaderPreferencesRepository
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -39,16 +39,15 @@ class BookReaderPreferencesRepository @Inject constructor(
             override?.toDomain() ?: global
         }
 
-    fun observeHasOverride(bookId: String): Flow<Boolean> =
-        dao.observe(bookId).map { it != null }
+    fun observeHasOverride(bookId: String): Flow<Boolean> = dao.observe(bookId).map { it != null }
 
     suspend fun saveOverride(bookId: String, prefs: ReaderPreferences) {
         dao.upsert(
             BookReaderPreferencesEntity(
                 bookId = bookId,
                 preferencesJson = json.encodeToString(prefs),
-                updatedAt = Instant.now(),
-            ),
+                updatedAt = Instant.now()
+            )
         )
     }
 
@@ -58,6 +57,8 @@ class BookReaderPreferencesRepository @Inject constructor(
 
     private fun BookReaderPreferencesEntity.toDomain(): ReaderPreferences =
         runCatching { json.decodeFromString<ReaderPreferences>(preferencesJson) }
-            .onFailure { Timber.w(it, "Failed to decode book preferences for $bookId; falling back to defaults") }
+            .onFailure {
+                Timber.w(it, "Failed to decode book preferences for $bookId; falling back to defaults")
+            }
             .getOrDefault(ReaderPreferences())
 }

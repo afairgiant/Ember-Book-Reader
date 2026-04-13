@@ -213,7 +213,7 @@ class ServerFormViewModel @Inject constructor(
     fun saveGrimmory(
         useGrimmoryLoginForOpds: Boolean,
         useGrimmoryLoginForKosync: Boolean,
-        onSuccess: () -> Unit,
+        onSuccess: () -> Unit
     ) {
         val state = _uiState.value
         if (state.name.isBlank() || state.url.isBlank()) {

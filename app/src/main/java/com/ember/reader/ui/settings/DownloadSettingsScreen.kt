@@ -42,7 +42,7 @@ import com.ember.reader.ui.settings.components.SettingsToggleRow
 fun DownloadSettingsScreen(
     onNavigateBack: () -> Unit,
     onOpenStorage: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val autoCleanup by viewModel.autoCleanup.collectAsStateWithLifecycle()
 
@@ -56,17 +56,17 @@ fun DownloadSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        },
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SettingsGroup(title = "Automatic") {
                 SettingsToggleRow(
@@ -74,7 +74,7 @@ fun DownloadSettingsScreen(
                     title = stringResource(R.string.auto_cleanup),
                     subtitle = stringResource(R.string.auto_cleanup_hint),
                     checked = autoCleanup,
-                    onCheckedChange = { viewModel.updateAutoCleanup(it) },
+                    onCheckedChange = { viewModel.updateAutoCleanup(it) }
                 )
             }
 
@@ -83,7 +83,7 @@ fun DownloadSettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
