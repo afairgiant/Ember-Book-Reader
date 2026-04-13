@@ -94,4 +94,5 @@ dependencies {
     testImplementation(libs.room.testing)
     testImplementation(libs.ktor.client.mock)
     testImplementation("net.sf.kxml:kxml2:2.3.0")
+    testImplementation("org.json:json:20231013")
 }
