@@ -46,12 +46,12 @@ class MetadataClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-    ): Result<GrimmoryBookMetadata> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookMetadata> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/books/$bookId") {
             header("Authorization", "Bearer $token")
             parameter("withDescription", true)
         }
-        if (!response.status.isSuccess()) error("Get book metadata failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get book metadata failed: ${response.status}")
         response.body<BookEnvelope>().metadata
             ?: error("Book ${'$'}bookId has no metadata")
     }
@@ -64,7 +64,7 @@ class MetadataClient @Inject constructor(
         wrapper: MetadataUpdateWrapper,
         replaceMode: MetadataReplaceMode = MetadataReplaceMode.REPLACE_WHEN_PROVIDED,
         mergeCategories: Boolean = false,
-    ): Result<GrimmoryBookMetadata> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookMetadata> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
@@ -72,7 +72,7 @@ class MetadataClient @Inject constructor(
             parameter("replaceMode", replaceMode.name)
             setBody(wrapper)
         }
-        if (!response.status.isSuccess()) error("Update metadata failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Update metadata failed: ${response.status}")
         response.body<GrimmoryBookMetadata>()
     }
 
@@ -82,13 +82,13 @@ class MetadataClient @Inject constructor(
         serverId: Long,
         bookId: Long,
         url: String,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata/cover/from-url") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(CoverFromUrlRequest(url))
         }
-        if (!response.status.isSuccess()) error("Cover upload (url) failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Cover upload (url) failed: ${response.status}")
     }
 
     /** Upload a new cover from a local byte array. */
@@ -99,7 +99,7 @@ class MetadataClient @Inject constructor(
         bytes: ByteArray,
         fileName: String,
         mimeType: String,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/$bookId/metadata/cover/upload") {
             header("Authorization", "Bearer $token")
             setBody(
@@ -117,7 +117,7 @@ class MetadataClient @Inject constructor(
                 ),
             )
         }
-        if (!response.status.isSuccess()) error("Cover upload failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Cover upload failed: ${response.status}")
     }
 
     /**
@@ -167,34 +167,6 @@ class MetadataClient @Inject constructor(
                 }
             }
             emit(MetadataSearchEvent.Done)
-        }
-    }
-
-    private suspend fun <T> withAuth(
-        baseUrl: String,
-        serverId: Long,
-        block: suspend (token: String) -> T,
-    ): Result<T> = runCatching {
-        val token = tokenManager.getAccessToken(serverId)
-            ?: error("Not logged in to Grimmory")
-        try {
-            block(token)
-        } catch (e: Exception) {
-            if (e.message?.contains("401") == true) {
-                Timber.d("MetadataClient: token expired, refreshing...")
-                val refresh = tokenManager.getRefreshToken(serverId)
-                    ?: error("No refresh token")
-                val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/refresh") {
-                    header("Content-Type", "application/json")
-                    setBody(GrimmoryRefreshRequest(refresh))
-                }
-                if (!response.status.isSuccess()) error("Token refresh failed")
-                val newTokens = response.body<GrimmoryTokens>()
-                tokenManager.storeTokens(serverId, newTokens)
-                block(newTokens.accessToken)
-            } else {
-                throw e
-            }
         }
     }
 

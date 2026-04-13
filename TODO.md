@@ -156,7 +156,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Play/pause/skip controls overlay
 - [ ] Highlight current sentence/paragraph being read
 - [ ] Speed control and voice selection
-- [ ] Background playback (continue reading with screen off)
+- [x] Background playback (continue reading with screen off)
 - [ ] Readium has TTS support via `readium-navigator-media`
 
 ### Search in Book

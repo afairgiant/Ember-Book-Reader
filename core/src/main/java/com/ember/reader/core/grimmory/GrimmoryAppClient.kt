@@ -35,7 +35,7 @@ class GrimmoryAppClient @Inject constructor(
         maxRating: Int? = null,
         authors: String? = null,
         language: String? = null,
-    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books") {
             header("Authorization", "Bearer $token")
             parameter("page", page)
@@ -52,7 +52,7 @@ class GrimmoryAppClient @Inject constructor(
             authors?.takeIf { it.isNotBlank() }?.let { parameter("authors", it) }
             language?.takeIf { it.isNotBlank() }?.let { parameter("language", it) }
         }
-        if (!response.status.isSuccess()) error("Get books failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get books failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppBook>>()
     }
 
@@ -62,7 +62,7 @@ class GrimmoryAppClient @Inject constructor(
         query: String,
         page: Int = 0,
         size: Int = 20
-    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val url = "${serverOrigin(baseUrl)}/api/v1/app/books/search"
         Timber.d("GrimmorySearch: url=$url q='$query' page=$page size=$size")
         val response = httpClient.get(url) {
@@ -72,27 +72,27 @@ class GrimmoryAppClient @Inject constructor(
             parameter("size", size)
         }
         Timber.d("GrimmorySearch: response status=${response.status}")
-        if (!response.status.isSuccess()) error("Search failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Search failed: ${response.status}")
         val result = response.body<GrimmoryAppPage<GrimmoryAppBook>>()
         Timber.d("GrimmorySearch: got ${result.content.size} results for '$query'")
         result
     }
 
     suspend fun getLibraries(baseUrl: String, serverId: Long): Result<List<GrimmoryAppLibrary>> =
-        withAuth(baseUrl, serverId) { token ->
+        tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/libraries") {
                 header("Authorization", "Bearer $token")
             }
-            if (!response.status.isSuccess()) error("Get libraries failed: ${response.status}")
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get libraries failed: ${response.status}")
             response.body<List<GrimmoryAppLibrary>>()
         }
 
     suspend fun getShelves(baseUrl: String, serverId: Long): Result<List<GrimmoryAppShelf>> =
-        withAuth(baseUrl, serverId) { token ->
+        tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves") {
                 header("Authorization", "Bearer $token")
             }
-            if (!response.status.isSuccess()) error("Get shelves failed: ${response.status}")
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get shelves failed: ${response.status}")
             response.body<List<GrimmoryAppShelf>>()
         }
 
@@ -107,11 +107,11 @@ class GrimmoryAppClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long,
-    ): Result<GrimmoryFullBook> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryFullBook> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Get book detail failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get book detail failed: ${response.status}")
         response.body<GrimmoryFullBook>()
     }
 
@@ -122,11 +122,11 @@ class GrimmoryAppClient @Inject constructor(
      * filename preview.
      */
     suspend fun getFullLibraries(baseUrl: String, serverId: Long): Result<List<GrimmoryLibraryFull>> =
-        withAuth(baseUrl, serverId) { token ->
+        tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/libraries") {
                 header("Authorization", "Bearer $token")
             }
-            if (!response.status.isSuccess()) error("Get full libraries failed: ${response.status}")
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get full libraries failed: ${response.status}")
             response.body<List<GrimmoryLibraryFull>>()
         }
 
@@ -140,13 +140,13 @@ class GrimmoryAppClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         request: FileMoveRequest,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/files/move") {
             header("Authorization", "Bearer $token")
             header("Content-Type", "application/json")
             setBody(request)
         }
-        if (!response.status.isSuccess()) error("Move files failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Move files failed: ${response.status}")
     }
 
     /**
@@ -155,11 +155,11 @@ class GrimmoryAppClient @Inject constructor(
      * Files.
      */
     suspend fun getCurrentUser(baseUrl: String, serverId: Long): Result<GrimmoryUser> =
-        withAuth(baseUrl, serverId) { token ->
+        tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/users/me") {
                 header("Authorization", "Bearer $token")
             }
-            if (!response.status.isSuccess()) error("Get current user failed: ${response.status}")
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get current user failed: ${response.status}")
             response.body<GrimmoryUser>()
         }
 
@@ -169,24 +169,24 @@ class GrimmoryAppClient @Inject constructor(
         magicShelfId: Long,
         page: Int = 0,
         size: Int = 50,
-    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves/magic/$magicShelfId/books") {
             header("Authorization", "Bearer $token")
             parameter("page", page)
             parameter("size", size)
         }
-        if (!response.status.isSuccess()) error("Get magic shelf books failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get magic shelf books failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppBook>>()
     }
 
     suspend fun getMagicShelves(
         baseUrl: String,
         serverId: Long
-    ): Result<List<GrimmoryAppMagicShelf>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryAppMagicShelf>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves/magic") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Get magic shelves failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get magic shelves failed: ${response.status}")
         response.body<List<GrimmoryAppMagicShelf>>()
     }
 
@@ -199,7 +199,7 @@ class GrimmoryAppClient @Inject constructor(
         dir: String = "asc",
         libraryId: Long? = null,
         search: String? = null
-    ): Result<GrimmoryAppPage<GrimmoryAppSeries>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppSeries>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/series") {
             header("Authorization", "Bearer $token")
             parameter("page", page)
@@ -209,7 +209,7 @@ class GrimmoryAppClient @Inject constructor(
             libraryId?.let { parameter("libraryId", it) }
             search?.let { parameter("search", it) }
         }
-        if (!response.status.isSuccess()) error("Get series failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get series failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppSeries>>()
     }
 
@@ -219,7 +219,7 @@ class GrimmoryAppClient @Inject constructor(
         seriesName: String,
         page: Int = 0,
         size: Int = 50
-    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppBook>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         // URLEncoder uses + for spaces (query string convention), but path segments need %20
         val encodedName = java.net.URLEncoder.encode(seriesName, "UTF-8").replace("+", "%20")
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/series/$encodedName/books") {
@@ -227,7 +227,7 @@ class GrimmoryAppClient @Inject constructor(
             parameter("page", page)
             parameter("size", size)
         }
-        if (!response.status.isSuccess()) error("Get series books failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get series books failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppBook>>()
     }
 
@@ -237,14 +237,14 @@ class GrimmoryAppClient @Inject constructor(
         page: Int = 0,
         size: Int = 30,
         search: String? = null
-    ): Result<GrimmoryAppPage<GrimmoryAppAuthor>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppPage<GrimmoryAppAuthor>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/authors") {
             header("Authorization", "Bearer $token")
             parameter("page", page)
             parameter("size", size)
             search?.let { parameter("search", it) }
         }
-        if (!response.status.isSuccess()) error("Get authors failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get authors failed: ${response.status}")
         response.body<GrimmoryAppPage<GrimmoryAppAuthor>>()
     }
 
@@ -252,12 +252,12 @@ class GrimmoryAppClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         limit: Int = 10
-    ): Result<List<GrimmoryBookSummary>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryBookSummary>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/recently-added") {
             header("Authorization", "Bearer $token")
             parameter("limit", limit)
         }
-        if (!response.status.isSuccess()) error("Get recently added failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get recently added failed: ${response.status}")
         response.body<List<GrimmoryBookSummary>>()
     }
 
@@ -267,14 +267,14 @@ class GrimmoryAppClient @Inject constructor(
         libraryId: Long? = null,
         shelfId: Long? = null,
         magicShelfId: Long? = null,
-    ): Result<GrimmoryAppFilterOptions> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAppFilterOptions> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/filter-options") {
             header("Authorization", "Bearer $token")
             libraryId?.let { parameter("libraryId", it) }
             shelfId?.let { parameter("shelfId", it) }
             magicShelfId?.let { parameter("magicShelfId", it) }
         }
-        if (!response.status.isSuccess()) error("Get filter options failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get filter options failed: ${response.status}")
         response.body<GrimmoryAppFilterOptions>()
     }
 
@@ -294,31 +294,4 @@ class GrimmoryAppClient @Inject constructor(
         return coverUpdatedOn?.let { "$base?v=${java.net.URLEncoder.encode(it, "UTF-8")}" } ?: base
     }
 
-    private suspend fun <T> withAuth(
-        baseUrl: String,
-        serverId: Long,
-        block: suspend (token: String) -> T
-    ): Result<T> = runCatching {
-        val token = tokenManager.getAccessToken(serverId)
-            ?: error("Not logged in to Grimmory")
-        try {
-            block(token)
-        } catch (e: Exception) {
-            if (e.message?.contains("401") == true) {
-                Timber.d("GrimmoryApp: token expired, refreshing...")
-                val refresh = tokenManager.getRefreshToken(serverId)
-                    ?: error("No refresh token")
-                val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/auth/refresh") {
-                    header("Content-Type", "application/json")
-                    setBody(GrimmoryRefreshRequest(refresh))
-                }
-                if (!response.status.isSuccess()) error("Token refresh failed")
-                val newTokens = response.body<GrimmoryTokens>()
-                tokenManager.storeTokens(serverId, newTokens)
-                block(newTokens.accessToken)
-            } else {
-                throw e
-            }
-        }
-    }
 }

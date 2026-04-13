@@ -13,20 +13,18 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
-import io.mockk.every
+import io.mockk.coEvery
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -54,7 +52,10 @@ class GrimmoryAppClientOrganizeTest {
             install(ContentNegotiation) { json(json) }
             expectSuccess = false
         }
-        every { tokenManager.getAccessToken(serverId) } returns "test-token"
+        coEvery { tokenManager.withAuth<Any>(baseUrl, serverId, any()) } coAnswers {
+            val block = thirdArg<suspend (String) -> Any>()
+            runCatching { block("test-token") }
+        }
         return GrimmoryAppClient(http, tokenManager) to captured
     }
 

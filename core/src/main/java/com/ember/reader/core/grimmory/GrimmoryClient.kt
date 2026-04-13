@@ -23,7 +23,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 @Singleton
 class GrimmoryClient @Inject constructor(
@@ -43,7 +42,7 @@ class GrimmoryClient @Inject constructor(
                 setBody(GrimmoryLoginRequest(username, password))
             }
             if (!response.status.isSuccess()) {
-                error("Login failed: ${response.status}")
+                throw GrimmoryHttpException(response.status.value, "Login failed: ${response.status}")
             }
             response.body<GrimmoryTokens>()
         }
@@ -55,7 +54,7 @@ class GrimmoryClient @Inject constructor(
                 setBody(GrimmoryRefreshRequest(refreshToken))
             }
             if (!response.status.isSuccess()) {
-                error("Token refresh failed: ${response.status}")
+                throw GrimmoryHttpException(response.status.value, "Token refresh failed: ${response.status}")
             }
             response.body<GrimmoryTokens>()
         }
@@ -64,13 +63,13 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         limit: Int = 10
-    ): Result<List<GrimmoryBookSummary>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryBookSummary>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/continue-reading") {
             header("Authorization", "Bearer $token")
             parameter("limit", limit)
         }
         if (!response.status.isSuccess()) {
-            error("Continue reading failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Continue reading failed: ${response.status}")
         }
         response.body<List<GrimmoryBookSummary>>()
     }
@@ -79,12 +78,12 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long
-    ): Result<GrimmoryBookDetail> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookDetail> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId") {
             header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) {
-            error("Book detail failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Book detail failed: ${response.status}")
         }
         response.body<GrimmoryBookDetail>()
     }
@@ -93,14 +92,14 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         request: GrimmoryProgressRequest
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/progress") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
         if (!response.status.isSuccess()) {
-            error("Push progress failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Push progress failed: ${response.status}")
         }
     }
 
@@ -109,14 +108,14 @@ class GrimmoryClient @Inject constructor(
         serverId: Long,
         grimmoryBookId: Long,
         status: ReadStatus
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId/status") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(GrimmoryStatusRequest(status))
         }
         if (!response.status.isSuccess()) {
-            error("Status update failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Status update failed: ${response.status}")
         }
     }
 
@@ -126,7 +125,7 @@ class GrimmoryClient @Inject constructor(
         grimmoryBookId: Long,
         destination: File,
         onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
             header("Authorization", "Bearer $token")
             timeout {
@@ -135,7 +134,7 @@ class GrimmoryClient @Inject constructor(
             }
         }.execute { response ->
             if (!response.status.isSuccess()) {
-                error("Download failed: ${response.status}")
+                throw GrimmoryHttpException(response.status.value, "Download failed: ${response.status}")
             }
             val totalBytes = response.contentLength()
             val channel = response.bodyAsChannel()
@@ -160,14 +159,14 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         request: GrimmoryReadingSessionRequest
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/reading-sessions") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
         if (!response.status.isSuccess()) {
-            error("Reading session failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Reading session failed: ${response.status}")
         }
     }
 
@@ -175,12 +174,12 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         grimmoryBookId: Long
-    ): Result<AudiobookInfo> = withAuth(baseUrl, serverId) { token ->
+    ): Result<AudiobookInfo> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/info") {
             header("Authorization", "Bearer $token")
         }
         if (!response.status.isSuccess()) {
-            error("Audiobook info failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Audiobook info failed: ${response.status}")
         }
         response.body<AudiobookInfo>()
     }
@@ -191,11 +190,11 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-    ): Result<List<GrimmoryAnnotation>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryAnnotation>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/annotations/book/$bookId") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Get annotations failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get annotations failed: ${response.status}")
         response.body<List<GrimmoryAnnotation>>()
     }
 
@@ -203,13 +202,13 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         request: CreateAnnotationRequest,
-    ): Result<GrimmoryAnnotation> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAnnotation> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/annotations") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        if (!response.status.isSuccess()) error("Create annotation failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Create annotation failed: ${response.status}")
         response.body<GrimmoryAnnotation>()
     }
 
@@ -218,13 +217,13 @@ class GrimmoryClient @Inject constructor(
         serverId: Long,
         annotationId: Long,
         request: UpdateAnnotationRequest,
-    ): Result<GrimmoryAnnotation> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryAnnotation> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/annotations/$annotationId") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        if (!response.status.isSuccess()) error("Update annotation failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Update annotation failed: ${response.status}")
         response.body<GrimmoryAnnotation>()
     }
 
@@ -232,11 +231,11 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         annotationId: Long,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.delete("${serverOrigin(baseUrl)}/api/v1/annotations/$annotationId") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Delete annotation failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Delete annotation failed: ${response.status}")
     }
 
     // --- Bookmark sync ---
@@ -245,11 +244,11 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookId: Long,
-    ): Result<List<GrimmoryBookmark>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryBookmark>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/bookmarks/book/$bookId") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Get bookmarks failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get bookmarks failed: ${response.status}")
         response.body<List<GrimmoryBookmark>>()
     }
 
@@ -257,13 +256,13 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         request: CreateBookmarkRequest,
-    ): Result<GrimmoryBookmark> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookmark> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/bookmarks") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        if (!response.status.isSuccess()) error("Create bookmark failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Create bookmark failed: ${response.status}")
         response.body<GrimmoryBookmark>()
     }
 
@@ -272,13 +271,13 @@ class GrimmoryClient @Inject constructor(
         serverId: Long,
         bookmarkId: Long,
         request: UpdateBookmarkRequest,
-    ): Result<GrimmoryBookmark> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookmark> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/bookmarks/$bookmarkId") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        if (!response.status.isSuccess()) error("Update bookmark failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Update bookmark failed: ${response.status}")
         response.body<GrimmoryBookmark>()
     }
 
@@ -286,11 +285,11 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         bookmarkId: Long,
-    ): Result<Unit> = withAuth(baseUrl, serverId) { token ->
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.delete("${serverOrigin(baseUrl)}/api/v1/bookmarks/$bookmarkId") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Delete bookmark failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Delete bookmark failed: ${response.status}")
     }
 
     // --- Reading stats ---
@@ -298,11 +297,11 @@ class GrimmoryClient @Inject constructor(
     suspend fun getReadingStreak(
         baseUrl: String,
         serverId: Long,
-    ): Result<GrimmoryStreakResponse> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryStreakResponse> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/streak") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Reading streak failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Reading streak failed: ${response.status}")
         response.body<GrimmoryStreakResponse>()
     }
 
@@ -310,67 +309,67 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         year: Int,
-    ): Result<List<GrimmoryDateCount>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryDateCount>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/heatmap") {
             header("Authorization", "Bearer $token")
             parameter("year", year)
         }
-        if (!response.status.isSuccess()) error("Reading heatmap failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Reading heatmap failed: ${response.status}")
         response.body<List<GrimmoryDateCount>>()
     }
 
     suspend fun getPeakHours(
         baseUrl: String,
         serverId: Long,
-    ): Result<List<GrimmoryPeakHour>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryPeakHour>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/peak-hours") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Peak hours failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Peak hours failed: ${response.status}")
         response.body<List<GrimmoryPeakHour>>()
     }
 
     suspend fun getFavoriteDays(
         baseUrl: String,
         serverId: Long,
-    ): Result<List<GrimmoryFavoriteDay>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryFavoriteDay>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/favorite-days") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Favorite days failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Favorite days failed: ${response.status}")
         response.body<List<GrimmoryFavoriteDay>>()
     }
 
     suspend fun getBookDistributions(
         baseUrl: String,
         serverId: Long,
-    ): Result<GrimmoryBookDistributions> = withAuth(baseUrl, serverId) { token ->
+    ): Result<GrimmoryBookDistributions> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/book-distributions") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Book distributions failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Book distributions failed: ${response.status}")
         response.body<GrimmoryBookDistributions>()
     }
 
     suspend fun getGenreStats(
         baseUrl: String,
         serverId: Long,
-    ): Result<List<GrimmoryGenreStat>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryGenreStat>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/genres") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Genre stats failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Genre stats failed: ${response.status}")
         response.body<List<GrimmoryGenreStat>>()
     }
 
     suspend fun getReadingDates(
         baseUrl: String,
         serverId: Long,
-    ): Result<List<GrimmoryDateCount>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryDateCount>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/dates") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Reading dates failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Reading dates failed: ${response.status}")
         response.body<List<GrimmoryDateCount>>()
     }
 
@@ -379,24 +378,24 @@ class GrimmoryClient @Inject constructor(
         serverId: Long,
         year: Int,
         week: Int,
-    ): Result<List<GrimmoryTimelineEntry>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryTimelineEntry>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/timeline") {
             header("Authorization", "Bearer $token")
             parameter("year", year)
             parameter("week", week)
         }
-        if (!response.status.isSuccess()) error("Reading timeline failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Reading timeline failed: ${response.status}")
         response.body<List<GrimmoryTimelineEntry>>()
     }
 
     suspend fun getPageTurnerScores(
         baseUrl: String,
         serverId: Long,
-    ): Result<List<GrimmoryPageTurnerScore>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmoryPageTurnerScore>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/page-turner-scores") {
             header("Authorization", "Bearer $token")
         }
-        if (!response.status.isSuccess()) error("Page turner scores failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Page turner scores failed: ${response.status}")
         response.body<List<GrimmoryPageTurnerScore>>()
     }
 
@@ -404,12 +403,12 @@ class GrimmoryClient @Inject constructor(
         baseUrl: String,
         serverId: Long,
         year: Int,
-    ): Result<List<GrimmorySessionScatter>> = withAuth(baseUrl, serverId) { token ->
+    ): Result<List<GrimmorySessionScatter>> = tokenManager.withAuth(baseUrl, serverId) { token ->
         val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/user-stats/reading/session-scatter") {
             header("Authorization", "Bearer $token")
             parameter("year", year)
         }
-        if (!response.status.isSuccess()) error("Session scatter failed: ${response.status}")
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Session scatter failed: ${response.status}")
         response.body<List<GrimmorySessionScatter>>()
     }
 
@@ -444,7 +443,7 @@ class GrimmoryClient @Inject constructor(
             }
         }.execute { response ->
             if (!response.status.isSuccess()) {
-                error("Download failed: ${response.status}")
+                throw GrimmoryHttpException(response.status.value, "Download failed: ${response.status}")
             }
             val totalBytes = response.contentLength()
             val channel = response.bodyAsChannel()
@@ -467,32 +466,4 @@ class GrimmoryClient @Inject constructor(
 
     fun audiobookCoverUrl(baseUrl: String, grimmoryBookId: Long): String =
         "${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/cover"
-
-    /**
-     * Executes a block with a valid access token.
-     * If the token is expired (401), refreshes and retries once.
-     */
-    private suspend fun <T> withAuth(
-        baseUrl: String,
-        serverId: Long,
-        block: suspend (token: String) -> T
-    ): Result<T> = runCatching {
-        val token = tokenManager.getAccessToken(serverId)
-            ?: error("Not logged in to Grimmory")
-
-        try {
-            block(token)
-        } catch (e: Exception) {
-            if (e.message?.contains("401") == true) {
-                Timber.d("Grimmory: access token expired, refreshing...")
-                val refreshToken = tokenManager.getRefreshToken(serverId)
-                    ?: error("No refresh token available")
-                val newTokens = refreshToken(baseUrl, refreshToken).getOrThrow()
-                tokenManager.storeTokens(serverId, newTokens)
-                block(newTokens.accessToken)
-            } else {
-                throw e
-            }
-        }
-    }
 }
