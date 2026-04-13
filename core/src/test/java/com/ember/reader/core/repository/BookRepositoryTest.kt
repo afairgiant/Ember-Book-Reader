@@ -4,14 +4,12 @@ import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.grimmory.GrimmoryAppClient
-import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
-import com.ember.reader.core.readium.BookOpener
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -39,19 +37,19 @@ class BookRepositoryTest {
     private lateinit var opdsClient: OpdsClient
 
     @MockK
-    private lateinit var bookOpener: BookOpener
-
-    @MockK
     private lateinit var serverRepository: ServerRepository
 
     @MockK
     private lateinit var grimmoryAppClient: GrimmoryAppClient
 
     @MockK
-    private lateinit var grimmoryClient: GrimmoryClient
+    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
 
     @MockK
-    private lateinit var grimmoryTokenManager: GrimmoryTokenManager
+    private lateinit var bookDownloader: BookDownloader
+
+    @MockK
+    private lateinit var metadataExtractor: BookMetadataExtractor
 
     @TempDir
     lateinit var tempDir: File
@@ -73,7 +71,7 @@ class BookRepositoryTest {
     @BeforeEach
     fun setUp() {
         every { context.filesDir } returns tempDir
-        repository = BookRepository(context, bookDao, opdsClient, bookOpener, serverRepository, grimmoryAppClient, grimmoryClient, grimmoryTokenManager)
+        repository = BookRepository(context, bookDao, opdsClient, serverRepository, grimmoryAppClient, grimmoryTokenManager, bookDownloader, metadataExtractor)
     }
 
     @Test
@@ -175,7 +173,9 @@ class BookRepositoryTest {
 
         coEvery { bookDao.insert(any()) } returns Unit
         coEvery { bookDao.updateFileHash(any(), any()) } returns Unit
-        coEvery { bookOpener.open(any()) } returns Result.failure(Exception("test"))
+        coEvery { metadataExtractor.extractMetadata(any()) } returns BookMetadata(
+            title = "Local Book", author = null, coverUrl = null,
+        )
 
         repository.addLocalBook(book)
 

@@ -1,12 +1,11 @@
 package com.ember.reader.core.repository
 
 import android.content.Context
-import android.graphics.Bitmap
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
+import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
-import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -15,18 +14,15 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
-import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.PartialMd5
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.io.FileOutputStream
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import org.readium.r2.shared.publication.services.cover
 import timber.log.Timber
 
 @Singleton
@@ -34,19 +30,15 @@ class BookRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val opdsClient: OpdsClient,
-    private val bookOpener: BookOpener,
     private val serverRepository: ServerRepository,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager
+    private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val bookDownloader: BookDownloader,
+    private val metadataExtractor: BookMetadataExtractor,
 ) {
 
     private val booksDir: File by lazy {
         File(context.filesDir, "books").also { it.mkdirs() }
-    }
-
-    private val coversDir: File by lazy {
-        File(context.filesDir, "covers").also { it.mkdirs() }
     }
 
     private val cachePrefs by lazy {
@@ -206,50 +198,7 @@ class BookRepository @Inject constructor(
         val resolvedIds = mutableListOf<String>()
 
         for (appBook in result.content) {
-            val opdsEntryId = "urn:booklore:book:${appBook.id}"
-            val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
-
-            val format = when (appBook.primaryFileType?.uppercase()) {
-                "PDF" -> BookFormat.PDF
-                "AUDIOBOOK" -> BookFormat.AUDIOBOOK
-                else -> BookFormat.EPUB
-            }
-
-            val coverUrl = if (format == BookFormat.AUDIOBOOK) {
-                grimmoryAppClient.audiobookCoverUrl(server.url, appBook.id, appBook.coverUpdatedOn)
-            } else {
-                grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn)
-            }
-
-            if (existing != null) {
-                bookDao.update(
-                    existing.copy(
-                        title = appBook.title,
-                        author = appBook.authors.firstOrNull(),
-                        coverUrl = coverUrl,
-                        downloadUrl = "/api/v1/opds/${appBook.id}/download",
-                        series = appBook.seriesName,
-                        seriesIndex = appBook.seriesNumber,
-                    )
-                )
-                resolvedIds.add(existing.id)
-            } else {
-                val book = Book(
-                    id = java.util.UUID.randomUUID().toString(),
-                    serverId = server.id,
-                    opdsEntryId = opdsEntryId,
-                    title = appBook.title,
-                    author = appBook.authors.firstOrNull(),
-                    coverUrl = coverUrl,
-                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
-                    format = format,
-                    series = appBook.seriesName,
-                    seriesIndex = appBook.seriesNumber,
-                    addedAt = Instant.now()
-                )
-                bookDao.insert(book.toEntity())
-                resolvedIds.add(book.id)
-            }
+            resolvedIds.add(upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook))
         }
 
         return Result.success(
@@ -286,7 +235,7 @@ class BookRepository @Inject constructor(
             ).getOrElse { throw it }
 
             for (appBook in appPage.content) {
-                val opdsEntryId = "urn:booklore:book:${appBook.id}"
+                val opdsEntryId = grimmoryOpdsEntryId(appBook.id)
                 seenOpdsIds.add(opdsEntryId)
                 upsertGrimmoryBook(server.id, origin, opdsEntryId, appBook)
             }
@@ -343,34 +292,30 @@ class BookRepository @Inject constructor(
         pruneStaleServerBooks(server.id, seenOpdsIds)
     }
 
+    /** Upserts a Grimmory book into the local DB. Returns the local book ID. */
     private suspend fun upsertGrimmoryBook(
         serverId: Long,
         origin: String,
         opdsEntryId: String,
-        appBook: com.ember.reader.core.grimmory.GrimmoryAppBook,
-    ) {
+        appBook: GrimmoryAppBook,
+    ): String {
         val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
-        val format = when (appBook.primaryFileType?.uppercase()) {
-            "PDF" -> BookFormat.PDF
-            "AUDIOBOOK" -> BookFormat.AUDIOBOOK
-            else -> BookFormat.EPUB
-        }
-        val coverUrl = if (format == BookFormat.AUDIOBOOK) {
-            grimmoryAppClient.audiobookCoverUrl(origin, appBook.id, appBook.coverUpdatedOn)
-        } else {
-            grimmoryAppClient.coverUrl(origin, appBook.id, appBook.coverUpdatedOn)
-        }
+        val format = appBook.toBookFormat()
+        val coverUrl = resolvedCoverUrl(origin, appBook, format)
+        val downloadUrl = grimmoryDownloadUrl(appBook.id)
+
         if (existing != null) {
             bookDao.update(
                 existing.copy(
                     title = appBook.title,
                     author = appBook.authors.firstOrNull(),
                     coverUrl = coverUrl,
-                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                    downloadUrl = downloadUrl,
                     series = appBook.seriesName,
                     seriesIndex = appBook.seriesNumber,
                 )
             )
+            return existing.id
         } else {
             val book = Book(
                 id = java.util.UUID.randomUUID().toString(),
@@ -379,13 +324,14 @@ class BookRepository @Inject constructor(
                 title = appBook.title,
                 author = appBook.authors.firstOrNull(),
                 coverUrl = coverUrl,
-                downloadUrl = "/api/v1/opds/${appBook.id}/download",
+                downloadUrl = downloadUrl,
                 format = format,
                 series = appBook.seriesName,
                 seriesIndex = appBook.seriesNumber,
                 addedAt = Instant.now(),
             )
             bookDao.insert(book.toEntity())
+            return book.id
         }
     }
 
@@ -421,172 +367,7 @@ class BookRepository @Inject constructor(
         book: Book,
         server: Server,
         onProgress: ((DownloadProgress) -> Unit)? = null,
-    ): Result<Book> = runCatching {
-        val grimmoryBookId = book.grimmoryBookId
-        Timber.d("Download: isGrimmory=${server.isGrimmory} loggedIn=${grimmoryTokenManager.isLoggedIn(server.id)} grimmoryBookId=$grimmoryBookId format=${book.format}")
-
-        // For audiobooks from Grimmory, check if folder-based and handle accordingly
-        if (book.format == com.ember.reader.core.model.BookFormat.AUDIOBOOK &&
-            server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null
-        ) {
-            return@runCatching downloadAudiobook(book, server, grimmoryBookId, onProgress)
-        }
-
-        val downloadUrl = book.downloadUrl
-            ?: error("No download URL for book: ${book.title}")
-
-        val extension = when (book.format) {
-            com.ember.reader.core.model.BookFormat.EPUB -> "epub"
-            com.ember.reader.core.model.BookFormat.PDF -> "pdf"
-            com.ember.reader.core.model.BookFormat.AUDIOBOOK -> "m4b"
-        }
-        val fileName = "${book.id}.$extension"
-        val file = File(booksDir, fileName)
-
-        if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            grimmoryClient.downloadBook(
-                baseUrl = server.url,
-                serverId = server.id,
-                grimmoryBookId = grimmoryBookId,
-                destination = file,
-                onProgress = onProgress?.let { callback ->
-                    { bytesRead, totalBytes ->
-                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
-                    }
-                },
-            ).getOrThrow()
-        } else {
-            opdsClient.downloadBookToFile(
-                baseUrl = server.url,
-                username = server.opdsUsername,
-                password = server.opdsPassword,
-                downloadPath = downloadUrl,
-                destination = file,
-                onProgress = onProgress?.let { callback ->
-                    { bytesRead, totalBytes ->
-                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
-                    }
-                },
-            ).getOrThrow()
-        }
-
-        Timber.d("Download complete: file=${file.name} size=${file.length()}")
-        if (file.length() < 100) {
-            file.delete()
-            error("Downloaded file is too small — server may have returned an error")
-        }
-        val header = ByteArray(5).also { buf -> file.inputStream().use { it.read(buf) } }
-        if (header.decodeToString().startsWith("<!") || header.decodeToString().startsWith("<html")) {
-            file.delete()
-            error("Downloaded file is HTML, not a book — check server URL and credentials")
-        }
-
-        val fileHash = PartialMd5.compute(file)
-        bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
-        bookDao.updateFileHash(book.id, fileHash)
-
-        // Extract and cache cover locally so it works offline
-        val metadata = extractMetadata(file)
-        if (metadata.coverUrl != null) {
-            bookDao.getById(book.id)?.let { entity ->
-                bookDao.update(entity.copy(coverUrl = metadata.coverUrl))
-            }
-        }
-
-        book.copy(
-            localPath = file.absolutePath,
-            fileHash = fileHash,
-            coverUrl = metadata.coverUrl ?: book.coverUrl,
-            downloadedAt = Instant.now()
-        )
-    }
-
-    /**
-     * Downloads an audiobook from Grimmory. Checks if folder-based (multiple tracks)
-     * and downloads each track individually to a subfolder if so.
-     */
-    private suspend fun downloadAudiobook(
-        book: Book,
-        server: Server,
-        grimmoryBookId: Long,
-        onProgress: ((DownloadProgress) -> Unit)? = null,
-    ): Book {
-        val infoResult = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
-        infoResult.onFailure { error ->
-            Timber.e(error, "Audiobook download: failed to fetch audiobook info for grimmoryBookId=%d", grimmoryBookId)
-        }
-        val info = infoResult.getOrNull()
-        Timber.d("Audiobook download: info=%s folderBased=%s tracks=%d", info != null, info?.folderBased, info?.tracks?.size ?: 0)
-
-        val tracks = info?.tracks
-        if (info != null && info.folderBased && !tracks.isNullOrEmpty()) {
-            // Folder-based: download each track to a subfolder
-            val audiobookDir = File(booksDir, "audiobook_${book.id}").also { it.mkdirs() }
-            Timber.d("Downloading folder-based audiobook: ${tracks.size} tracks to ${audiobookDir.name}")
-
-            val totalBytes = tracks.sumOf { it.fileSizeBytes }
-            var completedBytes = 0L
-
-            for (track in tracks) {
-                val trackFile = File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
-                if (trackFile.exists() && trackFile.length() > 0) {
-                    Timber.d("Track ${track.index} already downloaded, skipping")
-                    completedBytes += trackFile.length()
-                    continue
-                }
-                val streamUrl = grimmoryClient.audiobookStreamUrl(server.url, server.id, grimmoryBookId, track.index)
-                    ?: error("Cannot build stream URL for track ${track.index}")
-                Timber.d("Downloading track ${track.index}: ${track.title ?: track.fileName}")
-                val trackCompletedBytes = completedBytes
-                grimmoryClient.downloadFromUrl(streamUrl, trackFile) { bytesRead, trackTotalBytes ->
-                    onProgress?.invoke(
-                        DownloadProgress(
-                            bytesDownloaded = trackCompletedBytes + bytesRead,
-                            totalBytes = if (totalBytes > 0) totalBytes else null,
-                            trackIndex = track.index,
-                            trackCount = tracks.size,
-                            trackBytesDownloaded = bytesRead,
-                            trackTotalBytes = trackTotalBytes,
-                        )
-                    )
-                }.getOrThrow()
-                completedBytes += trackFile.length()
-            }
-
-            bookDao.updateLocalPath(book.id, audiobookDir.absolutePath, Instant.now())
-            return book.copy(
-                localPath = audiobookDir.absolutePath,
-                downloadedAt = Instant.now(),
-            )
-        } else {
-            // Single file: download directly
-            val file = File(booksDir, "${book.id}.m4b")
-            grimmoryClient.downloadBook(
-                server.url, server.id, grimmoryBookId, file,
-                onProgress = onProgress?.let { callback ->
-                    { bytesRead, totalBytes ->
-                        callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
-                    }
-                },
-            ).getOrThrow()
-
-            Timber.d("Download complete: file=${file.name} size=${file.length()}")
-            if (file.length() < 100) {
-                file.delete()
-                error("Downloaded file is too small — server may have returned an error")
-            }
-
-            val fileHash = PartialMd5.compute(file)
-            bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
-            bookDao.updateFileHash(book.id, fileHash)
-
-            return book.copy(
-                localPath = file.absolutePath,
-                fileHash = fileHash,
-                downloadedAt = Instant.now(),
-            )
-        }
-    }
+    ): Result<Book> = bookDownloader.downloadBook(book, server, onProgress)
 
     suspend fun addLocalBook(book: Book) {
         val file = book.localPath?.let { File(it) }
@@ -594,7 +375,7 @@ class BookRepository @Inject constructor(
         // Extract metadata and cover from the file
         val enrichedBook = if (file != null && file.exists()) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val metadata = extractMetadata(file)
+                val metadata = metadataExtractor.extractMetadata(file)
                 val hash = PartialMd5.compute(file)
                 book.copy(
                     title = if (book.title == "Untitled" || book.title == file.nameWithoutExtension) {
@@ -700,35 +481,14 @@ class BookRepository @Inject constructor(
                 ).getOrNull()
 
                 if (searchResult != null) {
+                    val origin = serverOrigin(server.url)
                     for (appBook in searchResult.content) {
-                        // Match by exact title or author+title combo
                         val titleMatch = appBook.title.equals(book.title, ignoreCase = true) ||
                             appBook.title.contains(book.title, ignoreCase = true) ||
                             book.title.contains(appBook.title, ignoreCase = true)
                         if (titleMatch) {
-                            // Ensure this book exists in our DB, create if not
-                            val opdsEntryId = "urn:booklore:book:${appBook.id}"
-                            val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
-                            val matchId = if (existing != null) {
-                                existing.id
-                            } else {
-                                val newBook = Book(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    serverId = server.id,
-                                    opdsEntryId = opdsEntryId,
-                                    title = appBook.title,
-                                    author = appBook.authors.firstOrNull(),
-                                    coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
-                                    downloadUrl = "/api/v1/opds/${appBook.id}/download",
-                                    format = when (appBook.primaryFileType?.uppercase()) {
-                                        "PDF" -> BookFormat.PDF
-                                        else -> BookFormat.EPUB
-                                    },
-                                    addedAt = java.time.Instant.now()
-                                )
-                                bookDao.insert(newBook.toEntity())
-                                newBook.id
-                            }
+                            val opdsEntryId = grimmoryOpdsEntryId(appBook.id)
+                            val matchId = upsertGrimmoryBook(server.id, origin, opdsEntryId, appBook)
                             if (matchId != book.id) {
                                 Timber.d("Relink: found match via Grimmory search: '${appBook.title}' (${appBook.id})")
                                 return@withContext RelinkMatch(matchId, server.name, server.id)
@@ -800,7 +560,7 @@ class BookRepository @Inject constructor(
 
                 // No match — extract metadata and create a local book
                 if (existingByHash == null) {
-                    val (title, author, coverUrl) = extractMetadata(file)
+                    val (title, author, coverUrl) = metadataExtractor.extractMetadata(file)
                     val book = Book(
                         id = java.util.UUID.randomUUID().toString(),
                         title = title,
@@ -821,53 +581,8 @@ class BookRepository @Inject constructor(
             recovered
         }
 
-    data class BookMetadata(
-        val title: String,
-        val author: String?,
-        val coverUrl: String?,
-        val publisher: String? = null,
-        val language: String? = null,
-        val subjects: String? = null,
-        val pageCount: Int? = null,
-        val publishedDate: String? = null,
-        val description: String? = null
-    )
-
-    suspend fun extractMetadata(file: File): BookMetadata {
-        val publication = bookOpener.open(file).getOrNull()
-            ?: return BookMetadata(file.nameWithoutExtension, null, null)
-
-        val meta = publication.metadata
-        val title = meta.title?.takeIf { it.isNotBlank() }
-            ?: file.nameWithoutExtension
-        val author = meta.authors.firstOrNull()?.name
-        val publisher = meta.publishers.firstOrNull()?.name
-        val language = meta.languages.firstOrNull()
-        val subjects = meta.subjects.map { it.name }.takeIf { it.isNotEmpty() }?.joinToString(", ")
-        val pageCount = meta.numberOfPages
-        val publishedDate = meta.published?.toString()
-        val description = meta.description
-
-        // Extract and save cover image
-        val coverUrl = try {
-            val bitmap = publication.cover()
-            if (bitmap != null) {
-                val coverFile = File(coversDir, "${file.nameWithoutExtension}.jpg")
-                FileOutputStream(coverFile).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
-                }
-                coverFile.toURI().toString()
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Timber.w(e, "Failed to extract cover from ${file.name}")
-            null
-        }
-
-        publication.close()
-        return BookMetadata(title, author, coverUrl, publisher, language, subjects, pageCount, publishedDate, description)
-    }
+    /** Kept for callers that reference it — delegates to BookMetadataExtractor. */
+    suspend fun extractMetadata(file: File): BookMetadata = metadataExtractor.extractMetadata(file)
 
     /** Update just the cover URL on an existing book row. Used after applying a new cover. */
     suspend fun updateBookCoverUrl(bookId: String, coverUrl: String) {
@@ -910,7 +625,7 @@ class BookRepository @Inject constructor(
     suspend fun enrichBookMetadata(bookId: String) {
         val entity = bookDao.getById(bookId) ?: return
         val localPath = entity.localPath ?: return
-        val metadata = extractMetadata(File(localPath))
+        val metadata = metadataExtractor.extractMetadata(File(localPath))
         bookDao.update(
             entity.copy(
                 publisher = metadata.publisher ?: entity.publisher,
@@ -923,4 +638,23 @@ class BookRepository @Inject constructor(
             )
         )
     }
+
+    private fun grimmoryOpdsEntryId(grimmoryBookId: Long): String =
+        "urn:booklore:book:$grimmoryBookId"
+
+    private fun grimmoryDownloadUrl(grimmoryBookId: Long): String =
+        "/api/v1/opds/$grimmoryBookId/download"
+
+    private fun resolvedCoverUrl(baseUrl: String, appBook: GrimmoryAppBook, format: BookFormat): String =
+        if (format == BookFormat.AUDIOBOOK) {
+            grimmoryAppClient.audiobookCoverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
+        } else {
+            grimmoryAppClient.coverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
+        }
+}
+
+private fun GrimmoryAppBook.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {
+    "PDF" -> BookFormat.PDF
+    "AUDIOBOOK" -> BookFormat.AUDIOBOOK
+    else -> BookFormat.EPUB
 }
