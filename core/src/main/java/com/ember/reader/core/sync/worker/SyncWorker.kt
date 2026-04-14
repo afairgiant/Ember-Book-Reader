@@ -82,8 +82,10 @@ class SyncWorker @AssistedInject constructor(
                 if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
                     syncGrimmoryProgress(server)
 
-                    // Auto-download books marked as Reading
-                    if (appPreferencesRepository.getAutoDownloadReading()) {
+                    // Auto-download books marked as Reading.
+                    // Skip when the authenticated user lacks download permission —
+                    // Grimmory would reject with 403 and we'd just spam failures.
+                    if (appPreferencesRepository.getAutoDownloadReading() && server.canDownload != false) {
                         autoDownloadReadingBooks(server)
                     }
 

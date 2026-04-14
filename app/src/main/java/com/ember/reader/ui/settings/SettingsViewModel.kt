@@ -17,6 +17,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -47,6 +50,20 @@ class SettingsViewModel @Inject constructor(
     val autoDownloadReading: StateFlow<Boolean> = appPreferencesRepository.autoDownloadReadingFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    /**
+     * False when every connected Grimmory server has explicit `canDownload == false`
+     * — in that state the toggle is meaningless because [SyncWorker.autoDownloadReadingBooks]
+     * would skip every server. Permissive while permissions are unknown (`null`) and when
+     * no Grimmory servers are configured at all (the global pref is harmless then).
+     */
+    val autoDownloadReadingEnabled: StateFlow<Boolean> = serverRepository.observeAll()
+        .map { servers ->
+            val grimmoryServers = servers.filter { it.isGrimmory }
+            grimmoryServers.isEmpty() || grimmoryServers.any { it.canDownload != false }
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val syncNotifications: StateFlow<Boolean> = appPreferencesRepository.syncNotificationsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -58,6 +75,20 @@ class SettingsViewModel @Inject constructor(
 
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        // Safety net: if permission flips to denied after the user turned the
+        // toggle on, force the pref off so reconnecting to a download-capable
+        // server doesn't silently reactivate an old enabled state.
+        viewModelScope.launch {
+            combine(autoDownloadReadingEnabled, autoDownloadReading) { enabled, on ->
+                !enabled && on
+            }
+                .distinctUntilChanged()
+                .filter { it }
+                .collect { appPreferencesRepository.updateAutoDownloadReading(false) }
+        }
+    }
 
     val readingStats: StateFlow<ReadingStats> = combine(
         bookRepository.observeDownloadedBooks(),

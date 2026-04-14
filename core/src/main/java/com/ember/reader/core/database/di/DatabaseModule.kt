@@ -30,7 +30,7 @@ object DatabaseModule {
         EmberDatabase::class.java,
         "ember.db"
     )
-        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8, EmberDatabase.MIGRATION_8_9, EmberDatabase.MIGRATION_9_10, EmberDatabase.MIGRATION_10_11, EmberDatabase.MIGRATION_11_12)
+        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8, EmberDatabase.MIGRATION_8_9, EmberDatabase.MIGRATION_9_10, EmberDatabase.MIGRATION_10_11, EmberDatabase.MIGRATION_11_12, EmberDatabase.MIGRATION_12_13)
         .build()
 
     @Provides

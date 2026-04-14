@@ -221,6 +221,26 @@ object NotificationHelper {
         NotificationManagerCompat.from(context).notify("download_error".hashCode(), notification)
     }
 
+    fun showDownloadForbidden(context: Context, bookTitle: String, serverName: String) {
+        if (!hasPermission(context)) return
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle("No download permission on $serverName")
+            .setContentText(bookTitle)
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "$bookTitle \u2014 your account on $serverName doesn't have download permission. Ask an admin, or try streaming the book instead."
+                )
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(openAppIntent(context))
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(context).notify("download_forbidden".hashCode(), notification)
+    }
+
     fun dismissDownloadProgress(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID_DOWNLOAD_PROGRESS)
     }

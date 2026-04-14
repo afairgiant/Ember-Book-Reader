@@ -119,6 +119,15 @@ class GrimmoryClient @Inject constructor(
         }
     }
 
+    /**
+     * Full URL for streaming an EPUB/PDF book from Grimmory without requiring
+     * download permission. Backed by `/api/v1/books/{id}/content`, which is
+     * gated only on library access — the same endpoint Grimmory's web reader
+     * uses. Readium opens this as a remote archive via range requests.
+     */
+    fun bookContentUrl(baseUrl: String, grimmoryBookId: Long): String =
+        "${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/content"
+
     suspend fun downloadBook(
         baseUrl: String,
         serverId: Long,

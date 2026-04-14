@@ -3,6 +3,8 @@ package com.ember.reader.core.sync
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.repository.ServerRepository
+import dagger.Lazy
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.async
@@ -30,10 +32,12 @@ import timber.log.Timber
 class SyncStatusProber @Inject constructor(
     private val grimmoryAppClient: GrimmoryAppClient,
     private val opdsClient: OpdsClient,
-    private val syncStatusRepository: SyncStatusRepository
+    private val syncStatusRepository: SyncStatusRepository,
+    // Lazy to break the ServerRepository ↔ (sync internals) dependency cycle Hilt
+    // would otherwise see; permissions persistence only fires on successful probe.
+    private val serverRepository: Lazy<ServerRepository>
 ) {
 
-    /** Probe [servers] concurrently. Completes when every probe finishes. */
     suspend fun probeAll(servers: List<Server>): Unit = coroutineScope {
         servers.map { server -> async { probe(server) } }.awaitAll()
     }
@@ -41,7 +45,12 @@ class SyncStatusProber @Inject constructor(
     suspend fun probe(server: Server) {
         Timber.d("SyncStatusProber: probing server ${server.id} (${server.name})")
         val result: Result<Unit>? = if (server.isGrimmory) {
-            grimmoryAppClient.getCurrentUser(server.url, server.id).map { }
+            grimmoryAppClient.getCurrentUser(server.url, server.id)
+                .onSuccess { user ->
+                    runCatching { serverRepository.get().persistGrimmoryPermissions(server.id, user) }
+                        .onFailure { Timber.w(it, "SyncStatusProber: persist permissions failed for server ${server.id}") }
+                }
+                .map { }
         } else {
             probeOpds(server)
         }

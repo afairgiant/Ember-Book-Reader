@@ -10,6 +10,7 @@ import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.grimmory.GrimmoryUser
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
@@ -88,12 +89,12 @@ class ServerRepository @Inject constructor(
 
     /**
      * Re-fetches the current user's [com.ember.reader.core.grimmory.GrimmoryUserPermissions]
-     * for a single Grimmory server and persists the `canMoveOrganizeFiles` flag to the
-     * server record. Silent — any network or auth failure is logged and swallowed, and
-     * the flag is left at its previous value.
+     * for a single Grimmory server and persists the permission flags + fetch timestamp
+     * to the server record. Silent — any network or auth failure is logged and swallowed,
+     * leaving previous values intact.
      *
-     * Call this on app start for each Grimmory server, after login, and on a 403 from
-     * a write operation that depends on this permission.
+     * Call this on app start for each Grimmory server, after login, on every server probe,
+     * and on a 403 from a download/organize action so the cached value can self-correct.
      */
     suspend fun refreshGrimmoryPermissions(serverId: Long) {
         val entity = serverDao.getById(serverId) ?: return
@@ -104,10 +105,35 @@ class ServerRepository @Inject constructor(
     private suspend fun refreshGrimmoryPermissions(serverId: Long, baseUrl: String) {
         runCatching {
             val user = grimmoryAppClient.getCurrentUser(baseUrl, serverId).getOrNull() ?: return
-            serverDao.updateCanMoveOrganizeFiles(serverId, user.permissions.canMoveOrganizeFiles)
+            persistGrimmoryPermissions(serverId, user)
         }.onFailure { e ->
             Timber.w(e, "Failed to refresh Grimmory permissions for server $serverId")
         }
+    }
+
+    /**
+     * Writes fetched permissions to the Server row. Skips the write when no flag
+     * changed so Room doesn't trigger downstream `observeAll()` re-emissions on
+     * every probe tick.
+     */
+    suspend fun persistGrimmoryPermissions(serverId: Long, user: GrimmoryUser) {
+        val existing = serverDao.getById(serverId) ?: return
+        val perms = user.permissions
+        val unchanged = existing.canMoveOrganizeFiles == perms.canMoveOrganizeFiles &&
+            existing.canDownload == perms.canDownload &&
+            existing.canUpload == perms.canUpload &&
+            existing.canAccessBookdrop == perms.canAccessBookdrop &&
+            existing.isAdmin == perms.isAdmin
+        if (unchanged) return
+        serverDao.updateGrimmoryPermissions(
+            id = serverId,
+            canMoveOrganizeFiles = perms.canMoveOrganizeFiles,
+            canDownload = perms.canDownload,
+            canUpload = perms.canUpload,
+            canAccessBookdrop = perms.canAccessBookdrop,
+            isAdmin = perms.isAdmin,
+            fetchedAt = Instant.now()
+        )
     }
 
     suspend fun delete(serverId: Long) {
@@ -169,11 +195,11 @@ class ServerRepository @Inject constructor(
         url: String,
         username: String,
         password: String
-    ): Result<String> {
+    ): Result<GrimmoryUser> {
         val tokens = grimmoryClient.login(url, username, password).getOrElse {
             return Result.failure(it)
         }
-        return Result.success("Logged in as $username")
+        return grimmoryAppClient.fetchCurrentUser(url, tokens.accessToken)
     }
 
     suspend fun detectGrimmory(url: String): Boolean = grimmoryClient.checkHealth(url)

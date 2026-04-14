@@ -19,18 +19,29 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,6 +67,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.Server
+import com.ember.reader.ui.settings.components.PermissionChip
 import com.ember.reader.ui.settings.components.SettingsGroup
 import com.ember.reader.ui.settings.components.SettingsNavRow
 
@@ -151,6 +163,7 @@ fun SettingsHubScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Connected Servers
+            val expandedServers = remember { mutableStateMapOf<Long, Boolean>() }
             SettingsGroup(
                 title = "Connected Servers",
                 subtitle = "Manage your book server connections"
@@ -159,10 +172,15 @@ fun SettingsHubScreen(
                     if (index > 0) {
                         com.ember.reader.ui.settings.components.SettingsDivider()
                     }
+                    val expanded = expandedServers[server.id] == true
                     ServerRow(
                         server = server,
                         isGrimmoryLoggedIn = viewModel.isGrimmoryLoggedIn(server.id),
-                        onClick = { onEditServer(server.id) }
+                        expanded = expanded,
+                        onClick = { onEditServer(server.id) },
+                        onToggleExpanded = {
+                            expandedServers[server.id] = !expanded
+                        }
                     )
                 }
                 if (servers.isNotEmpty()) {
@@ -310,54 +328,125 @@ fun SettingsHubScreen(
 }
 
 @Composable
-private fun ServerRow(server: Server, isGrimmoryLoggedIn: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (server.isGrimmory) {
-            Icon(
-                painter = painterResource(R.drawable.ic_grimmory),
-                contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(22.dp)
-            )
-        } else {
-            Icon(
-                Icons.Default.CloudQueue,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = server.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatusDot(label = "OPDS", active = true)
-                if (server.kosyncUsername.isNotBlank()) {
-                    StatusDot(label = "Kosync", active = true)
-                }
-                if (server.isGrimmory) {
-                    StatusDot(label = "Grimmory", active = isGrimmoryLoggedIn)
+private fun ServerRow(
+    server: Server,
+    isGrimmoryLoggedIn: Boolean,
+    expanded: Boolean,
+    onClick: () -> Unit,
+    onToggleExpanded: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (server.isGrimmory) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_grimmory),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else {
+                Icon(
+                    Icons.Default.CloudQueue,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = server.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatusDot(label = "OPDS", active = true)
+                    if (server.kosyncUsername.isNotBlank()) {
+                        StatusDot(label = "Kosync", active = true)
+                    }
+                    if (server.isGrimmory) {
+                        StatusDot(label = "Grimmory", active = isGrimmoryLoggedIn)
+                    }
                 }
             }
+            if (server.isGrimmory) {
+                IconButton(onClick = onToggleExpanded, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "Hide permissions" else "Show permissions",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+        if (server.isGrimmory) {
+            AnimatedVisibility(visible = expanded) {
+                GrimmoryPermissionsPanel(server = server)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GrimmoryPermissionsPanel(server: Server) {
+    val fetchedAt = server.permissionsFetchedAt
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 54.dp, end = 16.dp, bottom = 12.dp)
+    ) {
+        if (fetchedAt == null) {
+            Text(
+                text = "Permissions not yet loaded \u2014 will load on next connection.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@Column
+        }
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PermissionChip("Admin", server.isAdmin)
+            PermissionChip("Download", server.canDownload)
+            PermissionChip("Upload", server.canUpload)
+            PermissionChip("Bookdrop", server.canAccessBookdrop)
+            PermissionChip("Organize Files", server.canMoveOrganizeFiles)
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        val lastChecked = remember(fetchedAt) { relativeTime(fetchedAt) }
+        Text(
+            text = "Last checked $lastChecked",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+private fun relativeTime(instant: java.time.Instant): String {
+    val delta = java.time.Duration.between(instant, java.time.Instant.now()).toSeconds()
+    return when {
+        delta < 60 -> "just now"
+        delta < 3600 -> "${delta / 60}m ago"
+        delta < 86_400 -> "${delta / 3600}h ago"
+        else -> "${delta / 86_400}d ago"
     }
 }
 

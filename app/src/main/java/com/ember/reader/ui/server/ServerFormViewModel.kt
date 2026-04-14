@@ -3,6 +3,7 @@ package com.ember.reader.ui.server
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryUserPermissions
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.Server.Companion.GRIMMORY_OPDS_PATH
 import com.ember.reader.core.repository.ServerRepository
@@ -164,7 +165,9 @@ class ServerFormViewModel @Inject constructor(
         val state = _uiState.value
         if (state.url.isBlank() || state.grimmoryUsername.isBlank()) return
 
-        _uiState.update { it.copy(grimmoryTestResult = TestResult.Testing) }
+        _uiState.update {
+            it.copy(grimmoryTestResult = TestResult.Testing, grimmoryTestPermissions = null)
+        }
         viewModelScope.launch {
             val result = serverRepository.testGrimmoryConnection(
                 url = state.url,
@@ -175,9 +178,10 @@ class ServerFormViewModel @Inject constructor(
                 it.copy(
                     isGrimmory = result.isSuccess || it.isGrimmory,
                     grimmoryTestResult = result.fold(
-                        onSuccess = { msg -> TestResult.Success(msg) },
+                        onSuccess = { user -> TestResult.Success("Logged in as ${user.username}") },
                         onFailure = { err -> TestResult.Error(err.message ?: "Login failed") }
-                    )
+                    ),
+                    grimmoryTestPermissions = result.getOrNull()?.permissions
                 )
             }
         }
@@ -269,7 +273,8 @@ data class ServerFormUiState(
     val validationError: String? = null,
     val opdsTestResult: TestResult = TestResult.Idle,
     val kosyncTestResult: TestResult = TestResult.Idle,
-    val grimmoryTestResult: TestResult = TestResult.Idle
+    val grimmoryTestResult: TestResult = TestResult.Idle,
+    val grimmoryTestPermissions: GrimmoryUserPermissions? = null
 )
 
 sealed interface TestResult {

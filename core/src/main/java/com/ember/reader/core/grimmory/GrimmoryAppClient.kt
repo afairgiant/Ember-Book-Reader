@@ -157,12 +157,26 @@ class GrimmoryAppClient @Inject constructor(
      */
     suspend fun getCurrentUser(baseUrl: String, serverId: Long): Result<GrimmoryUser> =
         tokenManager.withAuth(baseUrl, serverId) { token ->
-            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/users/me") {
-                header("Authorization", "Bearer $token")
-            }
-            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get current user failed: ${response.status}")
-            response.body<GrimmoryUser>()
+            fetchCurrentUserWithToken(baseUrl, token)
         }
+
+    /**
+     * Fetches the current user with an already-obtained access token.
+     * For flows that don't yet have a persisted [GrimmoryTokenManager] entry —
+     * e.g. the pre-save Test button on the server form.
+     */
+    suspend fun fetchCurrentUser(baseUrl: String, accessToken: String): Result<GrimmoryUser> =
+        runCatching { fetchCurrentUserWithToken(baseUrl, accessToken) }
+
+    private suspend fun fetchCurrentUserWithToken(baseUrl: String, token: String): GrimmoryUser {
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/users/me") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) {
+            throw GrimmoryHttpException(response.status.value, "Get current user failed: ${response.status}")
+        }
+        return response.body<GrimmoryUser>()
+    }
 
     suspend fun getMagicShelfBooks(
         baseUrl: String,

@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -172,6 +172,16 @@ abstract class EmberDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE servers ADD COLUMN canDownload INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE servers ADD COLUMN canUpload INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE servers ADD COLUMN canAccessBookdrop INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE servers ADD COLUMN isAdmin INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE servers ADD COLUMN permissionsFetchedAt INTEGER DEFAULT NULL")
             }
         }
 

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
@@ -88,6 +89,7 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
+    onOpenStreamingReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
     onOpenLibrary: (serverId: Long, libraryId: Long) -> Unit = { _, _ -> },
     onEditMetadata: (bookId: String) -> Unit = {},
@@ -387,6 +389,11 @@ fun BookDetailScreen(
                                 Text(buttonText)
                             }
                         } else if (currentBook.downloadUrl != null || isAudiobook) {
+                            val canStream = currentServer?.isGrimmory == true &&
+                                grimmoryBookId != null &&
+                                (currentBook.format == BookFormat.EPUB || currentBook.format == BookFormat.PDF)
+                            val downloadBlocked = currentServer?.canDownload == false
+
                             if (isAudiobook && currentBook.grimmoryBookId != null) {
                                 Button(
                                     onClick = { onOpenReader(currentBook.id, currentBook.format) },
@@ -398,20 +405,53 @@ fun BookDetailScreen(
                                     Text(stringResource(R.string.listen))
                                 }
                             }
-                            if (currentBook.downloadUrl != null) {
-                                OutlinedButton(
-                                    onClick = { viewModel.downloadBook() },
-                                    enabled = !downloading,
-                                    modifier = if (isAudiobook && currentBook.grimmoryBookId != null) Modifier else Modifier.weight(1f),
+                            if (canStream) {
+                                Button(
+                                    onClick = { onOpenStreamingReader(currentBook.id, currentBook.format) },
+                                    modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    if (downloading) {
-                                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.read_streaming))
+                                }
+                            }
+                            if (currentBook.downloadUrl != null) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (downloadBlocked) {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    "Your account doesn't have download permission on this server"
+                                                )
+                                            }
+                                        } else {
+                                            viewModel.downloadBook()
+                                        }
+                                    },
+                                    enabled = !downloading,
+                                    modifier = if ((isAudiobook && currentBook.grimmoryBookId != null) || canStream) {
+                                        Modifier
                                     } else {
-                                        Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Modifier.weight(1f)
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    when {
+                                        downloading ->
+                                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                        downloadBlocked ->
+                                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        else ->
+                                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(if (downloading) stringResource(R.string.downloading) else stringResource(R.string.download))
+                                    Text(
+                                        text = when {
+                                            downloading -> stringResource(R.string.downloading)
+                                            else -> stringResource(R.string.download)
+                                        }
+                                    )
                                 }
                             }
                         }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Search
@@ -75,6 +76,7 @@ fun ReaderScaffold(
     onSeekToProgression: (Float) -> Unit = {},
     brightness: Float = -1f,
     onBrightnessChange: (Float) -> Unit = {},
+    streaming: Boolean = false,
     content: @Composable () -> Unit
 ) {
     var showBrightnessIndicator by remember { mutableStateOf(false) }
@@ -210,7 +212,8 @@ fun ReaderScaffold(
                 onOpenHighlights = onOpenHighlights,
                 onOpenBookmarks = onOpenBookmarks,
                 onOpenPreferences = onOpenPreferences,
-                onOpenSearch = onOpenSearch
+                onOpenSearch = onOpenSearch,
+                streaming = streaming
             )
         }
 
@@ -240,7 +243,8 @@ private fun ReaderTopBar(
     onOpenHighlights: () -> Unit,
     onOpenBookmarks: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit
+    onOpenSearch: () -> Unit,
+    streaming: Boolean = false
 ) {
     Row(
         modifier = Modifier
@@ -253,13 +257,32 @@ private fun ReaderTopBar(
         IconButton(onClick = onNavigateBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
         }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (streaming) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.CloudQueue,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Streaming \u2014 not saved to device",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
         IconButton(onClick = onOpenSearch) {
             Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_cd))
         }

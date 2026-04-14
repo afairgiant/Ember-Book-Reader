@@ -40,6 +40,8 @@ object Routes {
     const val ARG_SERVER_ID = "serverId"
     const val ARG_BOOK_ID = "bookId"
     const val ARG_PATH = "path"
+    const val ARG_MODE = "mode"
+    const val MODE_STREAM = "stream"
 
     // Top-level (bottom nav)
     const val HOME = "home"
@@ -58,8 +60,8 @@ object Routes {
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
     const val CATALOG = "catalog/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
     const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
-    const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}"
-    const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}"
+    const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}?$ARG_MODE={$ARG_MODE}"
+    const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}?$ARG_MODE={$ARG_MODE}"
     const val AUDIOBOOK_READER = "reader/audiobook/{$ARG_BOOK_ID}"
     const val BOOK_DETAIL = "book_detail/{$ARG_BOOK_ID}"
     const val EDIT_METADATA = "edit_metadata/{$ARG_BOOK_ID}"
@@ -87,8 +89,17 @@ object Routes {
         "library/$serverId"
     }
 
-    fun epubReader(bookId: String): String = "reader/epub/$bookId"
-    fun pdfReader(bookId: String): String = "reader/pdf/$bookId"
+    fun epubReader(bookId: String, streaming: Boolean = false): String = if (streaming) {
+        "reader/epub/$bookId?$ARG_MODE=$MODE_STREAM"
+    } else {
+        "reader/epub/$bookId"
+    }
+
+    fun pdfReader(bookId: String, streaming: Boolean = false): String = if (streaming) {
+        "reader/pdf/$bookId?$ARG_MODE=$MODE_STREAM"
+    } else {
+        "reader/pdf/$bookId"
+    }
 }
 
 private enum class BottomNavTab(
@@ -321,14 +332,28 @@ fun EmberNavHost(
             // Detail: Readers
             composable(
                 route = Routes.EPUB_READER,
-                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
+                arguments = listOf(
+                    navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType },
+                    navArgument(Routes.ARG_MODE) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
             ) {
                 EpubReaderScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable(
                 route = Routes.PDF_READER,
-                arguments = listOf(navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType })
+                arguments = listOf(
+                    navArgument(Routes.ARG_BOOK_ID) { type = NavType.StringType },
+                    navArgument(Routes.ARG_MODE) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
             ) {
                 PdfReaderScreen(onNavigateBack = { navController.popBackStack() })
             }
@@ -350,6 +375,9 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
+                    },
+                    onOpenStreamingReader = { bookId, format ->
+                        navigateToReader(navController, bookId, format, streaming = true)
                     },
                     onOpenBookDetail = { bookId ->
                         navController.navigate(Routes.bookDetail(bookId))
@@ -409,13 +437,14 @@ fun EmberNavHost(
 private fun navigateToReader(
     navController: NavHostController,
     bookId: String,
-    format: com.ember.reader.core.model.BookFormat
+    format: com.ember.reader.core.model.BookFormat,
+    streaming: Boolean = false
 ) {
     when (format) {
         com.ember.reader.core.model.BookFormat.EPUB ->
-            navController.navigate(Routes.epubReader(bookId))
+            navController.navigate(Routes.epubReader(bookId, streaming))
         com.ember.reader.core.model.BookFormat.PDF ->
-            navController.navigate(Routes.pdfReader(bookId))
+            navController.navigate(Routes.pdfReader(bookId, streaming))
         com.ember.reader.core.model.BookFormat.AUDIOBOOK ->
             navController.navigate(Routes.audiobookReader(bookId))
     }

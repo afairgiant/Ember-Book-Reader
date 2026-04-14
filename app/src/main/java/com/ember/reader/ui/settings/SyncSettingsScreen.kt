@@ -65,6 +65,7 @@ fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel 
     val syncHighlights by viewModel.syncHighlights.collectAsStateWithLifecycle()
     val syncBookmarks by viewModel.syncBookmarks.collectAsStateWithLifecycle()
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
+    val autoDownloadReadingEnabled by viewModel.autoDownloadReadingEnabled.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -149,9 +150,14 @@ fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel 
                 SettingsToggleRow(
                     icon = Icons.Default.Download,
                     title = stringResource(R.string.auto_download_reading),
-                    subtitle = stringResource(R.string.auto_download_reading_hint),
-                    checked = autoDownloadReading,
-                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) }
+                    subtitle = if (autoDownloadReadingEnabled) {
+                        stringResource(R.string.auto_download_reading_hint)
+                    } else {
+                        "Disabled \u2014 no connected Grimmory server grants download permission"
+                    },
+                    checked = autoDownloadReading && autoDownloadReadingEnabled,
+                    onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
+                    enabled = autoDownloadReadingEnabled
                 )
             }
 

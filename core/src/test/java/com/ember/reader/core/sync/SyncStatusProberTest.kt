@@ -5,8 +5,10 @@ import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryUser
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.testutil.FakeSyncStatusDao
 import com.ember.reader.core.testutil.TestFixtures.server
+import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
@@ -24,9 +26,15 @@ class SyncStatusProberTest {
 
     private val grimmoryAppClient: GrimmoryAppClient = mockk(relaxed = true)
     private val opdsClient: OpdsClient = mockk(relaxed = true)
+    private val serverRepository: ServerRepository = mockk(relaxed = true)
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
     private val syncStatusRepository = SyncStatusRepository(FakeSyncStatusDao(), clock)
-    private val prober = SyncStatusProber(grimmoryAppClient, opdsClient, syncStatusRepository)
+    private val prober = SyncStatusProber(
+        grimmoryAppClient,
+        opdsClient,
+        syncStatusRepository,
+        Lazy { serverRepository }
+    )
 
     @Test
     fun `probe reports Ok when Grimmory getCurrentUser succeeds`() = runTest {

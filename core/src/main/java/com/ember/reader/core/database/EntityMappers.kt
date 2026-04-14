@@ -29,7 +29,12 @@ fun ServerEntity.toDomain(
     grimmoryPassword = grimmoryPassword,
     isGrimmory = isGrimmory,
     lastConnected = lastConnected,
-    canMoveOrganizeFiles = canMoveOrganizeFiles
+    canMoveOrganizeFiles = canMoveOrganizeFiles,
+    canDownload = canDownload,
+    canUpload = canUpload,
+    canAccessBookdrop = canAccessBookdrop,
+    isAdmin = isAdmin,
+    permissionsFetchedAt = permissionsFetchedAt
 )
 
 fun Server.toEntity(): ServerEntity = ServerEntity(
@@ -41,7 +46,12 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     grimmoryUsername = grimmoryUsername,
     isGrimmory = isGrimmory,
     lastConnected = lastConnected,
-    canMoveOrganizeFiles = canMoveOrganizeFiles
+    canMoveOrganizeFiles = canMoveOrganizeFiles,
+    canDownload = canDownload,
+    canUpload = canUpload,
+    canAccessBookdrop = canAccessBookdrop,
+    isAdmin = isAdmin,
+    permissionsFetchedAt = permissionsFetchedAt
 )
 
 fun BookEntity.toDomain(): Book = Book(

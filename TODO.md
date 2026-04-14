@@ -108,7 +108,13 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Server Form
 - [x] Show connection status indicator on saved servers (OPDS · Kosync · Grimmory)
+- [x] Show Grimmory account permissions after Test Login (Admin/Download/Upload/Bookdrop/Organize Files)
 - [ ] Auto-detect server capabilities (OPDS version, kosync availability)
+- [ ] Make OPDS and Kosync optional when adding a Grimmory server
+    - Add an "Enable OPDS" checkbox and an "Enable Kosync" checkbox, both off by default on new Grimmory servers
+    - Hide each section's credential fields + test button until its checkbox is on
+    - The existing "Use Grimmory login for OPDS/Kosync" checkboxes stay in place but render disabled (greyed) until the parent service is enabled
+    - Persistence: a disabled service should save as blank credentials, not stale values from a previous toggle
 
 ### Settings / Profile
 - [x] Connected accounts with status indicators (OPDS/Kosync/Grimmory)

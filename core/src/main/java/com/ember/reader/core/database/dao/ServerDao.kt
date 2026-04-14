@@ -41,4 +41,26 @@ interface ServerDao {
 
     @Query("UPDATE servers SET canMoveOrganizeFiles = :canMove WHERE id = :id")
     suspend fun updateCanMoveOrganizeFiles(id: Long, canMove: Boolean)
+
+    @Query(
+        """
+        UPDATE servers
+        SET canMoveOrganizeFiles = :canMoveOrganizeFiles,
+            canDownload = :canDownload,
+            canUpload = :canUpload,
+            canAccessBookdrop = :canAccessBookdrop,
+            isAdmin = :isAdmin,
+            permissionsFetchedAt = :fetchedAt
+        WHERE id = :id
+        """
+    )
+    suspend fun updateGrimmoryPermissions(
+        id: Long,
+        canMoveOrganizeFiles: Boolean,
+        canDownload: Boolean,
+        canUpload: Boolean,
+        canAccessBookdrop: Boolean,
+        isAdmin: Boolean,
+        fetchedAt: java.time.Instant
+    )
 }

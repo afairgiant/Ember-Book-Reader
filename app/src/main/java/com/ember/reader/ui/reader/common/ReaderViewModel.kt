@@ -69,6 +69,8 @@ class ReaderViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
+    private val streaming: Boolean = savedStateHandle.get<String>("mode") == "stream"
+    val isStreaming: Boolean get() = streaming
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
@@ -147,15 +149,18 @@ class ReaderViewModel @Inject constructor(
         }
         book = loadedBook
 
-        val localPath = loadedBook.localPath
-        if (localPath == null) {
-            _uiState.value = ReaderUiState.Error("Book not downloaded")
-            return
-        }
-
-        val pub = bookOpener.open(File(localPath)).getOrElse { error ->
-            _uiState.value = ReaderUiState.Error("Failed to open: ${error.message}")
-            return
+        val pub = if (streaming) {
+            openStreamingPublication(loadedBook) ?: return
+        } else {
+            val localPath = loadedBook.localPath
+            if (localPath == null) {
+                _uiState.value = ReaderUiState.Error("Book not downloaded")
+                return
+            }
+            bookOpener.open(File(localPath)).getOrElse { error ->
+                _uiState.value = ReaderUiState.Error("Failed to open: ${error.message}")
+                return
+            }
         }
         publication = pub
 
@@ -174,7 +179,8 @@ class ReaderViewModel @Inject constructor(
         _uiState.value = ReaderUiState.Ready(
             publication = pub,
             initialLocator = initialLocator,
-            book = loadedBook
+            book = loadedBook,
+            streaming = streaming
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
@@ -183,6 +189,29 @@ class ReaderViewModel @Inject constructor(
         // locatorJson is null when progress came from server sync only (never opened locally)
         if (localProgress == null || localProgress.locatorJson == null) {
             _showTapZoneHint.value = true
+        }
+    }
+
+    private suspend fun openStreamingPublication(loadedBook: Book): Publication? {
+        val serverId = loadedBook.serverId
+        val grimmoryBookId = loadedBook.grimmoryBookId
+        if (serverId == null || grimmoryBookId == null) {
+            _uiState.value = ReaderUiState.Error("Streaming requires a Grimmory book")
+            return null
+        }
+        val server = serverRepository.getById(serverId)
+        if (server == null || !server.isGrimmory) {
+            _uiState.value = ReaderUiState.Error("Streaming requires a Grimmory server")
+            return null
+        }
+        if (!grimmoryTokenManager.isLoggedIn(serverId)) {
+            _uiState.value = ReaderUiState.Error("Sign in to Grimmory to stream this book")
+            return null
+        }
+        Timber.d("Streaming: opening %s from server %d", loadedBook.title, serverId)
+        return bookOpener.openStreaming(server, grimmoryBookId).getOrElse { error ->
+            _uiState.value = ReaderUiState.Error("Streaming failed: ${error.message}")
+            null
         }
     }
 
@@ -514,7 +543,8 @@ sealed interface ReaderUiState {
     data class Ready(
         val publication: Publication,
         val initialLocator: Locator?,
-        val book: Book
+        val book: Book,
+        val streaming: Boolean = false
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }

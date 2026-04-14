@@ -5,6 +5,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.DownloadProgress
 import com.ember.reader.core.model.Server
@@ -127,12 +128,29 @@ class DownloadService : Service() {
             }.onFailure { error ->
                 Timber.e(error, "DownloadService: download failed for %s", book.title)
                 NotificationHelper.dismissDownloadProgress(this)
-                NotificationHelper.showDownloadFailed(this, book.title)
+                if (isForbidden(error)) {
+                    NotificationHelper.showDownloadForbidden(this, book.title, server.name)
+                    // Self-correct: stale permissions likely caused this. Refresh
+                    // so the UI gates (button visibility, auto-download toggle)
+                    // can flip before the next retry.
+                    serverRepository.refreshGrimmoryPermissions(server.id)
+                } else {
+                    NotificationHelper.showDownloadFailed(this, book.title)
+                }
             }
         } catch (e: CancellationException) {
             Timber.d("DownloadService: download cancelled for %s", book.title)
             NotificationHelper.dismissDownloadProgress(this)
         }
+    }
+
+    private fun isForbidden(error: Throwable): Boolean {
+        var e: Throwable? = error
+        while (e != null) {
+            if (e is GrimmoryHttpException && e.statusCode == 403) return true
+            e = e.cause
+        }
+        return false
     }
 
     private fun buildProgressText(progress: DownloadProgress): String {

@@ -2,6 +2,9 @@ package com.ember.reader.ui.server
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
+import com.ember.reader.core.grimmory.GrimmoryUserPermissions
+import com.ember.reader.ui.settings.components.PermissionChip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -336,6 +341,13 @@ private fun GrimmoryForm(
             onClick = viewModel::testGrimmoryConnection,
             label = stringResource(R.string.test_login)
         )
+
+        AnimatedVisibility(visible = uiState.grimmoryTestPermissions != null) {
+            uiState.grimmoryTestPermissions?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                TestPermissionsPanel(it)
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -723,6 +735,35 @@ private fun TestConnectionButton(result: TestResult, onClick: () -> Unit, label:
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TestPermissionsPanel(permissions: GrimmoryUserPermissions) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.permissions_on_this_server),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PermissionChip("Admin", permissions.isAdmin)
+            PermissionChip("Download", permissions.canDownload)
+            PermissionChip("Upload", permissions.canUpload)
+            PermissionChip("Bookdrop", permissions.canAccessBookdrop)
+            PermissionChip("Organize Files", permissions.canMoveOrganizeFiles)
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.ember.reader.core.grimmory
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -18,7 +19,12 @@ data class GrimmoryUser(
 
 @Serializable
 data class GrimmoryUserPermissions(
-    val isAdmin: Boolean = false,
+    // Grimmory's Jackson strips the `is` prefix from Java `boolean isAdmin`,
+    // so the wire field is `"admin"`, not `"isAdmin"`.
+    @SerialName("admin") val isAdmin: Boolean = false,
     val canManageLibrary: Boolean = false,
-    val canMoveOrganizeFiles: Boolean = false
+    val canMoveOrganizeFiles: Boolean = false,
+    val canDownload: Boolean = false,
+    val canUpload: Boolean = false,
+    val canAccessBookdrop: Boolean = false
 )
