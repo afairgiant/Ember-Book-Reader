@@ -14,6 +14,10 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -101,18 +105,40 @@ class GrimmoryTokenManagerTest {
     }
 
     @Test
-    fun `withAuth fails when refresh endpoint returns error`() = runTest {
-        stubTokens(access = "expired-token", refresh = "my-refresh")
-        val engine = refreshEngine(status = HttpStatusCode.Forbidden)
-        val manager = tokenManager(engine)
+    fun `withAuth clears tokens and throws GrimmoryAuthExpired when refresh is rejected`() =
+        runTest {
+            stubTokens(access = "expired-token", refresh = "my-refresh")
+            every { credentialEncryption.removePassword(any()) } returns Unit
+            val engine = refreshEngine(status = HttpStatusCode.Forbidden)
+            val manager = tokenManager(engine)
 
-        val result = manager.withAuth(baseUrl, serverId) { token ->
-            throw GrimmoryHttpException(401, "Unauthorized")
+            val result = manager.withAuth(baseUrl, serverId) { _ ->
+                throw GrimmoryHttpException(401, "Unauthorized")
+            }
+
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is GrimmoryAuthExpiredException)
+            verify { credentialEncryption.removePassword("grimmory_access_$serverId") }
+            verify { credentialEncryption.removePassword("grimmory_refresh_$serverId") }
         }
 
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull()?.message?.contains("Token refresh failed") == true)
-    }
+    @Test
+    fun `withAuth keeps tokens and fails with HttpException on transient refresh error`() =
+        runTest {
+            stubTokens(access = "expired-token", refresh = "my-refresh")
+            val engine = refreshEngine(status = HttpStatusCode.InternalServerError)
+            val manager = tokenManager(engine)
+
+            val result = manager.withAuth(baseUrl, serverId) { _ ->
+                throw GrimmoryHttpException(401, "Unauthorized")
+            }
+
+            assertTrue(result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertTrue(exception is GrimmoryHttpException)
+            assertEquals(500, (exception as GrimmoryHttpException).statusCode)
+            verify(exactly = 0) { credentialEncryption.removePassword(any()) }
+        }
 
     @Test
     fun `withAuth fails immediately when no access token stored`() = runTest {
@@ -122,7 +148,50 @@ class GrimmoryTokenManagerTest {
         val result = manager.withAuth(baseUrl, serverId) { "should not run" }
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull()?.message?.contains("Not logged in") == true)
+        assertTrue(result.exceptionOrNull() is GrimmoryAuthExpiredException)
+    }
+
+    @Test
+    fun `concurrent withAuth callers coalesce into a single refresh`() = runTest {
+        // Grimmory rotates refresh tokens: if two callers refresh in parallel,
+        // the second sends an already-revoked token and gets 400. The mutex +
+        // stored-token check in refreshAccessToken prevents that.
+        var storedAccess = "expired-token"
+        var storedRefresh: String? = "my-refresh"
+        every { credentialEncryption.getPassword("grimmory_access_$serverId") } answers { storedAccess }
+        every { credentialEncryption.getPassword("grimmory_refresh_$serverId") } answers { storedRefresh }
+        every { credentialEncryption.storePassword("grimmory_access_$serverId", any()) } answers {
+            storedAccess = secondArg()
+        }
+        every { credentialEncryption.storePassword("grimmory_refresh_$serverId", any()) } answers {
+            storedRefresh = secondArg()
+        }
+
+        val refreshCalls = AtomicInteger(0)
+        val engine = MockEngine {
+            refreshCalls.incrementAndGet()
+            respond(
+                content = ByteReadChannel("""{"accessToken":"new-access","refreshToken":"new-refresh"}"""),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val manager = tokenManager(engine)
+
+        val results = coroutineScope {
+            (1..4).map {
+                async {
+                    manager.withAuth(baseUrl, serverId) { token ->
+                        if (token == "expired-token") throw GrimmoryHttpException(401, "Unauthorized")
+                        token
+                    }
+                }
+            }.awaitAll()
+        }
+
+        assertEquals(1, refreshCalls.get(), "refresh HTTP call should only fire once")
+        assertTrue(results.all { it.isSuccess })
+        assertTrue(results.all { it.getOrNull() == "new-access" })
     }
 
     @Test
