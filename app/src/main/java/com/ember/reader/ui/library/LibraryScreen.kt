@@ -74,6 +74,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.sync.SyncStatus
 import com.ember.reader.ui.common.BookCoverImage
 import com.ember.reader.ui.organize.OrganizeFilesSheet
 import kotlinx.coroutines.launch
@@ -83,6 +84,7 @@ import kotlinx.coroutines.launch
 fun LibraryScreen(
     serverId: Long,
     onNavigateBack: () -> Unit,
+    onNavigateToServerEdit: (serverId: Long) -> Unit = {},
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
@@ -102,6 +104,7 @@ fun LibraryScreen(
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
     var showOrganizeSheet by remember { mutableStateOf(false) }
+    var detailsSheetOpen by rememberSaveable { mutableStateOf(false) }
     var actionMenuOpen by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -183,7 +186,15 @@ fun LibraryScreen(
         ) {
             SyncStatusBanner(
                 status = syncStatus,
-                serverName = currentServer?.name
+                serverName = currentServer?.name,
+                onActionClick = {
+                    when (syncStatus) {
+                        is SyncStatus.AuthExpired -> onNavigateToServerEdit(serverId)
+                        is SyncStatus.NetworkError -> viewModel.retrySync()
+                        is SyncStatus.ServerError -> detailsSheetOpen = true
+                        is SyncStatus.Ok, SyncStatus.Unknown -> Unit
+                    }
+                }
             )
             if (searchActive) {
                 SearchBar(
@@ -264,6 +275,23 @@ fun LibraryScreen(
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(syncStatus) {
+        if (detailsSheetOpen && syncStatus !is SyncStatus.ServerError) {
+            detailsSheetOpen = false
+        }
+    }
+
+    if (detailsSheetOpen) {
+        val serverError = syncStatus as? SyncStatus.ServerError
+        if (serverError != null) {
+            SyncErrorDetailsSheet(
+                error = serverError,
+                serverName = currentServer?.name,
+                onDismiss = { detailsSheetOpen = false }
+            )
         }
     }
 

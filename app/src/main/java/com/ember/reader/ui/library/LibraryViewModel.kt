@@ -13,6 +13,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.SyncStatus
+import com.ember.reader.core.sync.SyncStatusProber
 import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.ui.download.DownloadService
 import com.ember.reader.ui.organize.OrganizeFilesViewModel
@@ -40,6 +41,7 @@ class LibraryViewModel @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val syncStatusRepository: SyncStatusRepository,
+    private val syncStatusProber: SyncStatusProber,
     val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 ) : ViewModel() {
 
@@ -450,6 +452,21 @@ class LibraryViewModel @Inject constructor(
         val currentServer = server ?: return
         DownloadService.start(context, book.id, currentServer.id)
     }
+
+    /**
+     * Re-probes the current server so a transient [SyncStatus.NetworkError] can
+     * clear itself. The probe writes through [SyncStatusRepository], which the
+     * [syncStatus] StateFlow already observes — no explicit state reset needed.
+     */
+    fun retrySync() {
+        val target = server ?: return
+        retryJob?.cancel()
+        retryJob = viewModelScope.launch {
+            syncStatusProber.probe(target)
+        }
+    }
+
+    private var retryJob: kotlinx.coroutines.Job? = null
 }
 
 sealed interface LibraryUiState {

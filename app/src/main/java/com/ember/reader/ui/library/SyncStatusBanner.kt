@@ -33,7 +33,7 @@ import com.ember.reader.core.sync.SyncStatus
 fun SyncStatusBanner(
     status: SyncStatus,
     serverName: String?,
-    onDetailsClick: (() -> Unit)? = null,
+    onActionClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val presentation = status.bannerPresentation() ?: return
@@ -68,8 +68,8 @@ fun SyncStatusBanner(
                 )
             }
         }
-        if (onDetailsClick != null) {
-            TextButton(onClick = onDetailsClick) {
+        if (onActionClick != null) {
+            TextButton(onClick = onActionClick) {
                 Text(presentation.actionLabel)
             }
         }

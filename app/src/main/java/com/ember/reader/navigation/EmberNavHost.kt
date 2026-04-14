@@ -306,6 +306,9 @@ fun EmberNavHost(
                 LibraryScreen(
                     serverId = serverId,
                     onNavigateBack = { navController.popBackStack() },
+                    onNavigateToServerEdit = { id ->
+                        navController.navigate(Routes.serverForm(id))
+                    },
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
                     },
