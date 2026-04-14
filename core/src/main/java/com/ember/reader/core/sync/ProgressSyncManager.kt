@@ -151,11 +151,13 @@ class ProgressSyncManager @Inject constructor(
         Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
         return runCatchingCancellable {
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
-            // readProgress is 0-1 scale, reflects whichever client pushed last.
-            // Grimmory doesn't expose epubProgress/fileProgress in the book detail response,
-            // so readProgress is the only available progress field.
-            val pct = detail.readProgress
-            Timber.d("Sync pull: Grimmory returned readProgress=$pct for '${book.title}'")
+            // Grimmory stores progress with per-source scales:
+            //  - epubProgress.percentage:     0-100 (what Ember + web reader push)
+            //  - koreaderProgress.percentage: 0-1   (KOReader protocol)
+            //  - readProgress:                falls through to whichever stored value exists,
+            //                                 so scale is ambiguous — we pick typed sources first.
+            val pct = resolveGrimmoryPercentage(detail)
+            Timber.d("Sync pull: Grimmory resolved pct=$pct (readProgress=${detail.readProgress} epub=${detail.epubProgress?.percentage} koreader=${detail.koreaderProgress?.percentage}) for '${book.title}'")
             if (pct == null || pct <= 0f) {
                 null
             } else {
@@ -222,6 +224,33 @@ class ProgressSyncManager @Inject constructor(
                 SourceOutcome.Failure(error)
             }
         )
+    }
+
+    /**
+     * Converts Grimmory's mixed-scale progress fields to Ember's 0-1 scale.
+     *
+     * Priority:
+     * 1. `koreaderProgress.percentage` (always 0-1, KOReader protocol)
+     * 2. `epubProgress.percentage` (always 0-100, what Ember/web reader push — divide)
+     * 3. `readProgress` (ambiguous: falls through to whichever source last wrote, so
+     *    scale depends on that source. Heuristic: values > 1 are 0-100.)
+     */
+    private fun resolveGrimmoryPercentage(
+        detail: com.ember.reader.core.grimmory.GrimmoryBookDetail
+    ): Float? {
+        detail.koreaderProgress?.percentage?.takeIf { it > 0f }?.let {
+            return it.coerceIn(0f, 1f)
+        }
+        detail.epubProgress?.percentage?.takeIf { it > 0f }?.let {
+            return (it / 100f).coerceIn(0f, 1f)
+        }
+        val raw = detail.readProgress ?: return null
+        if (raw <= 0f) return null
+        return if (raw > 1f) {
+            (raw / 100f).coerceIn(0f, 1f)
+        } else {
+            raw
+        }
     }
 
     companion object {
