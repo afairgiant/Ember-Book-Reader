@@ -8,16 +8,23 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
+import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.SyncStatus
+import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockkStatic
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -57,6 +64,8 @@ class LibraryViewModelTest {
     private lateinit var organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 
     private val testDispatcher = StandardTestDispatcher()
+    private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
+    private val syncStatusRepository = SyncStatusRepository(clock)
 
     private val testServer = Server(
         id = 1L,
@@ -90,7 +99,17 @@ class LibraryViewModelTest {
         val savedStateHandle = SavedStateHandle(
             mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog")
         )
-        return LibraryViewModel(savedStateHandle, context, bookRepository, serverRepository, readingProgressRepository, grimmoryClient, grimmoryAppClient, organizeFilesViewModelFactory)
+        return LibraryViewModel(
+            savedStateHandle,
+            context,
+            bookRepository,
+            serverRepository,
+            readingProgressRepository,
+            grimmoryClient,
+            grimmoryAppClient,
+            syncStatusRepository,
+            organizeFilesViewModelFactory,
+        )
     }
 
     @Test
@@ -133,5 +152,35 @@ class LibraryViewModelTest {
 
         viewModel.toggleDownloadedOnly()
         assertFalse(viewModel.downloadedOnly.value)
+    }
+
+    @Test
+    fun `syncStatus reflects the repository's state for this server`() = runTest {
+        val viewModel = createViewModel()
+        // WhileSubscribed-based stateIn only runs while someone is collecting, so
+        // keep a live subscriber for the duration of the test.
+        val collector = launch { viewModel.syncStatus.collect { } }
+        advanceUntilIdle()
+
+        assertEquals(SyncStatus.Unknown, viewModel.syncStatus.value)
+
+        syncStatusRepository.reportFailure(1L, GrimmoryAuthExpiredException(1L))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.syncStatus.value is SyncStatus.AuthExpired)
+        collector.cancel()
+    }
+
+    @Test
+    fun `syncStatus ignores events for other servers`() = runTest {
+        val viewModel = createViewModel()
+        val collector = launch { viewModel.syncStatus.collect { } }
+        advanceUntilIdle()
+
+        syncStatusRepository.reportFailure(999L, GrimmoryAuthExpiredException(999L))
+        advanceUntilIdle()
+
+        assertEquals(SyncStatus.Unknown, viewModel.syncStatus.value)
+        collector.cancel()
     }
 }

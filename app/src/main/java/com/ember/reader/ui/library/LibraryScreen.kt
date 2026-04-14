@@ -98,6 +98,7 @@ fun LibraryScreen(
     val selectedBookIds by viewModel.selectedBookIds.collectAsStateWithLifecycle()
     val isSelecting by viewModel.isSelecting.collectAsStateWithLifecycle()
     val currentServer by viewModel.currentServer.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
     var showOrganizeSheet by remember { mutableStateOf(false) }
@@ -180,6 +181,10 @@ fun LibraryScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            SyncStatusBanner(
+                status = syncStatus,
+                serverName = currentServer?.name
+            )
             if (searchActive) {
                 SearchBar(
                     query = searchQuery,

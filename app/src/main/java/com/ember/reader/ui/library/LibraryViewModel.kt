@@ -12,6 +12,8 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.SyncStatus
+import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.ui.download.DownloadService
 import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +39,7 @@ class LibraryViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
+    private val syncStatusRepository: SyncStatusRepository,
     val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 ) : ViewModel() {
 
@@ -95,6 +98,11 @@ class LibraryViewModel @Inject constructor(
 
     /** Reactive snapshot of the current [Server], exposing [Server.canMoveOrganizeFiles]. */
     val currentServer: StateFlow<Server?> = _currentServer.asStateFlow()
+
+    /** Live sync health for the current server — drives the [SyncStatusBanner]. */
+    val syncStatus: StateFlow<SyncStatus> = syncStatusRepository
+        .observe(serverId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyncStatus.Unknown)
 
     // Multi-select state — used by the library screen's long-press selection mode
     // to drive bulk actions like Organize Files.
