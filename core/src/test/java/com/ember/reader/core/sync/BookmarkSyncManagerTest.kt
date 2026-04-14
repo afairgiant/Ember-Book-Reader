@@ -4,6 +4,7 @@ import com.ember.reader.core.grimmory.CreateBookmarkRequest
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateBookmarkRequest
 import com.ember.reader.core.testutil.FakeBookmarkDao
+import com.ember.reader.core.testutil.FakeSyncStatusDao
 import com.ember.reader.core.testutil.TestFixtures.bookmarkEntity
 import com.ember.reader.core.testutil.TestFixtures.grimmoryBookmark
 import com.ember.reader.core.testutil.TestFixtures.server
@@ -30,7 +31,7 @@ class BookmarkSyncManagerTest {
 
     private val grimmoryClient: GrimmoryClient = mockk(relaxed = true)
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(clock)
+    private val syncStatusRepository = SyncStatusRepository(FakeSyncStatusDao(), clock)
     private lateinit var dao: FakeBookmarkDao
     private lateinit var syncManager: BookmarkSyncManager
 

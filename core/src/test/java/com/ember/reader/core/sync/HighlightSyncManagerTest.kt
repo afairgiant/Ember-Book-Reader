@@ -5,6 +5,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateAnnotationRequest
 import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.testutil.FakeHighlightDao
+import com.ember.reader.core.testutil.FakeSyncStatusDao
 import com.ember.reader.core.testutil.TestFixtures.grimmoryAnnotation
 import com.ember.reader.core.testutil.TestFixtures.highlightEntity
 import com.ember.reader.core.testutil.TestFixtures.server
@@ -31,7 +32,7 @@ class HighlightSyncManagerTest {
 
     private val grimmoryClient: GrimmoryClient = mockk(relaxed = true)
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(clock)
+    private val syncStatusRepository = SyncStatusRepository(FakeSyncStatusDao(), clock)
     private lateinit var dao: FakeHighlightDao
     private lateinit var syncManager: HighlightSyncManager
 

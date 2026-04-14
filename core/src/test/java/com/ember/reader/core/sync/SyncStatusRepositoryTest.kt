@@ -2,6 +2,7 @@ package com.ember.reader.core.sync
 
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryHttpException
+import com.ember.reader.core.testutil.FakeSyncStatusDao
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
 import java.net.UnknownHostException
@@ -19,10 +20,10 @@ class SyncStatusRepositoryTest {
 
     private val fixedInstant = Instant.parse("2026-04-14T12:00:00Z")
     private val clock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
-    private val repo = SyncStatusRepository(clock)
+    private val repo = SyncStatusRepository(FakeSyncStatusDao(), clock)
 
     @Test
-    fun `get returns Unknown for unreported server`() {
+    fun `get returns Unknown for unreported server`() = runTest {
         assertEquals(SyncStatus.Unknown, repo.get(1L))
     }
 
@@ -32,19 +33,19 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportSuccess transitions to Ok with current timestamp`() {
+    fun `reportSuccess transitions to Ok with current timestamp`() = runTest {
         repo.reportSuccess(1L)
         assertEquals(SyncStatus.Ok(fixedInstant), repo.get(1L))
     }
 
     @Test
-    fun `reportFailure with GrimmoryAuthExpiredException classifies as AuthExpired`() {
+    fun `reportFailure with GrimmoryAuthExpiredException classifies as AuthExpired`() = runTest {
         repo.reportFailure(1L, GrimmoryAuthExpiredException(1L))
         assertEquals(SyncStatus.AuthExpired(fixedInstant), repo.get(1L))
     }
 
     @Test
-    fun `reportFailure with GrimmoryHttpException classifies as ServerError with status code`() {
+    fun `reportFailure with GrimmoryHttpException classifies as ServerError with status code`() = runTest {
         repo.reportFailure(1L, GrimmoryHttpException(500, "boom"))
         val status = repo.get(1L)
         assertTrue(status is SyncStatus.ServerError)
@@ -53,7 +54,7 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with IOException classifies as NetworkError`() {
+    fun `reportFailure with IOException classifies as NetworkError`() = runTest {
         repo.reportFailure(1L, UnknownHostException("grimmory.invalid"))
         val status = repo.get(1L)
         assertTrue(status is SyncStatus.NetworkError)
@@ -61,7 +62,7 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with HttpRequestTimeoutException classifies as NetworkError with timeout detail`() {
+    fun `reportFailure with HttpRequestTimeoutException classifies as NetworkError with timeout detail`() = runTest {
         repo.reportFailure(1L, HttpRequestTimeoutException("GET /foo", 5000L))
         val status = repo.get(1L)
         assertTrue(status is SyncStatus.NetworkError)
@@ -69,13 +70,13 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with generic IOException subclass still maps to NetworkError`() {
+    fun `reportFailure with generic IOException subclass still maps to NetworkError`() = runTest {
         repo.reportFailure(1L, IOException("connection reset"))
         assertTrue(repo.get(1L) is SyncStatus.NetworkError)
     }
 
     @Test
-    fun `reportFailure with unknown exception classifies as ServerError without status`() {
+    fun `reportFailure with unknown exception classifies as ServerError without status`() = runTest {
         repo.reportFailure(1L, IllegalStateException("something weird"))
         val status = repo.get(1L)
         assertTrue(status is SyncStatus.ServerError)
@@ -84,7 +85,7 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `success after failure clears the unhealthy state`() {
+    fun `success after failure clears the unhealthy state`() = runTest {
         repo.reportFailure(1L, GrimmoryAuthExpiredException(1L))
         assertTrue(repo.get(1L).isUnhealthy)
 
@@ -103,7 +104,7 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `multiple servers tracked independently`() {
+    fun `multiple servers tracked independently`() = runTest {
         repo.reportSuccess(1L)
         repo.reportFailure(2L, GrimmoryAuthExpiredException(2L))
 

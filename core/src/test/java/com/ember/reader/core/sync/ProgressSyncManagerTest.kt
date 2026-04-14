@@ -40,7 +40,7 @@ class ProgressSyncManagerTest {
     private val grimmoryTokenManager: GrimmoryTokenManager = mockk(relaxed = true)
     private val fixedInstant = Instant.parse("2026-04-14T12:00:00Z")
     private val clock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(clock)
+    private val syncStatusRepository = SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
     private lateinit var syncManager: ProgressSyncManager
 
     private val testServer = server()

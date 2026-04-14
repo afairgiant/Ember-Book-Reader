@@ -15,6 +15,7 @@ import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
 import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.ServerDao
+import com.ember.reader.core.database.dao.SyncStatusDao
 import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.entity.BookReaderPreferencesEntity
 import com.ember.reader.core.database.entity.BookmarkEntity
@@ -24,6 +25,7 @@ import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
 import com.ember.reader.core.database.entity.ReadingSessionEntity
 import com.ember.reader.core.database.entity.ServerEntity
+import com.ember.reader.core.database.entity.SyncStatusEntity
 
 @Database(
     entities = [
@@ -35,9 +37,10 @@ import com.ember.reader.core.database.entity.ServerEntity
         ReadingSessionEntity::class,
         DictionaryEntryEntity::class,
         BookReaderPreferencesEntity::class,
-        CatalogEntryPreferenceEntity::class
+        CatalogEntryPreferenceEntity::class,
+        SyncStatusEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -156,6 +159,22 @@ abstract class EmberDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE sync_status (
+                        serverId INTEGER NOT NULL PRIMARY KEY,
+                        type TEXT NOT NULL,
+                        lastAttemptAt INTEGER NOT NULL,
+                        statusCode INTEGER,
+                        detail TEXT
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         /**
          * Migration 1→2: Change books foreign key from CASCADE to SET_NULL
          * so deleting a server doesn't destroy downloaded books.
@@ -202,4 +221,5 @@ abstract class EmberDatabase : RoomDatabase() {
     abstract fun dictionaryDao(): DictionaryDao
     abstract fun bookReaderPreferencesDao(): BookReaderPreferencesDao
     abstract fun catalogEntryPreferenceDao(): CatalogEntryPreferenceDao
+    abstract fun syncStatusDao(): SyncStatusDao
 }

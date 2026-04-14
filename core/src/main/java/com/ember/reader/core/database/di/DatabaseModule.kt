@@ -11,6 +11,7 @@ import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.dao.ReadingProgressDao
 import com.ember.reader.core.database.dao.ReadingSessionDao
 import com.ember.reader.core.database.dao.ServerDao
+import com.ember.reader.core.database.dao.SyncStatusDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,7 +30,7 @@ object DatabaseModule {
         EmberDatabase::class.java,
         "ember.db"
     )
-        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8, EmberDatabase.MIGRATION_8_9, EmberDatabase.MIGRATION_9_10, EmberDatabase.MIGRATION_10_11)
+        .addMigrations(EmberDatabase.MIGRATION_1_2, EmberDatabase.MIGRATION_2_3, EmberDatabase.MIGRATION_3_4, EmberDatabase.MIGRATION_4_5, EmberDatabase.MIGRATION_5_6, EmberDatabase.MIGRATION_6_7, EmberDatabase.MIGRATION_7_8, EmberDatabase.MIGRATION_8_9, EmberDatabase.MIGRATION_9_10, EmberDatabase.MIGRATION_10_11, EmberDatabase.MIGRATION_11_12)
         .build()
 
     @Provides
@@ -59,4 +60,7 @@ object DatabaseModule {
     @Provides
     fun provideCatalogEntryPreferenceDao(database: EmberDatabase): CatalogEntryPreferenceDao =
         database.catalogEntryPreferenceDao()
+
+    @Provides
+    fun provideSyncStatusDao(database: EmberDatabase): SyncStatusDao = database.syncStatusDao()
 }

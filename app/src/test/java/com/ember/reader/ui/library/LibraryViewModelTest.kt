@@ -65,7 +65,7 @@ class LibraryViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(clock)
+    private val syncStatusRepository = SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
 
     private val testServer = Server(
         id = 1L,

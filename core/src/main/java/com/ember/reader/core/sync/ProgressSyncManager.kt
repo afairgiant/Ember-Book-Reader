@@ -90,7 +90,7 @@ class ProgressSyncManager @Inject constructor(
      * - Otherwise, surface the most actionable failure (Auth > Http > other).
      * - All skipped → nothing to report (the server isn't in play for this op).
      */
-    private fun reportStatus(serverId: Long, outcomes: List<SourceOutcome<*>>) {
+    private suspend fun reportStatus(serverId: Long, outcomes: List<SourceOutcome<*>>) {
         val hasSuccess = outcomes.any { it is SourceOutcome.Ok<*> }
         val failures = outcomes.filterIsInstance<SourceOutcome.Failure>().map { it.error }
         when {
