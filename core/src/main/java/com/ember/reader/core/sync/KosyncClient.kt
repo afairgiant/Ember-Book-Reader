@@ -1,5 +1,6 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.network.md5Hash
 import com.ember.reader.core.network.serverOrigin
 import io.ktor.client.HttpClient
@@ -24,7 +25,7 @@ class KosyncClient @Inject constructor(
 ) {
 
     suspend fun authenticate(baseUrl: String, username: String, password: String): Result<Unit> =
-        runCatching {
+        runCatchingCancellable {
             val response = httpClient.get(serverOrigin(baseUrl) + "/api/koreader/users/auth") {
                 header("x-auth-user", username)
                 header("x-auth-key", md5Hash(password))
@@ -40,7 +41,7 @@ class KosyncClient @Inject constructor(
         username: String,
         password: String,
         request: KosyncProgressRequest
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = runCatchingCancellable {
         val response = httpClient.put(serverOrigin(baseUrl) + "/api/koreader/syncs/progress") {
             header("x-auth-user", username)
             header("x-auth-key", md5Hash(password))
@@ -58,7 +59,7 @@ class KosyncClient @Inject constructor(
         username: String,
         password: String,
         documentHash: String
-    ): Result<KosyncProgressResponse?> = runCatching {
+    ): Result<KosyncProgressResponse?> = runCatchingCancellable {
         val response = httpClient.get(
             serverOrigin(baseUrl) + "/api/koreader/syncs/progress/$documentHash"
         ) {

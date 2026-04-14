@@ -1,5 +1,6 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
@@ -94,14 +95,14 @@ class ProgressSyncManager @Inject constructor(
             return null
         }
         Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
-        return runCatching {
+        return runCatchingCancellable {
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
             // readProgress is 0-1 scale, reflects whichever client pushed last.
             // Grimmory doesn't expose epubProgress/fileProgress in the book detail response,
             // so readProgress is the only available progress field.
             val pct = detail.readProgress
             Timber.d("Sync pull: Grimmory returned readProgress=$pct for '${book.title}'")
-            if (pct == null || pct <= 0f) return@runCatching null
+            if (pct == null || pct <= 0f) return@runCatchingCancellable null
             RemoteSyncResult(
                 progress = ReadingProgress.fromRemote(book.id, server.id, pct),
                 source = detail.koreaderProgress?.device ?: "Grimmory"
@@ -130,7 +131,7 @@ class ProgressSyncManager @Inject constructor(
     private suspend fun pushGrimmory(server: Server, book: Book, percentage: Float): Boolean {
         val grimmoryBookId = book.grimmoryBookId ?: return false
         if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return false
-        return runCatching {
+        return runCatchingCancellable {
             val pct = percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
             val fileId = detail?.primaryFile?.id
