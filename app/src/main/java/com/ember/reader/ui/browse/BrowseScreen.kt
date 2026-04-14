@@ -44,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.sync.SyncStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +54,7 @@ fun BrowseScreen(
     viewModel: BrowseViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
+    val syncStatuses by viewModel.syncStatuses.collectAsStateWithLifecycle()
     val hardcoverConnected = viewModel.isHardcoverConnected
 
     // Auto-navigate if only one server and no Hardcover
@@ -112,6 +114,7 @@ fun BrowseScreen(
                 items(servers, key = { it.id }) { server ->
                     BrowseServerCard(
                         server = server,
+                        syncStatus = syncStatuses[server.id] ?: SyncStatus.Unknown,
                         onClick = { onOpenLibrary(server.id) }
                     )
                 }
@@ -126,7 +129,7 @@ fun BrowseScreen(
 }
 
 @Composable
-private fun BrowseServerCard(server: Server, onClick: () -> Unit) {
+private fun BrowseServerCard(server: Server, syncStatus: SyncStatus, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,6 +175,8 @@ private fun BrowseServerCard(server: Server, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            ServerSyncStatusDot(status = syncStatus)
+            Spacer(modifier = Modifier.width(12.dp))
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
