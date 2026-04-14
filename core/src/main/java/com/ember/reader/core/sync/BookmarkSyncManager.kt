@@ -14,13 +14,15 @@ import timber.log.Timber
 @Singleton
 class BookmarkSyncManager @Inject constructor(
     private val bookmarkDao: BookmarkDao,
-    private val grimmoryClient: GrimmoryClient
+    private val grimmoryClient: GrimmoryClient,
+    private val syncStatusRepository: SyncStatusRepository
 ) {
 
     suspend fun syncBookmarksForBook(server: Server, bookId: String, grimmoryBookId: Long) {
         Timber.d("BookmarkSync: syncing book=%s grimmoryId=%d", bookId, grimmoryBookId)
 
         val serverBookmarks = grimmoryClient.getBookmarks(server.url, server.id, grimmoryBookId)
+            .onFailure { syncStatusRepository.reportFailure(server.id, it) }
             .getOrElse {
                 Timber.e(it, "BookmarkSync: failed to fetch bookmarks")
                 return
@@ -132,6 +134,7 @@ class BookmarkSyncManager @Inject constructor(
 
         // Clean up remaining tombstones
         bookmarkDao.cleanupTombstones(bookId)
+        syncStatusRepository.reportSuccess(server.id)
         Timber.d("BookmarkSync: completed for book=%s", bookId)
     }
 

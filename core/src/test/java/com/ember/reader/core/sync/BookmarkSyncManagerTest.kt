@@ -12,7 +12,9 @@ import io.mockk.coVerify
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.slot
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 class BookmarkSyncManagerTest {
 
     private val grimmoryClient: GrimmoryClient = mockk(relaxed = true)
+    private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
+    private val syncStatusRepository = SyncStatusRepository(clock)
     private lateinit var dao: FakeBookmarkDao
     private lateinit var syncManager: BookmarkSyncManager
 
@@ -37,7 +41,7 @@ class BookmarkSyncManagerTest {
     @BeforeEach
     fun setUp() {
         dao = FakeBookmarkDao()
-        syncManager = BookmarkSyncManager(dao, grimmoryClient)
+        syncManager = BookmarkSyncManager(dao, grimmoryClient, syncStatusRepository)
     }
 
     @Nested
@@ -355,6 +359,29 @@ class BookmarkSyncManagerTest {
             // Local state unchanged
             assertEquals(1, dao.all.size)
             assertEquals("Existing", dao.all.first().title)
+        }
+    }
+
+    @Nested
+    inner class StatusReporting {
+
+        @Test
+        fun `successful sync reports Ok`() = runTest {
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.Ok)
+        }
+
+        @Test
+        fun `fetch failure reports the classified error`() = runTest {
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns
+                Result.failure(java.net.UnknownHostException("grimmory.invalid"))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
         }
     }
 }

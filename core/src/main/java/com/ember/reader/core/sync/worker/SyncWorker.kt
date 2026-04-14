@@ -22,6 +22,7 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.core.sync.HighlightSyncManager
 import com.ember.reader.core.sync.ProgressSyncManager
+import com.ember.reader.core.sync.SyncStatusRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
@@ -41,7 +42,8 @@ class SyncWorker @AssistedInject constructor(
     private val bookmarkSyncManager: BookmarkSyncManager,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
-    private val bookDao: com.ember.reader.core.database.dao.BookDao
+    private val bookDao: com.ember.reader.core.database.dao.BookDao,
+    private val syncStatusRepository: SyncStatusRepository
 ) : CoroutineWorker(context, params) {
 
     private var syncPushed = 0
@@ -108,6 +110,7 @@ class SyncWorker @AssistedInject constructor(
                 }
             }.onFailure {
                 syncErrors++
+                syncStatusRepository.reportFailure(server.id, it)
                 Timber.w(it, "SyncWorker: sync failed for ${server.name}")
             }
         }

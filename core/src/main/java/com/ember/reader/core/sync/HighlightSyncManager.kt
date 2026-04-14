@@ -15,13 +15,15 @@ import timber.log.Timber
 @Singleton
 class HighlightSyncManager @Inject constructor(
     private val highlightDao: HighlightDao,
-    private val grimmoryClient: GrimmoryClient
+    private val grimmoryClient: GrimmoryClient,
+    private val syncStatusRepository: SyncStatusRepository
 ) {
 
     suspend fun syncHighlightsForBook(server: Server, bookId: String, grimmoryBookId: Long) {
         Timber.d("HighlightSync: syncing book=%s grimmoryId=%d", bookId, grimmoryBookId)
 
         val serverAnnotations = grimmoryClient.getAnnotations(server.url, server.id, grimmoryBookId)
+            .onFailure { syncStatusRepository.reportFailure(server.id, it) }
             .getOrElse {
                 Timber.e(it, "HighlightSync: failed to fetch annotations")
                 return
@@ -174,6 +176,7 @@ class HighlightSyncManager @Inject constructor(
 
         // Clean up remaining tombstones
         highlightDao.cleanupTombstones(bookId)
+        syncStatusRepository.reportSuccess(server.id)
         Timber.d("HighlightSync: completed for book=%s", bookId)
     }
 
