@@ -2,6 +2,7 @@ package com.ember.reader.ui.reader.common
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
@@ -30,6 +31,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +64,8 @@ class ReaderViewModel @Inject constructor(
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
-    val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository
+    val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
+    @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
@@ -420,11 +423,6 @@ class ReaderViewModel @Inject constructor(
         sessionPauseJob?.cancel()
 
         _currentLocator.value?.let { locator ->
-            // Save progress to local DB — runs on IO, fast Room write
-            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                saveProgress(locator)
-            }
-
             // Determine if there's an unrecorded session segment
             val startTime = sessionStartTime
             val endTime = when {
@@ -433,10 +431,10 @@ class ReaderViewModel @Inject constructor(
                 else -> java.time.Instant.now() // active session, use now (safety net)
             }
 
-            // Fire-and-forget: push to server + record any remaining session
-            // Uses GlobalScope intentionally — this work must outlive the ViewModel
-            @Suppress("OPT_IN_USAGE")
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // All close-time work runs on the application scope so it outlives the
+            // ViewModel without blocking the main thread or leaking via GlobalScope.
+            applicationScope.launch {
+                saveProgress(locator)
                 pushProgressOnClose()
                 if (startTime != null && endTime != null) {
                     recordReadingSessionSegment(startTime, endTime)

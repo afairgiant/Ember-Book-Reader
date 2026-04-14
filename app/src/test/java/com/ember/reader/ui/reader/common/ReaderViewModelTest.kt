@@ -19,6 +19,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -89,6 +90,7 @@ class ReaderViewModelTest {
     private lateinit var dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository
 
     private val testDispatcher = StandardTestDispatcher()
+    private val applicationScope = CoroutineScope(testDispatcher)
 
     @BeforeEach
     fun setUp() {
@@ -122,7 +124,8 @@ class ReaderViewModelTest {
             readingSessionRepository = readingSessionRepository,
             appPreferencesRepository = appPreferencesRepository,
             progressSyncManager = progressSyncManager,
-            dictionaryRepository = dictionaryRepository
+            dictionaryRepository = dictionaryRepository,
+            applicationScope = applicationScope
         )
     }
 
