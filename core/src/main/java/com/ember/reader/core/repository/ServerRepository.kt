@@ -15,6 +15,7 @@ import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.KosyncClient
+import com.ember.reader.core.sync.SyncStatusRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
@@ -39,7 +40,8 @@ class ServerRepository @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val credentialEncryption: CredentialEncryption
+    private val credentialEncryption: CredentialEncryption,
+    private val syncStatusRepository: SyncStatusRepository
 ) {
 
     fun observeAll(): Flow<List<Server>> =
@@ -120,6 +122,7 @@ class ServerRepository @Inject constructor(
         credentialEncryption.removePassword(CredentialEncryption.kosyncPasswordKey(serverId))
         credentialEncryption.removePassword(grimmoryPasswordKey(serverId))
         grimmoryTokenManager.logout(serverId)
+        syncStatusRepository.clear(serverId)
     }
 
     private suspend fun extractLocalCoversForServer(serverId: Long) {

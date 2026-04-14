@@ -10,6 +10,7 @@ import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.CredentialEncryption
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.core.readium.BookOpener
 import com.ember.reader.core.sync.KosyncClient
 import io.mockk.coEvery
@@ -59,11 +60,20 @@ class ServerRepositoryTest {
     @MockK
     private lateinit var credentialEncryption: CredentialEncryption
 
+    private val syncStatusRepository = SyncStatusRepository(
+        com.ember.reader.core.testutil.FakeSyncStatusDao(),
+        java.time.Clock.systemUTC(),
+    )
+
     private lateinit var repository: ServerRepository
 
     @BeforeEach
     fun setUp() {
-        repository = ServerRepository(context, serverDao, bookDao, bookOpener, opdsClient, kosyncClient, grimmoryClient, grimmoryAppClient, grimmoryTokenManager, credentialEncryption)
+        repository = ServerRepository(
+            context, serverDao, bookDao, bookOpener, opdsClient, kosyncClient,
+            grimmoryClient, grimmoryAppClient, grimmoryTokenManager, credentialEncryption,
+            syncStatusRepository,
+        )
     }
 
     @Test
