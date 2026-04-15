@@ -1,15 +1,28 @@
 package com.ember.reader.core.database.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.ember.reader.core.database.entity.BookEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookDao {
+
+    /**
+     * Paged query for the library screen. The SQL is composed by `LibraryQueryBuilder` so sort,
+     * filter, search, and subcategory-scoping all resolve at the database layer.
+     */
+    @RawQuery(observedEntities = [BookEntity::class])
+    fun pageBooksForView(query: SupportSQLiteQuery): PagingSource<Int, BookEntity>
+
+    @Query("SELECT * FROM books WHERE id IN (:ids)")
+    suspend fun getByIds(ids: Set<String>): List<BookEntity>
 
     @Query("SELECT * FROM books WHERE serverId = :serverId ORDER BY title ASC")
     fun observeByServer(serverId: Long): Flow<List<BookEntity>>
