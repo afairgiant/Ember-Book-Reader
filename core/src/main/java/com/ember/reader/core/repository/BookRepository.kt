@@ -1,13 +1,20 @@
 package com.ember.reader.core.repository
 
 import android.content.Context
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.database.query.LibraryQueryBuilder
+import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryFilter
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
-import com.ember.reader.core.paging.GrimmoryRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.DownloadProgress
@@ -15,6 +22,11 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.paging.GrimmoryNetworkPager
+import com.ember.reader.core.paging.GrimmoryRequest
+import com.ember.reader.core.paging.LibraryRemoteMediator
+import com.ember.reader.core.paging.NetworkPager
+import com.ember.reader.core.paging.OpdsNetworkPager
 import com.ember.reader.core.sync.PartialMd5
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -22,6 +34,7 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
@@ -85,6 +98,65 @@ class BookRepository @Inject constructor(
 
     fun search(serverId: Long?, query: String): Flow<List<Book>> =
         bookDao.search(serverId, query).map { entities -> entities.map { it.toDomain() } }
+
+    /**
+     * Paged stream of books for the library screen. Re-subscribe the returned flow whenever any
+     * input changes — Pager caches page data per subscription.
+     *
+     * [sessionIds] is the mediator's view-scope allowlist: pass a [MutableStateFlow] initialized
+     * to `emptySet()` for subcategory views (series/shelf/etc.) so only books the server returned
+     * for this view are visible; pass one holding `null` for unscoped catalog roots.
+     */
+    @OptIn(ExperimentalPagingApi::class)
+    fun pageByServer(
+        server: Server,
+        catalogPath: String,
+        sort: LibrarySortOrder,
+        formatFilter: BookFormat?,
+        downloadedOnly: Boolean,
+        query: String,
+        grimmoryFilter: GrimmoryFilter,
+        sessionIds: MutableStateFlow<Set<String>?>,
+        pageSize: Int = 50,
+    ): Flow<PagingData<Book>> {
+        val networkPager: NetworkPager = if (catalogPath.startsWith("grimmory:")) {
+            GrimmoryNetworkPager(
+                server = server,
+                request = GrimmoryRequest.fromCatalogPath(
+                    catalogPath = catalogPath,
+                    filter = grimmoryFilter,
+                    searchOverride = query,
+                ),
+                repository = this,
+                pageSize = pageSize,
+            )
+        } else {
+            OpdsNetworkPager(server, catalogPath, this)
+        }
+        val mediator = LibraryRemoteMediator(networkPager, sessionIds)
+        return Pager(
+            config = PagingConfig(
+                pageSize = pageSize,
+                prefetchDistance = 20,
+                enablePlaceholders = false,
+            ),
+            remoteMediator = mediator,
+            pagingSourceFactory = {
+                bookDao.pageBooksForView(
+                    LibraryQueryBuilder.build(
+                        LibraryQueryBuilder.Inputs(
+                            serverId = server.id,
+                            sort = sort,
+                            formatFilter = formatFilter,
+                            downloadedOnly = downloadedOnly,
+                            query = query,
+                            sessionIds = sessionIds.value,
+                        ),
+                    ),
+                )
+            },
+        ).flow.map { pagingData -> pagingData.map { it.toDomain() } }
+    }
 
     suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): Book? =
         bookDao.getByOpdsEntryId(opdsEntryId, serverId)?.toDomain()
