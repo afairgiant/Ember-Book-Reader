@@ -2,8 +2,11 @@ package com.ember.reader.ui.library
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
@@ -11,6 +14,7 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.SyncStatus
+import com.ember.reader.core.sync.SyncStatusProber
 import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.ui.organize.OrganizeFilesViewModel
 import io.mockk.coEvery
@@ -63,6 +67,9 @@ class LibraryViewModelTest {
     @MockK(relaxed = true)
     private lateinit var organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 
+    @MockK(relaxed = true)
+    private lateinit var syncStatusProber: SyncStatusProber
+
     private val testDispatcher = StandardTestDispatcher()
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
     private val syncStatusRepository = SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
@@ -108,6 +115,7 @@ class LibraryViewModelTest {
             grimmoryClient,
             grimmoryAppClient,
             syncStatusRepository,
+            syncStatusProber,
             organizeFilesViewModelFactory,
         )
     }
@@ -131,13 +139,13 @@ class LibraryViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertEquals(SortOrder.TITLE, viewModel.sortOrder.value)
+        assertEquals(LibrarySortOrder.TITLE, viewModel.sortOrder.value)
 
-        viewModel.updateSortOrder(SortOrder.AUTHOR)
-        assertEquals(SortOrder.AUTHOR, viewModel.sortOrder.value)
+        viewModel.updateSortOrder(LibrarySortOrder.AUTHOR)
+        assertEquals(LibrarySortOrder.AUTHOR, viewModel.sortOrder.value)
 
-        viewModel.updateSortOrder(SortOrder.RECENT)
-        assertEquals(SortOrder.RECENT, viewModel.sortOrder.value)
+        viewModel.updateSortOrder(LibrarySortOrder.RECENT)
+        assertEquals(LibrarySortOrder.RECENT, viewModel.sortOrder.value)
     }
 
     @Test
@@ -169,6 +177,39 @@ class LibraryViewModelTest {
 
         assertTrue(viewModel.syncStatus.value is SyncStatus.AuthExpired)
         collector.cancel()
+    }
+
+    @Test
+    fun `resolveSelectedGrimmoryIds filters out books without grimmoryBookId`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.toggleSelection("grim-1")
+        viewModel.toggleSelection("local-only")
+
+        coEvery { bookRepository.getByIds(setOf("grim-1", "local-only")) } returns listOf(
+            Book(
+                id = "grim-1",
+                title = "G",
+                format = BookFormat.EPUB,
+                opdsEntryId = "urn:booklore:book:42",
+            ),
+            Book(id = "local-only", title = "L", format = BookFormat.EPUB),
+        )
+
+        val ids = viewModel.resolveSelectedGrimmoryIds()
+
+        assertEquals(listOf(42L), ids)
+    }
+
+    @Test
+    fun `resolveSelectedGrimmoryIds short-circuits on empty selection`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val ids = viewModel.resolveSelectedGrimmoryIds()
+
+        assertTrue(ids.isEmpty())
     }
 
     @Test

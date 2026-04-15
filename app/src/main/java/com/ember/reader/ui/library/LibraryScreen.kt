@@ -21,10 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -61,7 +64,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,12 +92,11 @@ fun LibraryScreen(
     onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val items = viewModel.bookPagingData.collectAsLazyPagingItems()
+    val downloadingIds by viewModel.downloadingBookIds.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
-    val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
-    val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val grimmoryFilter by viewModel.grimmoryFilter.collectAsStateWithLifecycle()
     val grimmoryFilterOptions by viewModel.grimmoryFilterOptions.collectAsStateWithLifecycle()
     val selectedBookIds by viewModel.selectedBookIds.collectAsStateWithLifecycle()
@@ -211,69 +212,71 @@ fun LibraryScreen(
                 ) {}
             }
 
-            when (val state = uiState) {
-                LibraryUiState.Loading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+            val refreshState = items.loadState.refresh
+            val appendLoading = items.loadState.append is LoadState.Loading
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    viewModel.refresh()
+                    items.refresh()
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    refreshState is LoadState.Loading && items.itemCount == 0 -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                is LibraryUiState.Error -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(state.message, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                is LibraryUiState.Success -> {
-                    PullToRefreshBox(
-                        isRefreshing = isRefreshing,
-                        onRefresh = viewModel::refresh,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        if (state.books.isEmpty()) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    stringResource(R.string.no_books_found),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        } else if (viewMode == ViewMode.GRID) {
-                            BookGrid(
-                                books = state.books,
-                                downloadingIds = state.downloadingBookIds,
-                                isSelecting = isSelecting,
-                                selectedIds = selectedBookIds,
-                                onBookClick = { book ->
-                                    if (isSelecting) {
-                                        viewModel.toggleSelection(book.id)
-                                    } else {
-                                        onOpenBookDetail(book.id)
-                                    }
-                                },
-                                onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
-                                onDownloadClick = viewModel::downloadBook,
-                                loadingMore = loadingMore,
-                                onLoadMore = if (hasMore) viewModel::loadMore else null
-                            )
-                        } else {
-                            BookList(
-                                books = state.books,
-                                downloadingIds = state.downloadingBookIds,
-                                isSelecting = isSelecting,
-                                selectedIds = selectedBookIds,
-                                onBookClick = { book ->
-                                    if (isSelecting) {
-                                        viewModel.toggleSelection(book.id)
-                                    } else {
-                                        onOpenBookDetail(book.id)
-                                    }
-                                },
-                                onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
-                                onDownloadClick = viewModel::downloadBook,
-                                loadingMore = loadingMore,
-                                onLoadMore = if (hasMore) viewModel::loadMore else null
+                    refreshState is LoadState.Error && items.itemCount == 0 -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                refreshState.error.message ?: "Failed to load books",
+                                color = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
+                    items.itemCount == 0 -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                stringResource(R.string.no_books_found),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    viewMode == ViewMode.GRID -> BookGrid(
+                        items = items,
+                        downloadingIds = downloadingIds,
+                        isSelecting = isSelecting,
+                        selectedIds = selectedBookIds,
+                        onBookClick = { book ->
+                            if (isSelecting) {
+                                viewModel.toggleSelection(book.id)
+                            } else {
+                                onOpenBookDetail(book.id)
+                            }
+                        },
+                        onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
+                        onDownloadClick = viewModel::downloadBook,
+                        appendLoading = appendLoading,
+                    )
+                    else -> BookList(
+                        items = items,
+                        downloadingIds = downloadingIds,
+                        isSelecting = isSelecting,
+                        selectedIds = selectedBookIds,
+                        onBookClick = { book ->
+                            if (isSelecting) {
+                                viewModel.toggleSelection(book.id)
+                            } else {
+                                onOpenBookDetail(book.id)
+                            }
+                        },
+                        onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
+                        onDownloadClick = viewModel::downloadBook,
+                        appendLoading = appendLoading,
+                    )
                 }
             }
         }
@@ -308,21 +311,19 @@ fun LibraryScreen(
 
     if (showOrganizeSheet) {
         val server = currentServer
-        val successState = uiState as? LibraryUiState.Success
-        // Map selected local-book IDs to their Grimmory backend IDs. Books with no
-        // grimmoryBookId (local-only, OPDS, etc.) are filtered out — we can't move them.
-        val grimmoryBookIds: List<Long> = successState
-            ?.books
-            ?.filter { it.id in selectedBookIds }
-            ?.mapNotNull { it.grimmoryBookId }
-            .orEmpty()
+        var grimmoryBookIds by remember(selectedBookIds) { mutableStateOf<List<Long>>(emptyList()) }
+        LaunchedEffect(selectedBookIds, showOrganizeSheet) {
+            if (showOrganizeSheet) {
+                grimmoryBookIds = viewModel.resolveSelectedGrimmoryIds()
+            }
+        }
 
         if (server != null && grimmoryBookIds.isNotEmpty()) {
             val organizeVm = remember(grimmoryBookIds) {
                 viewModel.organizeFilesViewModelFactory.create(
                     baseUrl = server.url,
                     serverId = server.id,
-                    bookIds = grimmoryBookIds
+                    bookIds = grimmoryBookIds,
                 )
             }
             OrganizeFilesSheet(
@@ -336,10 +337,10 @@ fun LibraryScreen(
                     viewModel.clearSelection()
                     viewModel.refresh()
                     showOrganizeSheet = false
-                }
+                },
             )
-        } else {
-            // Nothing movable — just close the sheet silently.
+        } else if (grimmoryBookIds.isEmpty() && selectedBookIds.isNotEmpty()) {
+            // Resolution done but no movable books (local-only, OPDS, etc.) — close silently.
             showOrganizeSheet = false
         }
     }
@@ -347,39 +348,30 @@ fun LibraryScreen(
 
 @Composable
 private fun BookGrid(
-    books: List<Book>,
+    items: LazyPagingItems<Book>,
     downloadingIds: Set<String>,
     isSelecting: Boolean,
     selectedIds: Set<String>,
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
-    loadingMore: Boolean = false,
-    onLoadMore: (() -> Unit)? = null
+    appendLoading: Boolean = false,
 ) {
     val gridState = rememberLazyGridState()
-
-    // Trigger load more when near end
-    if (onLoadMore != null) {
-        LaunchedEffect(gridState) {
-            snapshotFlow {
-                val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                val totalItems = gridState.layoutInfo.totalItemsCount
-                lastVisible >= totalItems - 6
-            }.collect { nearEnd ->
-                if (nearEnd) onLoadMore()
-            }
-        }
-    }
 
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(120.dp),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(books, key = { it.id }) { book ->
+        items(
+            count = items.itemCount,
+            key = items.itemKey { it.id },
+            contentType = items.itemContentType { "book" },
+        ) { index ->
+            val book = items[index] ?: return@items
             BookGridItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
@@ -387,14 +379,14 @@ private fun BookGrid(
                 isSelected = book.id in selectedIds,
                 onClick = { onBookClick(book) },
                 onLongClick = { onBookLongClick(book) },
-                onDownload = { onDownloadClick(book) }
+                onDownload = { onDownloadClick(book) },
             )
         }
-        if (loadingMore) {
+        if (appendLoading) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
@@ -509,36 +501,28 @@ private fun BookGridItem(
 
 @Composable
 private fun BookList(
-    books: List<Book>,
+    items: LazyPagingItems<Book>,
     downloadingIds: Set<String>,
     isSelecting: Boolean,
     selectedIds: Set<String>,
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
-    loadingMore: Boolean = false,
-    onLoadMore: (() -> Unit)? = null
+    appendLoading: Boolean = false,
 ) {
     val listState = rememberLazyListState()
-
-    if (onLoadMore != null) {
-        LaunchedEffect(listState) {
-            snapshotFlow {
-                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                val totalItems = listState.layoutInfo.totalItemsCount
-                lastVisible >= totalItems - 4
-            }.collect { nearEnd ->
-                if (nearEnd) onLoadMore()
-            }
-        }
-    }
 
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(books, key = { it.id }) { book ->
+        items(
+            count = items.itemCount,
+            key = items.itemKey { it.id },
+            contentType = items.itemContentType { "book" },
+        ) { index ->
+            val book = items[index] ?: return@items
             BookListItem(
                 book = book,
                 isDownloading = book.id in downloadingIds,
@@ -546,14 +530,14 @@ private fun BookList(
                 isSelected = book.id in selectedIds,
                 onClick = { onBookClick(book) },
                 onLongClick = { onBookLongClick(book) },
-                onDownload = { onDownloadClick(book) }
+                onDownload = { onDownloadClick(book) },
             )
         }
-        if (loadingMore) {
+        if (appendLoading) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
