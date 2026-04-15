@@ -7,6 +7,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import javax.inject.Inject
@@ -295,6 +296,38 @@ class GrimmoryAppClient @Inject constructor(
         }
         if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get filter options failed: ${response.status}")
         response.body<GrimmoryAppFilterOptions>()
+    }
+
+    /**
+     * Set or clear the user's personal rating for a Grimmory book on the 1-10 scale
+     * used by the web UI (`metadata-viewer` uses `stars="10"`). Pass a non-null
+     * [rating] in [1, 10] to set it, or `null` to clear it. The set path hits
+     * `PUT /api/v1/books/personal-rating` with `{ids:[bookId], rating}`; the clear
+     * path hits `POST /api/v1/books/reset-personal-rating` with `[bookId]`, matching
+     * the frontend's `book-patch.service.ts`.
+     */
+    suspend fun setPersonalRating(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+        rating: Int?
+    ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
+        val response = if (rating == null) {
+            httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/reset-personal-rating") {
+                header("Authorization", "Bearer $token")
+                header("Content-Type", "application/json")
+                setBody(listOf(grimmoryBookId))
+            }
+        } else {
+            httpClient.put("${serverOrigin(baseUrl)}/api/v1/books/personal-rating") {
+                header("Authorization", "Bearer $token")
+                header("Content-Type", "application/json")
+                setBody(PersonalRatingUpdateRequest(ids = listOf(grimmoryBookId), rating = rating))
+            }
+        }
+        if (!response.status.isSuccess()) {
+            throw GrimmoryHttpException(response.status.value, "Set personal rating failed: ${response.status}")
+        }
     }
 
     /**

@@ -6,7 +6,9 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
@@ -15,6 +17,9 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -176,6 +181,71 @@ class GrimmoryAppClientTest {
             val url = client.audiobookCoverUrl(baseUrl, 42L)
 
             assertEquals("http://grimmory.test/api/v1/audiobooks/42/cover", url)
+        }
+    }
+
+    @Nested
+    inner class PersonalRating {
+
+        @Test
+        fun `setPersonalRating with value PUTs to personal-rating with ids and rating`() = runTest {
+            var capturedMethod: HttpMethod? = null
+            var capturedPath: String? = null
+            var capturedBody: String? = null
+            val engine = MockEngine { request ->
+                capturedMethod = request.method
+                capturedPath = request.url.encodedPath
+                capturedBody = (request.body as TextContent).text
+                jsonResponse("[]")
+            }
+            val client = createClient(engine)
+
+            val result = client.setPersonalRating(baseUrl, serverId, grimmoryBookId = 42L, rating = 7)
+
+            assertTrue(result.isSuccess)
+            assertEquals(HttpMethod.Put, capturedMethod)
+            assertEquals("/api/v1/books/personal-rating", capturedPath)
+            val body = json.decodeFromString<JsonObject>(capturedBody!!)
+            assertEquals(7, body["rating"]!!.jsonPrimitive.content.toInt())
+            val ids = body["ids"] as JsonArray
+            assertEquals(1, ids.size)
+            assertEquals(42L, ids[0].jsonPrimitive.content.toLong())
+        }
+
+        @Test
+        fun `setPersonalRating with null POSTs to reset-personal-rating with id list`() = runTest {
+            var capturedMethod: HttpMethod? = null
+            var capturedPath: String? = null
+            var capturedBody: String? = null
+            val engine = MockEngine { request ->
+                capturedMethod = request.method
+                capturedPath = request.url.encodedPath
+                capturedBody = (request.body as TextContent).text
+                jsonResponse("[]")
+            }
+            val client = createClient(engine)
+
+            val result = client.setPersonalRating(baseUrl, serverId, grimmoryBookId = 42L, rating = null)
+
+            assertTrue(result.isSuccess)
+            assertEquals(HttpMethod.Post, capturedMethod)
+            assertEquals("/api/v1/books/reset-personal-rating", capturedPath)
+            val ids = json.decodeFromString<JsonArray>(capturedBody!!)
+            assertEquals(1, ids.size)
+            assertEquals(42L, ids[0].jsonPrimitive.content.toLong())
+        }
+
+        @Test
+        fun `setPersonalRating returns failure on non-success status`() = runTest {
+            val engine = MockEngine { jsonResponse("{}", HttpStatusCode.InternalServerError) }
+            val client = createClient(engine)
+
+            val result = client.setPersonalRating(baseUrl, serverId, grimmoryBookId = 42L, rating = 5)
+
+            assertTrue(result.isFailure)
+            val ex = result.exceptionOrNull()
+            assertTrue(ex is GrimmoryHttpException)
+            assertEquals(500, (ex as GrimmoryHttpException).statusCode)
         }
     }
 

@@ -45,6 +45,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -54,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -280,16 +282,6 @@ fun BookDetailScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                        }
-
-                        // Hardcover community rating
-                        val hcMatch = hardcoverMatch
-                        if (hcMatch != null) {
-                            val avg = hcMatch.averageRating
-                            if (avg != null && avg > 0f) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                HardcoverRatingRow(rating = avg, count = hcMatch.ratingsCount)
-                            }
                         }
 
                         // Hardcover user status badge
@@ -544,9 +536,11 @@ fun BookDetailScreen(
                     }
 
                     // Ratings card
-                    val goodreadsRating = gd?.goodreadsRating
-                    val personalRating = gd?.personalRating?.takeIf { it > 0 }
-                    if (goodreadsRating != null || personalRating != null) {
+                    val fullMeta = grimmoryFullBook?.metadata
+                    val goodreadsRating = fullMeta?.goodreadsRating
+                    val amazonRating = fullMeta?.amazonRating
+                    val hardcoverRating = fullMeta?.hardcoverRating
+                    if (gd != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -557,10 +551,30 @@ fun BookDetailScreen(
                                 Text("Ratings", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 goodreadsRating?.let { rating ->
-                                    val reviews = gd?.goodreadsReviewCount?.let { " ($it)" } ?: ""
+                                    val reviews = fullMeta.goodreadsReviewCount?.let { " ($it)" } ?: ""
                                     InfoRow("Goodreads", "%.1f$reviews".format(rating))
                                 }
-                                personalRating?.let { InfoRow("Your Rating", "$it / 5") }
+                                amazonRating?.let { rating ->
+                                    val reviews = fullMeta.amazonReviewCount?.let { " ($it)" } ?: ""
+                                    InfoRow("Amazon", "%.1f$reviews".format(rating))
+                                }
+                                hardcoverRating?.let { rating ->
+                                    val reviews = fullMeta.hardcoverReviewCount?.let { " ($it)" } ?: ""
+                                    InfoRow("Hardcover", "%.1f$reviews".format(rating))
+                                }
+                                if (goodreadsRating != null || amazonRating != null || hardcoverRating != null) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                Text(
+                                    text = "Your Rating",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                PersonalRatingStars(
+                                    value = gd.personalRating ?: 0,
+                                    onChange = { viewModel.setPersonalRating(it) }
+                                )
                             }
                         }
                     }
@@ -869,42 +883,6 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-@Composable
-private fun HardcoverRatingRow(rating: Float, count: Int) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        RatingStars(rating = rating)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "%.1f".format(rating),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Text(
-            text = " ($count)",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun RatingStars(rating: Float) {
-    Row {
-        for (i in 1..5) {
-            val icon = when {
-                rating >= i -> Icons.Default.Star
-                rating >= i - 0.5f -> Icons.Default.StarHalf
-                else -> Icons.Default.StarBorder
-            }
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFFFB300))
-        }
-    }
-}
-
 /** Simple HTML tag stripper for OPDS descriptions. */
 private fun cleanHtml(html: String): String = html.replace(Regex("<[^>]*>"), "")
     .replace("&amp;", "&")
@@ -927,3 +905,31 @@ private val ReadStatus.displayName: String
         ReadStatus.ABANDONED -> "Abandoned"
         ReadStatus.UNSET -> "Unset"
     }
+
+// 10-star rating input matching Grimmory's web metadata-viewer. Tap a star to set
+// the rating to that position; tap the currently selected star again to clear.
+// Relaxes Material's 48dp minimum tap target so 10 stars fit in the card width.
+@Composable
+private fun PersonalRatingStars(
+    value: Int,
+    onChange: (Int?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+            for (star in 1..10) {
+                val filled = star <= value
+                IconButton(
+                    onClick = { onChange(if (value == star) null else star) },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = if (filled) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = "Rate $star out of 10",
+                        tint = if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}

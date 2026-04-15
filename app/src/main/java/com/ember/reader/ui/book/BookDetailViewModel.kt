@@ -243,6 +243,30 @@ class BookDetailViewModel @Inject constructor(
                 }
         }
     }
+
+    /**
+     * Set the user's personal rating on a 1-10 scale (or null to clear). Applies an
+     * optimistic update to [_grimmoryDetail] so the stars reflect the new value
+     * immediately; reverts on network failure and surfaces a snackbar message.
+     */
+    fun setPersonalRating(rating: Int?) {
+        val book = _book.value ?: return
+        val server = _server.value ?: return
+        val grimmoryBookId = book.grimmoryBookId ?: return
+        if (!server.isGrimmory) return
+        val normalized = rating?.coerceIn(1, 10)
+
+        val previous = _grimmoryDetail.value
+        _grimmoryDetail.value = previous?.copy(personalRating = normalized)
+
+        viewModelScope.launch {
+            grimmoryAppClient.setPersonalRating(server.url, server.id, grimmoryBookId, normalized)
+                .onFailure {
+                    _grimmoryDetail.value = previous
+                    _message.value = "Failed to save rating"
+                }
+        }
+    }
 }
 
 data class SeriesBookItem(

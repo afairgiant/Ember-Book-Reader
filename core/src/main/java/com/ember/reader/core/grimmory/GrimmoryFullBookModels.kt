@@ -52,7 +52,13 @@ data class GrimmoryFullBookMetadata(
     val language: String? = null,
     val categories: List<String>? = null,
     val moods: List<String>? = null,
-    val tags: List<String>? = null
+    val tags: List<String>? = null,
+    val amazonRating: Double? = null,
+    val amazonReviewCount: Int? = null,
+    val goodreadsRating: Double? = null,
+    val goodreadsReviewCount: Int? = null,
+    val hardcoverRating: Double? = null,
+    val hardcoverReviewCount: Int? = null
 ) {
     val categoryNames: Set<String>
         get() = categories?.toSet() ?: emptySet()

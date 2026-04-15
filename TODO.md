@@ -55,20 +55,21 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Reading sessions: `POST /api/v1/reading-sessions` — records duration, start/end progress on reader close (skips < 30s)
 
 **Phase 2 — Catalog via App API (alternative to OPDS):**
-- [ ] Books: `GET /api/v1/app/books` — paginated, filterable, includes progress & covers
-- [ ] Libraries: `GET /api/v1/app/libraries`
-- [ ] Shelves: `GET /api/v1/app/shelves` + magic shelves
-- [ ] Series: `GET /api/v1/app/series` with book counts and read progress
-- [ ] Authors: `GET /api/v1/app/authors` with photos
-- [ ] Search: `GET /api/v1/app/books/search?q=`
-- [ ] Covers: `GET /api/v1/media/book/{bookId}/cover` (JWT auth, cacheable)
+- [x] Books: `GET /api/v1/app/books` — paginated, filterable, includes progress & covers
+- [x] Libraries: `GET /api/v1/app/libraries`
+- [x] Shelves: `GET /api/v1/app/shelves` + magic shelves
+- [x] Series: `GET /api/v1/app/series` with book counts and read progress
+- [x] Authors: `GET /api/v1/app/authors` with photos
+- [x] Search: `GET /api/v1/app/books/search?q=`
+- [x] Covers: `GET /api/v1/media/book/{bookId}/cover` (JWT auth, cacheable)
 
 **Phase 3 — Book Management:**
-- [ ] Ability to edit basic book metadata
-- [ ] Ability to change "read" status
+- [x] Ability to edit basic book metadata (chip-based tag editor for categories/moods/tags)
+- [x] Ability to change "read" status
 - [ ] Ability to shelve books
-- [ ] Ability to upload books
+- [ ] Ability to upload books (direct upload — Book Drop covers the queued/ingestion path)
 - [x] Access to book drop
+- [x] Organize Files (multi-select on LibraryScreen + per-book Organize menu with preview)
 
 **Phase 4 — Annotations & Bookmarks Sync:**
 - [ ] Annotations: `GET/POST/PUT/DELETE /api/v1/annotations` (CFI-based highlights)
@@ -84,6 +85,7 @@ Full API reference: `docs/grimmory-api.md`
 ### Bidirectional Position Sync
 - [ ] Investigate converting Readium Locator ↔ EPUB CFI for exact position sync (not just percentage)
 - [ ] Would give precise page-level sync between Ember and Grimmory's web reader
+- [ ] Research notes: two approaches identified — percentage bridge is simpler; full CFI requires JS injection into Readium's WebView (see `docs/` and prior CFI sync investigation)
 
 ## UI / Design
 
@@ -109,6 +111,10 @@ Full API reference: `docs/grimmory-api.md`
 ### Server Form
 - [x] Show connection status indicator on saved servers (OPDS · Kosync · Grimmory)
 - [x] Show Grimmory account permissions after Test Login (Admin/Download/Upload/Bookdrop/Organize Files)
+- [x] Per-server sync-status repository with health classifier, persisted to Room
+- [x] Sync-status banner on Library with recovery actions when current server is unhealthy
+- [x] Sync-status dot next to each server in Browse; probe on Browse load; clear on delete
+- [x] HTTP streaming reader for Grimmory books + normalized progress scale for streamed books
 - [ ] Auto-detect server capabilities (OPDS version, kosync availability)
 - [ ] Make OPDS and Kosync optional when adding a Grimmory server
     - Add an "Enable OPDS" checkbox and an "Enable Kosync" checkbox, both off by default on new Grimmory servers
@@ -120,6 +126,9 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Connected accounts with status indicators (OPDS/Kosync/Grimmory)
 - [x] Reading stats (downloaded, reading, completed)
 - [x] App version info
+- [x] Redesigned Stats dashboard (session heatmap + reading timeline)
+- [x] Hardcover integration (Browse tab entry, in-app detail with Search in Grimmory)
+- [x] GitHub link + open-source licenses in Settings → About
 - [ ] Actual user profile (pull from server if available)
 - [x] Appearance settings (theme toggle light/dark/system + keep screen on toggle)
 - [ ] Reading goals configuration
@@ -137,8 +146,18 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Unit tests for OPDS parser (OpdsParserTest — 24 tests)
 - [x] Unit tests for PartialMd5 (PartialMd5Test — 8 tests)
 - [x] Unit tests for URL builder (UrlBuilderTest — 7 tests)
+- [x] Sync managers, API clients, and ViewModels (86 tests — commit 9437d66)
 - [ ] Integration tests for kosync push/pull
 - [ ] UI tests for critical flows (connect server, download book, open reader)
+
+### Code Health / Refactors
+- [x] ReaderViewModel: replace `runBlocking + GlobalScope` in `onCleared()` with injected `@ApplicationScope` (commit 5a22820)
+- [ ] AudiobookViewModel: apply the same `@ApplicationScope` fix to its teardown path (still uses `GlobalScope.launch`)
+- [x] Extract `BookDownloader` and `BookMetadataExtractor` from `BookRepository`
+- [x] Extract shared `withAuth` token refresh + typed HTTP exceptions
+- [x] Coalesce concurrent Grimmory token refreshes; clear stale credentials
+- [x] Stop `runCatching` from swallowing `CancellationException` in sync paths
+- [x] Ktlint formatting applied across the codebase
 
 ### CI/CD
 - [x] GitHub Actions build pipeline (ci.yml)
@@ -172,10 +191,10 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Search icon in reader top bar → SearchSheet bottom sheet
 
 ### Dictionary / Lookup
-- [ ] Long-press word to select
-- [ ] Built-in dictionary lookup (or Android system dictionary intent)
-- [ ] Wikipedia / web search for selected text
-- [ ] Translate selected text (via Android translation intent)
+- [x] Long-press word to select (custom ActionMode with Define / Search Web / Translate)
+- [x] Built-in dictionary lookup — in-app bottom sheet with Wiktionary + inflection/form-of resolution + local cache
+- [x] Wikipedia / web search for selected text
+- [x] Translate selected text (via Android translation intent)
 - [ ] **Crowdsourced dictionary cache on Grimmory**: add a `/api/v1/dictionary/{word}` endpoint to Grimmory that Ember queries before falling through to Free Dictionary / Wiktionary. Every successful upstream lookup is POSTed back to Grimmory so the server gradually builds a SQLite library of words its users actually read. Over time most lookups would be served from the user's own server — fast, offline-from-the-internet, and shareable across all clients on that Grimmory instance.
 
 ### Highlights & Annotations
@@ -199,8 +218,11 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Book Details Screen
 - [x] Dedicated book detail page (cover, description, metadata, series info)
-- [ ] Rating (personal + Goodreads + Hardcover if available from Grimmory)
-- [x] Read status toggle (Unread/Reading/Read/DNF) — Grimmory API
+- [x] Hardcover enrichment on book detail (user status badge, description augmentation)
+- [x] Related series books shown on book detail
+- [x] Ratings card sources Goodreads/Amazon/Hardcover from Grimmory metadata (full-book endpoint)
+- [x] Interactive 10-star personal rating (matches Grimmory web UI; tap to set, tap same star to clear)
+- [x] Read status toggle (Unread/Reading/Read/DNF/Re-reading) — Grimmory API
 - [ ] Shelves/collections management
 - [ ] Download progress indicator
 - [ ] Similar books / recommendations (Grimmory has `/api/v1/books/{id}/recommendations`)
@@ -212,7 +234,7 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Smart collections (auto-populated by rules: genre, author, read status)
 
 ### Night Mode / Blue Light Filter
-- [ ] True system brightness control (not just theme)
+- [x] True system brightness control — slide left edge of reader to adjust (WindowManager)
 - [ ] Blue light filter (warm color temperature overlay)
 - [ ] Auto-switch based on time of day
 - [x] Screen keep-awake while reading (configurable in Profile → Appearance)
@@ -225,7 +247,7 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Orientation Lock
 - [x] Lock to portrait/landscape while reading (Auto/Portrait/Landscape in reader settings)
-- [ ] Per-book orientation preference
+- [x] Per-book orientation preference (universal reader defaults with per-book overrides)
 - [ ] Auto-rotate toggle in reader chrome
 
 ### File Management

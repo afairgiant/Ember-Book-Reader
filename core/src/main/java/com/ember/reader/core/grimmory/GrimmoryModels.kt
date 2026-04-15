@@ -16,6 +16,12 @@ data class GrimmoryTokens(
 )
 
 @Serializable
+data class PersonalRatingUpdateRequest(
+    val ids: List<Long>,
+    val rating: Int?
+)
+
+@Serializable
 data class GrimmoryRefreshRequest(
     val refreshToken: String
 )
