@@ -467,8 +467,8 @@ fun BookDetailScreen(
                         ?: hardcoverMatch?.description?.takeIf { it.isNotBlank() }
                     val gd = grimmoryDetail
                     val pageCount = currentBook.pageCount ?: gd?.pageCount ?: hardcoverMatch?.pages
-                    val published = currentBook.publishedDate ?: gd?.publishedDate
-                        ?: hardcoverMatch?.releaseYear?.toString()
+                    val published = (currentBook.publishedDate ?: gd?.publishedDate
+                        ?: hardcoverMatch?.releaseYear?.toString())?.let(::formatPublishedDate)
                     val language = currentBook.language ?: gd?.language
 
                     // About card — collapsible description + key metadata
@@ -892,6 +892,15 @@ private fun cleanHtml(html: String): String = html.replace(Regex("<[^>]*>"), "")
     .replace("&#39;", "'")
     .replace("&nbsp;", " ")
     .trim()
+
+/** Formats a published date string as MM-DD-YYYY, stripping any time component.
+ *  Falls back to the original string for non-ISO inputs (e.g. a bare year). */
+private fun formatPublishedDate(raw: String): String {
+    val dateOnly = raw.substringBefore('T')
+    val match = Regex("""^(\d{4})-(\d{2})-(\d{2})$""").matchEntire(dateOnly) ?: return dateOnly
+    val (year, month, day) = match.destructured
+    return "$month-$day-$year"
+}
 
 private val ReadStatus.displayName: String
     get() = when (this) {
