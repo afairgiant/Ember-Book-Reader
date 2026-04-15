@@ -18,6 +18,7 @@ import io.mockk.junit5.MockKExtension
 import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -155,6 +156,37 @@ class BookRepositoryTest {
             )
         }
         coVerify(exactly = 0) { bookDao.insert(any()) }
+    }
+
+    @Test
+    fun `getByIds returns empty list without hitting dao when ids empty`() = runTest {
+        val result = repository.getByIds(emptySet())
+        assertTrue(result.isEmpty())
+        coVerify(exactly = 0) { bookDao.getByIds(any()) }
+    }
+
+    @Test
+    fun `getByIds maps dao entities to domain books`() = runTest {
+        val entities = listOf(
+            BookEntity(
+                id = "a",
+                title = "A",
+                format = BookFormat.EPUB,
+                addedAt = Instant.EPOCH,
+            ),
+            BookEntity(
+                id = "b",
+                title = "B",
+                format = BookFormat.PDF,
+                addedAt = Instant.EPOCH,
+            ),
+        )
+        coEvery { bookDao.getByIds(setOf("a", "b")) } returns entities
+
+        val result = repository.getByIds(setOf("a", "b"))
+
+        assertEquals(setOf("A", "B"), result.map { it.title }.toSet())
+        coVerify { bookDao.getByIds(setOf("a", "b")) }
     }
 
     @Test

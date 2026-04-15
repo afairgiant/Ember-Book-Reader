@@ -76,6 +76,12 @@ class BookRepository @Inject constructor(
 
     suspend fun getById(id: String): Book? = bookDao.getById(id)?.toDomain()
 
+    /** Batch lookup for UI flows that already hold a selection of book IDs (e.g. paged lists). */
+    suspend fun getByIds(ids: Set<String>): List<Book> {
+        if (ids.isEmpty()) return emptyList()
+        return bookDao.getByIds(ids).map { it.toDomain() }
+    }
+
     fun search(serverId: Long?, query: String): Flow<List<Book>> =
         bookDao.search(serverId, query).map { entities -> entities.map { it.toDomain() } }
 
