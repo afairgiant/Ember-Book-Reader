@@ -620,9 +620,9 @@ private fun presetLabel(preset: LibraryPreset): String = when (preset) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GrimmoryFilterSheet(
-    filter: com.ember.reader.ui.library.GrimmoryFilter,
+    filter: com.ember.reader.core.grimmory.GrimmoryFilter,
     filterOptions: com.ember.reader.core.grimmory.GrimmoryAppFilterOptions?,
-    onApply: (com.ember.reader.ui.library.GrimmoryFilter) -> Unit,
+    onApply: (com.ember.reader.core.grimmory.GrimmoryFilter) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -653,7 +653,7 @@ fun GrimmoryFilterSheet(
             // Sort key
             Text("Sort by", style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(4.dp))
-            com.ember.reader.ui.library.GrimmorySortKey.values().forEach { key ->
+            com.ember.reader.core.grimmory.GrimmorySortKey.values().forEach { key ->
                 val isSelected = draft.sort == key
                 Row(
                     modifier = Modifier
@@ -676,9 +676,9 @@ fun GrimmoryFilterSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = when (key) {
-                            com.ember.reader.ui.library.GrimmorySortKey.ADDED -> "Recently added"
-                            com.ember.reader.ui.library.GrimmorySortKey.TITLE -> "Title"
-                            com.ember.reader.ui.library.GrimmorySortKey.SERIES -> "Series"
+                            com.ember.reader.core.grimmory.GrimmorySortKey.ADDED -> "Recently added"
+                            com.ember.reader.core.grimmory.GrimmorySortKey.TITLE -> "Title"
+                            com.ember.reader.core.grimmory.GrimmorySortKey.SERIES -> "Series"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isSelected) {
@@ -698,15 +698,15 @@ fun GrimmoryFilterSheet(
             ) {
                 Text("Direction", style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.weight(1f))
-                com.ember.reader.ui.library.SortDirection.values().forEach { dir ->
+                com.ember.reader.core.grimmory.SortDirection.values().forEach { dir ->
                     val isSelected = draft.direction == dir
                     AssistChip(
                         onClick = { draft = draft.copy(direction = dir) },
                         label = {
                             Text(
                                 when (dir) {
-                                    com.ember.reader.ui.library.SortDirection.ASC -> "Asc"
-                                    com.ember.reader.ui.library.SortDirection.DESC -> "Desc"
+                                    com.ember.reader.core.grimmory.SortDirection.ASC -> "Asc"
+                                    com.ember.reader.core.grimmory.SortDirection.DESC -> "Desc"
                                 }
                             )
                         },

@@ -7,6 +7,7 @@ import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.paging.GrimmoryRequest
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.DownloadProgress
@@ -171,26 +172,72 @@ class BookRepository @Inject constructor(
         maxRating: Int? = null,
         authors: String? = null,
         language: String? = null
+    ): Result<OpdsBookPage> = upsertGrimmoryPage(
+        server = server,
+        request = GrimmoryRequest(
+            libraryId = libraryId,
+            shelfId = shelfId,
+            magicShelfId = magicShelfId,
+            seriesName = seriesName,
+            status = status,
+            search = search,
+            sort = sort,
+            dir = dir,
+            minRating = minRating,
+            maxRating = maxRating,
+            authors = authors,
+            language = language,
+        ),
+        page = page,
+        pageSize = size,
+    )
+
+    /**
+     * Fetches one Grimmory page and upserts its books into the local DB. Returns an OpdsBookPage
+     * whose `resolvedBookIds` are the just-seen local IDs (in server order) and whose
+     * `nextPagePath` is a `grimmory:page=N+1` cursor (or null at the last page).
+     *
+     * This is the single code path behind both [refreshFromGrimmory] and the library paging
+     * mediator — any tweak to the upsert contract should happen here.
+     */
+    suspend fun upsertGrimmoryPage(
+        server: Server,
+        request: GrimmoryRequest,
+        page: Int,
+        pageSize: Int = 100,
     ): Result<OpdsBookPage> {
-        Timber.d("GrimmoryRefresh: search='$search' seriesName='$seriesName' libraryId=$libraryId shelfId=$shelfId magicShelfId=$magicShelfId status='$status' sort='$sort' dir='$dir' minRating=$minRating maxRating=$maxRating authors='$authors' language='$language'")
+        Timber.d(
+            "GrimmoryRefresh: search='${request.search}' seriesName='${request.seriesName}' " +
+                "libraryId=${request.libraryId} shelfId=${request.shelfId} " +
+                "magicShelfId=${request.magicShelfId} status='${request.status}' " +
+                "sort='${request.sort}' dir='${request.dir}' " +
+                "minRating=${request.minRating} maxRating=${request.maxRating} " +
+                "authors='${request.authors}' language='${request.language}'",
+        )
         val appPage = when {
-            seriesName != null -> grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName, page, size)
-            search != null -> grimmoryAppClient.searchBooks(server.url, server.id, search, page, size)
-            magicShelfId != null -> grimmoryAppClient.getMagicShelfBooks(server.url, server.id, magicShelfId, page, size)
+            request.seriesName != null -> grimmoryAppClient.getSeriesBooks(
+                server.url, server.id, request.seriesName, page, pageSize,
+            )
+            request.search != null -> grimmoryAppClient.searchBooks(
+                server.url, server.id, request.search, page, pageSize,
+            )
+            request.magicShelfId != null -> grimmoryAppClient.getMagicShelfBooks(
+                server.url, server.id, request.magicShelfId, page, pageSize,
+            )
             else -> grimmoryAppClient.getBooks(
                 baseUrl = server.url,
                 serverId = server.id,
                 page = page,
-                size = size,
-                sort = sort,
-                dir = dir,
-                libraryId = libraryId,
-                shelfId = shelfId,
-                status = status,
-                minRating = minRating,
-                maxRating = maxRating,
-                authors = authors,
-                language = language
+                size = pageSize,
+                sort = request.sort,
+                dir = request.dir,
+                libraryId = request.libraryId,
+                shelfId = request.shelfId,
+                status = request.status,
+                minRating = request.minRating,
+                maxRating = request.maxRating,
+                authors = request.authors,
+                language = request.language,
             )
         }
 
@@ -198,13 +245,18 @@ class BookRepository @Inject constructor(
             Timber.e(it, "GrimmoryRefresh: API call failed")
             return Result.failure(it)
         }
-        Timber.d("GrimmoryRefresh: got ${result.content.size} books (total=${result.totalElements}, hasNext=${result.hasNext})")
+        Timber.d(
+            "GrimmoryRefresh: got ${result.content.size} books " +
+                "(total=${result.totalElements}, hasNext=${result.hasNext})",
+        )
         result.content.take(5).forEach { Timber.d("  - '${it.title}' by ${it.authors}") }
         val origin = serverOrigin(server.url)
         val resolvedIds = mutableListOf<String>()
 
         for (appBook in result.content) {
-            resolvedIds.add(upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook))
+            resolvedIds.add(
+                upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook),
+            )
         }
 
         return Result.success(
@@ -212,8 +264,8 @@ class BookRepository @Inject constructor(
                 books = emptyList(),
                 resolvedBookIds = resolvedIds,
                 totalResults = result.totalElements.toInt(),
-                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null
-            )
+                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null,
+            ),
         )
     }
 
