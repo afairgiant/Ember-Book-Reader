@@ -26,14 +26,14 @@ class LibraryRemoteMediatorTest {
         pages = emptyList(),
         anchorPosition = null,
         config = PagingConfig(pageSize = 50),
-        leadingPlaceholderCount = 0,
+        leadingPlaceholderCount = 0
     )
 
     private fun book(id: String): BookEntity = BookEntity(
         id = id,
         title = id,
         format = BookFormat.EPUB,
-        addedAt = Instant.EPOCH,
+        addedAt = Instant.EPOCH
     )
 
     @Test
@@ -51,7 +51,7 @@ class LibraryRemoteMediatorTest {
     fun `refresh resets scoped sessionIds to empty and merges returned ids`() = runTest {
         val pager = mockk<NetworkPager>()
         coEvery { pager.refresh() } returns Result.success(
-            NetworkPager.PageResult(listOf("a", "b"), endOfPagination = false),
+            NetworkPager.PageResult(listOf("a", "b"), endOfPagination = false)
         )
         val sessionIds = MutableStateFlow<Set<String>?>(setOf("stale"))
         val mediator = LibraryRemoteMediator(pager, sessionIds)
@@ -67,7 +67,7 @@ class LibraryRemoteMediatorTest {
     fun `refresh leaves unscoped sessionIds as null`() = runTest {
         val pager = mockk<NetworkPager>()
         coEvery { pager.refresh() } returns Result.success(
-            NetworkPager.PageResult(listOf("a"), endOfPagination = true),
+            NetworkPager.PageResult(listOf("a"), endOfPagination = true)
         )
         val sessionIds = MutableStateFlow<Set<String>?>(null)
         val mediator = LibraryRemoteMediator(pager, sessionIds)
@@ -81,7 +81,7 @@ class LibraryRemoteMediatorTest {
     fun `append unions newly-fetched ids into scoped sessionIds`() = runTest {
         val pager = mockk<NetworkPager>()
         coEvery { pager.append() } returns Result.success(
-            NetworkPager.PageResult(listOf("c", "d"), endOfPagination = false),
+            NetworkPager.PageResult(listOf("c", "d"), endOfPagination = false)
         )
         val sessionIds = MutableStateFlow<Set<String>?>(setOf("a", "b"))
         val mediator = LibraryRemoteMediator(pager, sessionIds)
@@ -95,7 +95,7 @@ class LibraryRemoteMediatorTest {
     fun `append end-of-pagination surfaces through MediatorResult`() = runTest {
         val pager = mockk<NetworkPager>()
         coEvery { pager.append() } returns Result.success(
-            NetworkPager.PageResult(emptyList(), endOfPagination = true),
+            NetworkPager.PageResult(emptyList(), endOfPagination = true)
         )
         val mediator = LibraryRemoteMediator(pager, MutableStateFlow<Set<String>?>(null))
 

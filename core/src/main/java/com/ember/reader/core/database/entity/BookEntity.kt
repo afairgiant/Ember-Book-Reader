@@ -25,7 +25,7 @@ import java.time.Instant
         Index(value = ["serverId", "author"]),
         Index(value = ["serverId", "series", "seriesIndex"]),
         Index("localPath"),
-        Index("format"),
+        Index("format")
     ]
 )
 data class BookEntity(

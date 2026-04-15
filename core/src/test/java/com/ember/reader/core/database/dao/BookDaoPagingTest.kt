@@ -31,7 +31,7 @@ class BookDaoPagingTest {
     fun setup() {
         db = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
-            EmberDatabase::class.java,
+            EmberDatabase::class.java
         )
             .allowMainThreadQueries()
             .build()
@@ -43,8 +43,8 @@ class BookDaoPagingTest {
                     name = "test",
                     url = "http://localhost",
                     opdsUsername = "u",
-                    kosyncUsername = "u",
-                ),
+                    kosyncUsername = "u"
+                )
             )
         }
     }
@@ -63,7 +63,7 @@ class BookDaoPagingTest {
         addedAtEpoch: Long = 0L,
         format: BookFormat = BookFormat.EPUB,
         localPath: String? = null,
-        serverId: Long? = 1L,
+        serverId: Long? = 1L
     ) = BookEntity(
         id = id,
         serverId = serverId,
@@ -73,7 +73,7 @@ class BookDaoPagingTest {
         seriesIndex = seriesIndex,
         format = format,
         addedAt = Instant.ofEpochSecond(addedAtEpoch),
-        localPath = localPath,
+        localPath = localPath
     )
 
     private suspend fun load(inputs: LibraryQueryBuilder.Inputs): List<BookEntity> {
@@ -82,8 +82,8 @@ class BookDaoPagingTest {
             PagingSource.LoadParams.Refresh(
                 key = null,
                 loadSize = 100,
-                placeholdersEnabled = false,
-            ),
+                placeholdersEnabled = false
+            )
         )
         return (result as PagingSource.LoadResult.Page).data
     }
@@ -94,8 +94,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "banana"),
                 book("2", "Apple"),
-                book("3", "cherry"),
-            ),
+                book("3", "cherry")
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -104,8 +104,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("Apple", "banana", "cherry"), out.map { it.title })
     }
@@ -116,8 +116,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "A", author = null),
                 book("2", "B", author = "Zed"),
-                book("3", "C", author = "Alan"),
-            ),
+                book("3", "C", author = "Alan")
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -126,8 +126,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("C", "B", "A"), out.map { it.title })
     }
@@ -138,8 +138,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "old", addedAtEpoch = 100),
                 book("2", "new", addedAtEpoch = 300),
-                book("3", "mid", addedAtEpoch = 200),
-            ),
+                book("3", "mid", addedAtEpoch = 200)
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -148,8 +148,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("new", "mid", "old"), out.map { it.title })
     }
@@ -161,8 +161,8 @@ class BookDaoPagingTest {
                 book("1", "Standalone", series = null),
                 book("2", "HP2", series = "Harry Potter", seriesIndex = 2f),
                 book("3", "HP1", series = "Harry Potter", seriesIndex = 1f),
-                book("4", "Alpha3", series = "Alpha", seriesIndex = 3f),
-            ),
+                book("4", "Alpha3", series = "Alpha", seriesIndex = 3f)
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -171,8 +171,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("Alpha3", "HP1", "HP2", "Standalone"), out.map { it.title })
     }
@@ -183,8 +183,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "E", format = BookFormat.EPUB),
                 book("2", "P", format = BookFormat.PDF),
-                book("3", "A", format = BookFormat.AUDIOBOOK),
-            ),
+                book("3", "A", format = BookFormat.AUDIOBOOK)
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -193,8 +193,8 @@ class BookDaoPagingTest {
                 formatFilter = BookFormat.PDF,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("P"), out.map { it.title })
     }
@@ -204,8 +204,8 @@ class BookDaoPagingTest {
         dao.insertAll(
             listOf(
                 book("1", "downloaded", localPath = "/tmp/x.epub"),
-                book("2", "stream", localPath = null),
-            ),
+                book("2", "stream", localPath = null)
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -214,8 +214,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = true,
                 query = "",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("downloaded"), out.map { it.title })
     }
@@ -226,8 +226,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "The Fellowship", author = "Tolkien"),
                 book("2", "Mistborn", author = "Sanderson"),
-                book("3", "Harry Potter", author = "Rowling"),
-            ),
+                book("3", "Harry Potter", author = "Rowling")
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -236,8 +236,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "tolkien",
-                sessionIds = null,
-            ),
+                sessionIds = null
+            )
         )
         assertEquals(listOf("The Fellowship"), out.map { it.title })
     }
@@ -248,8 +248,8 @@ class BookDaoPagingTest {
             listOf(
                 book("1", "A"),
                 book("2", "B"),
-                book("3", "C"),
-            ),
+                book("3", "C")
+            )
         )
         val out = load(
             LibraryQueryBuilder.Inputs(
@@ -258,8 +258,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = setOf("1", "3"),
-            ),
+                sessionIds = setOf("1", "3")
+            )
         )
         assertEquals(listOf("A", "C"), out.map { it.title })
     }
@@ -274,8 +274,8 @@ class BookDaoPagingTest {
                 formatFilter = null,
                 downloadedOnly = false,
                 query = "",
-                sessionIds = emptySet(),
-            ),
+                sessionIds = emptySet()
+            )
         )
         assertTrue(out.isEmpty())
     }
@@ -286,8 +286,8 @@ class BookDaoPagingTest {
             listOf(
                 book("a", "A"),
                 book("b", "B"),
-                book("c", "C"),
-            ),
+                book("c", "C")
+            )
         )
         val out = dao.getByIds(setOf("a", "c"))
         assertEquals(setOf("A", "C"), out.map { it.title }.toSet())

@@ -10,7 +10,6 @@ import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryFilter
-import com.ember.reader.core.grimmory.GrimmorySortKey
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
@@ -52,7 +51,7 @@ class LibraryViewModel @Inject constructor(
     private val grimmoryAppClient: GrimmoryAppClient,
     private val syncStatusRepository: SyncStatusRepository,
     private val syncStatusProber: SyncStatusProber,
-    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
+    val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -72,7 +71,7 @@ class LibraryViewModel @Inject constructor(
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(
-        if (catalogPath.contains("seriesName")) LibrarySortOrder.SERIES else LibrarySortOrder.TITLE,
+        if (catalogPath.contains("seriesName")) LibrarySortOrder.SERIES else LibrarySortOrder.TITLE
     )
     val sortOrder: StateFlow<LibrarySortOrder> = _sortOrder.asStateFlow()
 
@@ -118,7 +117,7 @@ class LibraryViewModel @Inject constructor(
      * paged query reads this flow and gates rows to the allowlist when non-null.
      */
     private val _sessionIds = MutableStateFlow<Set<String>?>(
-        if (isSubcategory) emptySet() else null,
+        if (isSubcategory) emptySet() else null
     )
 
     private val _refreshTicker = MutableStateFlow(0)
@@ -130,14 +129,14 @@ class LibraryViewModel @Inject constructor(
         _downloadedOnly,
         _searchQuery.debounce(300),
         _grimmoryFilter,
-        _refreshTicker,
+        _refreshTicker
     ) { values ->
         LibraryInputs(
             sort = values[0] as LibrarySortOrder,
             formatFilter = values[1] as BookFormat?,
             downloadedOnly = values[2] as Boolean,
             query = values[3] as String,
-            grimmoryFilter = values[4] as GrimmoryFilter,
+            grimmoryFilter = values[4] as GrimmoryFilter
         )
     }
         .flatMapLatest { inputs ->
@@ -152,7 +151,7 @@ class LibraryViewModel @Inject constructor(
                 downloadedOnly = inputs.downloadedOnly,
                 query = inputs.query,
                 grimmoryFilter = inputs.grimmoryFilter,
-                sessionIds = _sessionIds,
+                sessionIds = _sessionIds
             )
         }
         .cachedIn(viewModelScope)
@@ -210,12 +209,12 @@ class LibraryViewModel @Inject constructor(
             serverId = currentServer.id,
             libraryId = params["libraryId"]?.toLongOrNull(),
             shelfId = params["shelfId"]?.toLongOrNull(),
-            magicShelfId = params["magicShelfId"]?.toLongOrNull(),
+            magicShelfId = params["magicShelfId"]?.toLongOrNull()
         ).onSuccess { options ->
             _grimmoryFilterOptions.value = options
             timber.log.Timber.d(
                 "FilterOptions loaded: ${options.authors.size} authors, " +
-                    "${options.languages.size} languages",
+                    "${options.languages.size} languages"
             )
         }.onFailure {
             timber.log.Timber.w(it, "LibraryVM: failed to load Grimmory filter options")
@@ -323,7 +322,7 @@ class LibraryViewModel @Inject constructor(
         val formatFilter: BookFormat?,
         val downloadedOnly: Boolean,
         val query: String,
-        val grimmoryFilter: GrimmoryFilter,
+        val grimmoryFilter: GrimmoryFilter
     )
 }
 

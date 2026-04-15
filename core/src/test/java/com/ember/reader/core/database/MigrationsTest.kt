@@ -20,14 +20,14 @@ class MigrationsTest {
         InstrumentationRegistry.getInstrumentation(),
         EmberDatabase::class.java,
         emptyList(),
-        FrameworkSQLiteOpenHelperFactory(),
+        FrameworkSQLiteOpenHelperFactory()
     )
 
     @Test
     fun migrate13To14_addsIndicesAndKeepsData() {
         helper.createDatabase(TEST_DB, 13).use { db ->
             db.execSQL(
-                "INSERT INTO books(id,title,format,addedAt) VALUES('x','t','EPUB',0)",
+                "INSERT INTO books(id,title,format,addedAt) VALUES('x','t','EPUB',0)"
             )
         }
 
@@ -35,7 +35,7 @@ class MigrationsTest {
             TEST_DB,
             14,
             true,
-            EmberDatabase.MIGRATION_13_14,
+            EmberDatabase.MIGRATION_13_14
         )
 
         migrated.query("SELECT COUNT(*) FROM books").use { c ->
@@ -44,7 +44,7 @@ class MigrationsTest {
         }
 
         val indexNames = migrated.query(
-            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='books'",
+            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='books'"
         ).use { c ->
             buildList {
                 while (c.moveToNext()) add(c.getString(0))
@@ -53,27 +53,27 @@ class MigrationsTest {
 
         assertTrue(
             "expected serverId_title composite index, got $indexNames",
-            indexNames.any { it.contains("serverId_title") },
+            indexNames.any { it.contains("serverId_title") }
         )
         assertTrue(
             "expected serverId_addedAt composite index, got $indexNames",
-            indexNames.any { it.contains("serverId_addedAt") },
+            indexNames.any { it.contains("serverId_addedAt") }
         )
         assertTrue(
             "expected serverId_author composite index, got $indexNames",
-            indexNames.any { it.contains("serverId_author") },
+            indexNames.any { it.contains("serverId_author") }
         )
         assertTrue(
             "expected serverId_series_seriesIndex composite index, got $indexNames",
-            indexNames.any { it.contains("serverId_series_seriesIndex") },
+            indexNames.any { it.contains("serverId_series_seriesIndex") }
         )
         assertTrue(
             "expected localPath index, got $indexNames",
-            indexNames.any { it.contains("index_books_localPath") },
+            indexNames.any { it.contains("index_books_localPath") }
         )
         assertTrue(
             "expected format index, got $indexNames",
-            indexNames.any { it.contains("index_books_format") },
+            indexNames.any { it.contains("index_books_format") }
         )
     }
 

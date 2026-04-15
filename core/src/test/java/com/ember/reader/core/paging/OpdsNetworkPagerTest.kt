@@ -27,7 +27,7 @@ class OpdsNetworkPagerTest {
         opdsUsername = "u",
         opdsPassword = "p",
         kosyncUsername = "k",
-        kosyncPassword = "k",
+        kosyncPassword = "k"
     )
     private val rootPath = "/catalog"
 
@@ -39,8 +39,8 @@ class OpdsNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("a", "b"),
-                nextPagePath = "/catalog?page=2",
-            ),
+                nextPagePath = "/catalog?page=2"
+            )
         )
         val pager = OpdsNetworkPager(server, rootPath, repository)
 
@@ -59,8 +59,8 @@ class OpdsNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("a"),
-                nextPagePath = "/catalog?page=2",
-            ),
+                nextPagePath = "/catalog?page=2"
+            )
         )
         coEvery {
             repository.refreshFromServer(server, page = 2, path = "/catalog?page=2")
@@ -68,8 +68,8 @@ class OpdsNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("b"),
-                nextPagePath = null,
-            ),
+                nextPagePath = null
+            )
         )
         val pager = OpdsNetworkPager(server, rootPath, repository)
 

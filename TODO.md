@@ -166,8 +166,8 @@ Full API reference: `docs/grimmory-api.md`
 
 ### Performance
 - [x] Coil disk cache (50MB) + memory cache (25%) configured in EmberApplication
-- [ ] Lazy loading for large book catalogs (currently loads all at once)
-- [ ] Database indices optimization for large libraries
+- [x] Lazy loading for large book catalogs (Paging 3 + RemoteMediator; SQL sort/filter/search)
+- [x] Database indices optimization for large libraries (v14: composite indices on books)
 
 ### Offline
 - [ ] Queue downloads for when network is available

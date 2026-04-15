@@ -13,7 +13,7 @@ package com.ember.reader.core.paging
 interface NetworkPager {
     data class PageResult(
         val resolvedBookIds: List<String>,
-        val endOfPagination: Boolean,
+        val endOfPagination: Boolean
     )
 
     /** Resets pagination and fetches the first page. */

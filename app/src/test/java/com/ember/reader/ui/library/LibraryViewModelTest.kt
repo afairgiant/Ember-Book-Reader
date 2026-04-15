@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -11,7 +12,6 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsBookPage
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
-import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.SyncStatus
 import com.ember.reader.core.sync.SyncStatusProber
@@ -72,7 +72,8 @@ class LibraryViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val clock = Clock.fixed(Instant.parse("2026-04-14T12:00:00Z"), ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
+    private val syncStatusRepository =
+        SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
 
     private val testServer = Server(
         id = 1L,
@@ -116,7 +117,7 @@ class LibraryViewModelTest {
             grimmoryAppClient,
             syncStatusRepository,
             syncStatusProber,
-            organizeFilesViewModelFactory,
+            organizeFilesViewModelFactory
         )
     }
 
@@ -192,9 +193,9 @@ class LibraryViewModelTest {
                 id = "grim-1",
                 title = "G",
                 format = BookFormat.EPUB,
-                opdsEntryId = "urn:booklore:book:42",
+                opdsEntryId = "urn:booklore:book:42"
             ),
-            Book(id = "local-only", title = "L", format = BookFormat.EPUB),
+            Book(id = "local-only", title = "L", format = BookFormat.EPUB)
         )
 
         val ids = viewModel.resolveSelectedGrimmoryIds()

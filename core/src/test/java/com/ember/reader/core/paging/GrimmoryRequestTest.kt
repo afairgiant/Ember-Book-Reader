@@ -14,7 +14,7 @@ class GrimmoryRequestTest {
     fun `parses library and shelf ids from catalog path`() {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:libraryId=2&shelfId=5",
-            GrimmoryFilter(),
+            GrimmoryFilter()
         )
         assertEquals(2L, req.libraryId)
         assertEquals(5L, req.shelfId)
@@ -24,7 +24,7 @@ class GrimmoryRequestTest {
     fun `decodes series name with url-encoded spaces`() {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:seriesName=Harry%20Potter",
-            GrimmoryFilter(),
+            GrimmoryFilter()
         )
         assertEquals("Harry Potter", req.seriesName)
     }
@@ -33,7 +33,7 @@ class GrimmoryRequestTest {
     fun `path status wins over filter status`() {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:status=READING",
-            GrimmoryFilter(status = ReadStatus.UNREAD),
+            GrimmoryFilter(status = ReadStatus.UNREAD)
         )
         assertEquals("READING", req.status)
     }
@@ -42,7 +42,7 @@ class GrimmoryRequestTest {
     fun `filter status applied when path omits status`() {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:",
-            GrimmoryFilter(status = ReadStatus.READ),
+            GrimmoryFilter(status = ReadStatus.READ)
         )
         assertEquals("READ", req.status)
     }
@@ -51,7 +51,7 @@ class GrimmoryRequestTest {
     fun `filter sort and direction drive sort params`() {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:libraryId=1",
-            GrimmoryFilter(sort = GrimmorySortKey.TITLE, direction = SortDirection.DESC),
+            GrimmoryFilter(sort = GrimmorySortKey.TITLE, direction = SortDirection.DESC)
         )
         assertEquals("title", req.sort)
         assertEquals("desc", req.dir)
@@ -62,7 +62,7 @@ class GrimmoryRequestTest {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:search=foo",
             GrimmoryFilter(),
-            searchOverride = "bar",
+            searchOverride = "bar"
         )
         assertEquals("bar", req.search)
     }
@@ -72,7 +72,7 @@ class GrimmoryRequestTest {
         val req = GrimmoryRequest.fromCatalogPath(
             "grimmory:search=foo",
             GrimmoryFilter(),
-            searchOverride = "",
+            searchOverride = ""
         )
         assertEquals("foo", req.search)
     }
@@ -85,8 +85,8 @@ class GrimmoryRequestTest {
                 minRating = 3,
                 maxRating = 5,
                 authors = "Tolkien",
-                language = "en",
-            ),
+                language = "en"
+            )
         )
         assertEquals(3, req.minRating)
         assertEquals(5, req.maxRating)

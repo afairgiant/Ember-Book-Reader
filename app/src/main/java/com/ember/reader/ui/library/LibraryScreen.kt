@@ -23,11 +23,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.paging.LoadState
-import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.itemContentType
-import androidx.paging.compose.itemKey
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -73,8 +68,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 import com.ember.reader.R
-import com.ember.reader.core.grimmory.GrimmoryFilter
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.sync.SyncStatus
@@ -220,7 +219,7 @@ fun LibraryScreen(
                     viewModel.refresh()
                     items.refresh()
                 },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize()
             ) {
                 when {
                     refreshState is LoadState.Loading && items.itemCount == 0 -> {
@@ -232,7 +231,7 @@ fun LibraryScreen(
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 refreshState.error.message ?: "Failed to load books",
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -241,7 +240,7 @@ fun LibraryScreen(
                             Text(
                                 stringResource(R.string.no_books_found),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -259,7 +258,7 @@ fun LibraryScreen(
                         },
                         onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
                         onDownloadClick = viewModel::downloadBook,
-                        appendLoading = appendLoading,
+                        appendLoading = appendLoading
                     )
                     else -> BookList(
                         items = items,
@@ -275,7 +274,7 @@ fun LibraryScreen(
                         },
                         onBookLongClick = { book -> viewModel.enterSelectionWith(book.id) },
                         onDownloadClick = viewModel::downloadBook,
-                        appendLoading = appendLoading,
+                        appendLoading = appendLoading
                     )
                 }
             }
@@ -323,7 +322,7 @@ fun LibraryScreen(
                 viewModel.organizeFilesViewModelFactory.create(
                     baseUrl = server.url,
                     serverId = server.id,
-                    bookIds = grimmoryBookIds,
+                    bookIds = grimmoryBookIds
                 )
             }
             OrganizeFilesSheet(
@@ -337,7 +336,7 @@ fun LibraryScreen(
                     viewModel.clearSelection()
                     viewModel.refresh()
                     showOrganizeSheet = false
-                },
+                }
             )
         } else if (grimmoryBookIds.isEmpty() && selectedBookIds.isNotEmpty()) {
             // Resolution done but no movable books (local-only, OPDS, etc.) — close silently.
@@ -355,7 +354,7 @@ private fun BookGrid(
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
-    appendLoading: Boolean = false,
+    appendLoading: Boolean = false
 ) {
     val gridState = rememberLazyGridState()
 
@@ -364,12 +363,12 @@ private fun BookGrid(
         columns = GridCells.Adaptive(120.dp),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
             count = items.itemCount,
             key = items.itemKey { it.id },
-            contentType = items.itemContentType { "book" },
+            contentType = items.itemContentType { "book" }
         ) { index ->
             val book = items[index] ?: return@items
             BookGridItem(
@@ -379,14 +378,14 @@ private fun BookGrid(
                 isSelected = book.id in selectedIds,
                 onClick = { onBookClick(book) },
                 onLongClick = { onBookLongClick(book) },
-                onDownload = { onDownloadClick(book) },
+                onDownload = { onDownloadClick(book) }
             )
         }
         if (appendLoading) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
@@ -508,19 +507,19 @@ private fun BookList(
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit,
     onDownloadClick: (Book) -> Unit,
-    appendLoading: Boolean = false,
+    appendLoading: Boolean = false
 ) {
     val listState = rememberLazyListState()
 
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(
             count = items.itemCount,
             key = items.itemKey { it.id },
-            contentType = items.itemContentType { "book" },
+            contentType = items.itemContentType { "book" }
         ) { index ->
             val book = items[index] ?: return@items
             BookListItem(
@@ -530,14 +529,14 @@ private fun BookList(
                 isSelected = book.id in selectedIds,
                 onClick = { onBookClick(book) },
                 onLongClick = { onBookLongClick(book) },
-                onDownload = { onDownloadClick(book) },
+                onDownload = { onDownloadClick(book) }
             )
         }
         if (appendLoading) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }

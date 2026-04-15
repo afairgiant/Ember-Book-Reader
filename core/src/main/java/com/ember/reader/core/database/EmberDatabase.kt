@@ -194,27 +194,27 @@ abstract class EmberDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_serverId_title` " +
-                        "ON `books` (`serverId`, `title`)",
+                        "ON `books` (`serverId`, `title`)"
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_serverId_addedAt` " +
-                        "ON `books` (`serverId`, `addedAt`)",
+                        "ON `books` (`serverId`, `addedAt`)"
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_serverId_author` " +
-                        "ON `books` (`serverId`, `author`)",
+                        "ON `books` (`serverId`, `author`)"
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_serverId_series_seriesIndex` " +
-                        "ON `books` (`serverId`, `series`, `seriesIndex`)",
+                        "ON `books` (`serverId`, `series`, `seriesIndex`)"
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_localPath` " +
-                        "ON `books` (`localPath`)",
+                        "ON `books` (`localPath`)"
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_format` " +
-                        "ON `books` (`format`)",
+                        "ON `books` (`format`)"
                 )
             }
         }

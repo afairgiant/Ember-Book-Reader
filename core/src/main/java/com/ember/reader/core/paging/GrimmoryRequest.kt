@@ -26,13 +26,13 @@ data class GrimmoryRequest(
     val minRating: Int? = null,
     val maxRating: Int? = null,
     val authors: String? = null,
-    val language: String? = null,
+    val language: String? = null
 ) {
     companion object {
         fun fromCatalogPath(
             catalogPath: String,
             filter: GrimmoryFilter,
-            searchOverride: String? = null,
+            searchOverride: String? = null
         ): GrimmoryRequest {
             val paramString = catalogPath.removePrefix("grimmory:")
             val params = paramString.split("&")
@@ -56,7 +56,7 @@ data class GrimmoryRequest(
                 minRating = filter.minRating,
                 maxRating = filter.maxRating,
                 authors = filter.authors,
-                language = filter.language,
+                language = filter.language
             )
         }
     }

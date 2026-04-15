@@ -12,7 +12,7 @@ class GrimmoryNetworkPager(
     private val server: Server,
     private val request: GrimmoryRequest,
     private val repository: BookRepository,
-    private val pageSize: Int = 50,
+    private val pageSize: Int = 50
 ) : NetworkPager {
 
     private var nextPage: Int? = null
@@ -26,7 +26,7 @@ class GrimmoryNetworkPager(
             .map {
                 NetworkPager.PageResult(
                     resolvedBookIds = it.resolvedBookIds,
-                    endOfPagination = it.nextPagePath == null,
+                    endOfPagination = it.nextPagePath == null
                 )
             }
     }
@@ -34,7 +34,7 @@ class GrimmoryNetworkPager(
     override suspend fun append(): Result<NetworkPager.PageResult> {
         val page = nextPage
             ?: return Result.success(
-                NetworkPager.PageResult(emptyList(), endOfPagination = true),
+                NetworkPager.PageResult(emptyList(), endOfPagination = true)
             )
         return repository.upsertGrimmoryPage(server, request, page = page, pageSize = pageSize)
             .onSuccess { result ->
@@ -43,7 +43,7 @@ class GrimmoryNetworkPager(
             .map {
                 NetworkPager.PageResult(
                     resolvedBookIds = it.resolvedBookIds,
-                    endOfPagination = it.nextPagePath == null,
+                    endOfPagination = it.nextPagePath == null
                 )
             }
     }

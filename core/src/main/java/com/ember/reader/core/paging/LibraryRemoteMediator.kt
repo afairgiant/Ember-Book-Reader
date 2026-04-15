@@ -24,12 +24,12 @@ import kotlinx.coroutines.flow.update
 @OptIn(ExperimentalPagingApi::class)
 class LibraryRemoteMediator(
     private val networkPager: NetworkPager,
-    private val sessionIds: MutableStateFlow<Set<String>?>,
+    private val sessionIds: MutableStateFlow<Set<String>?>
 ) : RemoteMediator<Int, BookEntity>() {
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<Int, BookEntity>,
+        state: PagingState<Int, BookEntity>
     ): MediatorResult = when (loadType) {
         LoadType.PREPEND -> MediatorResult.Success(endOfPaginationReached = true)
         LoadType.REFRESH -> {
@@ -40,7 +40,7 @@ class LibraryRemoteMediator(
     }
 
     private suspend fun fetchAndMerge(
-        fetch: suspend () -> Result<NetworkPager.PageResult>,
+        fetch: suspend () -> Result<NetworkPager.PageResult>
     ): MediatorResult = fetch().fold(
         onSuccess = { page ->
             if (sessionIds.value != null) {
@@ -48,6 +48,6 @@ class LibraryRemoteMediator(
             }
             MediatorResult.Success(endOfPaginationReached = page.endOfPagination)
         },
-        onFailure = { t -> MediatorResult.Error(LibraryLoadError.fromThrowable(t)) },
+        onFailure = { t -> MediatorResult.Error(LibraryLoadError.fromThrowable(t)) }
     )
 }

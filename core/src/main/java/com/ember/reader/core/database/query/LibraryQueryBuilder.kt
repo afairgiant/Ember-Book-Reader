@@ -24,7 +24,7 @@ object LibraryQueryBuilder {
          * force an empty result (subcategory view before mediator has fetched any IDs), or a
          * non-empty set to `id IN (?, ?, ...)` gate the rows.
          */
-        val sessionIds: Set<String>?,
+        val sessionIds: Set<String>?
     )
 
     fun build(inputs: Inputs): SimpleSQLiteQuery {

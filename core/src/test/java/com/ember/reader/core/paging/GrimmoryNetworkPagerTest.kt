@@ -28,7 +28,7 @@ class GrimmoryNetworkPagerTest {
         opdsPassword = "p",
         kosyncUsername = "k",
         kosyncPassword = "k",
-        isGrimmory = true,
+        isGrimmory = true
     )
     private val request = GrimmoryRequest(libraryId = 7L)
 
@@ -40,8 +40,8 @@ class GrimmoryNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("a", "b"),
-                nextPagePath = "grimmory:page=1",
-            ),
+                nextPagePath = "grimmory:page=1"
+            )
         )
         val pager = GrimmoryNetworkPager(server, request, repository, pageSize = 50)
 
@@ -59,8 +59,8 @@ class GrimmoryNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("a"),
-                nextPagePath = "grimmory:page=1",
-            ),
+                nextPagePath = "grimmory:page=1"
+            )
         )
         coEvery {
             repository.upsertGrimmoryPage(server, request, page = 1, pageSize = 50)
@@ -68,8 +68,8 @@ class GrimmoryNetworkPagerTest {
             OpdsBookPage(
                 books = emptyList(),
                 resolvedBookIds = listOf("b"),
-                nextPagePath = null,
-            ),
+                nextPagePath = null
+            )
         )
         val pager = GrimmoryNetworkPager(server, request, repository, pageSize = 50)
 

@@ -117,7 +117,7 @@ class BookRepository @Inject constructor(
         query: String,
         grimmoryFilter: GrimmoryFilter,
         sessionIds: MutableStateFlow<Set<String>?>,
-        pageSize: Int = 50,
+        pageSize: Int = 50
     ): Flow<PagingData<Book>> {
         val networkPager: NetworkPager = if (catalogPath.startsWith("grimmory:")) {
             GrimmoryNetworkPager(
@@ -125,10 +125,10 @@ class BookRepository @Inject constructor(
                 request = GrimmoryRequest.fromCatalogPath(
                     catalogPath = catalogPath,
                     filter = grimmoryFilter,
-                    searchOverride = query,
+                    searchOverride = query
                 ),
                 repository = this,
-                pageSize = pageSize,
+                pageSize = pageSize
             )
         } else {
             OpdsNetworkPager(server, catalogPath, this)
@@ -138,7 +138,7 @@ class BookRepository @Inject constructor(
             config = PagingConfig(
                 pageSize = pageSize,
                 prefetchDistance = 20,
-                enablePlaceholders = false,
+                enablePlaceholders = false
             ),
             remoteMediator = mediator,
             pagingSourceFactory = {
@@ -150,11 +150,11 @@ class BookRepository @Inject constructor(
                             formatFilter = formatFilter,
                             downloadedOnly = downloadedOnly,
                             query = query,
-                            sessionIds = sessionIds.value,
-                        ),
-                    ),
+                            sessionIds = sessionIds.value
+                        )
+                    )
                 )
-            },
+            }
         ).flow.map { pagingData -> pagingData.map { it.toDomain() } }
     }
 
@@ -258,10 +258,10 @@ class BookRepository @Inject constructor(
             minRating = minRating,
             maxRating = maxRating,
             authors = authors,
-            language = language,
+            language = language
         ),
         page = page,
-        pageSize = size,
+        pageSize = size
     )
 
     /**
@@ -276,7 +276,7 @@ class BookRepository @Inject constructor(
         server: Server,
         request: GrimmoryRequest,
         page: Int,
-        pageSize: Int = 100,
+        pageSize: Int = 100
     ): Result<OpdsBookPage> {
         Timber.d(
             "GrimmoryRefresh: search='${request.search}' seriesName='${request.seriesName}' " +
@@ -284,17 +284,17 @@ class BookRepository @Inject constructor(
                 "magicShelfId=${request.magicShelfId} status='${request.status}' " +
                 "sort='${request.sort}' dir='${request.dir}' " +
                 "minRating=${request.minRating} maxRating=${request.maxRating} " +
-                "authors='${request.authors}' language='${request.language}'",
+                "authors='${request.authors}' language='${request.language}'"
         )
         val appPage = when {
             request.seriesName != null -> grimmoryAppClient.getSeriesBooks(
-                server.url, server.id, request.seriesName, page, pageSize,
+                server.url, server.id, request.seriesName, page, pageSize
             )
             request.search != null -> grimmoryAppClient.searchBooks(
-                server.url, server.id, request.search, page, pageSize,
+                server.url, server.id, request.search, page, pageSize
             )
             request.magicShelfId != null -> grimmoryAppClient.getMagicShelfBooks(
-                server.url, server.id, request.magicShelfId, page, pageSize,
+                server.url, server.id, request.magicShelfId, page, pageSize
             )
             else -> grimmoryAppClient.getBooks(
                 baseUrl = server.url,
@@ -309,7 +309,7 @@ class BookRepository @Inject constructor(
                 minRating = request.minRating,
                 maxRating = request.maxRating,
                 authors = request.authors,
-                language = request.language,
+                language = request.language
             )
         }
 
@@ -319,7 +319,7 @@ class BookRepository @Inject constructor(
         }
         Timber.d(
             "GrimmoryRefresh: got ${result.content.size} books " +
-                "(total=${result.totalElements}, hasNext=${result.hasNext})",
+                "(total=${result.totalElements}, hasNext=${result.hasNext})"
         )
         result.content.take(5).forEach { Timber.d("  - '${it.title}' by ${it.authors}") }
         val origin = serverOrigin(server.url)
@@ -327,7 +327,7 @@ class BookRepository @Inject constructor(
 
         for (appBook in result.content) {
             resolvedIds.add(
-                upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook),
+                upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook)
             )
         }
 
@@ -336,8 +336,8 @@ class BookRepository @Inject constructor(
                 books = emptyList(),
                 resolvedBookIds = resolvedIds,
                 totalResults = result.totalElements.toInt(),
-                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null,
-            ),
+                nextPagePath = if (result.hasNext) "grimmory:page=${page + 1}" else null
+            )
         )
     }
 

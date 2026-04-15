@@ -13,14 +13,14 @@ class LibraryQueryBuilderTest {
         formatFilter: BookFormat? = null,
         downloadedOnly: Boolean = false,
         query: String = "",
-        sessionIds: Set<String>? = null,
+        sessionIds: Set<String>? = null
     ) = LibraryQueryBuilder.Inputs(
         serverId = serverId,
         sort = sort,
         formatFilter = formatFilter,
         downloadedOnly = downloadedOnly,
         query = query,
-        sessionIds = sessionIds,
+        sessionIds = sessionIds
     )
 
     @Test
@@ -85,7 +85,7 @@ class LibraryQueryBuilderTest {
     @Test
     fun `non-empty sessionIds adds IN clause with positional params`() {
         val query = LibraryQueryBuilder.build(
-            inputs(sessionIds = setOf("a", "b", "c")),
+            inputs(sessionIds = setOf("a", "b", "c"))
         )
         assertTrue(query.sql.contains("AND id IN (?, ?, ?)"), query.sql)
         assertEquals(4, query.argCount) // serverId + 3 ids
@@ -111,8 +111,8 @@ class LibraryQueryBuilderTest {
                 formatFilter = BookFormat.PDF,
                 downloadedOnly = true,
                 query = "harry",
-                sessionIds = setOf("x"),
-            ),
+                sessionIds = setOf("x")
+            )
         )
         val sql = query.sql
         // serverId, id IN, format, localPath, LIKE

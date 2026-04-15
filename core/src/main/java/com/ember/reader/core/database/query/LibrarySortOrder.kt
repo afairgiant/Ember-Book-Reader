@@ -8,5 +8,5 @@ enum class LibrarySortOrder(val displayName: String) {
     TITLE("Title"),
     AUTHOR("Author"),
     RECENT("Recently Added"),
-    SERIES("Series"),
+    SERIES("Series")
 }

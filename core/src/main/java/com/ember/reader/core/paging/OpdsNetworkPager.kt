@@ -10,7 +10,7 @@ import com.ember.reader.core.repository.BookRepository
 class OpdsNetworkPager(
     private val server: Server,
     private val rootPath: String,
-    private val repository: BookRepository,
+    private val repository: BookRepository
 ) : NetworkPager {
 
     private var nextPath: String? = null
@@ -27,7 +27,7 @@ class OpdsNetworkPager(
             .map {
                 NetworkPager.PageResult(
                     resolvedBookIds = it.resolvedBookIds,
-                    endOfPagination = it.nextPagePath == null,
+                    endOfPagination = it.nextPagePath == null
                 )
             }
     }
@@ -35,7 +35,7 @@ class OpdsNetworkPager(
     override suspend fun append(): Result<NetworkPager.PageResult> {
         val path = nextPath
             ?: return Result.success(
-                NetworkPager.PageResult(emptyList(), endOfPagination = true),
+                NetworkPager.PageResult(emptyList(), endOfPagination = true)
             )
         val pageNum = nextPageNumber
         return repository.refreshFromServer(server, page = pageNum, path = path)
@@ -46,7 +46,7 @@ class OpdsNetworkPager(
             .map {
                 NetworkPager.PageResult(
                     resolvedBookIds = it.resolvedBookIds,
-                    endOfPagination = it.nextPagePath == null,
+                    endOfPagination = it.nextPagePath == null
                 )
             }
     }

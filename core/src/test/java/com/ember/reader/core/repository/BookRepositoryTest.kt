@@ -172,14 +172,14 @@ class BookRepositoryTest {
                 id = "a",
                 title = "A",
                 format = BookFormat.EPUB,
-                addedAt = Instant.EPOCH,
+                addedAt = Instant.EPOCH
             ),
             BookEntity(
                 id = "b",
                 title = "B",
                 format = BookFormat.PDF,
-                addedAt = Instant.EPOCH,
-            ),
+                addedAt = Instant.EPOCH
+            )
         )
         coEvery { bookDao.getByIds(setOf("a", "b")) } returns entities
 

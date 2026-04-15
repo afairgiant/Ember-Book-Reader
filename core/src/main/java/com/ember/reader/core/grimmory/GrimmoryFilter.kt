@@ -15,7 +15,7 @@ data class GrimmoryFilter(
     val minRating: Int? = null,
     val maxRating: Int? = null,
     val authors: String? = null,
-    val language: String? = null,
+    val language: String? = null
 ) {
     /** True if any filter is set OR the sort differs from the default (title asc). */
     val isActive: Boolean
@@ -39,10 +39,10 @@ data class GrimmoryFilter(
 enum class GrimmorySortKey(val apiValue: String) {
     ADDED("addedOn"),
     TITLE("title"),
-    SERIES("series"),
+    SERIES("series")
 }
 
 enum class SortDirection(val apiValue: String) {
     ASC("asc"),
-    DESC("desc"),
+    DESC("desc")
 }
