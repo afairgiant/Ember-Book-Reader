@@ -160,7 +160,9 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             server = serverRepository.getById(serverId)
             _currentServer.value = server
-            refresh()
+            // Init-time reconcile runs in the background without flashing the pull-to-refresh
+            // indicator — the user didn't ask for a refresh.
+            syncCatalog(userInitiated = false)
             loadGrimmoryFilterOptions()
         }
     }
@@ -241,13 +243,18 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * Invalidates the Paging flow and, for unfiltered root views with no active filters, runs the
-     * catalog reconcile so deleted server books are pruned from the local DB.
+     * catalog reconcile so deleted server books are pruned from the local DB. Drives the
+     * PullToRefreshBox spinner — only call this from user-initiated refresh gestures.
      */
     fun refresh() {
+        viewModelScope.launch { syncCatalog(userInitiated = true) }
+    }
+
+    private suspend fun syncCatalog(userInitiated: Boolean) {
         val currentServer = server ?: return
         if (catalogPath.isEmpty()) return
-        _isRefreshing.value = true
-        viewModelScope.launch {
+        if (userInitiated) _isRefreshing.value = true
+        try {
             val grimmoryFilterActive = _grimmoryFilter.value.hasRestrictiveFilters
             if (!isSubcategory && isUnfilteredRootView() && !grimmoryFilterActive) {
                 if (catalogPath == "grimmory:all" || catalogPath == "grimmory:") {
@@ -263,7 +270,8 @@ class LibraryViewModel @Inject constructor(
                 }
             }
             _refreshTicker.update { it + 1 }
-            _isRefreshing.value = false
+        } finally {
+            if (userInitiated) _isRefreshing.value = false
         }
     }
 
