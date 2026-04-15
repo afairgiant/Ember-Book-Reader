@@ -37,6 +37,12 @@ android {
         }
     }
 
+    sourceSets {
+        getByName("test") {
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
+
     room {
         schemaDirectory("$projectDir/schemas")
     }

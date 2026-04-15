@@ -19,7 +19,13 @@ import java.time.Instant
     ],
     indices = [
         Index("serverId"),
-        Index("opdsEntryId")
+        Index("opdsEntryId"),
+        Index(value = ["serverId", "title"]),
+        Index(value = ["serverId", "addedAt"]),
+        Index(value = ["serverId", "author"]),
+        Index(value = ["serverId", "series", "seriesIndex"]),
+        Index("localPath"),
+        Index("format"),
     ]
 )
 data class BookEntity(

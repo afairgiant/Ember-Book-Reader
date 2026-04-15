@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -182,6 +182,40 @@ abstract class EmberDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE servers ADD COLUMN canAccessBookdrop INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE servers ADD COLUMN isAdmin INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE servers ADD COLUMN permissionsFetchedAt INTEGER DEFAULT NULL")
+            }
+        }
+
+        /**
+         * Migration 13→14: Adds composite and single-column indices on `books` to back
+         * paged library queries (Paging 3 PagingSource over ORDER BY title/author/addedAt/series,
+         * plus filtering on localPath/format).
+         */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_serverId_title` " +
+                        "ON `books` (`serverId`, `title`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_serverId_addedAt` " +
+                        "ON `books` (`serverId`, `addedAt`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_serverId_author` " +
+                        "ON `books` (`serverId`, `author`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_serverId_series_seriesIndex` " +
+                        "ON `books` (`serverId`, `series`, `seriesIndex`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_localPath` " +
+                        "ON `books` (`localPath`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_books_format` " +
+                        "ON `books` (`format`)",
+                )
             }
         }
 
