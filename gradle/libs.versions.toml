@@ -25,13 +25,18 @@ timber = "5.0.1"
 media3 = "1.5.1"
 desugar-jdk-libs = "2.1.4"
 aboutlibraries = "11.6.3"
+paging = "3.3.6"
 
 # Testing
 junit = "5.10.3"
+junit4 = "4.13.2"
+junit-vintage = "5.10.3"
 mockk = "1.13.13"
 turbine = "1.2.0"
 core-testing = "2.2.0"
 compose-ui-test = "1.7.6"
+robolectric = "4.13"
+androidx-test-core = "1.6.1"
 
 [libraries]
 # AndroidX Core
@@ -65,6 +70,13 @@ hilt-work-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hi
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
+
+# Paging 3
+androidx-paging-runtime = { module = "androidx.paging:paging-runtime-ktx", version.ref = "paging" }
+androidx-paging-common = { module = "androidx.paging:paging-common-ktx", version.ref = "paging" }
+androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
+androidx-paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
 
 # Ktor
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -125,12 +137,16 @@ timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
+junit4 = { module = "junit:junit", version.ref = "junit4" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

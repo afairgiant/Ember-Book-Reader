@@ -32,6 +32,9 @@ android {
 
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
     room {
@@ -45,7 +48,12 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     ksp(libs.room.compiler)
+
+    // Paging 3
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.common)
 
     // Ktor
     implementation(libs.ktor.client.core)
@@ -88,11 +96,16 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.junit4)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.room.testing)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.androidx.paging.testing)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testImplementation("net.sf.kxml:kxml2:2.3.0")
     testImplementation("org.json:json:20231013")
 }
