@@ -117,7 +117,7 @@ class BookRepository @Inject constructor(
         query: String,
         grimmoryFilter: GrimmoryFilter,
         sessionIds: MutableStateFlow<Set<String>?>,
-        pageSize: Int = 50
+        pageSize: Int = 100
     ): Flow<PagingData<Book>> {
         val networkPager: NetworkPager = if (catalogPath.startsWith("grimmory:")) {
             GrimmoryNetworkPager(
@@ -137,7 +137,7 @@ class BookRepository @Inject constructor(
         return Pager(
             config = PagingConfig(
                 pageSize = pageSize,
-                prefetchDistance = 20,
+                prefetchDistance = 40,
                 enablePlaceholders = false
             ),
             remoteMediator = mediator,

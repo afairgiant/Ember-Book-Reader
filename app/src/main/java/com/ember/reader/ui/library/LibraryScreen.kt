@@ -357,6 +357,9 @@ private fun BookGrid(
     appendLoading: Boolean = false
 ) {
     val gridState = rememberLazyGridState()
+    // Only render the append-loading spinner when the user has actually scrolled to the tail of
+    // the loaded range. Otherwise a short grid (first page only) puts the spinner mid-viewport.
+    val showAppendSpinner = appendLoading && !gridState.canScrollForward
 
     LazyVerticalGrid(
         state = gridState,
@@ -381,7 +384,7 @@ private fun BookGrid(
                 onDownload = { onDownloadClick(book) }
             )
         }
-        if (appendLoading) {
+        if (showAppendSpinner) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -510,6 +513,7 @@ private fun BookList(
     appendLoading: Boolean = false
 ) {
     val listState = rememberLazyListState()
+    val showAppendSpinner = appendLoading && !listState.canScrollForward
 
     LazyColumn(
         state = listState,
@@ -532,7 +536,7 @@ private fun BookList(
                 onDownload = { onDownloadClick(book) }
             )
         }
-        if (appendLoading) {
+        if (showAppendSpinner) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
