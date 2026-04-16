@@ -17,9 +17,12 @@ class CfiLocatorConverterTest {
         fun `extracts CFI from fragments array with epubcfi prefix`() {
             val json = JSONObject().apply {
                 put("href", "/chapter1.xhtml")
-                put("locations", JSONObject().apply {
-                    put("fragments", org.json.JSONArray().put("epubcfi(/6/4!/4/2)"))
-                })
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("fragments", org.json.JSONArray().put("epubcfi(/6/4!/4/2)"))
+                    }
+                )
             }.toString()
 
             assertEquals("/6/4!/4/2", CfiLocatorConverter.extractCfi(json))
@@ -29,9 +32,12 @@ class CfiLocatorConverterTest {
         fun `extracts raw fragment without epubcfi prefix`() {
             val json = JSONObject().apply {
                 put("href", "/chapter1.xhtml")
-                put("locations", JSONObject().apply {
-                    put("fragments", org.json.JSONArray().put("/6/4!/4/2"))
-                })
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("fragments", org.json.JSONArray().put("/6/4!/4/2"))
+                    }
+                )
             }.toString()
 
             assertEquals("/6/4!/4/2", CfiLocatorConverter.extractCfi(json))
@@ -41,9 +47,12 @@ class CfiLocatorConverterTest {
         fun `falls back to progression when no fragments`() {
             val json = JSONObject().apply {
                 put("href", "/chapter1.xhtml")
-                put("locations", JSONObject().apply {
-                    put("progression", "0.5")
-                })
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("progression", "0.5")
+                    }
+                )
             }.toString()
 
             assertEquals("0.5", CfiLocatorConverter.extractCfi(json))
@@ -53,9 +62,12 @@ class CfiLocatorConverterTest {
         fun `returns null for empty fragments array`() {
             val json = JSONObject().apply {
                 put("href", "/chapter1.xhtml")
-                put("locations", JSONObject().apply {
-                    put("fragments", org.json.JSONArray())
-                })
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("fragments", org.json.JSONArray())
+                    }
+                )
             }.toString()
 
             assertNull(CfiLocatorConverter.extractCfi(json))
@@ -78,9 +90,12 @@ class CfiLocatorConverterTest {
         @Test
         fun `returns null for blank fragment`() {
             val json = JSONObject().apply {
-                put("locations", JSONObject().apply {
-                    put("fragments", org.json.JSONArray().put("epubcfi()"))
-                })
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("fragments", org.json.JSONArray().put("epubcfi()"))
+                    }
+                )
             }.toString()
 
             // "epubcfi()" strips to "" which is blank -> null
@@ -195,7 +210,7 @@ class CfiLocatorConverterTest {
         fun `buildLocatorJson then extractTitle returns original title`() {
             val locatorJson = CfiLocatorConverter.buildLocatorJson(
                 "/6/4",
-                chapterTitle = "My Chapter",
+                chapterTitle = "My Chapter"
             )
             assertEquals("My Chapter", CfiLocatorConverter.extractTitle(locatorJson))
         }

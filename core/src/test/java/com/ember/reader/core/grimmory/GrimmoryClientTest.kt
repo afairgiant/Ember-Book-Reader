@@ -57,11 +57,11 @@ class GrimmoryClientTest {
 
     private fun io.ktor.client.engine.mock.MockRequestHandleScope.jsonResponse(
         content: String,
-        status: HttpStatusCode = HttpStatusCode.OK,
+        status: HttpStatusCode = HttpStatusCode.OK
     ) = respond(
         content = ByteReadChannel(content),
         status = status,
-        headers = headersOf(HttpHeaders.ContentType, "application/json"),
+        headers = headersOf(HttpHeaders.ContentType, "application/json")
     )
 
     @Nested
@@ -190,7 +190,7 @@ class GrimmoryClientTest {
             val request = GrimmoryProgressRequest(
                 bookId = 101L,
                 fileProgress = GrimmoryFileProgress(bookFileId = 5L, progressPercent = 50.0f),
-                epubProgress = GrimmoryEpubProgress(cfi = "epubcfi(/6/2)", percentage = 50.0f),
+                epubProgress = GrimmoryEpubProgress(cfi = "epubcfi(/6/2)", percentage = 50.0f)
             )
 
             val result = client.pushProgress(baseUrl, serverId, request)
@@ -236,7 +236,7 @@ class GrimmoryClientTest {
 
             val request = CreateAnnotationRequest(
                 bookId = 101L, cfi = "/6/4", text = "hello",
-                color = "#FFEB3B", note = "test note",
+                color = "#FFEB3B", note = "test note"
             )
             val result = client.createAnnotation(baseUrl, serverId, request)
 

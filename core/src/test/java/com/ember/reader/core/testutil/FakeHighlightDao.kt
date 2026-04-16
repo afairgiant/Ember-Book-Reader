@@ -50,7 +50,7 @@ class FakeHighlightDao : HighlightDao {
             val existing = highlights[index]
             highlights[index] = existing.copy(
                 deletedAt = java.time.Instant.ofEpochMilli(deletedAt),
-                updatedAt = java.time.Instant.ofEpochMilli(deletedAt),
+                updatedAt = java.time.Instant.ofEpochMilli(deletedAt)
             )
             emitUpdate()
         }

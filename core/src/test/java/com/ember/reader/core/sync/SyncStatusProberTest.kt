@@ -3,7 +3,6 @@ package com.ember.reader.core.sync
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryUser
-import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.testutil.FakeSyncStatusDao
@@ -40,7 +39,7 @@ class SyncStatusProberTest {
     fun `probe reports Ok when Grimmory getCurrentUser succeeds`() = runTest {
         val grimmoryServer = server(id = 1L, isGrimmory = true)
         coEvery { grimmoryAppClient.getCurrentUser(any(), any()) } returns Result.success(
-            GrimmoryUser(id = 1L, username = "me"),
+            GrimmoryUser(id = 1L, username = "me")
         )
 
         prober.probe(grimmoryServer)

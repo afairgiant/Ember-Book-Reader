@@ -26,7 +26,7 @@ object TestFixtures {
         kosyncPassword: String = "kosync-pass",
         grimmoryUsername: String = "admin",
         grimmoryPassword: String = "admin-pass",
-        isGrimmory: Boolean = true,
+        isGrimmory: Boolean = true
     ) = Server(
         id = id,
         name = name,
@@ -37,7 +37,7 @@ object TestFixtures {
         kosyncPassword = kosyncPassword,
         grimmoryUsername = grimmoryUsername,
         grimmoryPassword = grimmoryPassword,
-        isGrimmory = isGrimmory,
+        isGrimmory = isGrimmory
     )
 
     fun book(
@@ -49,7 +49,7 @@ object TestFixtures {
         format: BookFormat = BookFormat.EPUB,
         fileHash: String? = "abc123hash",
         localPath: String? = "/data/books/test.epub",
-        downloadedAt: Instant? = Instant.parse("2026-01-01T00:00:00Z"),
+        downloadedAt: Instant? = Instant.parse("2026-01-01T00:00:00Z")
     ) = Book(
         id = id,
         serverId = serverId,
@@ -59,7 +59,7 @@ object TestFixtures {
         format = format,
         fileHash = fileHash,
         localPath = localPath,
-        downloadedAt = downloadedAt,
+        downloadedAt = downloadedAt
     )
 
     fun bookmarkEntity(
@@ -70,7 +70,7 @@ object TestFixtures {
         remoteId: Long? = null,
         createdAt: Instant = Instant.parse("2026-01-01T12:00:00Z"),
         updatedAt: Instant = createdAt,
-        deletedAt: Instant? = null,
+        deletedAt: Instant? = null
     ) = BookmarkEntity(
         id = id,
         bookId = bookId,
@@ -79,7 +79,7 @@ object TestFixtures {
         remoteId = remoteId,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        deletedAt = deletedAt,
+        deletedAt = deletedAt
     )
 
     fun highlightEntity(
@@ -92,7 +92,7 @@ object TestFixtures {
         remoteId: Long? = null,
         createdAt: Instant = Instant.parse("2026-01-01T12:00:00Z"),
         updatedAt: Instant = createdAt,
-        deletedAt: Instant? = null,
+        deletedAt: Instant? = null
     ) = HighlightEntity(
         id = id,
         bookId = bookId,
@@ -103,7 +103,7 @@ object TestFixtures {
         remoteId = remoteId,
         createdAt = createdAt,
         updatedAt = updatedAt,
-        deletedAt = deletedAt,
+        deletedAt = deletedAt
     )
 
     fun readingProgress(
@@ -111,13 +111,13 @@ object TestFixtures {
         serverId: Long? = 1L,
         percentage: Float = 0.5f,
         locatorJson: String? = null,
-        needsSync: Boolean = false,
+        needsSync: Boolean = false
     ) = ReadingProgress(
         bookId = bookId,
         serverId = serverId,
         percentage = percentage,
         locatorJson = locatorJson,
-        needsSync = needsSync,
+        needsSync = needsSync
     )
 
     fun grimmoryBookmark(
@@ -125,13 +125,13 @@ object TestFixtures {
         cfi: String? = "/6/4!/4/2",
         title: String? = "Chapter 1",
         createdAt: String? = "2026-01-01T12:00:00Z",
-        updatedAt: String? = "2026-01-01T12:00:00Z",
+        updatedAt: String? = "2026-01-01T12:00:00Z"
     ) = GrimmoryBookmark(
         id = id,
         cfi = cfi,
         title = title,
         createdAt = createdAt,
-        updatedAt = updatedAt,
+        updatedAt = updatedAt
     )
 
     fun grimmoryAnnotation(
@@ -142,7 +142,7 @@ object TestFixtures {
         note: String? = null,
         chapterTitle: String? = "Chapter 1",
         createdAt: String? = "2026-01-01T12:00:00Z",
-        updatedAt: String? = "2026-01-01T12:00:00Z",
+        updatedAt: String? = "2026-01-01T12:00:00Z"
     ) = GrimmoryAnnotation(
         id = id,
         cfi = cfi,
@@ -151,7 +151,7 @@ object TestFixtures {
         note = note,
         chapterTitle = chapterTitle,
         createdAt = createdAt,
-        updatedAt = updatedAt,
+        updatedAt = updatedAt
     )
 
     fun grimmoryBookDetail(
@@ -159,12 +159,12 @@ object TestFixtures {
         title: String = "Test Book",
         readProgress: Float? = null,
         primaryFile: GrimmoryBookFile? = GrimmoryBookFile(id = 1L, fileName = "test.epub"),
-        koreaderProgress: GrimmoryKoreaderProgress? = null,
+        koreaderProgress: GrimmoryKoreaderProgress? = null
     ) = GrimmoryBookDetail(
         id = id,
         title = title,
         readProgress = readProgress,
         primaryFile = primaryFile,
-        koreaderProgress = koreaderProgress,
+        koreaderProgress = koreaderProgress
     )
 }

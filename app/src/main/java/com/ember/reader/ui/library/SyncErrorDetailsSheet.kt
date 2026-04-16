@@ -28,36 +28,36 @@ import java.time.format.FormatStyle
 fun SyncErrorDetailsSheet(
     error: SyncStatus.ServerError,
     serverName: String?,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = serverName?.let { "Sync failed · $it" } ?: "Sync failed",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium
             )
 
             DetailRow(
                 label = "Status code",
-                value = error.statusCode?.toString() ?: "Unknown",
+                value = error.statusCode?.toString() ?: "Unknown"
             )
             DetailRow(
                 label = "Message",
-                value = error.detail ?: "No details provided by the server.",
+                value = error.detail ?: "No details provided by the server."
             )
             DetailRow(
                 label = "Last attempt",
-                value = formatInstant(error.lastAttemptAt),
+                value = formatInstant(error.lastAttemptAt)
             )
 
             Spacer(Modifier.height(8.dp))
@@ -72,11 +72,11 @@ private fun DetailRow(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }
@@ -96,10 +96,10 @@ private fun SyncErrorDetailsSheetPreview() {
             error = SyncStatus.ServerError(
                 lastAttemptAt = Instant.parse("2026-04-14T10:15:30Z"),
                 statusCode = 503,
-                detail = "The server is temporarily unavailable.",
+                detail = "The server is temporarily unavailable."
             ),
             serverName = "Home Grimmory",
-            onDismiss = {},
+            onDismiss = {}
         )
     }
 }

@@ -50,7 +50,7 @@ class FakeBookmarkDao : BookmarkDao {
             val existing = bookmarks[index]
             bookmarks[index] = existing.copy(
                 deletedAt = java.time.Instant.ofEpochMilli(deletedAt),
-                updatedAt = java.time.Instant.ofEpochMilli(deletedAt),
+                updatedAt = java.time.Instant.ofEpochMilli(deletedAt)
             )
             emitUpdate()
         }

@@ -45,13 +45,14 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with GrimmoryHttpException classifies as ServerError with status code`() = runTest {
-        repo.reportFailure(1L, GrimmoryHttpException(500, "boom"))
-        val status = repo.get(1L)
-        assertTrue(status is SyncStatus.ServerError)
-        assertEquals(500, (status as SyncStatus.ServerError).statusCode)
-        assertEquals("boom", status.detail)
-    }
+    fun `reportFailure with GrimmoryHttpException classifies as ServerError with status code`() =
+        runTest {
+            repo.reportFailure(1L, GrimmoryHttpException(500, "boom"))
+            val status = repo.get(1L)
+            assertTrue(status is SyncStatus.ServerError)
+            assertEquals(500, (status as SyncStatus.ServerError).statusCode)
+            assertEquals("boom", status.detail)
+        }
 
     @Test
     fun `reportFailure with IOException classifies as NetworkError`() = runTest {
@@ -62,12 +63,13 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with HttpRequestTimeoutException classifies as NetworkError with timeout detail`() = runTest {
-        repo.reportFailure(1L, HttpRequestTimeoutException("GET /foo", 5000L))
-        val status = repo.get(1L)
-        assertTrue(status is SyncStatus.NetworkError)
-        assertEquals("timeout", (status as SyncStatus.NetworkError).detail)
-    }
+    fun `reportFailure with HttpRequestTimeoutException classifies as NetworkError with timeout detail`() =
+        runTest {
+            repo.reportFailure(1L, HttpRequestTimeoutException("GET /foo", 5000L))
+            val status = repo.get(1L)
+            assertTrue(status is SyncStatus.NetworkError)
+            assertEquals("timeout", (status as SyncStatus.NetworkError).detail)
+        }
 
     @Test
     fun `reportFailure with generic IOException subclass still maps to NetworkError`() = runTest {
@@ -76,13 +78,14 @@ class SyncStatusRepositoryTest {
     }
 
     @Test
-    fun `reportFailure with unknown exception classifies as ServerError without status`() = runTest {
-        repo.reportFailure(1L, IllegalStateException("something weird"))
-        val status = repo.get(1L)
-        assertTrue(status is SyncStatus.ServerError)
-        assertNull((status as SyncStatus.ServerError).statusCode)
-        assertEquals("something weird", status.detail)
-    }
+    fun `reportFailure with unknown exception classifies as ServerError without status`() =
+        runTest {
+            repo.reportFailure(1L, IllegalStateException("something weird"))
+            val status = repo.get(1L)
+            assertTrue(status is SyncStatus.ServerError)
+            assertNull((status as SyncStatus.ServerError).statusCode)
+            assertEquals("something weird", status.detail)
+        }
 
     @Test
     fun `success after failure clears the unhealthy state`() = runTest {

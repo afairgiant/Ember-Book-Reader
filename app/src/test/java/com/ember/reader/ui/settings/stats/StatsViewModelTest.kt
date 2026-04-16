@@ -49,7 +49,7 @@ class StatsViewModelTest {
         id = 1L, name = "Grimmory", url = "http://localhost",
         opdsUsername = "", opdsPassword = "",
         kosyncUsername = "", kosyncPassword = "",
-        isGrimmory = true,
+        isGrimmory = true
     )
 
     @BeforeEach
@@ -68,13 +68,27 @@ class StatsViewModelTest {
         coEvery { serverRepository.getAll() } returns emptyList()
 
         // Default Grimmory stubs (return failure so getOrNull() → null)
-        coEvery { grimmoryClient.getReadingStreak(any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getPeakHours(any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getFavoriteDays(any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getBookDistributions(any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getGenreStats(any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getReadingTimeline(any(), any(), any(), any()) } returns Result.failure(Exception("not stubbed"))
-        coEvery { grimmoryClient.getSessionScatter(any(), any(), any()) } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getReadingStreak(any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getPeakHours(any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getFavoriteDays(any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getBookDistributions(any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getGenreStats(any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getReadingTimeline(any(), any(), any(), any())
+        } returns Result.failure(Exception("not stubbed"))
+        coEvery {
+            grimmoryClient.getSessionScatter(any(), any(), any())
+        } returns Result.failure(Exception("not stubbed"))
     }
 
     @AfterEach
@@ -84,7 +98,7 @@ class StatsViewModelTest {
 
     private fun createViewModel() = StatsViewModel(
         readingSessionRepository, bookRepository,
-        readingProgressRepository, serverRepository, grimmoryClient,
+        readingProgressRepository, serverRepository, grimmoryClient
     )
 
     @Test
@@ -106,7 +120,7 @@ class StatsViewModelTest {
             ReadingSession(
                 bookId = "book-1",
                 startTime = Instant.now(), endTime = Instant.now(),
-                durationSeconds = 600, startProgress = 0.1f, endProgress = 0.2f,
+                durationSeconds = 600, startProgress = 0.1f, endProgress = 0.2f
             )
         )
         coEvery { readingSessionRepository.getRecentSessions(any()) } returns sessions
@@ -124,11 +138,12 @@ class StatsViewModelTest {
 
         val streak = GrimmoryStreakResponse(
             currentStreak = 10, longestStreak = 30, totalReadingDays = 100,
-            last52Weeks = emptyList(),
+            last52Weeks = emptyList()
         )
         coEvery { grimmoryClient.getReadingStreak(any(), any()) } returns Result.success(streak)
 
-        val peakHours = listOf(GrimmoryPeakHour(hourOfDay = 21, sessionCount = 15, totalDurationSeconds = 9000))
+        val peakHours =
+            listOf(GrimmoryPeakHour(hourOfDay = 21, sessionCount = 15, totalDurationSeconds = 9000))
         coEvery { grimmoryClient.getPeakHours(any(), any()) } returns Result.success(peakHours)
 
         val vm = createViewModel()
@@ -148,7 +163,7 @@ class StatsViewModelTest {
 
         val streak = GrimmoryStreakResponse(
             currentStreak = 5, longestStreak = 20, totalReadingDays = 50,
-            last52Weeks = emptyList(),
+            last52Weeks = emptyList()
         )
         coEvery { grimmoryClient.getReadingStreak(any(), any()) } returns Result.success(streak)
         // Peak hours fails
@@ -174,7 +189,7 @@ class StatsViewModelTest {
                 genre = "Genre $i",
                 bookCount = 10, totalSessions = 5,
                 totalDurationSeconds = i * 1000L,
-                averageSessionsPerBook = 1.0,
+                averageSessionsPerBook = 1.0
             )
         }
         coEvery { grimmoryClient.getGenreStats(any(), any()) } returns Result.success(genres)
@@ -196,7 +211,7 @@ class StatsViewModelTest {
         coEvery { readingProgressRepository.observeAll() } returns flowOf(
             listOf(
                 ReadingProgress(bookId = "b1", percentage = 0f),
-                ReadingProgress(bookId = "b2", percentage = 1.0f),
+                ReadingProgress(bookId = "b2", percentage = 1.0f)
             )
         )
 
@@ -211,13 +226,13 @@ class StatsViewModelTest {
         // A book at 50% with sessions totaling 3600s over 50% progress
         val progress = ReadingProgress(
             bookId = "b1", percentage = 0.5f,
-            lastReadAt = Instant.now(),
+            lastReadAt = Instant.now()
         )
         coEvery { readingProgressRepository.observeAll() } returns flowOf(listOf(progress))
         coEvery { readingSessionRepository.getSessionsForBook("b1") } returns listOf(
             ReadingSession(
                 bookId = "b1", startTime = Instant.now(), endTime = Instant.now(),
-                durationSeconds = 3600L, startProgress = 0f, endProgress = 0.5f,
+                durationSeconds = 3600L, startProgress = 0f, endProgress = 0.5f
             )
         )
 

@@ -51,7 +51,9 @@ class BookmarkSyncManagerTest {
         @Test
         fun `new server bookmark creates local entity with correct locatorJson`() = runTest {
             val serverBm = grimmoryBookmark(id = 10, cfi = "/6/4!/4/2", title = "Ch 1")
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -69,7 +71,9 @@ class BookmarkSyncManagerTest {
         @Test
         fun `server bookmark with null cfi is skipped`() = runTest {
             val serverBm = grimmoryBookmark(id = 10, cfi = null)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -85,7 +89,9 @@ class BookmarkSyncManagerTest {
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 10, title = "Old Title", updatedAt = localTime))
 
             val serverBm = grimmoryBookmark(id = 10, title = "New Title", updatedAt = serverTime)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -102,8 +108,12 @@ class BookmarkSyncManagerTest {
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 10, title = "Local Title", updatedAt = localTime))
 
             val serverBm = grimmoryBookmark(id = 10, title = "Server Title", updatedAt = serverTime)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
-            coEvery { grimmoryClient.updateBookmark(any(), any(), any(), any()) } returns Result.success(serverBm)
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.updateBookmark(any(), any(), any(), any())
+            } returns Result.success(serverBm)
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -118,8 +128,11 @@ class BookmarkSyncManagerTest {
 
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 10, title = "Same Title", updatedAt = time))
 
-            val serverBm = grimmoryBookmark(id = 10, title = "Same Title", updatedAt = "2026-01-01T12:00:00Z")
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            val serverBm =
+                grimmoryBookmark(id = 10, title = "Same Title", updatedAt = "2026-01-01T12:00:00Z")
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -135,7 +148,9 @@ class BookmarkSyncManagerTest {
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 10, title = "Local", updatedAt = localTime))
 
             val serverBm = grimmoryBookmark(id = 10, title = "Server", updatedAt = null)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -154,12 +169,14 @@ class BookmarkSyncManagerTest {
                 bookmarkEntity(
                     bookId = bookId,
                     remoteId = 10,
-                    deletedAt = Instant.parse("2026-01-02T00:00:00Z"),
+                    deletedAt = Instant.parse("2026-01-02T00:00:00Z")
                 )
             )
 
             val serverBm = grimmoryBookmark(id = 10)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
             coEvery { grimmoryClient.deleteBookmark(any(), any(), any()) } returns Result.success(Unit)
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
@@ -173,7 +190,7 @@ class BookmarkSyncManagerTest {
                 bookmarkEntity(
                     bookId = bookId,
                     remoteId = null,
-                    deletedAt = Instant.parse("2026-01-02T00:00:00Z"),
+                    deletedAt = Instant.parse("2026-01-02T00:00:00Z")
                 )
             )
 
@@ -192,12 +209,14 @@ class BookmarkSyncManagerTest {
                 bookmarkEntity(
                     bookId = bookId,
                     remoteId = 10,
-                    deletedAt = Instant.parse("2026-01-02T00:00:00Z"),
+                    deletedAt = Instant.parse("2026-01-02T00:00:00Z")
                 )
             )
 
             val serverBm = grimmoryBookmark(id = 10)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
             coEvery { grimmoryClient.deleteBookmark(any(), any(), any()) } returns Result.success(Unit)
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
@@ -238,7 +257,9 @@ class BookmarkSyncManagerTest {
             dao.insert(bookmarkEntity(bookId = bookId, locatorJson = locatorJson, remoteId = null))
 
             val serverBm = grimmoryBookmark(id = 50, cfi = cfi)
-            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(listOf(serverBm))
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(serverBm))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -307,13 +328,17 @@ class BookmarkSyncManagerTest {
             val serverBookmarks = listOf(
                 grimmoryBookmark(id = 10, cfi = "/6/4", title = "Old server title", updatedAt = "2026-01-01T00:00:00Z"),
                 grimmoryBookmark(id = 20, cfi = "/6/8", title = "Will be deleted"),
-                grimmoryBookmark(id = 50, cfi = "/6/50", title = "New from server", createdAt = "2026-01-01T10:00:00Z", updatedAt = "2026-01-01T10:00:00Z"),
+                grimmoryBookmark(id = 50, cfi = "/6/50", title = "New from server", createdAt = "2026-01-01T10:00:00Z", updatedAt = "2026-01-01T10:00:00Z")
             )
 
             coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(serverBookmarks)
             coEvery { grimmoryClient.deleteBookmark(any(), any(), any()) } returns Result.success(Unit)
-            coEvery { grimmoryClient.updateBookmark(any(), any(), any(), any()) } returns Result.success(grimmoryBookmark(id = 10))
-            coEvery { grimmoryClient.createBookmark(any(), any(), any()) } returns Result.success(grimmoryBookmark(id = 60, cfi = "/6/100"))
+            coEvery {
+                grimmoryClient.updateBookmark(any(), any(), any(), any())
+            } returns Result.success(grimmoryBookmark(id = 10))
+            coEvery {
+                grimmoryClient.createBookmark(any(), any(), any())
+            } returns Result.success(grimmoryBookmark(id = 60, cfi = "/6/100"))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 

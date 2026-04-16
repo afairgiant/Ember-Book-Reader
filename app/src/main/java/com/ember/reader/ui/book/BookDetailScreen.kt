@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -467,8 +466,10 @@ fun BookDetailScreen(
                         ?: hardcoverMatch?.description?.takeIf { it.isNotBlank() }
                     val gd = grimmoryDetail
                     val pageCount = currentBook.pageCount ?: gd?.pageCount ?: hardcoverMatch?.pages
-                    val published = (currentBook.publishedDate ?: gd?.publishedDate
-                        ?: hardcoverMatch?.releaseYear?.toString())?.let(::formatPublishedDate)
+                    val published = (
+                        currentBook.publishedDate ?: gd?.publishedDate
+                            ?: hardcoverMatch?.releaseYear?.toString()
+                        )?.let(::formatPublishedDate)
                     val language = currentBook.language ?: gd?.language
 
                     // About card — collapsible description + key metadata
@@ -922,7 +923,7 @@ private val ReadStatus.displayName: String
 private fun PersonalRatingStars(
     value: Int,
     onChange: (Int?) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -930,12 +931,12 @@ private fun PersonalRatingStars(
                 val filled = star <= value
                 IconButton(
                     onClick = { onChange(if (value == star) null else star) },
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         imageVector = if (filled) Icons.Filled.Star else Icons.Filled.StarBorder,
                         contentDescription = "Rate $star out of 10",
-                        tint = if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

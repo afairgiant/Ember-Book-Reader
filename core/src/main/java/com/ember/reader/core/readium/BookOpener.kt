@@ -68,10 +68,7 @@ class BookOpener @Inject constructor(
      * header. Only requests matching the server's origin are augmented; third-party
      * requests (e.g. remote fonts or images referenced by the EPUB) pass through.
      */
-    suspend fun openStreaming(
-        server: Server,
-        grimmoryBookId: Long
-    ): Result<Publication> {
+    suspend fun openStreaming(server: Server, grimmoryBookId: Long): Result<Publication> {
         val urlString = grimmoryClient.bookContentUrl(server.url, grimmoryBookId)
         val absoluteUrl = AbsoluteUrl(urlString)
             ?: return Result.failure(IllegalArgumentException("Invalid streaming URL: $urlString"))

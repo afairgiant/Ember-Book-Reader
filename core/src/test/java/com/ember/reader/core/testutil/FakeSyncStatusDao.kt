@@ -16,14 +16,12 @@ class FakeSyncStatusDao : SyncStatusDao {
 
     private val state = MutableStateFlow<Map<Long, SyncStatusEntity>>(emptyMap())
 
-    override fun observeAll(): Flow<List<SyncStatusEntity>> =
-        state.map { it.values.toList() }
+    override fun observeAll(): Flow<List<SyncStatusEntity>> = state.map { it.values.toList() }
 
     override fun observeByServer(serverId: Long): Flow<SyncStatusEntity?> =
         state.map { it[serverId] }
 
-    override suspend fun getByServer(serverId: Long): SyncStatusEntity? =
-        state.value[serverId]
+    override suspend fun getByServer(serverId: Long): SyncStatusEntity? = state.value[serverId]
 
     override suspend fun upsert(entity: SyncStatusEntity) {
         state.value = state.value + (entity.serverId to entity)

@@ -27,7 +27,10 @@ import org.junit.jupiter.api.extension.ExtendWith
 class HardcoverClientTest {
 
     private val credentialEncryption: CredentialEncryption = mockk()
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     @BeforeEach
     fun setUp() {
@@ -47,7 +50,7 @@ class HardcoverClientTest {
         respond(
             content = ByteReadChannel(content),
             status = HttpStatusCode.OK,
-            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            headers = headersOf(HttpHeaders.ContentType, "application/json")
         )
 
     @Test

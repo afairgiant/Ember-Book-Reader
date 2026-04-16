@@ -57,11 +57,11 @@ class GrimmoryAppClientTest {
 
     private fun io.ktor.client.engine.mock.MockRequestHandleScope.jsonResponse(
         content: String,
-        status: HttpStatusCode = HttpStatusCode.OK,
+        status: HttpStatusCode = HttpStatusCode.OK
     ) = respond(
         content = ByteReadChannel(content),
         status = status,
-        headers = headersOf(HttpHeaders.ContentType, "application/json"),
+        headers = headersOf(HttpHeaders.ContentType, "application/json")
     )
 
     private val emptyPageJson = """{"content":[],"totalElements":0,"totalPages":0,"number":0}"""
@@ -84,7 +84,7 @@ class GrimmoryAppClientTest {
                 libraryId = 5L, shelfId = 3L, status = "READING",
                 search = "test", fileType = "EPUB",
                 minRating = 3, maxRating = 5,
-                authors = "Author A", language = "en",
+                authors = "Author A", language = "en"
             )
 
             val url = capturedUrl!!
