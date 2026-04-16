@@ -24,6 +24,75 @@ data class RemoteSyncResult(
     val source: String
 )
 
+/**
+ * Why a per-source sync attempt was skipped. Skipping is not a failure — it
+ * means the channel isn't in play for this book/server, and the UI should
+ * report it differently from a real error.
+ */
+enum class SkipReason {
+    /** No local progress row, or percentage is 0 — nothing to push. */
+    NoLocalProgress,
+
+    /** Book has no fileHash (never downloaded, still streaming). */
+    NoFileHash,
+
+    /** Server has no kosync username configured. */
+    NoKosyncCreds,
+
+    /** Book is not linked to a Grimmory server book. */
+    NoGrimmoryBookId,
+
+    /** Server is not a Grimmory server. */
+    ServerNotGrimmory,
+
+    /** Not signed in to Grimmory for this server. */
+    GrimmoryNotLoggedIn
+}
+
+/**
+ * Per-source sync outcome. Exposed so callers can distinguish between
+ * "succeeded", "skipped for reason X", and "failed with error Y" —
+ * collapsing these to a single boolean hides real failures from users
+ * (e.g. Grimmory pushed but kosync silently 401'd).
+ */
+sealed interface SourceOutcome<out T> {
+    data class Ok<T>(val value: T?) : SourceOutcome<T>
+    data class Skipped(val reason: SkipReason) : SourceOutcome<Nothing>
+    data class Failure(val error: Throwable) : SourceOutcome<Nothing>
+}
+
+/**
+ * Result of a combined kosync + Grimmory progress push. Both channels run
+ * concurrently and either succeed, skip (not applicable), or fail.
+ */
+data class PushResult(
+    val kosync: SourceOutcome<Unit>,
+    val grimmory: SourceOutcome<Unit>
+) {
+    val anySucceeded: Boolean get() = kosync is SourceOutcome.Ok || grimmory is SourceOutcome.Ok
+    val anyFailed: Boolean get() = kosync is SourceOutcome.Failure || grimmory is SourceOutcome.Failure
+    val allFailed: Boolean get() = kosync is SourceOutcome.Failure && grimmory is SourceOutcome.Failure
+    val allSkipped: Boolean get() = kosync is SourceOutcome.Skipped && grimmory is SourceOutcome.Skipped
+
+    fun firstActionableError(): Throwable? {
+        val errors = listOfNotNull(
+            (kosync as? SourceOutcome.Failure)?.error,
+            (grimmory as? SourceOutcome.Failure)?.error
+        )
+        return errors.firstOrNull { it is GrimmoryAuthExpiredException }
+            ?: errors.firstOrNull { it is GrimmoryHttpException }
+            ?: errors.firstOrNull()
+    }
+
+    companion object {
+        /** Neither source had anything to push (no local progress yet). */
+        val NothingToPush = PushResult(
+            kosync = SourceOutcome.Skipped(SkipReason.NoLocalProgress),
+            grimmory = SourceOutcome.Skipped(SkipReason.NoLocalProgress)
+        )
+    }
+}
+
 @Singleton
 class ProgressSyncManager @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
@@ -31,18 +100,6 @@ class ProgressSyncManager @Inject constructor(
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val syncStatusRepository: SyncStatusRepository
 ) {
-
-    /**
-     * Per-source sync outcome. Success vs. Skipped matters for status
-     * reporting: skipping a channel (no credentials, book not sync-eligible)
-     * is not a failure, while contacting the server and getting nothing
-     * back is still a healthy sync.
-     */
-    private sealed interface SourceOutcome<out T> {
-        data class Ok<T>(val value: T?) : SourceOutcome<T>
-        data object Skipped : SourceOutcome<Nothing>
-        data class Failure(val error: Throwable) : SourceOutcome<Nothing>
-    }
 
     /**
      * Pull best remote progress from all available sources (kosync + Grimmory)
@@ -66,36 +123,43 @@ class ProgressSyncManager @Inject constructor(
 
     /**
      * Push local progress to all available endpoints (kosync + Grimmory)
-     * concurrently. Returns true if at least one push succeeded.
+     * concurrently. Returns a per-source [PushResult] so callers can tell
+     * "succeeded", "skipped because not applicable", and "failed" apart —
+     * hiding a channel failure behind a blanket boolean means the user
+     * thinks they're synced when they aren't.
      */
-    suspend fun pushProgress(server: Server, book: Book): Boolean {
-        val progress = readingProgressRepository.getByBookId(book.id) ?: return false
-        if (progress.percentage <= 0f) return false
+    suspend fun pushProgress(server: Server, book: Book): PushResult {
+        val progress = readingProgressRepository.getByBookId(book.id) ?: return PushResult.NothingToPush
+        if (progress.percentage <= 0f) return PushResult.NothingToPush
 
         return coroutineScope {
             val kosyncDeferred = async { pushKosync(server, book) }
             val grimmoryDeferred = async { pushGrimmory(server, book, progress.percentage) }
-            val outcomes = listOf(kosyncDeferred.await(), grimmoryDeferred.await())
+            val kosync = kosyncDeferred.await()
+            val grimmory = grimmoryDeferred.await()
 
-            reportStatus(server.id, outcomes)
+            reportStatus(server.id, listOf(kosync, grimmory))
 
-            outcomes.any { it is SourceOutcome.Ok<*> }
+            PushResult(kosync = kosync, grimmory = grimmory)
         }
     }
 
     /**
      * Classify a per-server sync attempt and report it.
      *
-     * - Any [SourceOutcome.Ok] → healthy; a single working channel is enough.
-     * - Otherwise, surface the most actionable failure (Auth > Http > other).
+     * - Any [SourceOutcome.Failure] → unhealthy. Even when another channel
+     *   succeeded, the user deserves to know the failed channel is drifting;
+     *   hiding that behind "at least something worked" is how stale kosync
+     *   state went unnoticed until the user spot-checked the server.
+     * - Otherwise, any success → healthy.
      * - All skipped → nothing to report (the server isn't in play for this op).
      */
     private suspend fun reportStatus(serverId: Long, outcomes: List<SourceOutcome<*>>) {
-        val hasSuccess = outcomes.any { it is SourceOutcome.Ok<*> }
         val failures = outcomes.filterIsInstance<SourceOutcome.Failure>().map { it.error }
+        val hasSuccess = outcomes.any { it is SourceOutcome.Ok<*> }
         when {
-            hasSuccess -> syncStatusRepository.reportSuccess(serverId)
             failures.isNotEmpty() -> syncStatusRepository.reportFailure(serverId, mostActionable(failures))
+            hasSuccess -> syncStatusRepository.reportSuccess(serverId)
             else -> Unit // all skipped — not a sync event
         }
     }
@@ -109,11 +173,11 @@ class ProgressSyncManager @Inject constructor(
         val fileHash = book.fileHash
         if (fileHash == null) {
             Timber.d("Sync pull: skipping kosync for '${book.title}' — no fileHash")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.NoFileHash)
         }
         if (server.kosyncUsername.isBlank()) {
             Timber.d("Sync pull: skipping kosync for '${book.title}' — no kosync credentials")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.NoKosyncCreds)
         }
         Timber.d("Sync pull: trying kosync for '${book.title}' hash=$fileHash")
         val result = readingProgressRepository.pullKosyncProgress(server, book.id, fileHash)
@@ -138,15 +202,15 @@ class ProgressSyncManager @Inject constructor(
         val grimmoryBookId = book.grimmoryBookId
         if (grimmoryBookId == null) {
             Timber.d("Sync pull: skipping Grimmory for '${book.title}' — no grimmoryBookId (opdsEntryId=${book.opdsEntryId})")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.NoGrimmoryBookId)
         }
         if (!server.isGrimmory) {
             Timber.d("Sync pull: skipping Grimmory for '${book.title}' — server not Grimmory")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.ServerNotGrimmory)
         }
         if (!grimmoryTokenManager.isLoggedIn(server.id)) {
             Timber.d("Sync pull: skipping Grimmory for '${book.title}' — not logged in to Grimmory")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.GrimmoryNotLoggedIn)
         }
         Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
         return runCatchingCancellable {
@@ -179,17 +243,20 @@ class ProgressSyncManager @Inject constructor(
         val fileHash = book.fileHash
         if (fileHash == null) {
             Timber.d("Sync push: skipping kosync for '${book.title}' — no fileHash")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.NoFileHash)
         }
         if (server.kosyncUsername.isBlank()) {
             Timber.d("Sync push: skipping kosync for '${book.title}' — no kosync credentials")
-            return SourceOutcome.Skipped
+            return SourceOutcome.Skipped(SkipReason.NoKosyncCreds)
         }
-        Timber.d("Sync push: pushing kosync for '${book.title}' hash=$fileHash")
+        Timber.d("Sync push: pushing kosync for '${book.title}' hash=$fileHash user=${server.kosyncUsername}")
         return readingProgressRepository.pushKosyncProgress(server, book.id, fileHash).fold(
-            onSuccess = { SourceOutcome.Ok(Unit) },
+            onSuccess = {
+                Timber.d("Sync push: kosync OK for '${book.title}'")
+                SourceOutcome.Ok(Unit)
+            },
             onFailure = { error ->
-                Timber.w(error, "Failed to push kosync progress for ${book.title}")
+                Timber.w(error, "Sync push: kosync FAILED for '${book.title}' (hash=$fileHash)")
                 SourceOutcome.Failure(error)
             }
         )
@@ -200,13 +267,20 @@ class ProgressSyncManager @Inject constructor(
         book: Book,
         percentage: Float
     ): SourceOutcome<Unit> {
-        val grimmoryBookId = book.grimmoryBookId ?: return SourceOutcome.Skipped
-        if (!server.isGrimmory || !grimmoryTokenManager.isLoggedIn(server.id)) return SourceOutcome.Skipped
+        val grimmoryBookId = book.grimmoryBookId
+            ?: return SourceOutcome.Skipped(SkipReason.NoGrimmoryBookId)
+        if (!server.isGrimmory) return SourceOutcome.Skipped(SkipReason.ServerNotGrimmory)
+        if (!grimmoryTokenManager.isLoggedIn(server.id)) {
+            return SourceOutcome.Skipped(SkipReason.GrimmoryNotLoggedIn)
+        }
         return runCatchingCancellable {
             val pct = percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
             val fileId = detail?.primaryFile?.id
 
+            Timber.d(
+                "Sync push: Grimmory request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct cfi=$PLACEHOLDER_CFI"
+            )
             grimmoryClient.pushProgress(
                 baseUrl = server.url,
                 serverId = server.id,
@@ -216,11 +290,11 @@ class ProgressSyncManager @Inject constructor(
                     epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
                 )
             ).getOrThrow()
-            Timber.d("Pushed Grimmory progress for ${book.title}: $pct%")
+            Timber.d("Sync push: Grimmory OK for '${book.title}' pct=$pct%")
         }.fold(
             onSuccess = { SourceOutcome.Ok(Unit) },
             onFailure = { error ->
-                Timber.w(error, "Failed to push Grimmory progress for ${book.title}")
+                Timber.w(error, "Sync push: Grimmory FAILED for '${book.title}' (bookId=$grimmoryBookId)")
                 SourceOutcome.Failure(error)
             }
         )

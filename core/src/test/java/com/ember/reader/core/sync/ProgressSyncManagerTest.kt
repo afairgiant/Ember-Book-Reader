@@ -5,7 +5,6 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
-import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingProgressRepository.KosyncProgressResult
 import com.ember.reader.core.testutil.TestFixtures.book
@@ -40,7 +39,8 @@ class ProgressSyncManagerTest {
     private val grimmoryTokenManager: GrimmoryTokenManager = mockk(relaxed = true)
     private val fixedInstant = Instant.parse("2026-04-14T12:00:00Z")
     private val clock = Clock.fixed(fixedInstant, ZoneOffset.UTC)
-    private val syncStatusRepository = SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
+    private val syncStatusRepository =
+        SyncStatusRepository(com.ember.reader.core.testutil.FakeSyncStatusDao(), clock)
     private lateinit var syncManager: ProgressSyncManager
 
     private val testServer = server()
@@ -52,7 +52,7 @@ class ProgressSyncManagerTest {
             readingProgressRepository,
             grimmoryClient,
             grimmoryTokenManager,
-            syncStatusRepository,
+            syncStatusRepository
         )
         every { grimmoryTokenManager.isLoggedIn(any()) } returns true
     }
@@ -66,7 +66,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(KosyncProgressResult(kosyncProgress, "KOReader"))
 
-            val detail = grimmoryBookDetail(readProgress = 0.50f, koreaderProgress = GrimmoryKoreaderProgress(device = "Grimmory"))
+            val detail =
+                grimmoryBookDetail(readProgress = 0.50f, koreaderProgress = GrimmoryKoreaderProgress(device = "Grimmory"))
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
@@ -82,7 +83,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(KosyncProgressResult(kosyncProgress, "KOReader"))
 
-            val detail = grimmoryBookDetail(readProgress = 0.80f, koreaderProgress = GrimmoryKoreaderProgress(device = "Browser"))
+            val detail =
+                grimmoryBookDetail(readProgress = 0.80f, koreaderProgress = GrimmoryKoreaderProgress(device = "Browser"))
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
@@ -210,52 +212,106 @@ class ProgressSyncManagerTest {
     inner class PushProgress {
 
         @Test
-        fun `push skipped when no local progress exists`() = runTest {
+        fun `push returns NothingToPush when no local progress exists`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns null
 
             val result = syncManager.pushProgress(testServer, testBook)
 
-            assertFalse(result)
+            assertEquals(PushResult.NothingToPush, result)
+            assertTrue(result.allSkipped)
+            assertFalse(result.anySucceeded)
             coVerify(exactly = 0) { readingProgressRepository.pushKosyncProgress(any(), any(), any()) }
         }
 
         @Test
-        fun `push skipped when local progress is zero`() = runTest {
+        fun `push returns NothingToPush when local progress is zero`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0f)
 
             val result = syncManager.pushProgress(testServer, testBook)
 
-            assertFalse(result)
+            assertEquals(PushResult.NothingToPush, result)
         }
 
         @Test
-        fun `push returns true when at least one endpoint succeeds`() = runTest {
+        fun `push reports partial success when kosync fails but Grimmory succeeds`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
-            // Kosync fails
             coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
                 Result.failure(Exception("timeout"))
-            // Grimmory succeeds
             val detail = grimmoryBookDetail()
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
             coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(testServer, testBook)
 
-            assertTrue(result)
+            assertTrue(result.anySucceeded)
+            assertTrue(result.anyFailed)
+            assertFalse(result.allFailed)
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertTrue(result.kosync is SourceOutcome.Failure)
         }
 
         @Test
-        fun `push returns false when all endpoints fail`() = runTest {
+        fun `push reports kosync skipped with NoFileHash when book not downloaded`() = runTest {
+            val streamedBook = book(fileHash = null)
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            val detail = grimmoryBookDetail()
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, streamedBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            val skipped = result.kosync as SourceOutcome.Skipped
+            assertEquals(SkipReason.NoFileHash, skipped.reason)
+            assertTrue(result.anySucceeded)
+            assertFalse(result.anyFailed)
+        }
+
+        @Test
+        fun `push reports kosync skipped with NoKosyncCreds when username blank`() = runTest {
+            val serverNoCreds = server(kosyncUsername = "", kosyncPassword = "")
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            val detail = grimmoryBookDetail()
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+
+            val result = syncManager.pushProgress(serverNoCreds, testBook)
+
+            val skipped = result.kosync as SourceOutcome.Skipped
+            assertEquals(SkipReason.NoKosyncCreds, skipped.reason)
+        }
+
+        @Test
+        fun `push reports allFailed when both endpoints fail`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
                 Result.failure(Exception("timeout"))
-            // pushGrimmory uses runCatching, so pushProgress must throw to make it fail
             coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
                 Result.failure(Exception("server error"))
 
             val result = syncManager.pushProgress(testServer, testBook)
 
-            assertFalse(result)
+            assertTrue(result.allFailed)
+            assertTrue(result.anyFailed)
+            assertFalse(result.anySucceeded)
+        }
+
+        @Test
+        fun `firstActionableError prefers GrimmoryAuthExpired over generic errors`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
+                Result.failure(UnknownHostException("net down"))
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                Result.success(grimmoryBookDetail())
+            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
+                Result.failure(GrimmoryAuthExpiredException(testServer.id))
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(
+                result.firstActionableError() is GrimmoryAuthExpiredException,
+                "expected GrimmoryAuthExpiredException, got ${result.firstActionableError()} (kosync=${result.kosync}, grimmory=${result.grimmory})"
+            )
         }
     }
 
@@ -275,15 +331,16 @@ class ProgressSyncManagerTest {
         }
 
         @Test
-        fun `pullBestProgress reports AuthExpired when Grimmory raises it and kosync is skipped`() = runTest {
-            val bookNoHash = book(fileHash = null) // skips kosync
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
-                Result.failure(GrimmoryAuthExpiredException(testServer.id))
+        fun `pullBestProgress reports AuthExpired when Grimmory raises it and kosync is skipped`() =
+            runTest {
+                val bookNoHash = book(fileHash = null) // skips kosync
+                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                    Result.failure(GrimmoryAuthExpiredException(testServer.id))
 
-            syncManager.pullBestProgress(testServer, bookNoHash)
+                syncManager.pullBestProgress(testServer, bookNoHash)
 
-            assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.AuthExpired)
-        }
+                assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.AuthExpired)
+            }
 
         @Test
         fun `pullBestProgress does not report when all sources are skipped`() = runTest {
@@ -295,57 +352,78 @@ class ProgressSyncManagerTest {
         }
 
         @Test
-        fun `pullBestProgress prefers AuthExpired over generic HTTP failure when both fail`() = runTest {
-            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
-                Result.failure(UnknownHostException("grimmory.invalid"))
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
-                Result.failure(GrimmoryAuthExpiredException(testServer.id))
+        fun `pullBestProgress prefers AuthExpired over generic HTTP failure when both fail`() =
+            runTest {
+                coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                    Result.failure(UnknownHostException("grimmory.invalid"))
+                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                    Result.failure(GrimmoryAuthExpiredException(testServer.id))
 
-            syncManager.pullBestProgress(testServer, testBook)
+                syncManager.pullBestProgress(testServer, testBook)
 
-            assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.AuthExpired)
-        }
-
-        @Test
-        fun `pullBestProgress reports NetworkError when only kosync was attempted and failed offline`() = runTest {
-            val bookKosyncOnly = book(opdsEntryId = "not-a-urn-format") // skips Grimmory
-            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
-                Result.failure(UnknownHostException("grimmory.invalid"))
-
-            syncManager.pullBestProgress(testServer, bookKosyncOnly)
-
-            assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
-        }
+                assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.AuthExpired)
+            }
 
         @Test
-        fun `pushProgress reports success when any endpoint succeeds`() = runTest {
+        fun `pullBestProgress reports NetworkError when only kosync was attempted and failed offline`() =
+            runTest {
+                val bookKosyncOnly = book(opdsEntryId = "not-a-urn-format") // skips Grimmory
+                coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                    Result.failure(UnknownHostException("grimmory.invalid"))
+
+                syncManager.pullBestProgress(testServer, bookKosyncOnly)
+
+                assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
+            }
+
+        @Test
+        fun `pushProgress reports success only when no channel failed`() = runTest {
+            val streamedBook = book(fileHash = null) // skips kosync, not a failure
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
                 Result.success(grimmoryBookDetail())
-            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
-                Result.failure(Exception("kosync down"))
             coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
 
-            syncManager.pushProgress(testServer, testBook)
+            syncManager.pushProgress(testServer, streamedBook)
 
             assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.Ok)
         }
 
         @Test
-        fun `pushProgress reports ServerError when all endpoints fail with HTTP errors`() = runTest {
-            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
-                Result.success(grimmoryBookDetail())
-            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
-                Result.failure(GrimmoryHttpException(500, "kosync 500"))
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
-                Result.failure(GrimmoryHttpException(502, "grimmory 502"))
+        fun `pushProgress reports failure when any channel failed (even if another succeeded)`() =
+            runTest {
+                coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                    Result.success(grimmoryBookDetail())
+                coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
+                    Result.failure(Exception("kosync down"))
+                coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
 
-            syncManager.pushProgress(testServer, testBook)
+                syncManager.pushProgress(testServer, testBook)
 
-            val status = syncStatusRepository.get(testServer.id)
-            assertTrue(status is SyncStatus.ServerError)
-        }
+                // Partial failure must surface so the user sees the banner — hiding kosync's
+                // failure behind Grimmory's success is how the original bug went undetected.
+                val status = syncStatusRepository.get(testServer.id)
+                assertTrue(status !is SyncStatus.Ok, "expected non-Ok, got $status")
+                assertTrue(status !is SyncStatus.Unknown, "expected reported failure, got $status")
+            }
+
+        @Test
+        fun `pushProgress reports ServerError when all endpoints fail with HTTP errors`() =
+            runTest {
+                coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                    Result.success(grimmoryBookDetail())
+                coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
+                    Result.failure(GrimmoryHttpException(500, "kosync 500"))
+                coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
+                    Result.failure(GrimmoryHttpException(502, "grimmory 502"))
+
+                syncManager.pushProgress(testServer, testBook)
+
+                val status = syncStatusRepository.get(testServer.id)
+                assertTrue(status is SyncStatus.ServerError)
+            }
 
         @Test
         fun `pushProgress does not report when there is no local progress to push`() = runTest {

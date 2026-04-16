@@ -12,6 +12,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.grimmory.AudiobookChapter
 import com.ember.reader.core.grimmory.AudiobookInfo
 import com.ember.reader.core.grimmory.AudiobookTrack
@@ -26,6 +27,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +53,8 @@ class AudiobookViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
-    private val grimmoryTokenManager: GrimmoryTokenManager
+    private val grimmoryTokenManager: GrimmoryTokenManager,
+    @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -450,9 +453,10 @@ class AudiobookViewModel @Inject constructor(
             val trackCount = ctrl.mediaItemCount
             val playing = ctrl.isPlaying
 
-            // Fire-and-forget: save progress on IO (survives ViewModel destruction)
-            @Suppress("OPT_IN_USAGE")
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Fire-and-forget on the application scope so the save outlives the
+            // ViewModel without leaking via GlobalScope (mirrors ReaderViewModel
+            // after commit 5a22820).
+            applicationScope.launch {
                 saveProgressSnapshot(position, trackIndex, duration, trackCount)
             }
 

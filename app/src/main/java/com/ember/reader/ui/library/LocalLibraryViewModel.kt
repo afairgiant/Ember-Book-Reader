@@ -3,6 +3,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
+import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
@@ -19,6 +21,9 @@ import com.ember.reader.core.repository.LibraryViewMode
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.ProgressSyncManager
+import com.ember.reader.core.sync.PushResult
+import com.ember.reader.core.sync.SkipReason
+import com.ember.reader.core.sync.SourceOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -441,13 +446,65 @@ class LocalLibraryViewModel @Inject constructor(
                 _operationResult.value = "No local progress to push"
                 return@launch
             }
-            val pushed = progressSyncManager.pushProgress(server, book)
-            _operationResult.value = if (pushed) {
-                "Pushed ${(progress.percentage * 100).roundToInt()}% to server"
-            } else {
-                "Failed to push progress"
-            }
+            val result = progressSyncManager.pushProgress(server, book)
+            _operationResult.value = describePushResult(result, progress.percentage)
         }
+    }
+
+    /**
+     * Surface per-channel outcomes so the user can see *what* synced. Collapsing
+     * this to a single "Pushed to server" message hides real failures
+     * (e.g. Grimmory succeeded but kosync silently 401'd) and leaves the user
+     * thinking they're in sync when they aren't.
+     */
+    private fun describePushResult(result: PushResult, percentage: Float): String {
+        val pct = (percentage * 100).roundToInt()
+        if (result.allSkipped) return "No sync channel available for this book"
+
+        val kosyncLabel = channelLabel("kosync", result.kosync)
+        val grimmoryLabel = channelLabel("Grimmory", result.grimmory)
+
+        return when {
+            result.anySucceeded && !result.anyFailed -> {
+                // Clean success across any non-skipped channels.
+                val synced = listOfNotNull(
+                    if (result.kosync is SourceOutcome.Ok) "kosync" else null,
+                    if (result.grimmory is SourceOutcome.Ok) "Grimmory" else null
+                ).joinToString(" + ")
+                val skippedNote = listOfNotNull(
+                    (result.kosync as? SourceOutcome.Skipped)?.let { "kosync ${skipReasonText(it.reason)}" },
+                    (result.grimmory as? SourceOutcome.Skipped)?.let { "Grimmory ${skipReasonText(it.reason)}" }
+                ).joinToString("; ")
+                if (skippedNote.isBlank()) "Pushed $pct% to $synced" else "Pushed $pct% to $synced ($skippedNote)"
+            }
+            result.anySucceeded && result.anyFailed -> "Pushed $pct% — $kosyncLabel, $grimmoryLabel"
+            result.allFailed -> "Push failed: ${errorText(result.firstActionableError())}"
+            else -> "Push failed"
+        }
+    }
+
+    private fun channelLabel(name: String, outcome: SourceOutcome<*>): String = when (outcome) {
+        is SourceOutcome.Ok -> "$name OK"
+        is SourceOutcome.Skipped -> "$name ${skipReasonText(outcome.reason)}"
+        is SourceOutcome.Failure -> "$name failed (${errorText(outcome.error)})"
+    }
+
+    private fun skipReasonText(reason: SkipReason): String = when (reason) {
+        SkipReason.NoLocalProgress -> "nothing to push"
+        SkipReason.NoFileHash -> "skipped (not downloaded locally)"
+        SkipReason.NoKosyncCreds -> "not configured"
+        SkipReason.NoGrimmoryBookId -> "not linked"
+        SkipReason.ServerNotGrimmory -> "not available"
+        SkipReason.GrimmoryNotLoggedIn -> "sign in required"
+    }
+
+    private fun errorText(error: Throwable?): String = when (error) {
+        is GrimmoryAuthExpiredException -> "session expired, sign in again"
+        is GrimmoryHttpException -> "server error ${error.statusCode}"
+        null -> "unknown error"
+        else -> error.message?.takeIf {
+            it.isNotBlank()
+        } ?: error::class.simpleName.orEmpty().ifBlank { "unknown error" }
     }
 
     private suspend fun pullProgressForBook(book: Book, server: Server): String {

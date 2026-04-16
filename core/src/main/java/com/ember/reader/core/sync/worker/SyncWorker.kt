@@ -173,10 +173,20 @@ class SyncWorker @AssistedInject constructor(
                 if (localPct > 0f) {
                     val serverPct = remote?.progress?.percentage ?: 0f
                     if (localPct > serverPct + 0.01f) {
-                        val pushed = progressSyncManager.pushProgress(server, book)
-                        if (pushed) {
+                        val pushResult = progressSyncManager.pushProgress(server, book)
+                        if (pushResult.anySucceeded) {
                             syncPushed++
                             Timber.d("SyncWorker: pushed progress for ${book.title}: ${(localPct * 100).toInt()}% (server was ${(serverPct * 100).toInt()}%)")
+                        }
+                        // Count a partial/complete failure so the notification reflects it even
+                        // when one channel succeeded — hiding kosync 401s behind Grimmory's
+                        // success is how users ended up trusting a stale server.
+                        if (pushResult.anyFailed) {
+                            syncErrors++
+                            Timber.w(
+                                pushResult.firstActionableError(),
+                                "SyncWorker: push had failures for ${book.title} (kosync=${pushResult.kosync::class.simpleName} grimmory=${pushResult.grimmory::class.simpleName})"
+                            )
                         }
                     }
                 }

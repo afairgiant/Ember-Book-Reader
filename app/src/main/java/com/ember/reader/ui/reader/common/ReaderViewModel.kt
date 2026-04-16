@@ -27,6 +27,7 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.ProgressSyncManager
+import com.ember.reader.core.sync.SourceOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -443,7 +444,28 @@ class ReaderViewModel @Inject constructor(
     private suspend fun pushProgressOnClose() {
         val server = getSyncServer() ?: return
         val loadedBook = book ?: return
-        progressSyncManager.pushProgress(server, loadedBook)
+        val result = progressSyncManager.pushProgress(server, loadedBook)
+        // Failures show up via SyncStatusBanner on next library/browse visit
+        // (reportStatus downgrades the server status on any failed channel).
+        // The reader screen is already being torn down here, so a Snackbar
+        // emit would be dropped — log loudly instead so the on-close push
+        // outcome is auditable in logcat.
+        if (result.anyFailed) {
+            Timber.w(
+                result.firstActionableError(),
+                "Sync push on close for '${loadedBook.title}': kosync=${describe(result.kosync)} grimmory=${describe(result.grimmory)}"
+            )
+        } else {
+            Timber.i(
+                "Sync push on close for '${loadedBook.title}': kosync=${describe(result.kosync)} grimmory=${describe(result.grimmory)}"
+            )
+        }
+    }
+
+    private fun describe(outcome: SourceOutcome<Unit>): String = when (outcome) {
+        is SourceOutcome.Ok -> "OK"
+        is SourceOutcome.Skipped -> "skipped(${outcome.reason})"
+        is SourceOutcome.Failure -> "failed(${outcome.error::class.simpleName})"
     }
 
     override fun onCleared() {
