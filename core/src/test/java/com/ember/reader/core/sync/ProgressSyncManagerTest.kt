@@ -314,10 +314,11 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), newHash) } returns
                 Result.success(Unit)
 
-            // Refresh swaps the stored hash; the manager reads the new hash via getById.
+            // Before refresh, getById returns old hash (no concurrent refresh yet).
+            // After refresh, the returned Book carries the new hash.
+            coEvery { bookRepository.getById(bookWithOldHash.id) } returns bookWithOldHash
             coEvery { bookRepository.refreshDownloadedFile(bookWithOldHash.id) } returns
                 Result.success(bookWithNewHash)
-            coEvery { bookRepository.getById(bookWithOldHash.id) } returns bookWithNewHash
 
             // Grimmory push — keep the other channel clean so we can isolate the kosync retry.
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns

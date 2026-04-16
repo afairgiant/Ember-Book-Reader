@@ -31,22 +31,11 @@ data class RemoteSyncResult(
  * report it differently from a real error.
  */
 enum class SkipReason {
-    /** No local progress row, or percentage is 0 — nothing to push. */
     NoLocalProgress,
-
-    /** Book has no fileHash (never downloaded, still streaming). */
     NoFileHash,
-
-    /** Server has no kosync username configured. */
     NoKosyncCreds,
-
-    /** Book is not linked to a Grimmory server book. */
     NoGrimmoryBookId,
-
-    /** Server is not a Grimmory server. */
     ServerNotGrimmory,
-
-    /** Not signed in to Grimmory for this server. */
     GrimmoryNotLoggedIn
 }
 
@@ -160,16 +149,16 @@ class ProgressSyncManager @Inject constructor(
         val failures = outcomes.filterIsInstance<SourceOutcome.Failure>().map { it.error }
         val hasSuccess = outcomes.any { it is SourceOutcome.Ok<*> }
         when {
-            failures.isNotEmpty() -> syncStatusRepository.reportFailure(serverId, mostActionable(failures))
+            failures.isNotEmpty() -> {
+                val error = failures.firstOrNull { it is GrimmoryAuthExpiredException }
+                    ?: failures.firstOrNull { it is GrimmoryHttpException }
+                    ?: failures.first()
+                syncStatusRepository.reportFailure(serverId, error)
+            }
             hasSuccess -> syncStatusRepository.reportSuccess(serverId)
             else -> Unit // all skipped — not a sync event
         }
     }
-
-    private fun mostActionable(errors: List<Throwable>): Throwable =
-        errors.firstOrNull { it is GrimmoryAuthExpiredException }
-            ?: errors.firstOrNull { it is GrimmoryHttpException }
-            ?: errors.first()
 
     private suspend fun pullKosync(server: Server, book: Book): SourceOutcome<RemoteSyncResult> {
         val fileHash = book.fileHash
@@ -288,12 +277,19 @@ class ProgressSyncManager @Inject constructor(
         val err = exceptionOrNull() as? KosyncHttpException ?: return this
         if (err.statusCode != 404) return this
 
-        val refresh = bookRepository.refreshDownloadedFile(bookId)
-        if (refresh.isFailure) {
-            Timber.w(refresh.exceptionOrNull(), "Kosync 404: refresh failed, keeping original 404 for book $bookId")
+        // Check if a concurrent path (e.g. pull running alongside push) already
+        // refreshed the file, so we don't download the same book twice.
+        val alreadyRefreshed = bookRepository.getById(bookId)?.fileHash
+        if (alreadyRefreshed != null && alreadyRefreshed != oldHash) {
+            Timber.i("Kosync 404: hash already refreshed by another path ($oldHash -> $alreadyRefreshed); retrying")
+            return retry(alreadyRefreshed)
+        }
+
+        val refreshed = bookRepository.refreshDownloadedFile(bookId).getOrElse { refreshErr ->
+            Timber.w(refreshErr, "Kosync 404: refresh failed, keeping original 404 for book $bookId")
             return this
         }
-        val newHash = bookRepository.getById(bookId)?.fileHash
+        val newHash = refreshed.fileHash
         if (newHash == null || newHash == oldHash) {
             Timber.w("Kosync 404: hash unchanged after refresh (book not on server), not retrying")
             return this
