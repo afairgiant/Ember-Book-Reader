@@ -5,7 +5,9 @@ import com.ember.reader.core.grimmory.GrimmorySortKey
 import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.grimmory.SortDirection
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class GrimmoryRequestTest {
@@ -100,5 +102,18 @@ class GrimmoryRequestTest {
         assertNull(req.libraryId)
         assertNull(req.seriesName)
         assertNull(req.search)
+        assertFalse(req.recentlyAdded)
+    }
+
+    @Test
+    fun `recentlyAdded flag path sets recentlyAdded true`() {
+        val req = GrimmoryRequest.fromCatalogPath("grimmory:recentlyAdded", GrimmoryFilter())
+        assertTrue(req.recentlyAdded)
+    }
+
+    @Test
+    fun `other paths leave recentlyAdded false`() {
+        val req = GrimmoryRequest.fromCatalogPath("grimmory:shelfId=1", GrimmoryFilter())
+        assertFalse(req.recentlyAdded)
     }
 }

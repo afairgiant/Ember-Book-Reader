@@ -255,7 +255,9 @@ class CatalogViewModel @Inject constructor(
                 id = "grimmory:recent",
                 title = "Recently Added",
                 subtitle = "Latest additions to your library",
-                href = "grimmory:sort=addedOn&dir=desc",
+                // Must hit the dedicated /recently-added endpoint — it applies a 30-day window
+                // that /books?sort=addedOn doesn't, so sort params alone can't reproduce it.
+                href = "grimmory:recentlyAdded",
                 type = CatalogEntryType.RECENTLY_ADDED
             )
         )

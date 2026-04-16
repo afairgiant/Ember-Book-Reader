@@ -48,7 +48,9 @@ data class GrimmoryBookSummary(
     val readProgress: Float? = null,
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
-    val coverUpdatedOn: String? = null
+    val coverUpdatedOn: String? = null,
+    /** ISO-8601 timestamp of when the book was added to Grimmory — used to sort Recently Added. */
+    val addedOn: String? = null
 )
 
 @Serializable

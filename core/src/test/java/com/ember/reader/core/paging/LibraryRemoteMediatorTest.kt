@@ -118,4 +118,68 @@ class LibraryRemoteMediatorTest {
         assertInstanceOf(LibraryLoadError.Network::class.java, err.throwable)
         assertEquals(boom, (err.throwable as LibraryLoadError.Network).original)
     }
+
+    /**
+     * Regression guard for the shelf-shows-empty race: without an explicit invalidate after the
+     * sessionIds update, Room's auto-invalidation (triggered by the book upserts inside the
+     * fetch) snapshots the still-empty sessionIds and the shelf view stays frozen empty.
+     * The callback must fire AFTER sessionIds has been populated so the refactored PagingSource
+     * reads the allowlist.
+     */
+    @Test
+    fun `scoped refresh invalidates PagingSource after populating sessionIds`() = runTest {
+        val pager = mockk<NetworkPager>()
+        coEvery { pager.refresh() } returns Result.success(
+            NetworkPager.PageResult(listOf("a", "b"), endOfPagination = true)
+        )
+        val sessionIds = MutableStateFlow<Set<String>?>(emptySet())
+        var sessionIdsAtInvalidation: Set<String>? = null
+        val mediator = LibraryRemoteMediator(
+            networkPager = pager,
+            sessionIds = sessionIds,
+            invalidatePagingSource = { sessionIdsAtInvalidation = sessionIds.value }
+        )
+
+        mediator.load(LoadType.REFRESH, emptyState())
+
+        assertEquals(setOf("a", "b"), sessionIdsAtInvalidation)
+    }
+
+    @Test
+    fun `scoped append invalidates PagingSource after unioning ids`() = runTest {
+        val pager = mockk<NetworkPager>()
+        coEvery { pager.append() } returns Result.success(
+            NetworkPager.PageResult(listOf("c"), endOfPagination = true)
+        )
+        val sessionIds = MutableStateFlow<Set<String>?>(setOf("a", "b"))
+        var invalidateCount = 0
+        val mediator = LibraryRemoteMediator(
+            networkPager = pager,
+            sessionIds = sessionIds,
+            invalidatePagingSource = { invalidateCount++ }
+        )
+
+        mediator.load(LoadType.APPEND, emptyState())
+
+        assertEquals(1, invalidateCount)
+        assertEquals(setOf("a", "b", "c"), sessionIds.value)
+    }
+
+    @Test
+    fun `unscoped refresh does not invalidate PagingSource`() = runTest {
+        val pager = mockk<NetworkPager>()
+        coEvery { pager.refresh() } returns Result.success(
+            NetworkPager.PageResult(listOf("a"), endOfPagination = true)
+        )
+        var invalidateCount = 0
+        val mediator = LibraryRemoteMediator(
+            networkPager = pager,
+            sessionIds = MutableStateFlow<Set<String>?>(null),
+            invalidatePagingSource = { invalidateCount++ }
+        )
+
+        mediator.load(LoadType.REFRESH, emptyState())
+
+        assertEquals(0, invalidateCount)
+    }
 }

@@ -5,14 +5,17 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.PagingSource
 import androidx.paging.map
 import com.ember.reader.core.database.dao.BookDao
+import com.ember.reader.core.database.entity.BookEntity
 import com.ember.reader.core.database.query.LibraryQueryBuilder
 import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
 import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
 import com.ember.reader.core.grimmory.GrimmoryFilter
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
@@ -31,6 +34,7 @@ import com.ember.reader.core.sync.PartialMd5
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -133,7 +137,16 @@ class BookRepository @Inject constructor(
         } else {
             OpdsNetworkPager(server, catalogPath, this)
         }
-        val mediator = LibraryRemoteMediator(networkPager, sessionIds)
+        // Room auto-invalidates the PagingSource when books change — including the upserts the
+        // mediator just made. That fires BEFORE the mediator's sessionIds.update, so without a
+        // second explicit invalidate afterwards the refreshed PagingSource would snapshot the
+        // still-empty sessionIds and the view would stay empty. The callback closes that gap.
+        val pagingSourceRef = AtomicReference<PagingSource<Int, BookEntity>?>(null)
+        val mediator = LibraryRemoteMediator(
+            networkPager = networkPager,
+            sessionIds = sessionIds,
+            invalidatePagingSource = { pagingSourceRef.get()?.invalidate() }
+        )
         return Pager(
             config = PagingConfig(
                 pageSize = pageSize,
@@ -153,7 +166,7 @@ class BookRepository @Inject constructor(
                             sessionIds = sessionIds.value
                         )
                     )
-                )
+                ).also { pagingSourceRef.set(it) }
             }
         ).flow.map { pagingData -> pagingData.map { it.toDomain() } }
     }
@@ -271,6 +284,11 @@ class BookRepository @Inject constructor(
      *
      * This is the single code path behind both [refreshFromGrimmory] and the library paging
      * mediator — any tweak to the upsert contract should happen here.
+     *
+     * [GrimmoryRequest.recentlyAdded] routes to the dedicated `/books/recently-added` endpoint,
+     * which applies a 30-day window filter that `/books?sort=addedOn` doesn't — the two can't be
+     * reconciled from the client side. That endpoint is non-paginated; we return a single-page
+     * result (`nextPagePath=null`) so the mediator stops APPENDing after one REFRESH.
      */
     suspend fun upsertGrimmoryPage(
         server: Server,
@@ -279,13 +297,17 @@ class BookRepository @Inject constructor(
         pageSize: Int = 100
     ): Result<OpdsBookPage> {
         Timber.d(
-            "GrimmoryRefresh: search='${request.search}' seriesName='${request.seriesName}' " +
+            "GrimmoryRefresh: recentlyAdded=${request.recentlyAdded} " +
+                "search='${request.search}' seriesName='${request.seriesName}' " +
                 "libraryId=${request.libraryId} shelfId=${request.shelfId} " +
                 "magicShelfId=${request.magicShelfId} status='${request.status}' " +
                 "sort='${request.sort}' dir='${request.dir}' " +
                 "minRating=${request.minRating} maxRating=${request.maxRating} " +
                 "authors='${request.authors}' language='${request.language}'"
         )
+        if (request.recentlyAdded) {
+            return upsertGrimmoryRecentlyAdded(server, page, pageSize)
+        }
         val appPage = when {
             request.seriesName != null -> grimmoryAppClient.getSeriesBooks(
                 server.url, server.id, request.seriesName, page, pageSize
@@ -433,6 +455,9 @@ class BookRepository @Inject constructor(
         val format = appBook.toBookFormat()
         val coverUrl = resolvedCoverUrl(origin, appBook, format)
         val downloadUrl = grimmoryDownloadUrl(appBook.id)
+        // Prefer the server's addedOn so RECENT sort mirrors Grimmory's ordering; fall back to
+        // now() only when the server omits it (older API builds).
+        val serverAddedAt = parseServerTimestampOrNull(appBook.addedOn)
 
         if (existing != null) {
             bookDao.update(
@@ -442,7 +467,8 @@ class BookRepository @Inject constructor(
                     coverUrl = coverUrl,
                     downloadUrl = downloadUrl,
                     series = appBook.seriesName,
-                    seriesIndex = appBook.seriesNumber
+                    seriesIndex = appBook.seriesNumber,
+                    addedAt = serverAddedAt ?: existing.addedAt
                 )
             )
             return existing.id
@@ -458,11 +484,107 @@ class BookRepository @Inject constructor(
                 format = format,
                 series = appBook.seriesName,
                 seriesIndex = appBook.seriesNumber,
-                addedAt = Instant.now()
+                addedAt = serverAddedAt ?: Instant.now()
             )
             bookDao.insert(book.toEntity())
             return book.id
         }
+    }
+
+    /**
+     * Upserts a book returned by the `/books/recently-added` endpoint. The summary model carries
+     * fewer fields than [GrimmoryAppBook] — notably no `libraryId`, `seriesName`, or
+     * `seriesNumber` — so when a row already exists we preserve those from the prior upsert.
+     */
+    private suspend fun upsertGrimmorySummary(
+        serverId: Long,
+        origin: String,
+        opdsEntryId: String,
+        summary: GrimmoryBookSummary
+    ): String {
+        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
+        val format = summary.toBookFormat()
+        val coverUrl = if (format == BookFormat.AUDIOBOOK) {
+            grimmoryAppClient.audiobookCoverUrl(origin, summary.id, summary.coverUpdatedOn)
+        } else {
+            grimmoryAppClient.coverUrl(origin, summary.id, summary.coverUpdatedOn)
+        }
+        val downloadUrl = grimmoryDownloadUrl(summary.id)
+        val serverAddedAt = parseServerTimestampOrNull(summary.addedOn)
+
+        if (existing != null) {
+            bookDao.update(
+                existing.copy(
+                    title = summary.title,
+                    author = summary.authors.firstOrNull() ?: existing.author,
+                    coverUrl = coverUrl,
+                    downloadUrl = downloadUrl,
+                    addedAt = serverAddedAt ?: existing.addedAt
+                )
+            )
+            return existing.id
+        } else {
+            val book = Book(
+                id = java.util.UUID.randomUUID().toString(),
+                serverId = serverId,
+                opdsEntryId = opdsEntryId,
+                title = summary.title,
+                author = summary.authors.firstOrNull(),
+                coverUrl = coverUrl,
+                downloadUrl = downloadUrl,
+                format = format,
+                addedAt = serverAddedAt ?: Instant.now()
+            )
+            bookDao.insert(book.toEntity())
+            return book.id
+        }
+    }
+
+    /**
+     * Hits `/books/recently-added` and upserts the returned summaries. Non-paginated endpoint, so
+     * we only serve `page == 0`; higher pages short-circuit to an empty end-of-pagination result.
+     */
+    private suspend fun upsertGrimmoryRecentlyAdded(
+        server: Server,
+        page: Int,
+        pageSize: Int
+    ): Result<OpdsBookPage> {
+        if (page > 0) {
+            return Result.success(
+                OpdsBookPage(
+                    books = emptyList(),
+                    resolvedBookIds = emptyList(),
+                    totalResults = 0,
+                    nextPagePath = null
+                )
+            )
+        }
+        val summaries = grimmoryAppClient.getRecentlyAdded(
+            baseUrl = server.url,
+            serverId = server.id,
+            limit = pageSize
+        ).getOrElse {
+            Timber.e(it, "GrimmoryRefresh: /recently-added failed")
+            return Result.failure(it)
+        }
+        Timber.d("GrimmoryRefresh: /recently-added returned ${summaries.size} books")
+        val origin = serverOrigin(server.url)
+        val resolvedIds = summaries.map { summary ->
+            upsertGrimmorySummary(
+                serverId = server.id,
+                origin = origin,
+                opdsEntryId = grimmoryOpdsEntryId(summary.id),
+                summary = summary
+            )
+        }
+        return Result.success(
+            OpdsBookPage(
+                books = emptyList(),
+                resolvedBookIds = resolvedIds,
+                totalResults = summaries.size,
+                nextPagePath = null
+            )
+        )
     }
 
     /**
@@ -820,4 +942,26 @@ private fun GrimmoryAppBook.toBookFormat(): BookFormat = when (primaryFileType?.
     "PDF" -> BookFormat.PDF
     "AUDIOBOOK" -> BookFormat.AUDIOBOOK
     else -> BookFormat.EPUB
+}
+
+private fun GrimmoryBookSummary.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {
+    "PDF" -> BookFormat.PDF
+    "AUDIOBOOK" -> BookFormat.AUDIOBOOK
+    else -> BookFormat.EPUB
+}
+
+/**
+ * Parses Grimmory's `addedOn`-style timestamps (ISO-8601). Accepts offset forms
+ * (`2024-05-01T12:34:56Z`), plain offset (`...+00:00`), and local-time (`2024-05-01T12:34:56`) —
+ * the backend's Jackson defaults have varied across versions. Returns `null` for blank/invalid
+ * input so callers can fall back to a locally-generated timestamp without crashing.
+ */
+private fun parseServerTimestampOrNull(raw: String?): Instant? {
+    val trimmed = raw?.trim().orEmpty()
+    if (trimmed.isEmpty()) return null
+    return runCatching { Instant.parse(trimmed) }.getOrNull()
+        ?: runCatching { java.time.OffsetDateTime.parse(trimmed).toInstant() }.getOrNull()
+        ?: runCatching {
+            java.time.LocalDateTime.parse(trimmed).toInstant(java.time.ZoneOffset.UTC)
+        }.getOrNull()
 }

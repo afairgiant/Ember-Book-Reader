@@ -57,9 +57,21 @@ class LibraryViewModel @Inject constructor(
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
     private val catalogPath: String = savedStateHandle.get<String>("path") ?: ""
 
-    private val isSubcategory = catalogPath.contains("?") ||
+    /**
+     * Parsed Grimmory catalog params, or `null` when [catalogPath] isn't a Grimmory path. Empty
+     * map for unscoped roots (`grimmory:` or `grimmory:all`). This is the single source of truth
+     * for "is this a scoped Grimmory view" — both [isSubcategory] and [isUnfilteredRootView] read
+     * it, so they can't drift apart when new filter keys are added to [GRIMMORY_FILTER_KEYS].
+     */
+    private val grimmoryParams: Map<String, String>? = parseGrimmoryParamsOrNull(catalogPath)
+
+    private val isGrimmoryScopedPath: Boolean =
+        grimmoryParams?.keys?.any { it in GRIMMORY_FILTER_KEYS } == true
+
+    private val isSubcategory: Boolean = catalogPath.contains("?") ||
         catalogPath.contains("recent") ||
-        catalogPath.contains("surprise")
+        catalogPath.contains("surprise") ||
+        isGrimmoryScopedPath
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -70,9 +82,7 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
-    private val _sortOrder = MutableStateFlow(
-        if (catalogPath.contains("seriesName")) LibrarySortOrder.SERIES else LibrarySortOrder.TITLE
-    )
+    private val _sortOrder = MutableStateFlow(defaultSortOrderFor(catalogPath, grimmoryParams))
     val sortOrder: StateFlow<LibrarySortOrder> = _sortOrder.asStateFlow()
 
     private val _formatFilter = MutableStateFlow<BookFormat?>(null)
@@ -193,19 +203,9 @@ class LibraryViewModel @Inject constructor(
         return bookRepository.getByIds(ids).mapNotNull { it.grimmoryBookId }
     }
 
-    /** Fetches available filter options once on init — see [loadGrimmoryFilterOptions]. */
-    private fun isGrimmoryPath(): Boolean = catalogPath.startsWith("grimmory:")
-
     private suspend fun loadGrimmoryFilterOptions() {
         val currentServer = server ?: return
-        if (!isGrimmoryPath()) return
-        val paramString = catalogPath.removePrefix("grimmory:")
-        val params = paramString.split("&")
-            .filter { "=" in it }
-            .associate {
-                val (key, value) = it.split("=", limit = 2)
-                key to java.net.URLDecoder.decode(value, "UTF-8")
-            }
+        val params = grimmoryParams ?: return
         grimmoryAppClient.getFilterOptions(
             baseUrl = currentServer.url,
             serverId = currentServer.id,
@@ -227,18 +227,9 @@ class LibraryViewModel @Inject constructor(
      * True when the current view is a full unfiltered catalog root (not a shelf, library, series,
      * search, or subcategory). Reconcile/prune only runs for these.
      */
-    private fun isUnfilteredRootView(): Boolean {
-        if (catalogPath.startsWith("grimmory:")) {
-            val params = catalogPath.removePrefix("grimmory:")
-            if (params.isEmpty() || params == "all") return true
-            val keys = params.split("&").mapNotNull {
-                it.substringBefore("=", "").takeIf { k -> k.isNotEmpty() }
-            }.toSet()
-            val filterKeys =
-                setOf("libraryId", "shelfId", "magicShelfId", "seriesName", "status", "search")
-            return keys.none { it in filterKeys }
-        }
-        return "?" !in catalogPath && catalogPath.isNotEmpty()
+    private fun isUnfilteredRootView(): Boolean = when {
+        grimmoryParams != null -> !isGrimmoryScopedPath
+        else -> "?" !in catalogPath && catalogPath.isNotEmpty()
     }
 
     /**
@@ -332,6 +323,54 @@ class LibraryViewModel @Inject constructor(
         val query: String,
         val grimmoryFilter: GrimmoryFilter
     )
+
+    companion object {
+        /**
+         * Grimmory catalog-path keys that turn a catalog view into a scoped subcategory (shelf,
+         * library, series, etc.). Kept in one place so [isSubcategory] and [isUnfilteredRootView]
+         * can never disagree about what "scoped" means — adding a new scoped view means adding a
+         * key here and nowhere else.
+         *
+         * `recentlyAdded` is flag-shaped (`grimmory:recentlyAdded` with no `=value`) but lives
+         * here anyway so the Recently Added view gets sessionIds gating like shelves do.
+         */
+        private val GRIMMORY_FILTER_KEYS = setOf(
+            "libraryId", "shelfId", "magicShelfId", "seriesName", "status", "search", "recentlyAdded"
+        )
+
+        private fun parseGrimmoryParamsOrNull(catalogPath: String): Map<String, String>? {
+            if (!catalogPath.startsWith("grimmory:")) return null
+            val paramString = catalogPath.removePrefix("grimmory:")
+            if (paramString.isEmpty() || paramString == "all") return emptyMap()
+            return paramString.split("&")
+                .filter { it.isNotEmpty() }
+                .associate { segment ->
+                    if ("=" in segment) {
+                        val (key, value) = segment.split("=", limit = 2)
+                        key to java.net.URLDecoder.decode(value, "UTF-8")
+                    } else {
+                        // Flag-style params (e.g. `grimmory:recentlyAdded`) map to an empty value
+                        // so callers can still check for key presence.
+                        segment to ""
+                    }
+                }
+        }
+
+        /**
+         * Picks the initial local sort order for the library view. Most paths default to TITLE,
+         * but series views sort by series/index and the Recently Added view sorts by addedAt DESC
+         * so the local ordering mirrors Grimmory's `/recently-added` response instead of getting
+         * re-alphabetized.
+         */
+        private fun defaultSortOrderFor(
+            catalogPath: String,
+            grimmoryParams: Map<String, String>?
+        ): LibrarySortOrder = when {
+            catalogPath.contains("seriesName") -> LibrarySortOrder.SERIES
+            grimmoryParams?.containsKey("recentlyAdded") == true -> LibrarySortOrder.RECENT
+            else -> LibrarySortOrder.TITLE
+        }
+    }
 }
 
 enum class ViewMode { GRID, LIST }

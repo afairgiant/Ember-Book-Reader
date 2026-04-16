@@ -2,6 +2,7 @@ package com.ember.reader.ui.library
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import androidx.paging.PagingData
 import com.ember.reader.core.database.query.LibrarySortOrder
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
@@ -22,11 +23,13 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockkStatic
+import io.mockk.slot
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -37,6 +40,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -96,6 +101,15 @@ class LibraryViewModelTest {
             OpdsBookPage(books = emptyList())
         )
         coEvery { bookRepository.reconcileOpdsLibrary(any(), any()) } returns Result.success(0)
+        coEvery {
+            grimmoryAppClient.getFilterOptions(
+                baseUrl = any(),
+                serverId = any(),
+                libraryId = any(),
+                shelfId = any(),
+                magicShelfId = any()
+            )
+        } returns Result.failure(RuntimeException("unused in test"))
     }
 
     @AfterEach
@@ -103,9 +117,9 @@ class LibraryViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): LibraryViewModel {
+    private fun createViewModel(path: String = "/api/v1/opds/catalog"): LibraryViewModel {
         val savedStateHandle = SavedStateHandle(
-            mapOf("serverId" to 1L, "path" to "/api/v1/opds/catalog")
+            mapOf("serverId" to 1L, "path" to path)
         )
         return LibraryViewModel(
             savedStateHandle,
@@ -225,4 +239,63 @@ class LibraryViewModelTest {
         assertEquals(SyncStatus.Unknown, viewModel.syncStatus.value)
         collector.cancel()
     }
+
+    @Test
+    fun `Recently Added path defaults sort order to RECENT`() = runTest {
+        val viewModel = createViewModel(path = "grimmory:recentlyAdded")
+        advanceUntilIdle()
+
+        assertEquals(LibrarySortOrder.RECENT, viewModel.sortOrder.value)
+    }
+
+    @Test
+    fun `seriesName path defaults sort order to SERIES`() = runTest {
+        val viewModel = createViewModel(path = "grimmory:seriesName=Foundation")
+        advanceUntilIdle()
+
+        assertEquals(LibrarySortOrder.SERIES, viewModel.sortOrder.value)
+    }
+
+    /**
+     * Regression guard: Grimmory shelf/library paths must prime sessionIds with `emptySet()` so
+     * the DAO query gates rows to books the mediator has fetched for this shelf. A `null` seed
+     * skips the `id IN (...)` clause entirely and the UI shows every book on the server — the
+     * exact bug this encodes. Adding a new Grimmory scoped key to `GRIMMORY_FILTER_KEYS` is
+     * incomplete without an entry here.
+     */
+    @Test
+    fun `grimmory shelf path seeds sessionIds with emptySet, unscoped root seeds with null`() =
+        runTest {
+            val sessionIdsSlot = slot<MutableStateFlow<Set<String>?>>()
+            every {
+                bookRepository.pageByServer(
+                    server = any(),
+                    catalogPath = any(),
+                    sort = any(),
+                    formatFilter = any(),
+                    downloadedOnly = any(),
+                    query = any(),
+                    grimmoryFilter = any(),
+                    sessionIds = capture(sessionIdsSlot),
+                    pageSize = any()
+                )
+            } returns flowOf(PagingData.empty<Book>())
+            coEvery { bookRepository.reconcileGrimmoryLibrary(any()) } returns Result.success(0)
+
+            val shelfVm = createViewModel(path = "grimmory:shelfId=1")
+            val shelfCollector = launch { shelfVm.bookPagingData.collect { } }
+            advanceUntilIdle()
+
+            assertTrue(sessionIdsSlot.isCaptured, "pageByServer was not invoked for shelf path")
+            assertNotNull(sessionIdsSlot.captured.value, "shelf must seed sessionIds non-null")
+            assertEquals(emptySet<String>(), sessionIdsSlot.captured.value)
+            shelfCollector.cancel()
+
+            val rootVm = createViewModel(path = "grimmory:all")
+            val rootCollector = launch { rootVm.bookPagingData.collect { } }
+            advanceUntilIdle()
+
+            assertNull(sessionIdsSlot.captured.value, "unscoped root must seed sessionIds null")
+            rootCollector.cancel()
+        }
 }

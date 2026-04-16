@@ -17,6 +17,12 @@ import kotlinx.coroutines.flow.update
  * to empty; on APPEND it unions in newly-fetched IDs. The DAO query reads the same flow so the
  * Room PagingSource restricts rows to the subset of books the server returned for this view.
  *
+ * [invalidatePagingSource] is called after each scoped [sessionIds] update so the active
+ * PagingSource requeries with the populated allowlist. Without this the PagingSource would
+ * typically race Room's own auto-invalidation (triggered by the book upserts inside the fetch)
+ * and end up frozen on the stale `emptySet()` snapshot — the view would stay empty until an
+ * unrelated DB write forced a refresh. A no-op is valid (unscoped views don't need it).
+ *
  * No RemoteKeys table: OPDS uses an opaque next-path URL held in memory and Grimmory uses a
  * simple page counter. Across process death, paging will restart at page 0/1, which is fine for
  * this UI — there's no "jump back to row 3000" requirement.
@@ -24,7 +30,8 @@ import kotlinx.coroutines.flow.update
 @OptIn(ExperimentalPagingApi::class)
 class LibraryRemoteMediator(
     private val networkPager: NetworkPager,
-    private val sessionIds: MutableStateFlow<Set<String>?>
+    private val sessionIds: MutableStateFlow<Set<String>?>,
+    private val invalidatePagingSource: () -> Unit = {}
 ) : RemoteMediator<Int, BookEntity>() {
 
     override suspend fun load(
@@ -45,6 +52,7 @@ class LibraryRemoteMediator(
         onSuccess = { page ->
             if (sessionIds.value != null) {
                 sessionIds.update { (it ?: emptySet()) + page.resolvedBookIds }
+                invalidatePagingSource()
             }
             MediatorResult.Success(endOfPaginationReached = page.endOfPagination)
         },

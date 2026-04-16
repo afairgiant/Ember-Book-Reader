@@ -13,6 +13,11 @@ import java.net.URLDecoder
  * catalogPath string used by the library navigation. When both the path and the filter set
  * `status`, the path wins — the user has navigated into a scoped view. Search is the inverse:
  * a non-blank `searchOverride` (from the search bar) wins over any path-level `search` param.
+ *
+ * [recentlyAdded] routes the fetch to Grimmory's dedicated `/books/recently-added` endpoint,
+ * which applies a 30-day window filter that the generic `/books?sort=addedOn` query doesn't —
+ * the two endpoints return different rows, so there's no way to reproduce the home-page view
+ * from ordinary sort params alone.
  */
 data class GrimmoryRequest(
     val libraryId: Long? = null,
@@ -26,7 +31,8 @@ data class GrimmoryRequest(
     val minRating: Int? = null,
     val maxRating: Int? = null,
     val authors: String? = null,
-    val language: String? = null
+    val language: String? = null,
+    val recentlyAdded: Boolean = false
 ) {
     companion object {
         fun fromCatalogPath(
@@ -44,6 +50,7 @@ data class GrimmoryRequest(
             val resolvedSearch = searchOverride
                 ?.takeIf { it.isNotBlank() }
                 ?: params["search"]
+            val recentlyAdded = paramString == "recentlyAdded" || "recentlyAdded" in params
             return GrimmoryRequest(
                 libraryId = params["libraryId"]?.toLongOrNull(),
                 shelfId = params["shelfId"]?.toLongOrNull(),
@@ -56,7 +63,8 @@ data class GrimmoryRequest(
                 minRating = filter.minRating,
                 maxRating = filter.maxRating,
                 authors = filter.authors,
-                language = filter.language
+                language = filter.language,
+                recentlyAdded = recentlyAdded
             )
         }
     }
