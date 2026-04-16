@@ -12,6 +12,7 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.toGrimmoryPercentage
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -96,6 +97,7 @@ data class PushResult(
 @Singleton
 class ProgressSyncManager @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
+    private val bookRepository: BookRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val syncStatusRepository: SyncStatusRepository
@@ -180,8 +182,12 @@ class ProgressSyncManager @Inject constructor(
             return SourceOutcome.Skipped(SkipReason.NoKosyncCreds)
         }
         Timber.d("Sync pull: trying kosync for '${book.title}' hash=$fileHash")
-        val result = readingProgressRepository.pullKosyncProgress(server, book.id, fileHash)
-        return result.fold(
+        val first = readingProgressRepository.pullKosyncProgress(server, book.id, fileHash)
+        val retried = first.recoverKosync404(book.id, fileHash) { refreshedHash ->
+            Timber.i("Sync pull: retrying kosync for '${book.title}' with refreshed hash=$refreshedHash")
+            readingProgressRepository.pullKosyncProgress(server, book.id, refreshedHash)
+        }
+        return retried.fold(
             onSuccess = { remote ->
                 if (remote == null) {
                     Timber.d("Sync pull: kosync returned nothing for '${book.title}'")
@@ -250,7 +256,12 @@ class ProgressSyncManager @Inject constructor(
             return SourceOutcome.Skipped(SkipReason.NoKosyncCreds)
         }
         Timber.d("Sync push: pushing kosync for '${book.title}' hash=$fileHash user=${server.kosyncUsername}")
-        return readingProgressRepository.pushKosyncProgress(server, book.id, fileHash).fold(
+        val first = readingProgressRepository.pushKosyncProgress(server, book.id, fileHash)
+        val retried = first.recoverKosync404(book.id, fileHash) { refreshedHash ->
+            Timber.i("Sync push: retrying kosync for '${book.title}' with refreshed hash=$refreshedHash")
+            readingProgressRepository.pushKosyncProgress(server, book.id, refreshedHash)
+        }
+        return retried.fold(
             onSuccess = {
                 Timber.d("Sync push: kosync OK for '${book.title}'")
                 SourceOutcome.Ok(Unit)
@@ -260,6 +271,35 @@ class ProgressSyncManager @Inject constructor(
                 SourceOutcome.Failure(error)
             }
         )
+    }
+
+    /**
+     * On a kosync 404 (server doesn't recognise our hash — almost always stale
+     * after a metadata edit rewrote the EPUB), re-download the file so the
+     * partial-MD5 re-computes to whatever Grimmory now has stored, then retry
+     * once with the new hash. If the refresh fails or the hash didn't actually
+     * change (book genuinely unknown to server), propagate the original 404.
+     */
+    private suspend fun <T> Result<T>.recoverKosync404(
+        bookId: String,
+        oldHash: String,
+        retry: suspend (refreshedHash: String) -> Result<T>
+    ): Result<T> {
+        val err = exceptionOrNull() as? KosyncHttpException ?: return this
+        if (err.statusCode != 404) return this
+
+        val refresh = bookRepository.refreshDownloadedFile(bookId)
+        if (refresh.isFailure) {
+            Timber.w(refresh.exceptionOrNull(), "Kosync 404: refresh failed, keeping original 404 for book $bookId")
+            return this
+        }
+        val newHash = bookRepository.getById(bookId)?.fileHash
+        if (newHash == null || newHash == oldHash) {
+            Timber.w("Kosync 404: hash unchanged after refresh (book not on server), not retrying")
+            return this
+        }
+        Timber.i("Kosync 404 recovered: hash $oldHash -> $newHash for book $bookId; retrying")
+        return retry(newHash)
     }
 
     private suspend fun pushGrimmory(

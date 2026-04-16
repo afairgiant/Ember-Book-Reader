@@ -499,6 +499,35 @@ class BookRepository @Inject constructor(
         onProgress: ((DownloadProgress) -> Unit)? = null
     ): Result<Book> = bookDownloader.downloadBook(book, server, onProgress)
 
+    /**
+     * Re-download a previously-downloaded book to refresh the local file and
+     * its partial-MD5 `fileHash` after the server-side file has changed
+     * (typically a metadata edit that rewrites the EPUB, flipping the hash
+     * Grimmory stores in `book_file.current_hash`). Without this, kosync push
+     * / pull 404s on the now-stale local hash.
+     *
+     * No-op when the book isn't eligible: not downloaded yet, no server, or
+     * no `grimmoryBookId` (we can only refresh files we can fetch again).
+     */
+    suspend fun refreshDownloadedFile(bookId: String): Result<Book> {
+        val book = getById(bookId) ?: return Result.failure(
+            IllegalStateException("refreshDownloadedFile: book $bookId not in local DB")
+        )
+        if (book.localPath.isNullOrBlank()) {
+            return Result.failure(
+                IllegalStateException("refreshDownloadedFile: book ${book.id} not downloaded")
+            )
+        }
+        val serverId = book.serverId ?: return Result.failure(
+            IllegalStateException("refreshDownloadedFile: book ${book.id} has no server")
+        )
+        val server = serverRepository.getById(serverId) ?: return Result.failure(
+            IllegalStateException("refreshDownloadedFile: server $serverId missing")
+        )
+        Timber.i("Refreshing downloaded file for '${book.title}' to recover from server-side hash change")
+        return bookDownloader.downloadBook(book, server)
+    }
+
     suspend fun addLocalBook(book: Book) {
         val file = book.localPath?.let { File(it) }
 

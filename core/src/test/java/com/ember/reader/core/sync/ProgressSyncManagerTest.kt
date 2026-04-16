@@ -5,6 +5,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingProgressRepository.KosyncProgressResult
 import com.ember.reader.core.testutil.TestFixtures.book
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 class ProgressSyncManagerTest {
 
     private val readingProgressRepository: ReadingProgressRepository = mockk(relaxed = true)
+    private val bookRepository: BookRepository = mockk(relaxed = true)
     private val grimmoryClient: GrimmoryClient = mockk(relaxed = true)
     private val grimmoryTokenManager: GrimmoryTokenManager = mockk(relaxed = true)
     private val fixedInstant = Instant.parse("2026-04-14T12:00:00Z")
@@ -50,6 +52,7 @@ class ProgressSyncManagerTest {
     fun setUp() {
         syncManager = ProgressSyncManager(
             readingProgressRepository,
+            bookRepository,
             grimmoryClient,
             grimmoryTokenManager,
             syncStatusRepository
@@ -294,6 +297,60 @@ class ProgressSyncManagerTest {
             assertTrue(result.allFailed)
             assertTrue(result.anyFailed)
             assertFalse(result.anySucceeded)
+        }
+
+        @Test
+        fun `kosync 404 triggers file refresh and retries with new hash`() = runTest {
+            val originalHash = "old-hash"
+            val newHash = "new-hash"
+            val bookWithOldHash = book(fileHash = originalHash)
+            val bookWithNewHash = bookWithOldHash.copy(fileHash = newHash)
+
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+
+            // First push (with old hash) 404s; second push (with refreshed hash) succeeds.
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), originalHash) } returns
+                Result.failure(KosyncHttpException(404, "Book not found"))
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), newHash) } returns
+                Result.success(Unit)
+
+            // Refresh swaps the stored hash; the manager reads the new hash via getById.
+            coEvery { bookRepository.refreshDownloadedFile(bookWithOldHash.id) } returns
+                Result.success(bookWithNewHash)
+            coEvery { bookRepository.getById(bookWithOldHash.id) } returns bookWithNewHash
+
+            // Grimmory push — keep the other channel clean so we can isolate the kosync retry.
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                Result.success(grimmoryBookDetail())
+            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, bookWithOldHash)
+
+            assertTrue(result.kosync is SourceOutcome.Ok, "expected kosync OK after retry, got ${result.kosync}")
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            coVerify(exactly = 1) { bookRepository.refreshDownloadedFile(bookWithOldHash.id) }
+            coVerify(exactly = 1) { readingProgressRepository.pushKosyncProgress(any(), any(), originalHash) }
+            coVerify(exactly = 1) { readingProgressRepository.pushKosyncProgress(any(), any(), newHash) }
+        }
+
+        @Test
+        fun `kosync 404 does not retry when refresh produces same hash`() = runTest {
+            val sameHash = "same-hash"
+            val bookStatic = book(fileHash = sameHash)
+
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), sameHash) } returns
+                Result.failure(KosyncHttpException(404, "Book not found"))
+            coEvery { bookRepository.refreshDownloadedFile(bookStatic.id) } returns Result.success(bookStatic)
+            coEvery { bookRepository.getById(bookStatic.id) } returns bookStatic
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                Result.success(grimmoryBookDetail())
+            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, bookStatic)
+
+            assertTrue(result.kosync is SourceOutcome.Failure, "expected failure when hash unchanged")
+            coVerify(exactly = 1) { readingProgressRepository.pushKosyncProgress(any(), any(), sameHash) }
         }
 
         @Test

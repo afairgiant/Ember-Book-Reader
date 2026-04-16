@@ -3,6 +3,7 @@ package com.ember.reader.ui.editmetadata
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.grimmory.FetchMetadataRequest
 import com.ember.reader.core.grimmory.GrimmoryBookMetadata
 import com.ember.reader.core.grimmory.MetadataClearFlags
@@ -20,6 +21,7 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -209,7 +211,8 @@ class EditMetadataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
-    private val metadataClient: MetadataClient
+    private val metadataClient: MetadataClient,
+    @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
@@ -486,6 +489,20 @@ class EditMetadataViewModel @Inject constructor(
                 )
             }
             _saved.value = true
+
+            // Grimmory rewrites the EPUB bytes when saving metadata, which flips
+            // `book_file.current_hash`. Our local file still has the old hash, so
+            // future kosync requests would 404. Refresh the local file in the
+            // background so the hash is back in sync. Fire-and-forget on the app
+            // scope so it survives the ViewModel going away as the user navigates
+            // away post-save.
+            if (s.book.localPath != null) {
+                applicationScope.launch {
+                    bookRepository.refreshDownloadedFile(s.bookId).onFailure { error ->
+                        Timber.w(error, "Post-save file refresh failed for '${s.book.title}' — kosync may 404 until next sync")
+                    }
+                }
+            }
         }.onFailure { e ->
             Timber.e(e, "Save metadata failed")
             updateSuccess { it.copy(saving = false) }

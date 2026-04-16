@@ -50,7 +50,7 @@ class KosyncClient @Inject constructor(
             setBody(request)
         }
         if (!response.status.isSuccess()) {
-            error("Push progress failed: ${response.status}")
+            throw KosyncHttpException(response.status.value, "Push progress failed: ${response.status}")
         }
     }
 
@@ -67,11 +67,19 @@ class KosyncClient @Inject constructor(
             header("x-auth-key", md5Hash(password))
             headers[HttpHeaders.Accept] = ACCEPT_HEADER
         }
-        if (response.status.isSuccess()) {
-            response.body<KosyncProgressResponse>()
-        } else {
-            Timber.w("Pull progress returned ${response.status}")
-            null
+        when {
+            response.status.isSuccess() -> response.body<KosyncProgressResponse>()
+            // 404 on pull means "book hash not on server" — almost always stale local
+            // hash after a metadata edit rewrote the file. Surface it typed so the
+            // caller can refresh the local file and retry instead of silently
+            // treating it as "no remote progress" (which would then pre-empt a
+            // real pull once the hash is corrected).
+            response.status.value == 404 ->
+                throw KosyncHttpException(404, "Pull progress returned 404 for hash=$documentHash")
+            else -> {
+                Timber.w("Pull progress returned ${response.status}")
+                null
+            }
         }
     }
 
@@ -79,6 +87,17 @@ class KosyncClient @Inject constructor(
         private const val ACCEPT_HEADER = "application/vnd.koreader.v1+json"
     }
 }
+
+/**
+ * Typed failure from the kosync endpoint. Callers need to tell 404s (book-not-
+ * found — kosync identifies books by a partial-MD5 hash that can drift from
+ * the server's stored hash when files are rewritten during metadata edits)
+ * apart from generic failures so they can trigger a local file refresh.
+ */
+class KosyncHttpException(
+    val statusCode: Int,
+    message: String
+) : RuntimeException(message)
 
 @Serializable
 data class KosyncProgressRequest(

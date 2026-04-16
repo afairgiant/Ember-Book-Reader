@@ -154,9 +154,24 @@ class KosyncClientTest {
     }
 
     @Test
-    fun `pullProgress returns null on non-success status`() = runTest {
+    fun `pullProgress surfaces 404 as typed KosyncHttpException so callers can refresh`() = runTest {
         val engine = MockEngine {
             respond(content = ByteReadChannel(""), status = HttpStatusCode.NotFound)
+        }
+
+        val client = createClient(engine)
+        val result = client.pullProgress(baseUrl, username, password, "abc123hash")
+
+        assertTrue(result.isFailure)
+        val err = result.exceptionOrNull()
+        assertTrue(err is KosyncHttpException, "expected KosyncHttpException, got $err")
+        assertEquals(404, (err as KosyncHttpException).statusCode)
+    }
+
+    @Test
+    fun `pullProgress returns null on other non-success statuses`() = runTest {
+        val engine = MockEngine {
+            respond(content = ByteReadChannel(""), status = HttpStatusCode.InternalServerError)
         }
 
         val client = createClient(engine)
