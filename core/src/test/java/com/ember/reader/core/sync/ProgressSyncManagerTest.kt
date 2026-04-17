@@ -374,6 +374,32 @@ class ProgressSyncManagerTest {
     }
 
     @Nested
+    inner class DisabledChannels {
+
+        @Test
+        fun `pushProgress skips kosync when kosyncEnabled is false`() = runTest {
+            val disabled = testServer.copy(kosyncEnabled = false)
+            coEvery { readingProgressRepository.getByBookId(testBook.id) } returns
+                readingProgress(percentage = 0.5f)
+
+            val result = syncManager.pushProgress(disabled, testBook)
+
+            assertTrue(result.kosync is SourceOutcome.Skipped)
+            assertEquals(SkipReason.KosyncDisabled, (result.kosync as SourceOutcome.Skipped).reason)
+            coVerify(exactly = 0) { readingProgressRepository.pushKosyncProgress(any(), any(), any()) }
+        }
+
+        @Test
+        fun `pullBestProgress skips kosync when kosyncEnabled is false`() = runTest {
+            val disabled = testServer.copy(kosyncEnabled = false)
+
+            syncManager.pullBestProgress(disabled, testBook)
+
+            coVerify(exactly = 0) { readingProgressRepository.pullKosyncProgress(any(), any(), any()) }
+        }
+    }
+
+    @Nested
     inner class StatusReporting {
 
         @Test

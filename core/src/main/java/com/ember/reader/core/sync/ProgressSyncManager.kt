@@ -34,9 +34,10 @@ enum class SkipReason {
     NoLocalProgress,
     NoFileHash,
     NoKosyncCreds,
+    KosyncDisabled,
     NoGrimmoryBookId,
     ServerNotGrimmory,
-    GrimmoryNotLoggedIn
+    GrimmoryNotLoggedIn,
 }
 
 /**
@@ -161,6 +162,10 @@ class ProgressSyncManager @Inject constructor(
     }
 
     private suspend fun pullKosync(server: Server, book: Book): SourceOutcome<RemoteSyncResult> {
+        if (!server.kosyncEnabled) {
+            Timber.d("Sync pull: skipping kosync for '${book.title}' — kosync disabled on server")
+            return SourceOutcome.Skipped(SkipReason.KosyncDisabled)
+        }
         val fileHash = book.fileHash
         if (fileHash == null) {
             Timber.d("Sync pull: skipping kosync for '${book.title}' — no fileHash")
@@ -235,6 +240,10 @@ class ProgressSyncManager @Inject constructor(
     }
 
     private suspend fun pushKosync(server: Server, book: Book): SourceOutcome<Unit> {
+        if (!server.kosyncEnabled) {
+            Timber.d("Sync push: skipping kosync for '${book.title}' — kosync disabled on server")
+            return SourceOutcome.Skipped(SkipReason.KosyncDisabled)
+        }
         val fileHash = book.fileHash
         if (fileHash == null) {
             Timber.d("Sync push: skipping kosync for '${book.title}' — no fileHash")
