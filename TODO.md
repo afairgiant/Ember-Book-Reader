@@ -116,7 +116,7 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Sync-status dot next to each server in Browse; probe on Browse load; clear on delete
 - [x] HTTP streaming reader for Grimmory books + normalized progress scale for streamed books
 - [ ] Auto-detect server capabilities (OPDS version, kosync availability)
-- [ ] Make OPDS and Kosync optional when adding a Grimmory server
+- [x] Make OPDS and Kosync optional when adding a Grimmory server
     - Add an "Enable OPDS" checkbox and an "Enable Kosync" checkbox, both off by default on new Grimmory servers
     - Hide each section's credential fields + test button until its checkbox is on
     - The existing "Use Grimmory login for OPDS/Kosync" checkboxes stay in place but render disabled (greyed) until the parent service is enabled
