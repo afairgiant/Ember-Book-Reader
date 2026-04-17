@@ -393,8 +393,9 @@ class ProgressSyncManagerTest {
         fun `pullBestProgress skips kosync when kosyncEnabled is false`() = runTest {
             val disabled = testServer.copy(kosyncEnabled = false)
 
-            syncManager.pullBestProgress(disabled, testBook)
+            val result = syncManager.pullBestProgress(disabled, testBook)
 
+            assertNull(result)
             coVerify(exactly = 0) { readingProgressRepository.pullKosyncProgress(any(), any(), any()) }
         }
     }
