@@ -1,6 +1,7 @@
 package com.ember.reader.ui.server
 
 import androidx.lifecycle.SavedStateHandle
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -141,10 +142,10 @@ class ServerFormViewModelTest {
 
     @Test
     fun `saveGrimmory with kosync disabled persists blank kosync credentials`() = runTest {
-        val captured = slot<com.ember.reader.core.model.Server>()
+        val captured = slot<Server>()
         coEvery { serverRepository.save(capture(captured)) } returns 1L
 
-        val viewModel = ServerFormViewModel(SavedStateHandle(mapOf("serverId" to -1L)), serverRepository)
+        val viewModel = createViewModel()
         viewModel.updateName("g1")
         viewModel.updateUrl("https://g1")
         viewModel.updateGrimmoryUsername("alex")
@@ -169,10 +170,10 @@ class ServerFormViewModelTest {
 
     @Test
     fun `save (OPDS-only server) respects opdsEnabled flag`() = runTest {
-        val captured = slot<com.ember.reader.core.model.Server>()
+        val captured = slot<Server>()
         coEvery { serverRepository.save(capture(captured)) } returns 1L
 
-        val viewModel = ServerFormViewModel(SavedStateHandle(mapOf("serverId" to -1L)), serverRepository)
+        val viewModel = createViewModel()
         viewModel.updateName("opds1")
         viewModel.updateUrl("https://opds.example")
         viewModel.setOpdsEnabled(true)
@@ -188,5 +189,31 @@ class ServerFormViewModelTest {
         assertEquals("alex", saved.opdsUsername)
         assertFalse(saved.kosyncEnabled)
         assertEquals("", saved.kosyncUsername)
+    }
+
+    @Test
+    fun `saveGrimmory uses grimmory login for opds when opdsEnabled and delegation is on`() = runTest {
+        val captured = slot<Server>()
+        coEvery { serverRepository.save(capture(captured)) } returns 1L
+
+        val viewModel = createViewModel()
+        viewModel.updateName("g1")
+        viewModel.updateUrl("https://g1")
+        viewModel.updateGrimmoryUsername("alex")
+        viewModel.updateGrimmoryPassword("gpass")
+        viewModel.setOpdsEnabled(true)
+        // opdsUsername/opdsPassword left blank — delegation should copy Grimmory values
+
+        viewModel.saveGrimmory(
+            useGrimmoryLoginForOpds = true,
+            useGrimmoryLoginForKosync = true,
+            onSuccess = {},
+        )
+        runCurrent()
+
+        val saved = captured.captured
+        assertEquals("alex", saved.opdsUsername)
+        assertEquals("gpass", saved.opdsPassword)
+        assertTrue(saved.opdsEnabled)
     }
 }
