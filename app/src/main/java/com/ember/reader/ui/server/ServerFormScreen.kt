@@ -133,10 +133,17 @@ fun ServerFormScreen(
                 onGrimmory = {
                     isGrimmoryType = true
                     serverTypeChosen = true
+                    // Both off by default on new Grimmory servers (user opts in explicitly)
+                    viewModel.setOpdsEnabled(false)
+                    viewModel.setKosyncEnabled(false)
                 },
                 onOpds = {
                     isGrimmoryType = false
                     serverTypeChosen = true
+                    // Plain OPDS servers are pointless without OPDS — on by default.
+                    // Kosync still opt-in.
+                    viewModel.setOpdsEnabled(true)
+                    viewModel.setKosyncEnabled(false)
                 }
             )
         } else if (isGrimmoryType) {
