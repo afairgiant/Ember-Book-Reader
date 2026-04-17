@@ -20,6 +20,7 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -176,5 +177,39 @@ class ServerRepositoryTest {
 
         assertTrue(result.isSuccess)
         coVerify { kosyncClient.authenticate("http://example.com", "user", "pass") }
+    }
+
+    @Test
+    fun `save then getById round-trips opdsEnabled and kosyncEnabled`() = runTest {
+        val server = Server(
+            id = 0,
+            name = "Test Server",
+            url = "http://localhost",
+            opdsUsername = "opds_user",
+            opdsPassword = "opds_pass",
+            kosyncUsername = "kosync_user",
+            kosyncPassword = "kosync_pass",
+            opdsEnabled = true,
+            kosyncEnabled = false,
+        )
+        coEvery { serverDao.insert(any()) } returns 9L
+        every { credentialEncryption.storePassword(any(), any()) } returns Unit
+        coEvery { serverDao.getById(9L) } returns com.ember.reader.core.database.entity.ServerEntity(
+            id = 9L,
+            name = "Test Server",
+            url = "http://localhost",
+            opdsUsername = "opds_user",
+            kosyncUsername = "kosync_user",
+            opdsEnabled = true,
+            kosyncEnabled = false,
+        )
+        every { credentialEncryption.getPassword(any()) } returns ""
+
+        val savedId = repository.save(server)
+        val loaded = repository.getById(savedId)
+
+        assertNotNull(loaded)
+        assertTrue(loaded!!.opdsEnabled)
+        assertFalse(loaded.kosyncEnabled)
     }
 }
