@@ -184,6 +184,10 @@ Full API reference: `docs/grimmory-api.md`
 - [x] Background playback (continue reading with screen off)
 - [ ] Readium has TTS support via `readium-navigator-media`
 
+### EPUB 3 Media Overlays (Synchronized Audiobook / EPUB Combo)
+- [ ] Support for EPUB 3 with embedded audio (combined audiobook/ebook) — SMIL-based read-along where text highlights sync with narration
+- [ ] Blocked on Readium Kotlin Toolkit — upstream has signalled proper support by end of 2026; revisit then
+
 ### Search in Book
 - [x] Full-text search within the current book (via Readium SearchService)
 - [x] Search results list with context snippets (highlighted match text)
