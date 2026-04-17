@@ -493,6 +493,7 @@ class LocalLibraryViewModel @Inject constructor(
         SkipReason.NoLocalProgress -> "nothing to push"
         SkipReason.NoFileHash -> "skipped (not downloaded locally)"
         SkipReason.NoKosyncCreds -> "not configured"
+        SkipReason.KosyncDisabled -> "disabled"
         SkipReason.NoGrimmoryBookId -> "not linked"
         SkipReason.ServerNotGrimmory -> "not available"
         SkipReason.GrimmoryNotLoggedIn -> "sign in required"

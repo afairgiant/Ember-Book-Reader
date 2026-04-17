@@ -6,15 +6,18 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -134,5 +137,56 @@ class ServerFormViewModelTest {
         val result = viewModel.uiState.value.opdsTestResult
         assertTrue(result is TestResult.Error)
         assertEquals("Connection refused", (result as TestResult.Error).message)
+    }
+
+    @Test
+    fun `saveGrimmory with kosync disabled persists blank kosync credentials`() = runTest {
+        val captured = slot<com.ember.reader.core.model.Server>()
+        coEvery { serverRepository.save(capture(captured)) } returns 1L
+
+        val viewModel = ServerFormViewModel(SavedStateHandle(mapOf("serverId" to -1L)), serverRepository)
+        viewModel.updateName("g1")
+        viewModel.updateUrl("https://g1")
+        viewModel.updateGrimmoryUsername("alex")
+        viewModel.updateGrimmoryPassword("pw")
+        viewModel.setOpdsEnabled(false)
+        viewModel.setKosyncEnabled(false)
+        viewModel.updateKosyncUsername("stale")   // should be discarded
+        viewModel.updateKosyncPassword("stale")
+
+        viewModel.saveGrimmory(
+            useGrimmoryLoginForOpds = false,
+            useGrimmoryLoginForKosync = false,
+            onSuccess = {}
+        )
+        runCurrent()
+
+        val saved = captured.captured
+        assertFalse(saved.kosyncEnabled)
+        assertEquals("", saved.kosyncUsername)
+        assertEquals("", saved.kosyncPassword)
+    }
+
+    @Test
+    fun `save (OPDS-only server) respects opdsEnabled flag`() = runTest {
+        val captured = slot<com.ember.reader.core.model.Server>()
+        coEvery { serverRepository.save(capture(captured)) } returns 1L
+
+        val viewModel = ServerFormViewModel(SavedStateHandle(mapOf("serverId" to -1L)), serverRepository)
+        viewModel.updateName("opds1")
+        viewModel.updateUrl("https://opds.example")
+        viewModel.setOpdsEnabled(true)
+        viewModel.updateOpdsUsername("alex")
+        viewModel.updateOpdsPassword("pw")
+        viewModel.setKosyncEnabled(false)
+
+        viewModel.save(onSuccess = {})
+        runCurrent()
+
+        val saved = captured.captured
+        assertTrue(saved.opdsEnabled)
+        assertEquals("alex", saved.opdsUsername)
+        assertFalse(saved.kosyncEnabled)
+        assertEquals("", saved.kosyncUsername)
     }
 }

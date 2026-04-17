@@ -41,7 +41,9 @@ class ServerFormViewModel @Inject constructor(
                             grimmoryUsername = server.grimmoryUsername,
                             grimmoryPassword = server.grimmoryPassword,
                             isGrimmory = server.isGrimmory,
-                            isEditing = true
+                            opdsEnabled = server.opdsEnabled,
+                            kosyncEnabled = server.kosyncEnabled,
+                            isEditing = true,
                         )
                     }
                 }
@@ -59,6 +61,8 @@ class ServerFormViewModel @Inject constructor(
         _uiState.update { it.copy(grimmoryUsername = value) }
     fun updateGrimmoryPassword(value: String) =
         _uiState.update { it.copy(grimmoryPassword = value) }
+    fun setOpdsEnabled(value: Boolean) = _uiState.update { it.copy(opdsEnabled = value) }
+    fun setKosyncEnabled(value: Boolean) = _uiState.update { it.copy(kosyncEnabled = value) }
 
     fun testOpdsConnection() {
         val state = _uiState.value
@@ -200,13 +204,15 @@ class ServerFormViewModel @Inject constructor(
                 id = serverId ?: 0,
                 name = state.name.trim(),
                 url = state.url.trim().trimEnd('/'),
-                opdsUsername = state.opdsUsername.trim(),
-                opdsPassword = state.opdsPassword,
-                kosyncUsername = state.kosyncUsername.trim(),
-                kosyncPassword = state.kosyncPassword,
+                opdsUsername = if (state.opdsEnabled) state.opdsUsername.trim() else "",
+                opdsPassword = if (state.opdsEnabled) state.opdsPassword else "",
+                kosyncUsername = if (state.kosyncEnabled) state.kosyncUsername.trim() else "",
+                kosyncPassword = if (state.kosyncEnabled) state.kosyncPassword else "",
                 grimmoryUsername = state.grimmoryUsername.trim(),
                 grimmoryPassword = state.grimmoryPassword,
-                isGrimmory = state.isGrimmory
+                isGrimmory = state.isGrimmory,
+                opdsEnabled = state.opdsEnabled,
+                kosyncEnabled = state.kosyncEnabled,
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -234,10 +240,26 @@ class ServerFormViewModel @Inject constructor(
             val grimmoryUser = state.grimmoryUsername.trim()
             val grimmoryPass = state.grimmoryPassword
 
-            val opdsUser = if (useGrimmoryLoginForOpds) grimmoryUser else state.opdsUsername.trim()
-            val opdsPass = if (useGrimmoryLoginForOpds) grimmoryPass else state.opdsPassword
-            val kosyncUser = if (useGrimmoryLoginForKosync) grimmoryUser else state.kosyncUsername.trim()
-            val kosyncPass = if (useGrimmoryLoginForKosync) grimmoryPass else state.kosyncPassword
+            val opdsUser = when {
+                !state.opdsEnabled -> ""
+                useGrimmoryLoginForOpds -> grimmoryUser
+                else -> state.opdsUsername.trim()
+            }
+            val opdsPass = when {
+                !state.opdsEnabled -> ""
+                useGrimmoryLoginForOpds -> grimmoryPass
+                else -> state.opdsPassword
+            }
+            val kosyncUser = when {
+                !state.kosyncEnabled -> ""
+                useGrimmoryLoginForKosync -> grimmoryUser
+                else -> state.kosyncUsername.trim()
+            }
+            val kosyncPass = when {
+                !state.kosyncEnabled -> ""
+                useGrimmoryLoginForKosync -> grimmoryPass
+                else -> state.kosyncPassword
+            }
 
             val server = Server(
                 id = serverId ?: 0,
@@ -249,7 +271,9 @@ class ServerFormViewModel @Inject constructor(
                 kosyncPassword = kosyncPass,
                 grimmoryUsername = grimmoryUser,
                 grimmoryPassword = grimmoryPass,
-                isGrimmory = true
+                isGrimmory = true,
+                opdsEnabled = state.opdsEnabled,
+                kosyncEnabled = state.kosyncEnabled,
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -268,13 +292,15 @@ data class ServerFormUiState(
     val grimmoryUsername: String = "",
     val grimmoryPassword: String = "",
     val isGrimmory: Boolean = false,
+    val opdsEnabled: Boolean = false,
+    val kosyncEnabled: Boolean = false,
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
     val validationError: String? = null,
     val opdsTestResult: TestResult = TestResult.Idle,
     val kosyncTestResult: TestResult = TestResult.Idle,
     val grimmoryTestResult: TestResult = TestResult.Idle,
-    val grimmoryTestPermissions: GrimmoryUserPermissions? = null
+    val grimmoryTestPermissions: GrimmoryUserPermissions? = null,
 )
 
 sealed interface TestResult {
