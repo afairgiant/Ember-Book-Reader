@@ -354,47 +354,57 @@ private fun GrimmoryForm(
         // OPDS section
         SectionHeader(icon = Icons.Default.CloudQueue, title = stringResource(R.string.opds_credentials))
         Spacer(modifier = Modifier.height(8.dp))
-        SameLoginCheckbox(
-            checked = useGrimmoryLoginForOpds,
-            onCheckedChange = onUseGrimmoryLoginForOpdsChanged,
-            label = stringResource(R.string.use_grimmory_login_for_opds)
+        EnableSectionCheckbox(
+            checked = uiState.opdsEnabled,
+            onCheckedChange = viewModel::setOpdsEnabled,
+            label = stringResource(R.string.enable_opds),
         )
-        AnimatedVisibility(visible = !useGrimmoryLoginForOpds) {
+        AnimatedVisibility(visible = uiState.opdsEnabled) {
             Column {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = uiState.opdsUsername,
-                    onValueChange = viewModel::updateOpdsUsername,
-                    label = { Text(stringResource(R.string.opds_username)) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(4.dp))
+                SameLoginCheckbox(
+                    checked = useGrimmoryLoginForOpds,
+                    onCheckedChange = onUseGrimmoryLoginForOpdsChanged,
+                    label = stringResource(R.string.use_grimmory_login_for_opds),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = uiState.opdsPassword,
-                    onValueChange = viewModel::updateOpdsPassword,
-                    label = { Text(stringResource(R.string.opds_password)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                AnimatedVisibility(visible = !useGrimmoryLoginForOpds) {
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.opdsUsername,
+                            onValueChange = viewModel::updateOpdsUsername,
+                            label = { Text(stringResource(R.string.opds_username)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = uiState.opdsPassword,
+                            onValueChange = viewModel::updateOpdsPassword,
+                            label = { Text(stringResource(R.string.opds_password)) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                TestConnectionButton(
+                    result = uiState.opdsTestResult,
+                    onClick = {
+                        if (useGrimmoryLoginForOpds) {
+                            viewModel.testOpdsWithGrimmoryCredentials()
+                        } else {
+                            viewModel.testOpdsConnection()
+                        }
+                    },
+                    label = stringResource(R.string.test_opds),
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        TestConnectionButton(
-            result = uiState.opdsTestResult,
-            onClick = {
-                if (useGrimmoryLoginForOpds) {
-                    viewModel.testOpdsWithGrimmoryCredentials()
-                } else {
-                    viewModel.testOpdsConnection()
-                }
-            },
-            label = stringResource(R.string.test_opds)
-        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -403,50 +413,60 @@ private fun GrimmoryForm(
         Text(
             text = stringResource(R.string.kosync_sync_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(8.dp))
-        SameLoginCheckbox(
-            checked = useGrimmoryLoginForKosync,
-            onCheckedChange = onUseGrimmoryLoginForKosyncChanged,
-            label = stringResource(R.string.use_grimmory_login_for_kosync)
+        EnableSectionCheckbox(
+            checked = uiState.kosyncEnabled,
+            onCheckedChange = viewModel::setKosyncEnabled,
+            label = stringResource(R.string.enable_kosync),
         )
-        AnimatedVisibility(visible = !useGrimmoryLoginForKosync) {
+        AnimatedVisibility(visible = uiState.kosyncEnabled) {
             Column {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = uiState.kosyncUsername,
-                    onValueChange = viewModel::updateKosyncUsername,
-                    label = { Text(stringResource(R.string.kosync_username)) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(4.dp))
+                SameLoginCheckbox(
+                    checked = useGrimmoryLoginForKosync,
+                    onCheckedChange = onUseGrimmoryLoginForKosyncChanged,
+                    label = stringResource(R.string.use_grimmory_login_for_kosync),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = uiState.kosyncPassword,
-                    onValueChange = viewModel::updateKosyncPassword,
-                    label = { Text(stringResource(R.string.kosync_password)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                AnimatedVisibility(visible = !useGrimmoryLoginForKosync) {
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.kosyncUsername,
+                            onValueChange = viewModel::updateKosyncUsername,
+                            label = { Text(stringResource(R.string.kosync_username)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = uiState.kosyncPassword,
+                            onValueChange = viewModel::updateKosyncPassword,
+                            label = { Text(stringResource(R.string.kosync_password)) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                TestConnectionButton(
+                    result = uiState.kosyncTestResult,
+                    onClick = {
+                        if (useGrimmoryLoginForKosync) {
+                            viewModel.testKosyncWithGrimmoryCredentials()
+                        } else {
+                            viewModel.testKosyncConnection()
+                        }
+                    },
+                    label = stringResource(R.string.test_kosync),
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        TestConnectionButton(
-            result = uiState.kosyncTestResult,
-            onClick = {
-                if (useGrimmoryLoginForKosync) {
-                    viewModel.testKosyncWithGrimmoryCredentials()
-                } else {
-                    viewModel.testKosyncConnection()
-                }
-            },
-            label = stringResource(R.string.test_kosync)
-        )
 
         uiState.validationError?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
@@ -577,33 +597,42 @@ private fun OpdsForm(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = uiState.kosyncUsername,
-            onValueChange = viewModel::updateKosyncUsername,
-            label = { Text(stringResource(R.string.username)) },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = uiState.kosyncPassword,
-            onValueChange = viewModel::updateKosyncPassword,
-            label = { Text(stringResource(R.string.password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
+        EnableSectionCheckbox(
+            checked = uiState.kosyncEnabled,
+            onCheckedChange = viewModel::setKosyncEnabled,
+            label = stringResource(R.string.enable_kosync),
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        TestConnectionButton(
-            result = uiState.kosyncTestResult,
-            onClick = viewModel::testKosyncConnection,
-            label = stringResource(R.string.test_kosync)
-        )
+        AnimatedVisibility(visible = uiState.kosyncEnabled) {
+            Column {
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = uiState.kosyncUsername,
+                    onValueChange = viewModel::updateKosyncUsername,
+                    label = { Text(stringResource(R.string.username)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = uiState.kosyncPassword,
+                    onValueChange = viewModel::updateKosyncPassword,
+                    label = { Text(stringResource(R.string.password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TestConnectionButton(
+                    result = uiState.kosyncTestResult,
+                    onClick = viewModel::testKosyncConnection,
+                    label = stringResource(R.string.test_kosync)
+                )
+            }
+        }
 
         uiState.validationError?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
@@ -695,6 +724,26 @@ private fun SameLoginCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Un
             text = label,
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+@Composable
+private fun EnableSectionCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }
 

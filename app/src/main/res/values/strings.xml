@@ -138,6 +138,8 @@
     <string name="opds_password">OPDS Password</string>
     <string name="kosync_username">Kosync Username</string>
     <string name="kosync_password">Kosync Password</string>
+    <string name="enable_opds">Enable OPDS catalog</string>
+    <string name="enable_kosync">Enable kosync progress sync</string>
     <string name="test_login">Test Login</string>
     <string name="test_opds">Test OPDS</string>
     <string name="test_kosync">Test Kosync</string>
