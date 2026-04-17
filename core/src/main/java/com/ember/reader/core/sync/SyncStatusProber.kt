@@ -64,6 +64,7 @@ class SyncStatusProber @Inject constructor(
     }
 
     private suspend fun probeOpds(server: Server): Result<Unit>? {
+        if (!server.opdsEnabled) return null
         if (server.opdsUsername.isBlank() || server.opdsPassword.isBlank()) return null
         return opdsClient.testConnection(server.url, server.opdsUsername, server.opdsPassword)
             .map { }
