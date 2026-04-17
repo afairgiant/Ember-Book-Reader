@@ -612,7 +612,7 @@ private fun OpdsForm(
                     label = { Text(stringResource(R.string.username)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -623,13 +623,13 @@ private fun OpdsForm(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 TestConnectionButton(
                     result = uiState.kosyncTestResult,
                     onClick = viewModel::testKosyncConnection,
-                    label = stringResource(R.string.test_kosync)
+                    label = stringResource(R.string.test_kosync),
                 )
             }
         }
