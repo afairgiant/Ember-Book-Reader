@@ -364,7 +364,7 @@ private fun GrimmoryForm(
         EnableSectionCheckbox(
             checked = uiState.opdsEnabled,
             onCheckedChange = viewModel::setOpdsEnabled,
-            label = stringResource(R.string.enable_opds),
+            label = stringResource(R.string.enable_opds)
         )
         AnimatedVisibility(visible = uiState.opdsEnabled) {
             Column {
@@ -372,7 +372,7 @@ private fun GrimmoryForm(
                 SameLoginCheckbox(
                     checked = useGrimmoryLoginForOpds,
                     onCheckedChange = onUseGrimmoryLoginForOpdsChanged,
-                    label = stringResource(R.string.use_grimmory_login_for_opds),
+                    label = stringResource(R.string.use_grimmory_login_for_opds)
                 )
                 AnimatedVisibility(visible = !useGrimmoryLoginForOpds) {
                     Column {
@@ -383,7 +383,7 @@ private fun GrimmoryForm(
                             label = { Text(stringResource(R.string.opds_username)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
@@ -394,7 +394,7 @@ private fun GrimmoryForm(
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -408,7 +408,7 @@ private fun GrimmoryForm(
                             viewModel.testOpdsConnection()
                         }
                     },
-                    label = stringResource(R.string.test_opds),
+                    label = stringResource(R.string.test_opds)
                 )
             }
         }
@@ -420,13 +420,13 @@ private fun GrimmoryForm(
         Text(
             text = stringResource(R.string.kosync_sync_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         EnableSectionCheckbox(
             checked = uiState.kosyncEnabled,
             onCheckedChange = viewModel::setKosyncEnabled,
-            label = stringResource(R.string.enable_kosync),
+            label = stringResource(R.string.enable_kosync)
         )
         AnimatedVisibility(visible = uiState.kosyncEnabled) {
             Column {
@@ -434,7 +434,7 @@ private fun GrimmoryForm(
                 SameLoginCheckbox(
                     checked = useGrimmoryLoginForKosync,
                     onCheckedChange = onUseGrimmoryLoginForKosyncChanged,
-                    label = stringResource(R.string.use_grimmory_login_for_kosync),
+                    label = stringResource(R.string.use_grimmory_login_for_kosync)
                 )
                 AnimatedVisibility(visible = !useGrimmoryLoginForKosync) {
                     Column {
@@ -445,7 +445,7 @@ private fun GrimmoryForm(
                             label = { Text(stringResource(R.string.kosync_username)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
@@ -456,7 +456,7 @@ private fun GrimmoryForm(
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -470,7 +470,7 @@ private fun GrimmoryForm(
                             viewModel.testKosyncConnection()
                         }
                     },
-                    label = stringResource(R.string.test_kosync),
+                    label = stringResource(R.string.test_kosync)
                 )
             }
         }
@@ -608,7 +608,7 @@ private fun OpdsForm(
         EnableSectionCheckbox(
             checked = uiState.kosyncEnabled,
             onCheckedChange = viewModel::setKosyncEnabled,
-            label = stringResource(R.string.enable_kosync),
+            label = stringResource(R.string.enable_kosync)
         )
         AnimatedVisibility(visible = uiState.kosyncEnabled) {
             Column {
@@ -619,7 +619,7 @@ private fun OpdsForm(
                     label = { Text(stringResource(R.string.username)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -630,13 +630,13 @@ private fun OpdsForm(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 TestConnectionButton(
                     result = uiState.kosyncTestResult,
                     onClick = viewModel::testKosyncConnection,
-                    label = stringResource(R.string.test_kosync),
+                    label = stringResource(R.string.test_kosync)
                 )
             }
         }
@@ -738,7 +738,7 @@ private fun SameLoginCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Un
 private fun EnableSectionCheckbox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    label: String,
+    label: String
 ) {
     Row(
         modifier = Modifier
@@ -746,7 +746,7 @@ private fun EnableSectionCheckbox(
             .clip(RoundedCornerShape(8.dp))
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Spacer(modifier = Modifier.width(4.dp))

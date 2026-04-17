@@ -43,7 +43,7 @@ class ServerFormViewModel @Inject constructor(
                             isGrimmory = server.isGrimmory,
                             opdsEnabled = server.opdsEnabled,
                             kosyncEnabled = server.kosyncEnabled,
-                            isEditing = true,
+                            isEditing = true
                         )
                     }
                 }
@@ -212,7 +212,7 @@ class ServerFormViewModel @Inject constructor(
                 grimmoryPassword = state.grimmoryPassword,
                 isGrimmory = state.isGrimmory,
                 opdsEnabled = state.opdsEnabled,
-                kosyncEnabled = state.kosyncEnabled,
+                kosyncEnabled = state.kosyncEnabled
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -273,7 +273,7 @@ class ServerFormViewModel @Inject constructor(
                 grimmoryPassword = grimmoryPass,
                 isGrimmory = true,
                 opdsEnabled = state.opdsEnabled,
-                kosyncEnabled = state.kosyncEnabled,
+                kosyncEnabled = state.kosyncEnabled
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -300,7 +300,7 @@ data class ServerFormUiState(
     val opdsTestResult: TestResult = TestResult.Idle,
     val kosyncTestResult: TestResult = TestResult.Idle,
     val grimmoryTestResult: TestResult = TestResult.Idle,
-    val grimmoryTestPermissions: GrimmoryUserPermissions? = null,
+    val grimmoryTestPermissions: GrimmoryUserPermissions? = null
 )
 
 sealed interface TestResult {

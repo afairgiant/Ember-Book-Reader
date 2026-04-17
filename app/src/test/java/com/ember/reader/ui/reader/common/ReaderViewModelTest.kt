@@ -148,13 +148,13 @@ class ReaderViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertTrue(viewModel.chromeVisible.value)
-
-        viewModel.toggleChrome()
         assertFalse(viewModel.chromeVisible.value)
 
         viewModel.toggleChrome()
         assertTrue(viewModel.chromeVisible.value)
+
+        viewModel.toggleChrome()
+        assertFalse(viewModel.chromeVisible.value)
     }
 
     @Test

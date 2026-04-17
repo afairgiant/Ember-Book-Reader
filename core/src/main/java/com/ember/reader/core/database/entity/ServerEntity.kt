@@ -22,5 +22,5 @@ data class ServerEntity(
     val canUpload: Boolean? = null,
     val canAccessBookdrop: Boolean? = null,
     val isAdmin: Boolean? = null,
-    val permissionsFetchedAt: Instant? = null,
+    val permissionsFetchedAt: Instant? = null
 )

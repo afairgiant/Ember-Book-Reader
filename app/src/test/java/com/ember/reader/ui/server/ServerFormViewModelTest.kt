@@ -152,7 +152,7 @@ class ServerFormViewModelTest {
         viewModel.updateGrimmoryPassword("pw")
         viewModel.setOpdsEnabled(false)
         viewModel.setKosyncEnabled(false)
-        viewModel.updateKosyncUsername("stale")   // should be discarded
+        viewModel.updateKosyncUsername("stale") // should be discarded
         viewModel.updateKosyncPassword("stale")
 
         viewModel.saveGrimmory(
@@ -192,28 +192,29 @@ class ServerFormViewModelTest {
     }
 
     @Test
-    fun `saveGrimmory uses grimmory login for opds when opdsEnabled and delegation is on`() = runTest {
-        val captured = slot<Server>()
-        coEvery { serverRepository.save(capture(captured)) } returns 1L
+    fun `saveGrimmory uses grimmory login for opds when opdsEnabled and delegation is on`() =
+        runTest {
+            val captured = slot<Server>()
+            coEvery { serverRepository.save(capture(captured)) } returns 1L
 
-        val viewModel = createViewModel()
-        viewModel.updateName("g1")
-        viewModel.updateUrl("https://g1")
-        viewModel.updateGrimmoryUsername("alex")
-        viewModel.updateGrimmoryPassword("gpass")
-        viewModel.setOpdsEnabled(true)
-        // opdsUsername/opdsPassword left blank — delegation should copy Grimmory values
+            val viewModel = createViewModel()
+            viewModel.updateName("g1")
+            viewModel.updateUrl("https://g1")
+            viewModel.updateGrimmoryUsername("alex")
+            viewModel.updateGrimmoryPassword("gpass")
+            viewModel.setOpdsEnabled(true)
+            // opdsUsername/opdsPassword left blank — delegation should copy Grimmory values
 
-        viewModel.saveGrimmory(
-            useGrimmoryLoginForOpds = true,
-            useGrimmoryLoginForKosync = true,
-            onSuccess = {},
-        )
-        runCurrent()
+            viewModel.saveGrimmory(
+                useGrimmoryLoginForOpds = true,
+                useGrimmoryLoginForKosync = true,
+                onSuccess = {}
+            )
+            runCurrent()
 
-        val saved = captured.captured
-        assertEquals("alex", saved.opdsUsername)
-        assertEquals("gpass", saved.opdsPassword)
-        assertTrue(saved.opdsEnabled)
-    }
+            val saved = captured.captured
+            assertEquals("alex", saved.opdsUsername)
+            assertEquals("gpass", saved.opdsPassword)
+            assertTrue(saved.opdsEnabled)
+        }
 }

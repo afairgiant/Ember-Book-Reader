@@ -28,7 +28,7 @@ object TestFixtures {
         grimmoryPassword: String = "admin-pass",
         isGrimmory: Boolean = true,
         opdsEnabled: Boolean = true,
-        kosyncEnabled: Boolean = true,
+        kosyncEnabled: Boolean = true
     ) = Server(
         id = id,
         name = name,
@@ -41,7 +41,7 @@ object TestFixtures {
         grimmoryPassword = grimmoryPassword,
         isGrimmory = isGrimmory,
         opdsEnabled = opdsEnabled,
-        kosyncEnabled = kosyncEnabled,
+        kosyncEnabled = kosyncEnabled
     )
 
     fun book(

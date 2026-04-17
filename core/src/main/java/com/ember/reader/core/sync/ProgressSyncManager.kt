@@ -37,7 +37,7 @@ enum class SkipReason {
     KosyncDisabled,
     NoGrimmoryBookId,
     ServerNotGrimmory,
-    GrimmoryNotLoggedIn,
+    GrimmoryNotLoggedIn
 }
 
 /**

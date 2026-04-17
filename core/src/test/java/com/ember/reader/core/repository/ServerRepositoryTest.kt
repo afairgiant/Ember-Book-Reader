@@ -20,8 +20,8 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -190,7 +190,7 @@ class ServerRepositoryTest {
             kosyncUsername = "kosync_user",
             kosyncPassword = "kosync_pass",
             opdsEnabled = true,
-            kosyncEnabled = false,
+            kosyncEnabled = false
         )
         coEvery { serverDao.insert(any()) } returns 9L
         every { credentialEncryption.storePassword(any(), any()) } returns Unit
@@ -201,7 +201,7 @@ class ServerRepositoryTest {
             opdsUsername = "opds_user",
             kosyncUsername = "kosync_user",
             opdsEnabled = true,
-            kosyncEnabled = false,
+            kosyncEnabled = false
         )
         every { credentialEncryption.getPassword(any()) } returns ""
 
