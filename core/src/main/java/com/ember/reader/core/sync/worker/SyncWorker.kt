@@ -62,7 +62,7 @@ class SyncWorker @AssistedInject constructor(
         for (server in servers) {
             runCatching {
                 // Kosync push/pull
-                if (server.kosyncUsername.isNotBlank()) {
+                if (server.kosyncEnabled && server.kosyncUsername.isNotBlank()) {
                     readingProgressRepository.pushUnsyncedKosyncProgress(server) { bookId ->
                         bookRepository.getById(bookId)?.fileHash
                     }
