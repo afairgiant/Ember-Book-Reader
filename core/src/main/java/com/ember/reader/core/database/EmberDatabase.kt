@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -215,6 +215,26 @@ abstract class EmberDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_books_format` " +
                         "ON `books` (`format`)"
+                )
+            }
+        }
+
+        /**
+         * Migration 14→15: Adds opdsEnabled + kosyncEnabled to servers.
+         *
+         * Backfill policy: existing rows get each flag set to 1 iff the corresponding
+         * username is non-empty. This preserves current behavior for anyone already
+         * using OPDS or kosync; only servers that never had credentials start disabled.
+         */
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE servers ADD COLUMN opdsEnabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE servers ADD COLUMN kosyncEnabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "UPDATE servers SET opdsEnabled = 1 WHERE opdsUsername IS NOT NULL AND opdsUsername <> ''"
+                )
+                db.execSQL(
+                    "UPDATE servers SET kosyncEnabled = 1 WHERE kosyncUsername IS NOT NULL AND kosyncUsername <> ''"
                 )
             }
         }
