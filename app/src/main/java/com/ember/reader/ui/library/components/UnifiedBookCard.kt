@@ -48,7 +48,7 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
 import com.ember.reader.ui.theme.LocalAccentColor
-import com.ember.reader.ui.theme.ServerAccentPalette
+import com.ember.reader.ui.theme.serverAccentColor
 import kotlin.math.roundToInt
 
 data class CardInfoToggles(
@@ -59,9 +59,6 @@ data class CardInfoToggles(
 )
 
 enum class SourceBadgeStyle { GRID, LIST_PILL, COMPACT_DOT }
-
-/** Returns the palette color for a given slot, cycling if the index exceeds palette size. */
-private fun slotColor(slot: Int): Color = ServerAccentPalette[slot.mod(ServerAccentPalette.size)]
 
 /**
  * Per-server identifier rendered on a book surface.
@@ -78,66 +75,32 @@ fun SourceBadge(
     localLabel: String = stringResource(R.string.filter_local)
 ) {
     val label = appearance?.name ?: localLabel
-    val color = appearance?.let { slotColor(it.colorSlot) } ?: LocalAccentColor
+    val color = appearance?.let { serverAccentColor(it.colorSlot) } ?: LocalAccentColor
     val description = stringResource(R.string.chip_source, label)
 
     when (style) {
-        SourceBadgeStyle.GRID -> Box(
+        SourceBadgeStyle.GRID -> LabelledBadge(
+            label = label,
+            fill = color,
+            description = description,
+            cornerRadius = 6.dp,
+            maxWidth = 140.dp,
+            horizontalPadding = 6.dp,
+            verticalPadding = 2.dp,
+            dotSpacing = 5.dp,
             modifier = modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(color.copy(alpha = 0.9f))
-                .widthIn(max = 140.dp)
-                .semantics { contentDescription = description }
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.9f))
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        SourceBadgeStyle.LIST_PILL -> Box(
+        )
+        SourceBadgeStyle.LIST_PILL -> LabelledBadge(
+            label = label,
+            fill = color,
+            description = description,
+            cornerRadius = 12.dp,
+            maxWidth = 110.dp,
+            horizontalPadding = 8.dp,
+            verticalPadding = 3.dp,
+            dotSpacing = 4.dp,
             modifier = modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(color.copy(alpha = 0.9f))
-                .widthIn(max = 110.dp)
-                .semantics { contentDescription = description }
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.9f))
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        )
         SourceBadgeStyle.COMPACT_DOT -> Box(
             modifier = modifier
                 .size(9.dp)
@@ -145,6 +108,48 @@ fun SourceBadge(
                 .background(color)
                 .semantics { contentDescription = description }
         )
+    }
+}
+
+@Composable
+private fun LabelledBadge(
+    label: String,
+    fill: Color,
+    description: String,
+    cornerRadius: androidx.compose.ui.unit.Dp,
+    maxWidth: androidx.compose.ui.unit.Dp,
+    horizontalPadding: androidx.compose.ui.unit.Dp,
+    verticalPadding: androidx.compose.ui.unit.Dp,
+    dotSpacing: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(fill.copy(alpha = 0.9f))
+            .widthIn(max = maxWidth)
+            .semantics { contentDescription = description }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.9f))
+            )
+            Spacer(modifier = Modifier.width(dotSpacing))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

@@ -35,6 +35,13 @@ val ServerAccentPalette: List<Color> = listOf(
 // Neutral grey for local-only books. Not part of the rotation.
 val LocalAccentColor: Color = Color(0xFF6E6A68)
 
+/**
+ * Resolves a server accent slot index to its palette [Color], wrapping past the palette
+ * size. The single source of truth for slot-to-color lookup across card badges, list
+ * pills, group headers, and anywhere else servers need to render their identity.
+ */
+fun serverAccentColor(slot: Int): Color = ServerAccentPalette[slot.mod(ServerAccentPalette.size)]
+
 private val LightColorScheme = lightColorScheme(
     primary = EmberOrange,
     onPrimary = Color.White,

@@ -41,6 +41,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -54,7 +56,18 @@ data class ProgressInfo(val percentage: Float, val lastReadAt: Instant)
 
 /** Either a book entry or a sticky group header. */
 sealed interface LibraryListItem {
-    data class Header(val key: String, val label: String, val count: Int) : LibraryListItem
+    /**
+     * Group header. [colorSlot] is non-null only for server source groups and encodes
+     * the palette index the UI should render beside the label; `null` means "no dot"
+     * (non-source groups, or the Local source group which uses the neutral accent).
+     */
+    data class Header(
+        val key: String,
+        val label: String,
+        val count: Int,
+        val colorSlot: Int? = null,
+        val isLocalSource: Boolean = false
+    ) : LibraryListItem
     data class BookEntry(val book: Book) : LibraryListItem
 }
 
@@ -113,13 +126,12 @@ class LocalLibraryViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val viewState: StateFlow<LibraryViewState> = combine(
-        allDownloadedBooks,
-        progressInfo,
-        prefs,
+        combine(allDownloadedBooks, progressInfo, prefs) { b, p, pr -> Triple(b, p, pr) },
         _searchQuery,
-        servers
-    ) { books, progress, p, query, srv ->
-        buildViewState(books, progress, p, query, srv)
+        servers,
+        appearances
+    ) { (books, progress, p), query, srv, appMap ->
+        buildViewState(books, progress, p, query, srv, appMap)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryViewState())
 
@@ -129,17 +141,11 @@ class LocalLibraryViewModel @Inject constructor(
         // an empty library because the id doesn't match any book.
         combine(prefs, servers) { p, srv ->
             val filter = p.sourceFilter
-            if (filter is LibrarySourceFilter.Server && srv.none { it.id == filter.serverId }) {
-                LibrarySourceFilter.All
-            } else {
-                null
-            }
+            (filter as? LibrarySourceFilter.Server)?.takeIf { srv.none { s -> s.id == it.serverId } }
         }
-            .onEach { reset ->
-                if (reset != null) {
-                    prefsRepo.update { it.copy(sourceFilter = reset) }
-                }
-            }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { prefsRepo.update { it.copy(sourceFilter = LibrarySourceFilter.All) } }
             .launchIn(viewModelScope)
     }
 
@@ -148,7 +154,8 @@ class LocalLibraryViewModel @Inject constructor(
         progress: Map<String, ProgressInfo>,
         prefs: LibraryPrefs,
         query: String,
-        servers: List<Server>
+        servers: List<Server>,
+        appearances: Map<Long, ServerAppearance>
     ): LibraryViewState {
         // Counts always reflect the *unfiltered* set so the filter sheet shows true totals.
         val formatCounts = mapOf(
@@ -156,14 +163,12 @@ class LocalLibraryViewModel @Inject constructor(
             LibraryFormat.BOOKS to books.count { it.format == BookFormat.EPUB || it.format == BookFormat.PDF },
             LibraryFormat.AUDIOBOOKS to books.count { it.format == BookFormat.AUDIOBOOK }
         )
+        val countsByServerId: Map<Long?, Int> = books.groupingBy { it.serverId }.eachCount()
         val sourceCounts: Map<LibrarySourceFilter, Int> = buildMap {
             put(LibrarySourceFilter.All, books.size)
-            put(LibrarySourceFilter.Local, books.count { it.serverId == null })
+            put(LibrarySourceFilter.Local, countsByServerId[null] ?: 0)
             for (server in servers) {
-                put(
-                    LibrarySourceFilter.Server(server.id),
-                    books.count { it.serverId == server.id }
-                )
+                put(LibrarySourceFilter.Server(server.id), countsByServerId[server.id] ?: 0)
             }
         }
         val statusCounts = mapOf(
@@ -196,7 +201,7 @@ class LocalLibraryViewModel @Inject constructor(
         val items: List<LibraryListItem> = if (prefs.groupBy == LibraryGroupBy.NONE) {
             sorted.map { LibraryListItem.BookEntry(it) }
         } else {
-            buildGrouped(sorted, progress, prefs.groupBy, servers)
+            buildGrouped(sorted, progress, prefs.groupBy, servers, appearances)
         }
 
         return LibraryViewState(
@@ -265,8 +270,39 @@ class LocalLibraryViewModel @Inject constructor(
         sorted: List<Book>,
         progress: Map<String, ProgressInfo>,
         groupBy: LibraryGroupBy,
-        servers: List<Server>
+        servers: List<Server>,
+        appearances: Map<Long, ServerAppearance>
     ): List<LibraryListItem> {
+        if (groupBy == LibraryGroupBy.SOURCE) {
+            val byServerId = sorted.groupBy { it.serverId }
+            return buildList {
+                for (server in servers) {
+                    val list = byServerId[server.id].orEmpty()
+                    if (list.isEmpty()) continue
+                    add(
+                        LibraryListItem.Header(
+                            key = "server:${server.id}",
+                            label = server.name,
+                            count = list.size,
+                            colorSlot = appearances[server.id]?.colorSlot
+                        )
+                    )
+                    for (b in list) add(LibraryListItem.BookEntry(b))
+                }
+                byServerId[null]?.takeIf { it.isNotEmpty() }?.let { list ->
+                    add(
+                        LibraryListItem.Header(
+                            key = "local",
+                            label = "Local",
+                            count = list.size,
+                            isLocalSource = true
+                        )
+                    )
+                    for (b in list) add(LibraryListItem.BookEntry(b))
+                }
+            }
+        }
+
         val grouped: Map<String, Pair<String, List<Book>>> = when (groupBy) {
             LibraryGroupBy.AUTHOR -> sorted.groupBy { it.author ?: "Unknown" }
                 .mapValues { it.key to it.value }
@@ -294,22 +330,7 @@ class LocalLibraryViewModel @Inject constructor(
                     instant.atZone(ZoneId.systemDefault()).format(fmt)
                 }.mapValues { it.key to it.value }
             }
-            LibraryGroupBy.SOURCE -> {
-                // Servers first (in the order they come from the servers flow — alphabetical),
-                // then a Local group. Empty sections are skipped.
-                val byServerId = sorted.groupBy { it.serverId }
-                linkedMapOf<String, Pair<String, List<Book>>>().apply {
-                    for (server in servers) {
-                        byServerId[server.id]?.takeIf { it.isNotEmpty() }?.let { list ->
-                            put("server:${server.id}", server.name to list)
-                        }
-                    }
-                    byServerId[null]?.takeIf { it.isNotEmpty() }?.let { list ->
-                        put("local", "Local" to list)
-                    }
-                }
-            }
-            LibraryGroupBy.NONE -> emptyMap()
+            LibraryGroupBy.SOURCE, LibraryGroupBy.NONE -> emptyMap()
         }
 
         return buildList {

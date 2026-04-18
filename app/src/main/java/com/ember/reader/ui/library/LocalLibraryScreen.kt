@@ -76,7 +76,7 @@ import com.ember.reader.ui.library.components.LibraryToolbar
 import com.ember.reader.ui.library.components.UnifiedBookCard
 import com.ember.reader.ui.library.components.UnifiedBookListRow
 import com.ember.reader.ui.theme.LocalAccentColor
-import com.ember.reader.ui.theme.ServerAccentPalette
+import com.ember.reader.ui.theme.serverAccentColor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -463,7 +463,7 @@ private fun LibraryContent(
                                 GroupHeader(
                                     label = item.label,
                                     count = item.count,
-                                    dotColor = sourceGroupDotColor(item.key, appearances)
+                                    dotColor = item.sourceDotColor()
                                 )
                             }
                         }
@@ -527,7 +527,7 @@ private fun LibraryContent(
                                 GroupHeader(
                                     label = item.label,
                                     count = item.count,
-                                    dotColor = sourceGroupDotColor(item.key, appearances)
+                                    dotColor = item.sourceDotColor()
                                 )
                             }
                         }
@@ -605,17 +605,10 @@ private fun GroupHeader(
     }
 }
 
-/** Maps a SOURCE group key back to the palette color for its header dot. */
-private fun sourceGroupDotColor(
-    key: String,
-    appearances: Map<Long, com.ember.reader.core.repository.ServerAppearance>
-): androidx.compose.ui.graphics.Color? = when {
-    key == "local" -> LocalAccentColor
-    key.startsWith("server:") -> {
-        val id = key.removePrefix("server:").toLongOrNull()
-        val slot = id?.let { appearances[it]?.colorSlot }
-        slot?.let { ServerAccentPalette[it.mod(ServerAccentPalette.size)] }
-    }
+/** Palette color for the dot rendered beside a SOURCE group header; null for non-source groups. */
+private fun LibraryListItem.Header.sourceDotColor(): androidx.compose.ui.graphics.Color? = when {
+    isLocalSource -> LocalAccentColor
+    colorSlot != null -> serverAccentColor(colorSlot)
     else -> null
 }
 
