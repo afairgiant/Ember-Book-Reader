@@ -38,7 +38,6 @@ fun LibraryLayoutSheet(
     onShowContinueReadingChange: (Boolean) -> Unit,
     onCardShowProgressChange: (Boolean) -> Unit,
     onCardShowAuthorChange: (Boolean) -> Unit,
-    onCardShowSourceBadgeChange: (Boolean) -> Unit,
     onCardShowFormatBadgeChange: (Boolean) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -105,11 +104,6 @@ fun LibraryLayoutSheet(
                 label = stringResource(R.string.card_author),
                 checked = prefs.cardShowAuthor,
                 onCheckedChange = onCardShowAuthorChange,
-            )
-            ToggleRow(
-                label = stringResource(R.string.card_source_badge),
-                checked = prefs.cardShowSourceBadge,
-                onCheckedChange = onCardShowSourceBadgeChange,
             )
             ToggleRow(
                 label = stringResource(R.string.card_format_badge),

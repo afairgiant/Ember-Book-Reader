@@ -54,18 +54,16 @@ import kotlin.math.roundToInt
 data class CardInfoToggles(
     val showProgress: Boolean = true,
     val showAuthor: Boolean = true,
-    val showSourceBadge: Boolean = true,
     val showFormatBadge: Boolean = false
 )
 
 enum class SourceBadgeStyle { GRID, LIST_PILL, COMPACT_DOT }
 
+private const val SOURCE_BADGE_MAX_CHARS = 12
+
 /**
- * Per-server identifier rendered on a book surface.
- *
- * [appearance] == null represents a local (non-server) book and always renders with
- * [LocalAccentColor] and the label "Local". Caller is responsible for wrapping in the
- * `if (info.showSourceBadge)` gate.
+ * Per-server identifier rendered on a book surface. [appearance] == null renders
+ * as "Local" with [LocalAccentColor].
  */
 @Composable
 fun SourceBadge(
@@ -74,9 +72,14 @@ fun SourceBadge(
     modifier: Modifier = Modifier,
     localLabel: String = stringResource(R.string.filter_local)
 ) {
-    val label = appearance?.name ?: localLabel
+    val rawLabel = appearance?.name ?: localLabel
+    val label = if (rawLabel.length > SOURCE_BADGE_MAX_CHARS) {
+        rawLabel.take(SOURCE_BADGE_MAX_CHARS).trimEnd() + "…"
+    } else {
+        rawLabel
+    }
     val color = appearance?.let { serverAccentColor(it.colorSlot) } ?: LocalAccentColor
-    val description = stringResource(R.string.chip_source, label)
+    val description = stringResource(R.string.chip_source, rawLabel)
 
     when (style) {
         SourceBadgeStyle.GRID -> LabelledBadge(
@@ -161,7 +164,6 @@ fun UnifiedBookCard(
     isSelected: Boolean = false,
     isSelecting: Boolean = false,
     info: CardInfoToggles = CardInfoToggles(),
-    sourceAppearance: ServerAppearance? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
@@ -264,16 +266,6 @@ fun UnifiedBookCard(
                     }
                 }
 
-                if (info.showSourceBadge) {
-                    SourceBadge(
-                        appearance = sourceAppearance,
-                        style = SourceBadgeStyle.GRID,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp)
-                    )
-                }
-
                 if (info.showFormatBadge) {
                     Box(
                         modifier = Modifier
@@ -343,7 +335,6 @@ fun UnifiedBookListRow(
     isSelecting: Boolean = false,
     compact: Boolean = false,
     info: CardInfoToggles = CardInfoToggles(),
-    sourceAppearance: ServerAppearance? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
@@ -384,14 +375,6 @@ fun UnifiedBookListRow(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            if (compact && info.showSourceBadge) {
-                SourceBadge(
-                    appearance = sourceAppearance,
-                    style = SourceBadgeStyle.COMPACT_DOT
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = book.title,
@@ -422,14 +405,6 @@ fun UnifiedBookListRow(
                         trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                 }
-            }
-
-            if (!compact && info.showSourceBadge) {
-                SourceBadge(
-                    appearance = sourceAppearance,
-                    style = SourceBadgeStyle.LIST_PILL,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
             }
 
             if (isSelecting) {

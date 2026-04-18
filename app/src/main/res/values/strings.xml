@@ -79,7 +79,6 @@
     <string name="card_info">Card info</string>
     <string name="card_progress">Progress bar</string>
     <string name="card_author">Author</string>
-    <string name="card_source_badge">Source badge</string>
     <string name="card_format_badge">Format badge</string>
     <string name="quick_presets">Quick presets</string>
     <string name="format">Format</string>

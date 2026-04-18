@@ -151,7 +151,6 @@ fun LocalLibraryScreen(
     val cardInfo = CardInfoToggles(
         showProgress = prefs.cardShowProgress,
         showAuthor = prefs.cardShowAuthor,
-        showSourceBadge = prefs.cardShowSourceBadge,
         showFormatBadge = prefs.cardShowFormatBadge,
     )
 
@@ -329,7 +328,6 @@ fun LocalLibraryScreen(
                 onShowContinueReadingChange = viewModel::setShowContinueReading,
                 onCardShowProgressChange = viewModel::setCardShowProgress,
                 onCardShowAuthorChange = viewModel::setCardShowAuthor,
-                onCardShowSourceBadgeChange = viewModel::setCardShowSourceBadge,
                 onCardShowFormatBadgeChange = viewModel::setCardShowFormatBadge
             )
         }
@@ -436,8 +434,6 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            appearances = appearances,
-                            cardInfo = cardInfo,
                             onBookClick = onBookClick
                         )
                     }
@@ -462,7 +458,6 @@ private fun LibraryContent(
                                     isSelected = book.id in selectedIds,
                                     isSelecting = isSelecting,
                                     info = cardInfo,
-                                    sourceAppearance = book.serverId?.let { appearances[it] },
                                     onClick = { onBookClick(book) },
                                     onLongClick = { onBookLongClick(book) },
                                     onDelete = { onBookDelete(book) },
@@ -500,8 +495,6 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
-                            appearances = appearances,
-                            cardInfo = cardInfo,
                             onBookClick = onBookClick
                         )
                     }
@@ -527,7 +520,6 @@ private fun LibraryContent(
                                     isSelecting = isSelecting,
                                     compact = compact,
                                     info = cardInfo,
-                                    sourceAppearance = book.serverId?.let { appearances[it] },
                                     onClick = { onBookClick(book) },
                                     onLongClick = { onBookLongClick(book) },
                                     onDelete = { onBookDelete(book) },

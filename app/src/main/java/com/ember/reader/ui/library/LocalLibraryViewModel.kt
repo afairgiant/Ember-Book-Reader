@@ -400,10 +400,6 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch { prefsRepo.update { it.copy(cardShowAuthor = v) } }
     }
 
-    fun setCardShowSourceBadge(v: Boolean) {
-        viewModelScope.launch { prefsRepo.update { it.copy(cardShowSourceBadge = v) } }
-    }
-
     fun setCardShowFormatBadge(v: Boolean) {
         viewModelScope.launch { prefsRepo.update { it.copy(cardShowFormatBadge = v) } }
     }
