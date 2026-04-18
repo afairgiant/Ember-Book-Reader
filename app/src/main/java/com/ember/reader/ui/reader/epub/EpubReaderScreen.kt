@@ -9,18 +9,6 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,15 +17,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.Highlight
-import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
 import com.ember.reader.core.readium.toJsonString
@@ -47,7 +32,6 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.AnnotationDialog
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.DictionarySheet
-import com.ember.reader.ui.reader.common.HighlightColorPicker
 import com.ember.reader.ui.reader.common.HighlightsSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
@@ -57,6 +41,9 @@ import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
+import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
+import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
+import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -405,37 +392,20 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
             // Color picker dialog (after selecting text and tapping Highlight)
             if (showColorPicker && pendingSelection != null) {
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = {
+                SelectionColorPickerDialog(
+                    onColorSelected = { color ->
+                        val selection = pendingSelection ?: return@SelectionColorPickerDialog
+                        val locatorJson = selection.locator.toJsonString()
+                        val selectedText = selection.locator.text.highlight
+                        viewModel.addHighlight(locatorJson, color, selectedText = selectedText)
+                        highlightManager?.clearSelection()
                         showColorPicker = false
                         pendingSelection = null
                     },
-                    title = {
-                        androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.highlight_action))
+                    onDismiss = {
+                        showColorPicker = false
+                        pendingSelection = null
                     },
-                    text = {
-                        HighlightColorPicker(
-                            selectedColor = HighlightColor.YELLOW,
-                            onColorSelected = { color ->
-                                val selection = pendingSelection ?: return@HighlightColorPicker
-                                val locatorJson = selection.locator.toJsonString()
-                                val selectedText = selection.locator.text.highlight
-                                viewModel.addHighlight(locatorJson, color, selectedText = selectedText)
-                                highlightManager?.clearSelection()
-                                showColorPicker = false
-                                pendingSelection = null
-                            }
-                        )
-                    },
-                    confirmButton = {},
-                    dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = {
-                            showColorPicker = false
-                            pendingSelection = null
-                        }) {
-                            androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.cancel))
-                        }
-                    }
                 )
             }
 
@@ -489,41 +459,13 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
             // Bookmark name dialog
             if (showBookmarkDialog) {
-                var bookmarkName by remember { mutableStateOf("") }
-                val chapterTitle = currentLocator?.title ?: ""
-                AlertDialog(
-                    onDismissRequest = { showBookmarkDialog = false },
-                    title = { Text("Add Bookmark") },
-                    text = {
-                        Column {
-                            if (chapterTitle.isNotBlank()) {
-                                Text(
-                                    chapterTitle,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                            }
-                            OutlinedTextField(
-                                value = bookmarkName,
-                                onValueChange = { bookmarkName = it },
-                                label = { Text("Name (optional)") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                BookmarkNameDialog(
+                    chapterTitle = currentLocator?.title ?: "",
+                    onSave = { name ->
+                        viewModel.addBookmark(name)
+                        showBookmarkDialog = false
                     },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            viewModel.addBookmark(bookmarkName.ifBlank { chapterTitle })
-                            showBookmarkDialog = false
-                        }) { Text("Save") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showBookmarkDialog = false
-                        }) { Text("Cancel") }
-                    }
+                    onDismiss = { showBookmarkDialog = false },
                 )
             }
 
@@ -600,88 +542,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     onDismiss = viewModel::dismissTapZoneHint
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun TapZoneHintOverlay(preferences: ReaderPreferences, onDismiss: () -> Unit) {
-    androidx.compose.foundation.layout.Box(
-        modifier = androidx.compose.ui.Modifier
-            .fillMaxSize()
-            .clickable(onClick = onDismiss)
-    ) {
-        Canvas(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val topH = h * preferences.topZoneHeight
-            val leftW = w * preferences.leftZoneWidth
-            val rightW = w * preferences.rightZoneWidth
-
-            drawRect(
-                color = androidx.compose.ui.graphics.Color(0x44FF9800),
-                topLeft = androidx.compose.ui.geometry.Offset.Zero,
-                size = androidx.compose.ui.geometry.Size(w, topH)
-            )
-            drawRect(
-                color = androidx.compose.ui.graphics.Color(0x442196F3),
-                topLeft = androidx.compose.ui.geometry.Offset(0f, topH),
-                size = androidx.compose.ui.geometry.Size(leftW, h - topH)
-            )
-            drawRect(
-                color = androidx.compose.ui.graphics.Color(0x444CAF50),
-                topLeft = androidx.compose.ui.geometry.Offset(w - rightW, topH),
-                size = androidx.compose.ui.geometry.Size(rightW, h - topH)
-            )
-            drawRect(
-                color = androidx.compose.ui.graphics.Color(0x229C27B0),
-                topLeft = androidx.compose.ui.geometry.Offset(leftW, topH),
-                size = androidx.compose.ui.geometry.Size(w - leftW - rightW, h - topH)
-            )
-        }
-
-        val labelStyle = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
-            color = androidx.compose.ui.graphics.Color.White,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-        )
-        androidx.compose.material3.Text(
-            text = preferences.topTapZone.displayName,
-            style = labelStyle,
-            modifier = androidx.compose.ui.Modifier
-                .align(androidx.compose.ui.Alignment.TopCenter)
-                .padding(top = 24.dp)
-        )
-        androidx.compose.material3.Text(
-            text = preferences.leftTapZone.displayName,
-            style = labelStyle,
-            modifier = androidx.compose.ui.Modifier
-                .align(androidx.compose.ui.Alignment.CenterStart)
-                .padding(start = 16.dp)
-        )
-        androidx.compose.material3.Text(
-            text = preferences.rightTapZone.displayName,
-            style = labelStyle,
-            modifier = androidx.compose.ui.Modifier
-                .align(androidx.compose.ui.Alignment.CenterEnd)
-                .padding(end = 16.dp)
-        )
-        androidx.compose.foundation.layout.Column(
-            modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.Center),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-        ) {
-            androidx.compose.material3.Text(
-                text = preferences.centerTapZone.displayName,
-                style = labelStyle
-            )
-            androidx.compose.foundation.layout.Spacer(
-                modifier = androidx.compose.ui.Modifier.height(8.dp)
-            )
-            androidx.compose.material3.Text(
-                text = "Tap anywhere to dismiss",
-                style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
-                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
-                )
-            )
         }
     }
 }
