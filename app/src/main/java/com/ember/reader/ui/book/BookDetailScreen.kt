@@ -77,6 +77,7 @@ fun BookDetailScreen(
     val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
     val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
     val grimmoryFullBook by viewModel.grimmoryFullBook.collectAsStateWithLifecycle()
+    val sourceAppearance by viewModel.sourceAppearance.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -202,6 +203,7 @@ fun BookDetailScreen(
                             book = currentBook,
                             hardcoverUserEntry = hardcoverUserEntry,
                             progress = progress,
+                            sourceAppearance = sourceAppearance,
                             onCoverClick = { coverZoomed = true },
                         )
 

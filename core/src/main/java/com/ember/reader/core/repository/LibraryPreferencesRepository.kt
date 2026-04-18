@@ -74,7 +74,7 @@ data class LibraryPrefs(
     val showContinueReading: Boolean = true,
     val cardShowProgress: Boolean = true,
     val cardShowAuthor: Boolean = true,
-    val cardShowSourceBadge: Boolean = true,
+    val cardShowSourceBadge: Boolean = false,
     val cardShowFormatBadge: Boolean = false
 )
 
@@ -139,7 +139,7 @@ class LibraryPreferencesRepository @Inject constructor(
         showContinueReading = p[Keys.SHOW_CONTINUE_READING] ?: true,
         cardShowProgress = p[Keys.CARD_PROGRESS] ?: true,
         cardShowAuthor = p[Keys.CARD_AUTHOR] ?: true,
-        cardShowSourceBadge = p[Keys.CARD_SOURCE_BADGE] ?: true,
+        cardShowSourceBadge = p[Keys.CARD_SOURCE_BADGE] ?: false,
         cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false
     )
 }

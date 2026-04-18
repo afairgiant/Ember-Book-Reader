@@ -152,7 +152,7 @@ fun LocalLibraryScreen(
         showProgress = prefs.cardShowProgress,
         showAuthor = prefs.cardShowAuthor,
         showSourceBadge = prefs.cardShowSourceBadge,
-        showFormatBadge = prefs.cardShowFormatBadge
+        showFormatBadge = prefs.cardShowFormatBadge,
     )
 
     val gridMinSize = when (prefs.density) {

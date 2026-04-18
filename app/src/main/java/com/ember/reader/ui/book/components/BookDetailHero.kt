@@ -30,7 +30,10 @@ import com.ember.reader.core.hardcover.HardcoverStatus
 import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
+import com.ember.reader.ui.library.components.SourceBadge
+import com.ember.reader.ui.library.components.SourceBadgeStyle
 import kotlin.math.roundToInt
 
 @Composable
@@ -38,6 +41,7 @@ fun BookDetailHero(
     book: Book,
     hardcoverUserEntry: HardcoverUserBookEntry?,
     progress: ReadingProgress?,
+    sourceAppearance: ServerAppearance?,
     onCoverClick: () -> Unit,
 ) {
     Box(
@@ -46,14 +50,26 @@ fun BookDetailHero(
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        BookCoverImage(
-            book = book,
+        Box(
             modifier = Modifier
                 .width(180.dp)
-                .aspectRatio(0.67f)
-                .clip(RoundedCornerShape(12.dp)),
-            onClick = if (book.coverUrl != null) onCoverClick else null,
-        )
+                .aspectRatio(0.67f),
+        ) {
+            BookCoverImage(
+                book = book,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp)),
+                onClick = if (book.coverUrl != null) onCoverClick else null,
+            )
+            SourceBadge(
+                appearance = sourceAppearance,
+                style = SourceBadgeStyle.GRID,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp),
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))

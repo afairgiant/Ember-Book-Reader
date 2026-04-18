@@ -77,7 +77,7 @@ data class LibraryViewState(
     val inProgress: List<Book> = emptyList(),
     val formatCounts: Map<LibraryFormat, Int> = emptyMap(),
     val sourceCounts: Map<LibrarySourceFilter, Int> = emptyMap(),
-    val statusCounts: Map<LibraryStatus, Int> = emptyMap()
+    val statusCounts: Map<LibraryStatus, Int> = emptyMap(),
 )
 
 @HiltViewModel
@@ -210,7 +210,7 @@ class LocalLibraryViewModel @Inject constructor(
             inProgress = inProgress,
             formatCounts = formatCounts,
             sourceCounts = sourceCounts,
-            statusCounts = statusCounts
+            statusCounts = statusCounts,
         )
     }
 

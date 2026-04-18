@@ -19,6 +19,8 @@ import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
+import com.ember.reader.core.repository.ServerAppearance
+import com.ember.reader.core.repository.ServerAppearanceResolver
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.download.DownloadService
 import com.ember.reader.ui.organize.OrganizeFilesViewModel
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -46,6 +49,7 @@ class BookDetailViewModel @Inject constructor(
     private val hardcoverClient: HardcoverClient,
     private val hardcoverTokenManager: HardcoverTokenManager,
     val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
+    serverAppearanceResolver: ServerAppearanceResolver,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -91,6 +95,12 @@ class BookDetailViewModel @Inject constructor(
     val progress: StateFlow<ReadingProgress?> = readingProgressRepository
         .observeByBookId(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val sourceAppearance: StateFlow<ServerAppearance?> =
+        combine(_book, serverAppearanceResolver.appearances) { book, appearances ->
+            book?.serverId?.let { appearances[it] }
+        }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         viewModelScope.launch {
