@@ -36,7 +36,8 @@ fun ServerEntity.toDomain(
     canUpload = canUpload,
     canAccessBookdrop = canAccessBookdrop,
     isAdmin = isAdmin,
-    permissionsFetchedAt = permissionsFetchedAt
+    permissionsFetchedAt = permissionsFetchedAt,
+    accentColorSlot = accentColorSlot
 )
 
 fun Server.toEntity(): ServerEntity = ServerEntity(
@@ -55,7 +56,8 @@ fun Server.toEntity(): ServerEntity = ServerEntity(
     canUpload = canUpload,
     canAccessBookdrop = canAccessBookdrop,
     isAdmin = isAdmin,
-    permissionsFetchedAt = permissionsFetchedAt
+    permissionsFetchedAt = permissionsFetchedAt,
+    accentColorSlot = accentColorSlot
 )
 
 fun BookEntity.toDomain(): Book = Book(

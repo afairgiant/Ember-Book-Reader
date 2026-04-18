@@ -72,9 +72,10 @@ import com.ember.reader.core.repository.LibraryFormat
 import com.ember.reader.core.repository.LibraryGroupBy
 import com.ember.reader.core.repository.LibraryPrefs
 import com.ember.reader.core.repository.LibrarySortKey
-import com.ember.reader.core.repository.LibrarySource
+import com.ember.reader.core.repository.LibrarySourceFilter
 import com.ember.reader.core.repository.LibraryStatus
 import com.ember.reader.core.repository.LibraryViewMode
+import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.library.LibraryPreset
 
 /** Active filter chip displayed in the toolbar row. */
@@ -286,6 +287,7 @@ private fun groupLabel(g: LibraryGroupBy): String = when (g) {
     LibraryGroupBy.FORMAT -> stringResource(R.string.group_format)
     LibraryGroupBy.STATUS -> stringResource(R.string.group_status)
     LibraryGroupBy.DATE_ADDED -> stringResource(R.string.sort_date_added)
+    LibraryGroupBy.SOURCE -> stringResource(R.string.group_source)
 }
 
 // ============================================================================
@@ -453,10 +455,12 @@ private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 fun LibraryFilterSheet(
     prefs: LibraryPrefs,
     formatCounts: Map<LibraryFormat, Int>,
-    sourceCounts: Map<LibrarySource, Int>,
+    sourceCounts: Map<LibrarySourceFilter, Int>,
+    sourceOptions: List<LibrarySourceFilter>,
+    appearances: Map<Long, ServerAppearance>,
     statusCounts: Map<LibraryStatus, Int>,
     onDismiss: () -> Unit,
-    onSourceChange: (LibrarySource) -> Unit,
+    onSourceChange: (LibrarySourceFilter) -> Unit,
     onFormatChange: (LibraryFormat) -> Unit,
     onStatusChange: (LibraryStatus) -> Unit,
     onApplyPreset: (LibraryPreset) -> Unit,
@@ -520,14 +524,14 @@ fun LibraryFilterSheet(
             // Source
             FilterSection(
                 title = stringResource(R.string.source),
-                options = LibrarySource.values().toList(),
+                options = sourceOptions,
                 selected = prefs.sourceFilter,
                 onSelect = onSourceChange,
                 labelOf = {
                     when (it) {
-                        LibrarySource.ALL -> stringResource(R.string.filter_all)
-                        LibrarySource.SERVER -> stringResource(R.string.filter_server)
-                        LibrarySource.LOCAL -> stringResource(R.string.filter_local)
+                        LibrarySourceFilter.All -> stringResource(R.string.filter_all)
+                        LibrarySourceFilter.Local -> stringResource(R.string.filter_local)
+                        is LibrarySourceFilter.Server -> appearances[it.serverId]?.name ?: ""
                     }
                 },
                 countOf = { sourceCounts[it] ?: 0 }

@@ -19,6 +19,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
 import kotlin.math.roundToInt
 
@@ -34,6 +36,8 @@ import kotlin.math.roundToInt
 fun ContinueReadingCarousel(
     books: List<Book>,
     progressMap: Map<String, Float>,
+    appearances: Map<Long, ServerAppearance>,
+    cardInfo: CardInfoToggles,
     onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -53,6 +57,8 @@ fun ContinueReadingCarousel(
                 ContinueReadingCard(
                     book = book,
                     progress = progressMap[book.id] ?: 0f,
+                    sourceAppearance = book.serverId?.let { appearances[it] },
+                    showSourceBadge = cardInfo.showSourceBadge,
                     onClick = { onBookClick(book) }
                 )
             }
@@ -62,7 +68,13 @@ fun ContinueReadingCarousel(
 }
 
 @Composable
-private fun ContinueReadingCard(book: Book, progress: Float, onClick: () -> Unit) {
+private fun ContinueReadingCard(
+    book: Book,
+    progress: Float,
+    sourceAppearance: ServerAppearance?,
+    showSourceBadge: Boolean,
+    onClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .width(110.dp)
@@ -78,6 +90,15 @@ private fun ContinueReadingCard(book: Book, progress: Float, onClick: () -> Unit
                 book = book,
                 modifier = Modifier.fillMaxSize()
             )
+            if (showSourceBadge) {
+                SourceBadge(
+                    appearance = sourceAppearance,
+                    style = SourceBadgeStyle.GRID,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(6.dp))
         LinearProgressIndicator(

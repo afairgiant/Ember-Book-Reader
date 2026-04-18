@@ -14,11 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -39,12 +38,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
+import com.ember.reader.ui.theme.LocalAccentColor
+import com.ember.reader.ui.theme.ServerAccentPalette
 import kotlin.math.roundToInt
 
 data class CardInfoToggles(
@@ -54,6 +58,96 @@ data class CardInfoToggles(
     val showFormatBadge: Boolean = false
 )
 
+enum class SourceBadgeStyle { GRID, LIST_PILL, COMPACT_DOT }
+
+/** Returns the palette color for a given slot, cycling if the index exceeds palette size. */
+private fun slotColor(slot: Int): Color = ServerAccentPalette[slot.mod(ServerAccentPalette.size)]
+
+/**
+ * Per-server identifier rendered on a book surface.
+ *
+ * [appearance] == null represents a local (non-server) book and always renders with
+ * [LocalAccentColor] and the label "Local". Caller is responsible for wrapping in the
+ * `if (info.showSourceBadge)` gate.
+ */
+@Composable
+fun SourceBadge(
+    appearance: ServerAppearance?,
+    style: SourceBadgeStyle,
+    modifier: Modifier = Modifier,
+    localLabel: String = stringResource(R.string.filter_local)
+) {
+    val label = appearance?.name ?: localLabel
+    val color = appearance?.let { slotColor(it.colorSlot) } ?: LocalAccentColor
+    val description = stringResource(R.string.chip_source, label)
+
+    when (style) {
+        SourceBadgeStyle.GRID -> Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(color.copy(alpha = 0.9f))
+                .widthIn(max = 140.dp)
+                .semantics { contentDescription = description }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.9f))
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        SourceBadgeStyle.LIST_PILL -> Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(color.copy(alpha = 0.9f))
+                .widthIn(max = 110.dp)
+                .semantics { contentDescription = description }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.9f))
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        SourceBadgeStyle.COMPACT_DOT -> Box(
+            modifier = modifier
+                .size(9.dp)
+                .clip(RoundedCornerShape(50))
+                .background(color)
+                .semantics { contentDescription = description }
+        )
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UnifiedBookCard(
@@ -62,6 +156,7 @@ fun UnifiedBookCard(
     isSelected: Boolean = false,
     isSelecting: Boolean = false,
     info: CardInfoToggles = CardInfoToggles(),
+    sourceAppearance: ServerAppearance? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
@@ -70,7 +165,6 @@ fun UnifiedBookCard(
     onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val isFromServer = book.serverId != null
 
     Card(
         modifier = Modifier
@@ -166,38 +260,13 @@ fun UnifiedBookCard(
                 }
 
                 if (info.showSourceBadge) {
-                    Box(
+                    SourceBadge(
+                        appearance = sourceAppearance,
+                        style = SourceBadgeStyle.GRID,
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(6.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (isFromServer) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                                } else {
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f)
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                if (isFromServer) Icons.Default.CloudDone else Icons.Default.PhoneAndroid,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (isFromServer) stringResource(R.string.source_server) else stringResource(R.string.source_local),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
+                    )
                 }
 
                 if (info.showFormatBadge) {
@@ -269,6 +338,7 @@ fun UnifiedBookListRow(
     isSelecting: Boolean = false,
     compact: Boolean = false,
     info: CardInfoToggles = CardInfoToggles(),
+    sourceAppearance: ServerAppearance? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onDelete: () -> Unit = {},
@@ -277,7 +347,6 @@ fun UnifiedBookListRow(
     onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val isFromServer = book.serverId != null
     val coverWidth = if (compact) 0.dp else 44.dp
     val coverHeight = if (compact) 0.dp else 64.dp
 
@@ -308,6 +377,14 @@ fun UnifiedBookListRow(
                         .clip(RoundedCornerShape(6.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
+            }
+
+            if (compact && info.showSourceBadge) {
+                SourceBadge(
+                    appearance = sourceAppearance,
+                    style = SourceBadgeStyle.COMPACT_DOT
+                )
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -342,14 +419,11 @@ fun UnifiedBookListRow(
                 }
             }
 
-            if (info.showSourceBadge) {
-                Icon(
-                    if (isFromServer) Icons.Default.CloudDone else Icons.Default.PhoneAndroid,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .size(16.dp)
+            if (!compact && info.showSourceBadge) {
+                SourceBadge(
+                    appearance = sourceAppearance,
+                    style = SourceBadgeStyle.LIST_PILL,
+                    modifier = Modifier.padding(start = 8.dp)
                 )
             }
 

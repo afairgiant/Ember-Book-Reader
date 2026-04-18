@@ -77,6 +77,30 @@ class MigrationsTest {
         )
     }
 
+    @Test
+    fun migrate15To16_addsAccentColorSlotColumn() {
+        helper.createDatabase(TEST_DB, 15).use { db ->
+            db.execSQL(
+                "INSERT INTO servers(" +
+                    "name,url,opdsUsername,kosyncUsername,grimmoryUsername," +
+                    "isGrimmory,canMoveOrganizeFiles,opdsEnabled,kosyncEnabled" +
+                    ") VALUES('S','https://s','u','u','',0,0,1,1)"
+            )
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            16,
+            true,
+            EmberDatabase.MIGRATION_15_16
+        )
+
+        migrated.query("SELECT accentColorSlot FROM servers").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue("expected NULL default for accentColorSlot", c.isNull(0))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "ember-migrations-test"
     }

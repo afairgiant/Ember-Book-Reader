@@ -2,6 +2,7 @@ package com.ember.reader.ui.server
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
@@ -41,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -51,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.GrimmoryUserPermissions
 import com.ember.reader.ui.settings.components.PermissionChip
+import com.ember.reader.ui.theme.ServerAccentPalette
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -475,6 +480,12 @@ private fun GrimmoryForm(
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+        AppearanceSection(
+            currentSlot = uiState.accentColorSlot,
+            onSelect = viewModel::updateAccentColorSlot
+        )
+
         uiState.validationError?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -641,6 +652,12 @@ private fun OpdsForm(
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+        AppearanceSection(
+            currentSlot = uiState.accentColorSlot,
+            onSelect = viewModel::updateAccentColorSlot
+        )
+
         uiState.validationError?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -674,6 +691,38 @@ private fun OpdsForm(
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun AppearanceSection(currentSlot: Int?, onSelect: (Int?) -> Unit) {
+    SectionHeader(icon = Icons.Default.Palette, title = stringResource(R.string.appearance))
+    Spacer(modifier = Modifier.height(12.dp))
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        ServerAccentPalette.forEachIndexed { index, color ->
+            val selected = currentSlot == index
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color)
+                    .border(
+                        width = if (selected) 2.dp else 0.dp,
+                        color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                        shape = RoundedCornerShape(50)
+                    )
+                    .clickable { onSelect(index) }
+            )
+        }
+    }
+    if (currentSlot != null) {
+        TextButton(onClick = { onSelect(null) }) {
+            Text(stringResource(R.string.reset_to_default))
+        }
     }
 }
 

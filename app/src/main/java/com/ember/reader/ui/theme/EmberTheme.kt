@@ -19,6 +19,22 @@ private val EmberOrangeDark = Color(0xFFAC1900)
 val EmberCardLight = Color(0xFFFFF0E8)
 val EmberCardDark = Color(0xFF2E2220)
 
+// Per-server accent palette. Chosen to read against both light (#FFF0E8) and dark (#2E2220)
+// surfaceVariant, mutually distinct, and clear of the EmberOrange primary family.
+// Index is persisted in Server.accentColorSlot.
+// Order: blue, teal, green, purple, pink, amber.
+val ServerAccentPalette: List<Color> = listOf(
+    Color(0xFF4A90D9),
+    Color(0xFF2AA198),
+    Color(0xFF4E9A3E),
+    Color(0xFF9061C2),
+    Color(0xFFD65D9B),
+    Color(0xFFCFA13B)
+)
+
+// Neutral grey for local-only books. Not part of the rotation.
+val LocalAccentColor: Color = Color(0xFF6E6A68)
+
 private val LightColorScheme = lightColorScheme(
     primary = EmberOrange,
     onPrimary = Color.White,

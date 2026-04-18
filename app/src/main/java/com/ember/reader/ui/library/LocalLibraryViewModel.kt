@@ -15,10 +15,12 @@ import com.ember.reader.core.repository.LibraryGroupBy
 import com.ember.reader.core.repository.LibraryPreferencesRepository
 import com.ember.reader.core.repository.LibraryPrefs
 import com.ember.reader.core.repository.LibrarySortKey
-import com.ember.reader.core.repository.LibrarySource
+import com.ember.reader.core.repository.LibrarySourceFilter
 import com.ember.reader.core.repository.LibraryStatus
 import com.ember.reader.core.repository.LibraryViewMode
 import com.ember.reader.core.repository.ReadingProgressRepository
+import com.ember.reader.core.repository.ServerAppearance
+import com.ember.reader.core.repository.ServerAppearanceResolver
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.PushResult
@@ -39,7 +41,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -59,7 +63,7 @@ data class LibraryViewState(
     val totalCount: Int = 0,
     val inProgress: List<Book> = emptyList(),
     val formatCounts: Map<LibraryFormat, Int> = emptyMap(),
-    val sourceCounts: Map<LibrarySource, Int> = emptyMap(),
+    val sourceCounts: Map<LibrarySourceFilter, Int> = emptyMap(),
     val statusCounts: Map<LibraryStatus, Int> = emptyMap()
 )
 
@@ -70,7 +74,8 @@ class LocalLibraryViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
     private val progressSyncManager: ProgressSyncManager,
-    private val prefsRepo: LibraryPreferencesRepository
+    private val prefsRepo: LibraryPreferencesRepository,
+    serverAppearanceResolver: ServerAppearanceResolver
 ) : ViewModel() {
 
     val allDownloadedBooks: StateFlow<List<Book>> = bookRepository.observeDownloadedBooks()
@@ -104,21 +109,46 @@ class LocalLibraryViewModel @Inject constructor(
     val servers: StateFlow<List<Server>> = serverRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val appearances: StateFlow<Map<Long, ServerAppearance>> = serverAppearanceResolver.appearances
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     val viewState: StateFlow<LibraryViewState> = combine(
         allDownloadedBooks,
         progressInfo,
         prefs,
-        _searchQuery
-    ) { books, progress, prefs, query ->
-        buildViewState(books, progress, prefs, query)
+        _searchQuery,
+        servers
+    ) { books, progress, p, query, srv ->
+        buildViewState(books, progress, p, query, srv)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryViewState())
+
+    init {
+        // When the selected-server filter points at a server that no longer exists, silently
+        // reset to All. The filter sheet UI would otherwise show "Source: (unknown)" and yield
+        // an empty library because the id doesn't match any book.
+        combine(prefs, servers) { p, srv ->
+            val filter = p.sourceFilter
+            if (filter is LibrarySourceFilter.Server && srv.none { it.id == filter.serverId }) {
+                LibrarySourceFilter.All
+            } else {
+                null
+            }
+        }
+            .onEach { reset ->
+                if (reset != null) {
+                    prefsRepo.update { it.copy(sourceFilter = reset) }
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
     private fun buildViewState(
         books: List<Book>,
         progress: Map<String, ProgressInfo>,
         prefs: LibraryPrefs,
-        query: String
+        query: String,
+        servers: List<Server>
     ): LibraryViewState {
         // Counts always reflect the *unfiltered* set so the filter sheet shows true totals.
         val formatCounts = mapOf(
@@ -126,11 +156,16 @@ class LocalLibraryViewModel @Inject constructor(
             LibraryFormat.BOOKS to books.count { it.format == BookFormat.EPUB || it.format == BookFormat.PDF },
             LibraryFormat.AUDIOBOOKS to books.count { it.format == BookFormat.AUDIOBOOK }
         )
-        val sourceCounts = mapOf(
-            LibrarySource.ALL to books.size,
-            LibrarySource.SERVER to books.count { it.serverId != null },
-            LibrarySource.LOCAL to books.count { it.serverId == null }
-        )
+        val sourceCounts: Map<LibrarySourceFilter, Int> = buildMap {
+            put(LibrarySourceFilter.All, books.size)
+            put(LibrarySourceFilter.Local, books.count { it.serverId == null })
+            for (server in servers) {
+                put(
+                    LibrarySourceFilter.Server(server.id),
+                    books.count { it.serverId == server.id }
+                )
+            }
+        }
         val statusCounts = mapOf(
             LibraryStatus.ALL to books.size,
             LibraryStatus.READING to books.count { statusOf(it, progress) == LibraryStatus.READING },
@@ -161,7 +196,7 @@ class LocalLibraryViewModel @Inject constructor(
         val items: List<LibraryListItem> = if (prefs.groupBy == LibraryGroupBy.NONE) {
             sorted.map { LibraryListItem.BookEntry(it) }
         } else {
-            buildGrouped(sorted, progress, prefs.groupBy)
+            buildGrouped(sorted, progress, prefs.groupBy, servers)
         }
 
         return LibraryViewState(
@@ -183,10 +218,10 @@ class LocalLibraryViewModel @Inject constructor(
         }
     }
 
-    private fun matchesSource(book: Book, filter: LibrarySource): Boolean = when (filter) {
-        LibrarySource.ALL -> true
-        LibrarySource.SERVER -> book.serverId != null
-        LibrarySource.LOCAL -> book.serverId == null
+    private fun matchesSource(book: Book, filter: LibrarySourceFilter): Boolean = when (filter) {
+        LibrarySourceFilter.All -> true
+        LibrarySourceFilter.Local -> book.serverId == null
+        is LibrarySourceFilter.Server -> book.serverId == filter.serverId
     }
 
     private fun matchesFormat(book: Book, filter: LibraryFormat): Boolean = when (filter) {
@@ -229,7 +264,8 @@ class LocalLibraryViewModel @Inject constructor(
     private fun buildGrouped(
         sorted: List<Book>,
         progress: Map<String, ProgressInfo>,
-        groupBy: LibraryGroupBy
+        groupBy: LibraryGroupBy,
+        servers: List<Server>
     ): List<LibraryListItem> {
         val grouped: Map<String, Pair<String, List<Book>>> = when (groupBy) {
             LibraryGroupBy.AUTHOR -> sorted.groupBy { it.author ?: "Unknown" }
@@ -257,6 +293,21 @@ class LocalLibraryViewModel @Inject constructor(
                     val instant = it.addedAt
                     instant.atZone(ZoneId.systemDefault()).format(fmt)
                 }.mapValues { it.key to it.value }
+            }
+            LibraryGroupBy.SOURCE -> {
+                // Servers first (in the order they come from the servers flow — alphabetical),
+                // then a Local group. Empty sections are skipped.
+                val byServerId = sorted.groupBy { it.serverId }
+                linkedMapOf<String, Pair<String, List<Book>>>().apply {
+                    for (server in servers) {
+                        byServerId[server.id]?.takeIf { it.isNotEmpty() }?.let { list ->
+                            put("server:${server.id}", server.name to list)
+                        }
+                    }
+                    byServerId[null]?.takeIf { it.isNotEmpty() }?.let { list ->
+                        put("local", "Local" to list)
+                    }
+                }
             }
             LibraryGroupBy.NONE -> emptyMap()
         }
@@ -296,7 +347,7 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch { prefsRepo.update { it.copy(groupBy = group) } }
     }
 
-    fun setSource(source: LibrarySource) {
+    fun setSource(source: LibrarySourceFilter) {
         viewModelScope.launch { prefsRepo.update { it.copy(sourceFilter = source) } }
     }
 
@@ -341,7 +392,7 @@ class LocalLibraryViewModel @Inject constructor(
             _searchQuery.value = ""
             prefsRepo.update {
                 it.copy(
-                    sourceFilter = LibrarySource.ALL,
+                    sourceFilter = LibrarySourceFilter.All,
                     formatFilter = LibraryFormat.ALL,
                     statusFilter = LibraryStatus.ALL
                 )
@@ -354,27 +405,27 @@ class LocalLibraryViewModel @Inject constructor(
             prefsRepo.update {
                 when (preset) {
                     LibraryPreset.CURRENTLY_READING -> it.copy(
-                        sourceFilter = LibrarySource.ALL,
+                        sourceFilter = LibrarySourceFilter.All,
                         formatFilter = LibraryFormat.ALL,
                         statusFilter = LibraryStatus.READING
                     )
                     LibraryPreset.UNREAD -> it.copy(
-                        sourceFilter = LibrarySource.ALL,
+                        sourceFilter = LibrarySourceFilter.All,
                         formatFilter = LibraryFormat.ALL,
                         statusFilter = LibraryStatus.UNREAD
                     )
                     LibraryPreset.FINISHED -> it.copy(
-                        sourceFilter = LibrarySource.ALL,
+                        sourceFilter = LibrarySourceFilter.All,
                         formatFilter = LibraryFormat.ALL,
                         statusFilter = LibraryStatus.FINISHED
                     )
                     LibraryPreset.DOWNLOADED -> it.copy(
-                        sourceFilter = LibrarySource.LOCAL,
+                        sourceFilter = LibrarySourceFilter.Local,
                         formatFilter = LibraryFormat.ALL,
                         statusFilter = LibraryStatus.ALL
                     )
                     LibraryPreset.AUDIOBOOKS -> it.copy(
-                        sourceFilter = LibrarySource.ALL,
+                        sourceFilter = LibrarySourceFilter.All,
                         formatFilter = LibraryFormat.AUDIOBOOKS,
                         statusFilter = LibraryStatus.ALL
                     )

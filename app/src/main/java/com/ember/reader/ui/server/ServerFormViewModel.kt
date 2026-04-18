@@ -43,6 +43,7 @@ class ServerFormViewModel @Inject constructor(
                             isGrimmory = server.isGrimmory,
                             opdsEnabled = server.opdsEnabled,
                             kosyncEnabled = server.kosyncEnabled,
+                            accentColorSlot = server.accentColorSlot,
                             isEditing = true
                         )
                     }
@@ -63,6 +64,7 @@ class ServerFormViewModel @Inject constructor(
         _uiState.update { it.copy(grimmoryPassword = value) }
     fun setOpdsEnabled(value: Boolean) = _uiState.update { it.copy(opdsEnabled = value) }
     fun setKosyncEnabled(value: Boolean) = _uiState.update { it.copy(kosyncEnabled = value) }
+    fun updateAccentColorSlot(slot: Int?) = _uiState.update { it.copy(accentColorSlot = slot) }
 
     fun testOpdsConnection() {
         val state = _uiState.value
@@ -212,7 +214,8 @@ class ServerFormViewModel @Inject constructor(
                 grimmoryPassword = state.grimmoryPassword,
                 isGrimmory = state.isGrimmory,
                 opdsEnabled = state.opdsEnabled,
-                kosyncEnabled = state.kosyncEnabled
+                kosyncEnabled = state.kosyncEnabled,
+                accentColorSlot = state.accentColorSlot
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -273,7 +276,8 @@ class ServerFormViewModel @Inject constructor(
                 grimmoryPassword = grimmoryPass,
                 isGrimmory = true,
                 opdsEnabled = state.opdsEnabled,
-                kosyncEnabled = state.kosyncEnabled
+                kosyncEnabled = state.kosyncEnabled,
+                accentColorSlot = state.accentColorSlot
             )
             serverRepository.save(server)
             _uiState.update { it.copy(isSaving = false) }
@@ -294,6 +298,7 @@ data class ServerFormUiState(
     val isGrimmory: Boolean = false,
     val opdsEnabled: Boolean = false,
     val kosyncEnabled: Boolean = false,
+    val accentColorSlot: Int? = null,
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
     val validationError: String? = null,

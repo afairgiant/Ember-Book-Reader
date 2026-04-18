@@ -32,7 +32,6 @@
     <string name="no_books_hint">Download from a server or tap + to import</string>
     <string name="import_book">Import Book</string>
     <string name="filter_all">All</string>
-    <string name="filter_server">Server</string>
     <string name="filter_local">Local</string>
     <string name="filter_books">Books</string>
     <string name="filter_audiobooks">Audiobooks</string>
@@ -40,7 +39,6 @@
     <string name="clear_selection">Clear</string>
     <string name="sync_count">Sync %d</string>
     <string name="delete_count">Delete %d</string>
-    <string name="source_server">Server</string>
     <string name="source_local">Local</string>
     <string name="pull_progress">Pull Progress</string>
     <string name="push_progress">Push Progress</string>
@@ -61,6 +59,9 @@
     <string name="group_series">Series</string>
     <string name="group_format">Format</string>
     <string name="group_status">Status</string>
+    <string name="group_source">Source</string>
+    <string name="chip_source">Source: %1$s</string>
+    <string name="reset_to_default">Reset to default</string>
     <string name="sort_recent">Recent</string>
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>

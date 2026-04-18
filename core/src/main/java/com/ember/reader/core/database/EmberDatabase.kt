@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -236,6 +236,16 @@ abstract class EmberDatabase : RoomDatabase() {
                 db.execSQL(
                     "UPDATE servers SET kosyncEnabled = 1 WHERE kosyncUsername IS NOT NULL AND kosyncUsername <> ''"
                 )
+            }
+        }
+
+        /**
+         * Migration 15→16: Adds accentColorSlot to servers for per-server
+         * color identity in the library. Null = auto-assign on first resolve.
+         */
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE servers ADD COLUMN accentColorSlot INTEGER DEFAULT NULL")
             }
         }
 

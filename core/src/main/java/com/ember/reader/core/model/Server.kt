@@ -21,7 +21,8 @@ data class Server(
     val canUpload: Boolean? = null,
     val canAccessBookdrop: Boolean? = null,
     val isAdmin: Boolean? = null,
-    val permissionsFetchedAt: Instant? = null
+    val permissionsFetchedAt: Instant? = null,
+    val accentColorSlot: Int? = null
 ) {
     /** Returns the OPDS feed URL — appends the known OPDS path for Grimmory servers. */
     val opdsUrl: String

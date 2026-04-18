@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,7 +63,7 @@ import com.ember.reader.R
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.repository.LibraryDensity
 import com.ember.reader.core.repository.LibraryFormat
-import com.ember.reader.core.repository.LibrarySource
+import com.ember.reader.core.repository.LibrarySourceFilter
 import com.ember.reader.core.repository.LibraryStatus
 import com.ember.reader.core.repository.LibraryViewMode
 import com.ember.reader.ui.library.components.ActiveFilterChip
@@ -73,6 +75,8 @@ import com.ember.reader.ui.library.components.LibrarySortMenu
 import com.ember.reader.ui.library.components.LibraryToolbar
 import com.ember.reader.ui.library.components.UnifiedBookCard
 import com.ember.reader.ui.library.components.UnifiedBookListRow
+import com.ember.reader.ui.theme.LocalAccentColor
+import com.ember.reader.ui.theme.ServerAccentPalette
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -88,6 +92,7 @@ fun LocalLibraryScreen(
     val importing by viewModel.importing.collectAsStateWithLifecycle()
     val progressMap by viewModel.progressMap.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
+    val appearances by viewModel.appearances.collectAsStateWithLifecycle()
     val operationResult by viewModel.operationResult.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
 
@@ -110,13 +115,15 @@ fun LocalLibraryScreen(
     val isSelecting = selectedIds.isNotEmpty()
 
     val activeChips: List<ActiveFilterChip> = buildList {
-        if (prefs.sourceFilter != LibrarySource.ALL) {
-            val label = when (prefs.sourceFilter) {
-                LibrarySource.SERVER -> stringResource(R.string.filter_server)
-                LibrarySource.LOCAL -> stringResource(R.string.filter_local)
-                LibrarySource.ALL -> ""
+        val sourceFilter = prefs.sourceFilter
+        if (sourceFilter != LibrarySourceFilter.All) {
+            val sourceName = when (sourceFilter) {
+                LibrarySourceFilter.All -> ""
+                LibrarySourceFilter.Local -> stringResource(R.string.filter_local)
+                is LibrarySourceFilter.Server -> appearances[sourceFilter.serverId]?.name ?: ""
             }
-            add(ActiveFilterChip("source", label) { viewModel.setSource(LibrarySource.ALL) })
+            val label = stringResource(R.string.chip_source, sourceName)
+            add(ActiveFilterChip("source", label) { viewModel.setSource(LibrarySourceFilter.All) })
         }
         if (prefs.formatFilter != LibraryFormat.ALL) {
             val label = when (prefs.formatFilter) {
@@ -280,6 +287,7 @@ fun LocalLibraryScreen(
                     showContinueReading = prefs.showContinueReading,
                     progressMap = progressMap,
                     cardInfo = cardInfo,
+                    appearances = appearances,
                     selectedIds = selectedIds,
                     isSelecting = isSelecting,
                     onBookClick = { book ->
@@ -303,10 +311,19 @@ fun LocalLibraryScreen(
         }
 
         if (filterSheetVisible) {
+            val sourceOptions: List<LibrarySourceFilter> = remember(servers) {
+                buildList {
+                    add(LibrarySourceFilter.All)
+                    add(LibrarySourceFilter.Local)
+                    servers.forEach { add(LibrarySourceFilter.Server(it.id)) }
+                }
+            }
             LibraryFilterSheet(
                 prefs = prefs,
                 formatCounts = viewState.formatCounts,
                 sourceCounts = viewState.sourceCounts,
+                sourceOptions = sourceOptions,
+                appearances = appearances,
                 statusCounts = viewState.statusCounts,
                 onDismiss = { filterSheetVisible = false },
                 onSourceChange = viewModel::setSource,
@@ -405,6 +422,7 @@ private fun LibraryContent(
     showContinueReading: Boolean,
     progressMap: Map<String, Float>,
     cardInfo: CardInfoToggles,
+    appearances: Map<Long, com.ember.reader.core.repository.ServerAppearance>,
     selectedIds: Set<String>,
     isSelecting: Boolean,
     onBookClick: (com.ember.reader.core.model.Book) -> Unit,
@@ -432,6 +450,8 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
+                            appearances = appearances,
+                            cardInfo = cardInfo,
                             onBookClick = onBookClick
                         )
                     }
@@ -440,7 +460,11 @@ private fun LibraryContent(
                     when (item) {
                         is LibraryListItem.Header -> {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "header-${item.key}") {
-                                GroupHeader(label = item.label, count = item.count)
+                                GroupHeader(
+                                    label = item.label,
+                                    count = item.count,
+                                    dotColor = sourceGroupDotColor(item.key, appearances)
+                                )
                             }
                         }
                         is LibraryListItem.BookEntry -> {
@@ -452,6 +476,7 @@ private fun LibraryContent(
                                     isSelected = book.id in selectedIds,
                                     isSelecting = isSelecting,
                                     info = cardInfo,
+                                    sourceAppearance = book.serverId?.let { appearances[it] },
                                     onClick = { onBookClick(book) },
                                     onLongClick = { onBookLongClick(book) },
                                     onDelete = { onBookDelete(book) },
@@ -489,6 +514,8 @@ private fun LibraryContent(
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
                             progressMap = progressMap,
+                            appearances = appearances,
+                            cardInfo = cardInfo,
                             onBookClick = onBookClick
                         )
                     }
@@ -497,7 +524,11 @@ private fun LibraryContent(
                     when (item) {
                         is LibraryListItem.Header -> {
                             item(key = "header-${item.key}") {
-                                GroupHeader(label = item.label, count = item.count)
+                                GroupHeader(
+                                    label = item.label,
+                                    count = item.count,
+                                    dotColor = sourceGroupDotColor(item.key, appearances)
+                                )
                             }
                         }
                         is LibraryListItem.BookEntry -> {
@@ -510,6 +541,7 @@ private fun LibraryContent(
                                     isSelecting = isSelecting,
                                     compact = compact,
                                     info = cardInfo,
+                                    sourceAppearance = book.serverId?.let { appearances[it] },
                                     onClick = { onBookClick(book) },
                                     onLongClick = { onBookLongClick(book) },
                                     onDelete = { onBookDelete(book) },
@@ -539,13 +571,26 @@ private fun LibraryContent(
 }
 
 @Composable
-private fun GroupHeader(label: String, count: Int) {
+private fun GroupHeader(
+    label: String,
+    count: Int,
+    dotColor: androidx.compose.ui.graphics.Color? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, bottom = 4.dp, start = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (dotColor != null) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(dotColor)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.titleSmall,
@@ -558,6 +603,20 @@ private fun GroupHeader(label: String, count: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+/** Maps a SOURCE group key back to the palette color for its header dot. */
+private fun sourceGroupDotColor(
+    key: String,
+    appearances: Map<Long, com.ember.reader.core.repository.ServerAppearance>
+): androidx.compose.ui.graphics.Color? = when {
+    key == "local" -> LocalAccentColor
+    key.startsWith("server:") -> {
+        val id = key.removePrefix("server:").toLongOrNull()
+        val slot = id?.let { appearances[it]?.colorSlot }
+        slot?.let { ServerAccentPalette[it.mod(ServerAccentPalette.size)] }
+    }
+    else -> null
 }
 
 @Composable
