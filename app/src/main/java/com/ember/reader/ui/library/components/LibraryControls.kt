@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -403,10 +404,12 @@ fun LibraryFilterSheet(
     onClearAll: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val activePreset = prefs.matchingPreset()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -430,12 +433,21 @@ fun LibraryFilterSheet(
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(LibraryPreset.values().toList()) { preset ->
+                    val selected = preset == activePreset
                     AssistChip(
                         onClick = {
                             onApplyPreset(preset)
                             onDismiss()
                         },
-                        label = { Text(presetLabel(preset)) }
+                        label = { Text(presetLabel(preset)) },
+                        colors = if (selected) {
+                            AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            AssistChipDefaults.assistChipColors()
+                        }
                     )
                 }
             }
@@ -592,6 +604,30 @@ private fun presetLabel(preset: LibraryPreset): String = when (preset) {
     LibraryPreset.FINISHED -> stringResource(R.string.preset_finished)
     LibraryPreset.DOWNLOADED -> stringResource(R.string.preset_downloaded)
     LibraryPreset.AUDIOBOOKS -> stringResource(R.string.preset_audiobooks)
+}
+
+/**
+ * Returns the [LibraryPreset] whose field combination exactly matches the current prefs,
+ * so the sheet can highlight the active preset chip. Must stay in sync with the
+ * corresponding branches of `LocalLibraryViewModel.applyPreset`.
+ */
+private fun LibraryPrefs.matchingPreset(): LibraryPreset? = when {
+    sourceFilter == LibrarySourceFilter.All &&
+        formatFilter == LibraryFormat.ALL &&
+        statusFilter == LibraryStatus.READING -> LibraryPreset.CURRENTLY_READING
+    sourceFilter == LibrarySourceFilter.All &&
+        formatFilter == LibraryFormat.ALL &&
+        statusFilter == LibraryStatus.UNREAD -> LibraryPreset.UNREAD
+    sourceFilter == LibrarySourceFilter.All &&
+        formatFilter == LibraryFormat.ALL &&
+        statusFilter == LibraryStatus.FINISHED -> LibraryPreset.FINISHED
+    sourceFilter == LibrarySourceFilter.Local &&
+        formatFilter == LibraryFormat.ALL &&
+        statusFilter == LibraryStatus.ALL -> LibraryPreset.DOWNLOADED
+    sourceFilter == LibrarySourceFilter.All &&
+        formatFilter == LibraryFormat.AUDIOBOOKS &&
+        statusFilter == LibraryStatus.ALL -> LibraryPreset.AUDIOBOOKS
+    else -> null
 }
 
 // ============================================================================
