@@ -81,6 +81,9 @@ class BookDetailViewModel @Inject constructor(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     fun dismissMessage() {
         _message.value = null
     }
@@ -218,11 +221,16 @@ class BookDetailViewModel @Inject constructor(
         DownloadService.start(context, book.id, server.id)
     }
 
-    /** Re-fetch book detail from Grimmory (e.g. after metadata edit). */
+    /** Re-fetch book detail from Grimmory (e.g. after metadata edit or pull-to-refresh). */
     fun refreshFromServer() {
         viewModelScope.launch {
             val srv = _server.value ?: return@launch
-            loadServer(srv.id)
+            _isRefreshing.value = true
+            try {
+                loadServer(srv.id)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

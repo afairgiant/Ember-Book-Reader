@@ -53,6 +53,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -109,6 +110,7 @@ fun BookDetailScreen(
     val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
     val grimmoryFullBook by viewModel.grimmoryFullBook.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showOrganizeSheet by remember { mutableStateOf(false) }
@@ -214,516 +216,522 @@ fun BookDetailScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refreshFromServer() },
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    // Hero cover — centered
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        BookCoverImage(
-                            book = currentBook,
-                            modifier = Modifier
-                                .width(180.dp)
-                                .aspectRatio(0.67f)
-                                .clip(RoundedCornerShape(12.dp)),
-                            onClick = if (currentBook.coverUrl != null) {
-                                { coverZoomed = true }
-                            } else {
-                                null
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Title + Author + Series — centered
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        Text(
-                            text = currentBook.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        currentBook.author?.let { author ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = author,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-
-                        currentBook.series?.let { series ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            val idx = currentBook.seriesIndex
-                            val seriesText = if (idx != null) {
-                                if (idx == idx.toLong().toFloat()) "$series #${idx.toLong()}" else "$series #$idx"
-                            } else {
-                                series
-                            }
-                            Text(
-                                text = seriesText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        // Hardcover user status badge
-                        val hcEntry = hardcoverUserEntry
-                        if (hcEntry != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Hardcover: ${HardcoverStatus.label(hcEntry.statusId)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                        // Hero cover — centered
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            BookCoverImage(
+                                book = currentBook,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .width(180.dp)
+                                    .aspectRatio(0.67f)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                onClick = if (currentBook.coverUrl != null) {
+                                    { coverZoomed = true }
+                                } else {
+                                    null
+                                }
                             )
                         }
 
-                        // Format badge + reading progress
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Title + Author + Series — centered
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = currentBook.format.name,
-                                style = MaterialTheme.typography.labelSmall,
+                                text = currentBook.title,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
                             )
+
+                            currentBook.author?.let { author ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = author,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+
+                            currentBook.series?.let { series ->
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val idx = currentBook.seriesIndex
+                                val seriesText = if (idx != null) {
+                                    if (idx == idx.toLong().toFloat()) "$series #${idx.toLong()}" else "$series #$idx"
+                                } else {
+                                    series
+                                }
+                                Text(
+                                    text = seriesText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            // Hardcover user status badge
+                            val hcEntry = hardcoverUserEntry
+                            if (hcEntry != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Hardcover: ${HardcoverStatus.label(hcEntry.statusId)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            // Format badge + reading progress
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = currentBook.format.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                                val pct = progress?.percentage
+                                if (pct != null && pct > 0f) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "${(pct * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
                             val pct = progress?.percentage
                             if (pct != null && pct > 0f) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "${(pct * 100).roundToInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = { pct },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                                 )
                             }
                         }
 
-                        val pct = progress?.percentage
-                        if (pct != null && pct > 0f) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { pct },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            )
-                        }
-                    }
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Action buttons
-                    val isAudiobook = currentBook.format == BookFormat.AUDIOBOOK
-                    val currentServer = server
-                    val grimmoryBookId = currentBook.grimmoryBookId
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (currentBook.isDownloaded) {
-                            Button(
-                                onClick = { onOpenReader(currentBook.id, currentBook.format) },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    if (isAudiobook) Icons.Default.PlayArrow else Icons.AutoMirrored.Filled.MenuBook,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                val buttonText = if (isAudiobook) {
-                                    if (progress?.percentage?.let { it > 0f } == true) {
-                                        stringResource(R.string.continue_listening)
-                                    } else {
-                                        stringResource(R.string.listen)
-                                    }
-                                } else {
-                                    if (progress?.percentage?.let { it > 0f } == true) {
-                                        stringResource(R.string.continue_reading_button)
-                                    } else {
-                                        stringResource(R.string.start_reading)
-                                    }
-                                }
-                                Text(buttonText)
-                            }
-                        } else if (currentBook.downloadUrl != null || isAudiobook) {
-                            val canStream = currentServer?.isGrimmory == true &&
-                                grimmoryBookId != null &&
-                                (currentBook.format == BookFormat.EPUB || currentBook.format == BookFormat.PDF)
-                            val downloadBlocked = currentServer?.canDownload == false
-
-                            if (isAudiobook && currentBook.grimmoryBookId != null) {
+                        // Action buttons
+                        val isAudiobook = currentBook.format == BookFormat.AUDIOBOOK
+                        val currentServer = server
+                        val grimmoryBookId = currentBook.grimmoryBookId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (currentBook.isDownloaded) {
                                 Button(
                                     onClick = { onOpenReader(currentBook.id, currentBook.format) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        if (isAudiobook) Icons.Default.PlayArrow else Icons.AutoMirrored.Filled.MenuBook,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.listen))
-                                }
-                            }
-                            if (canStream) {
-                                Button(
-                                    onClick = { onOpenStreamingReader(currentBook.id, currentBook.format) },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.read_streaming))
-                                }
-                            }
-                            if (currentBook.downloadUrl != null) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (downloadBlocked) {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    "Your account doesn't have download permission on this server"
-                                                )
-                                            }
+                                    val buttonText = if (isAudiobook) {
+                                        if (progress?.percentage?.let { it > 0f } == true) {
+                                            stringResource(R.string.continue_listening)
                                         } else {
-                                            viewModel.downloadBook()
+                                            stringResource(R.string.listen)
                                         }
-                                    },
-                                    enabled = !downloading,
-                                    modifier = if ((isAudiobook && currentBook.grimmoryBookId != null) || canStream) {
-                                        Modifier
                                     } else {
-                                        Modifier.weight(1f)
-                                    },
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    when {
-                                        downloading ->
-                                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                        downloadBlocked ->
-                                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        else ->
-                                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = when {
-                                            downloading -> stringResource(R.string.downloading)
-                                            else -> stringResource(R.string.download)
+                                        if (progress?.percentage?.let { it > 0f } == true) {
+                                            stringResource(R.string.continue_reading_button)
+                                        } else {
+                                            stringResource(R.string.start_reading)
                                         }
-                                    )
+                                    }
+                                    Text(buttonText)
                                 }
-                            }
-                        }
-                        // View on Grimmory icon button
-                        if (currentServer?.isGrimmory == true && grimmoryBookId != null) {
-                            val context = LocalContext.current
-                            val serverOrigin = com.ember.reader.core.network.serverOrigin(currentServer.url)
-                            IconButton(onClick = {
-                                context.startActivity(
-                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("$serverOrigin/book/$grimmoryBookId"))
-                                )
-                            }) {
-                                Icon(Icons.Default.OpenInBrowser, contentDescription = stringResource(R.string.view_on_grimmory))
-                            }
-                        }
-                    }
+                            } else if (currentBook.downloadUrl != null || isAudiobook) {
+                                val canStream = currentServer?.isGrimmory == true &&
+                                    grimmoryBookId != null &&
+                                    (currentBook.format == BookFormat.EPUB || currentBook.format == BookFormat.PDF)
+                                val downloadBlocked = currentServer?.canDownload == false
 
-                    // About card — description + key metadata
-                    val bookDescription = currentBook.description?.takeIf { it.isNotBlank() }
-                        ?: grimmoryDetail?.description?.takeIf { it.isNotBlank() }
-                        ?: hardcoverMatch?.description?.takeIf { it.isNotBlank() }
-                    val gd = grimmoryDetail
-                    val pageCount = currentBook.pageCount ?: gd?.pageCount ?: hardcoverMatch?.pages
-                    val published = (
-                        currentBook.publishedDate ?: gd?.publishedDate
-                            ?: hardcoverMatch?.releaseYear?.toString()
-                        )?.let(::formatPublishedDate)
-                    val language = currentBook.language ?: gd?.language
-
-                    // About card — collapsible description + key metadata
-                    if (bookDescription != null || pageCount != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("About", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                bookDescription?.let {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    var expanded by remember { mutableStateOf(false) }
-                                    Text(
-                                        text = cleanHtml(it),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = if (expanded) Int.MAX_VALUE else 3,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.clickable { expanded = !expanded }
-                                    )
-                                    Text(
-                                        text = if (expanded) "Show less" else "Show more",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.clickable { expanded = !expanded }.padding(top = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Book Info card
-                    val publisher = currentBook.publisher ?: gd?.publisher
-                    val isbn = gd?.isbn13
-                    val series = currentBook.series ?: gd?.seriesName
-                    val seriesIdx = currentBook.seriesIndex ?: gd?.seriesNumber
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Book Info", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            series?.let {
-                                val seriesText = if (seriesIdx != null) {
-                                    val idx = if (seriesIdx == seriesIdx.toLong().toFloat()) "${seriesIdx.toLong()}" else "$seriesIdx"
-                                    "$it #$idx"
-                                } else {
-                                    it
-                                }
-                                InfoRow(stringResource(R.string.info_series), seriesText)
-                            }
-                            InfoRow(stringResource(R.string.info_format), currentBook.format.name)
-                            pageCount?.let { InfoRow(stringResource(R.string.info_pages), "$it") }
-                            language?.let { InfoRow(stringResource(R.string.info_language), it.uppercase()) }
-                            published?.let { InfoRow(stringResource(R.string.info_published), it) }
-                            publisher?.let { InfoRow(stringResource(R.string.info_publisher), it) }
-                            isbn?.let { InfoRow(stringResource(R.string.info_isbn), it) }
-                        }
-                    }
-
-                    // Ratings card
-                    val fullMeta = grimmoryFullBook?.metadata
-                    val goodreadsRating = fullMeta?.goodreadsRating
-                    val amazonRating = fullMeta?.amazonRating
-                    val hardcoverRating = fullMeta?.hardcoverRating
-                    if (gd != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Ratings", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                goodreadsRating?.let { rating ->
-                                    val reviews = fullMeta.goodreadsReviewCount?.let { " ($it)" } ?: ""
-                                    InfoRow("Goodreads", "%.1f$reviews".format(rating))
-                                }
-                                amazonRating?.let { rating ->
-                                    val reviews = fullMeta.amazonReviewCount?.let { " ($it)" } ?: ""
-                                    InfoRow("Amazon", "%.1f$reviews".format(rating))
-                                }
-                                hardcoverRating?.let { rating ->
-                                    val reviews = fullMeta.hardcoverReviewCount?.let { " ($it)" } ?: ""
-                                    InfoRow("Hardcover", "%.1f$reviews".format(rating))
-                                }
-                                if (goodreadsRating != null || amazonRating != null || hardcoverRating != null) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                Text(
-                                    text = "Your Rating",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                PersonalRatingStars(
-                                    value = gd.personalRating ?: 0,
-                                    onChange = { viewModel.setPersonalRating(it) }
-                                )
-                            }
-                        }
-                    }
-
-                    // Server Info card
-                    val subjectList: List<String> =
-                        grimmoryFullBook?.metadata?.categoryNames?.toList()
-                            ?: gd?.categories?.toList()
-                            ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
-                            ?: emptyList()
-                    val primaryFileName = gd?.primaryFile?.fileName
-                    if (currentServer != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Server", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                InfoRow(stringResource(R.string.info_server), currentServer.name)
-                                gd?.libraryName?.let { libraryName ->
-                                    val libraryId = gd?.libraryId
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp)
-                                            .then(
-                                                if (libraryId != null) {
-                                                    Modifier.clickable {
-                                                        onOpenLibrary(currentServer.id, libraryId)
-                                                    }
-                                                } else {
-                                                    Modifier
-                                                }
-                                            ),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                if (isAudiobook && currentBook.grimmoryBookId != null) {
+                                    Button(
+                                        onClick = { onOpenReader(currentBook.id, currentBook.format) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text(
-                                            text = stringResource(R.string.info_library),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = libraryName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = if (libraryId != null) {
-                                                MaterialTheme.colorScheme.primary
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.listen))
+                                    }
+                                }
+                                if (canStream) {
+                                    Button(
+                                        onClick = { onOpenStreamingReader(currentBook.id, currentBook.format) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.read_streaming))
+                                    }
+                                }
+                                if (currentBook.downloadUrl != null) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (downloadBlocked) {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(
+                                                        "Your account doesn't have download permission on this server"
+                                                    )
+                                                }
                                             } else {
-                                                MaterialTheme.colorScheme.onSurface
+                                                viewModel.downloadBook()
+                                            }
+                                        },
+                                        enabled = !downloading,
+                                        modifier = if ((isAudiobook && currentBook.grimmoryBookId != null) || canStream) {
+                                            Modifier
+                                        } else {
+                                            Modifier.weight(1f)
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        when {
+                                            downloading ->
+                                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                            downloadBlocked ->
+                                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            else ->
+                                                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = when {
+                                                downloading -> stringResource(R.string.downloading)
+                                                else -> stringResource(R.string.download)
                                             }
                                         )
                                     }
                                 }
-                                primaryFileName?.let { InfoRow("File", it) }
-                                grimmoryFullBook?.metadataMatchScore?.let { score ->
-                                    MetadataScoreRow(score)
+                            }
+                            // View on Grimmory icon button
+                            if (currentServer?.isGrimmory == true && grimmoryBookId != null) {
+                                val context = LocalContext.current
+                                val serverOrigin = com.ember.reader.core.network.serverOrigin(currentServer.url)
+                                IconButton(onClick = {
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("$serverOrigin/book/$grimmoryBookId"))
+                                    )
+                                }) {
+                                    Icon(Icons.Default.OpenInBrowser, contentDescription = stringResource(R.string.view_on_grimmory))
                                 }
-                                gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
-                                    InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
+                            }
+                        }
+
+                        // About card — description + key metadata
+                        val bookDescription = currentBook.description?.takeIf { it.isNotBlank() }
+                            ?: grimmoryDetail?.description?.takeIf { it.isNotBlank() }
+                            ?: hardcoverMatch?.description?.takeIf { it.isNotBlank() }
+                        val gd = grimmoryDetail
+                        val pageCount = currentBook.pageCount ?: gd?.pageCount ?: hardcoverMatch?.pages
+                        val published = (
+                            currentBook.publishedDate ?: gd?.publishedDate
+                                ?: hardcoverMatch?.releaseYear?.toString()
+                            )?.let(::formatPublishedDate)
+                        val language = currentBook.language ?: gd?.language
+
+                        // About card — collapsible description + key metadata
+                        if (bookDescription != null || pageCount != null) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("About", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    bookDescription?.let {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        var expanded by remember { mutableStateOf(false) }
+                                        Text(
+                                            text = cleanHtml(it),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = if (expanded) Int.MAX_VALUE else 3,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.clickable { expanded = !expanded }
+                                        )
+                                        Text(
+                                            text = if (expanded) "Show less" else "Show more",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.clickable { expanded = !expanded }.padding(top = 4.dp)
+                                        )
+                                    }
                                 }
-                                if (subjectList.isNotEmpty()) {
+                            }
+                        }
+
+                        // Book Info card
+                        val publisher = currentBook.publisher ?: gd?.publisher
+                        val isbn = gd?.isbn13
+                        val series = currentBook.series ?: gd?.seriesName
+                        val seriesIdx = currentBook.seriesIndex ?: gd?.seriesNumber
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Book Info", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                series?.let {
+                                    val seriesText = if (seriesIdx != null) {
+                                        val idx = if (seriesIdx == seriesIdx.toLong().toFloat()) "${seriesIdx.toLong()}" else "$seriesIdx"
+                                        "$it #$idx"
+                                    } else {
+                                        it
+                                    }
+                                    InfoRow(stringResource(R.string.info_series), seriesText)
+                                }
+                                InfoRow(stringResource(R.string.info_format), currentBook.format.name)
+                                pageCount?.let { InfoRow(stringResource(R.string.info_pages), "$it") }
+                                language?.let { InfoRow(stringResource(R.string.info_language), it.uppercase()) }
+                                published?.let { InfoRow(stringResource(R.string.info_published), it) }
+                                publisher?.let { InfoRow(stringResource(R.string.info_publisher), it) }
+                                isbn?.let { InfoRow(stringResource(R.string.info_isbn), it) }
+                            }
+                        }
+
+                        // Ratings card
+                        val fullMeta = grimmoryFullBook?.metadata
+                        val goodreadsRating = fullMeta?.goodreadsRating
+                        val amazonRating = fullMeta?.amazonRating
+                        val hardcoverRating = fullMeta?.hardcoverRating
+                        if (gd != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Ratings", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                     Spacer(modifier = Modifier.height(8.dp))
+                                    goodreadsRating?.let { rating ->
+                                        val reviews = fullMeta.goodreadsReviewCount?.let { " ($it)" } ?: ""
+                                        InfoRow("Goodreads", "%.1f$reviews".format(rating))
+                                    }
+                                    amazonRating?.let { rating ->
+                                        val reviews = fullMeta.amazonReviewCount?.let { " ($it)" } ?: ""
+                                        InfoRow("Amazon", "%.1f$reviews".format(rating))
+                                    }
+                                    hardcoverRating?.let { rating ->
+                                        val reviews = fullMeta.hardcoverReviewCount?.let { " ($it)" } ?: ""
+                                        InfoRow("Hardcover", "%.1f$reviews".format(rating))
+                                    }
+                                    if (goodreadsRating != null || amazonRating != null || hardcoverRating != null) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
                                     Text(
-                                        text = stringResource(R.string.info_subjects),
+                                        text = "Your Rating",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
+                                    PersonalRatingStars(
+                                        value = gd.personalRating ?: 0,
+                                        onChange = { viewModel.setPersonalRating(it) }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Server Info card
+                        val subjectList: List<String> =
+                            grimmoryFullBook?.metadata?.categoryNames?.toList()
+                                ?: gd?.categories?.toList()
+                                ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                                ?: emptyList()
+                        val primaryFileName = gd?.primaryFile?.fileName
+                        if (currentServer != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Server", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    InfoRow(stringResource(R.string.info_server), currentServer.name)
+                                    gd?.libraryName?.let { libraryName ->
+                                        val libraryId = gd?.libraryId
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp)
+                                                .then(
+                                                    if (libraryId != null) {
+                                                        Modifier.clickable {
+                                                            onOpenLibrary(currentServer.id, libraryId)
+                                                        }
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                ),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.info_library),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = libraryName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = if (libraryId != null) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                }
+                                            )
+                                        }
+                                    }
+                                    primaryFileName?.let { InfoRow("File", it) }
+                                    grimmoryFullBook?.metadataMatchScore?.let { score ->
+                                        MetadataScoreRow(score)
+                                    }
+                                    gd?.shelves?.takeIf { it.isNotEmpty() }?.let { shelves ->
+                                        InfoRow(stringResource(R.string.info_shelves), shelves.mapNotNull { it.name }.joinToString(", "))
+                                    }
+                                    if (subjectList.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.info_subjects),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            subjectList.forEach { subject ->
+                                                Text(
+                                                    text = subject,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Grimmory card — read status
+                        if (currentServer?.isGrimmory == true && grimmoryBookId != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(stringResource(R.string.read_status), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     FlowRow(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        subjectList.forEach { subject ->
-                                            Text(
-                                                text = subject,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ReadStatus.entries.forEach { status ->
+                                            FilterChip(
+                                                selected = readStatus == status,
+                                                onClick = { viewModel.updateReadStatus(status) },
+                                                label = { Text(status.displayName) }
                                             )
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Grimmory card — read status
-                    if (currentServer?.isGrimmory == true && grimmoryBookId != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(stringResource(R.string.read_status), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    ReadStatus.entries.forEach { status ->
-                                        FilterChip(
-                                            selected = readStatus == status,
-                                            onClick = { viewModel.updateReadStatus(status) },
-                                            label = { Text(status.displayName) }
-                                        )
-                                    }
+                        // Series books
+                        if (seriesBooks.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "More in Series",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyRow(
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(seriesBooks, key = { it.grimmoryBookId }) { item ->
+                                    SeriesBookCard(
+                                        item = item,
+                                        onClick = {
+                                            val localId = item.localBookId
+                                            if (localId != null) {
+                                                onOpenBookDetail(localId)
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         }
-                    }
 
-                    // Series books
-                    if (seriesBooks.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "More in Series",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(seriesBooks, key = { it.grimmoryBookId }) { item ->
-                                SeriesBookCard(
-                                    item = item,
-                                    onClick = {
-                                        val localId = item.localBookId
-                                        if (localId != null) {
-                                            onOpenBookDetail(localId)
-                                        }
-                                    }
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
-
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
             if (coverZoomed && currentBook != null) {
