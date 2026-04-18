@@ -415,7 +415,10 @@ class LocalLibraryViewModel @Inject constructor(
                 it.copy(
                     sourceFilter = LibrarySourceFilter.All,
                     formatFilter = LibraryFormat.ALL,
-                    statusFilter = LibraryStatus.ALL
+                    statusFilter = LibraryStatus.ALL,
+                    sortKey = LibrarySortKey.RECENT,
+                    sortReversed = false,
+                    groupBy = LibraryGroupBy.NONE
                 )
             }
         }

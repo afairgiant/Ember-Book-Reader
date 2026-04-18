@@ -52,6 +52,8 @@
     <string name="library_count">%d books</string>
     <string name="filter">Filter</string>
     <string name="sort">Sort</string>
+    <string name="sort_and_filter">Sort &amp; filter</string>
+    <string name="sheet_reset">Reset</string>
     <string name="layout">Layout</string>
     <string name="sort_by">Sort by</string>
     <string name="group_by">Group by</string>

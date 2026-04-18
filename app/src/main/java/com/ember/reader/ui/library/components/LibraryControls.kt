@@ -10,6 +10,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,14 +27,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.AssistChip
@@ -62,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -77,6 +79,8 @@ import com.ember.reader.core.repository.LibraryStatus
 import com.ember.reader.core.repository.LibraryViewMode
 import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.library.LibraryPreset
+import com.ember.reader.ui.theme.LocalAccentColor
+import com.ember.reader.ui.theme.serverAccentColor
 
 /** Active filter chip displayed in the toolbar row. */
 data class ActiveFilterChip(val key: String, val label: String, val onClear: () -> Unit)
@@ -91,7 +95,6 @@ fun LibraryToolbar(
     onSearchQueryChange: (String) -> Unit,
     onSearchToggle: () -> Unit,
     onFilterClick: () -> Unit,
-    onSortClick: () -> Unit,
     onLayoutClick: () -> Unit,
     viewMode: LibraryViewMode,
     modifier: Modifier = Modifier
@@ -153,10 +156,7 @@ fun LibraryToolbar(
                         Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                     }
                     IconButton(onClick = onFilterClick) {
-                        Icon(Icons.Default.FilterList, contentDescription = stringResource(R.string.filter))
-                    }
-                    IconButton(onClick = onSortClick) {
-                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
+                        Icon(Icons.Default.Tune, contentDescription = stringResource(R.string.sort_and_filter))
                     }
                     IconButton(onClick = onLayoutClick) {
                         Icon(
@@ -202,69 +202,6 @@ private fun InlineSearchRow(query: String, onQueryChange: (String) -> Unit, onCl
         )
         IconButton(onClick = onClose) {
             Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.close_search))
-        }
-    }
-}
-
-// ============================================================================
-// Sort menu
-// ============================================================================
-
-@Composable
-fun LibrarySortMenu(
-    expanded: Boolean,
-    prefs: LibraryPrefs,
-    onDismiss: () -> Unit,
-    onSortSelected: (LibrarySortKey) -> Unit,
-    onGroupSelected: (LibraryGroupBy) -> Unit
-) {
-    var groupSubExpanded by remember { mutableStateOf(false) }
-
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        Text(
-            text = stringResource(R.string.sort_by),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        LibrarySortKey.values().forEach { key ->
-            val selected = prefs.sortKey == key
-            DropdownMenuItem(
-                text = { Text(sortLabel(key)) },
-                onClick = { onSortSelected(key) },
-                trailingIcon = {
-                    if (selected) {
-                        Icon(
-                            if (prefs.sortReversed) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                            contentDescription = null
-                        )
-                    }
-                }
-            )
-        }
-        HorizontalDivider()
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.group_by) + ": " + groupLabel(prefs.groupBy)) },
-            onClick = { groupSubExpanded = true },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(
-            expanded = groupSubExpanded,
-            onDismissRequest = { groupSubExpanded = false }
-        ) {
-            LibraryGroupBy.values().forEach { g ->
-                DropdownMenuItem(
-                    text = { Text(groupLabel(g)) },
-                    onClick = {
-                        onGroupSelected(g)
-                        groupSubExpanded = false
-                        onDismiss()
-                    },
-                    trailingIcon = {
-                        if (prefs.groupBy == g) Icon(Icons.Default.Check, contentDescription = null)
-                    }
-                )
-            }
         }
     }
 }
@@ -450,16 +387,15 @@ private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 // Filter sheet
 // ============================================================================
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryFilterSheet(
     prefs: LibraryPrefs,
-    formatCounts: Map<LibraryFormat, Int>,
-    sourceCounts: Map<LibrarySourceFilter, Int>,
     sourceOptions: List<LibrarySourceFilter>,
     appearances: Map<Long, ServerAppearance>,
-    statusCounts: Map<LibraryStatus, Int>,
     onDismiss: () -> Unit,
+    onSortSelected: (LibrarySortKey) -> Unit,
+    onGroupSelected: (LibraryGroupBy) -> Unit,
     onSourceChange: (LibrarySourceFilter) -> Unit,
     onFormatChange: (LibraryFormat) -> Unit,
     onStatusChange: (LibraryStatus) -> Unit,
@@ -475,14 +411,14 @@ fun LibraryFilterSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.filter),
+                    stringResource(R.string.sort_and_filter),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = {
                     onClearAll()
                     onDismiss()
-                }) { Text(stringResource(R.string.clear_filters)) }
+                }) { Text(stringResource(R.string.sheet_reset)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -503,13 +439,44 @@ fun LibraryFilterSheet(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Sort by — tapping a selected chip flips the direction; arrow shows current direction
+            FilterChipRow(
+                title = stringResource(R.string.sort_by),
+                options = LibrarySortKey.values().toList(),
+                isSelected = { it == prefs.sortKey },
+                onSelect = onSortSelected,
+                labelOf = { sortLabel(it) },
+                trailing = { opt ->
+                    if (opt == prefs.sortKey) {
+                        Icon(
+                            imageVector = if (prefs.sortReversed) {
+                                Icons.Default.ArrowDropUp
+                            } else {
+                                Icons.Default.ArrowDropDown
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            )
+
+            // Group by
+            FilterChipRow(
+                title = stringResource(R.string.group_by),
+                options = LibraryGroupBy.values().toList(),
+                isSelected = { it == prefs.groupBy },
+                onSelect = onGroupSelected,
+                labelOf = { groupLabel(it) }
+            )
 
             // Format
-            FilterSection(
+            FilterChipRow(
                 title = stringResource(R.string.format),
                 options = LibraryFormat.values().toList(),
-                selected = prefs.formatFilter,
+                isSelected = { it == prefs.formatFilter },
                 onSelect = onFormatChange,
                 labelOf = {
                     when (it) {
@@ -517,15 +484,14 @@ fun LibraryFilterSheet(
                         LibraryFormat.BOOKS -> stringResource(R.string.filter_books)
                         LibraryFormat.AUDIOBOOKS -> stringResource(R.string.filter_audiobooks)
                     }
-                },
-                countOf = { formatCounts[it] ?: 0 }
+                }
             )
 
-            // Source
-            FilterSection(
+            // Source — per-server chips carry their accent color dot
+            FilterChipRow(
                 title = stringResource(R.string.source),
                 options = sourceOptions,
-                selected = prefs.sourceFilter,
+                isSelected = { it == prefs.sourceFilter },
                 onSelect = onSourceChange,
                 labelOf = {
                     when (it) {
@@ -534,14 +500,29 @@ fun LibraryFilterSheet(
                         is LibrarySourceFilter.Server -> appearances[it.serverId]?.name ?: ""
                     }
                 },
-                countOf = { sourceCounts[it] ?: 0 }
+                leading = { opt ->
+                    val dotColor: Color? = when (opt) {
+                        LibrarySourceFilter.Local -> LocalAccentColor
+                        is LibrarySourceFilter.Server ->
+                            appearances[opt.serverId]?.colorSlot?.let(::serverAccentColor)
+                        else -> null
+                    }
+                    if (dotColor != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(dotColor)
+                        )
+                    }
+                }
             )
 
             // Status
-            FilterSection(
+            FilterChipRow(
                 title = stringResource(R.string.status),
                 options = LibraryStatus.values().toList(),
-                selected = prefs.statusFilter,
+                isSelected = { it == prefs.statusFilter },
                 onSelect = onStatusChange,
                 labelOf = {
                     when (it) {
@@ -550,8 +531,7 @@ fun LibraryFilterSheet(
                         LibraryStatus.UNREAD -> stringResource(R.string.status_unread)
                         LibraryStatus.FINISHED -> stringResource(R.string.status_finished)
                     }
-                },
-                countOf = { statusCounts[it] ?: 0 }
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -559,49 +539,46 @@ fun LibraryFilterSheet(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> FilterSection(
+private fun <T> FilterChipRow(
     title: String,
     options: List<T>,
-    selected: T,
+    isSelected: (T) -> Boolean,
     onSelect: (T) -> Unit,
     labelOf: @Composable (T) -> String,
-    countOf: (T) -> Int
+    leading: @Composable (T) -> Unit = {},
+    trailing: @Composable (T) -> Unit = {}
 ) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(4.dp))
-        options.forEach { opt ->
-            val isSelected = opt == selected
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onSelect(opt) }
-                    .padding(vertical = 10.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = labelOf(opt),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.onSurface
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            options.forEach { opt ->
+                val selected = isSelected(opt)
+                AssistChip(
+                    onClick = { onSelect(opt) },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            leading(opt)
+                            Text(text = labelOf(opt))
+                            trailing(opt)
+                        }
+                    },
+                    colors = if (selected) {
+                        AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        AssistChipDefaults.assistChipColors()
                     }
-                )
-                Text(
-                    text = countOf(opt).toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

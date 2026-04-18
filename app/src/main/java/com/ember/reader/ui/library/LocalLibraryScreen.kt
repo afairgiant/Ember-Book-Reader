@@ -71,7 +71,6 @@ import com.ember.reader.ui.library.components.CardInfoToggles
 import com.ember.reader.ui.library.components.ContinueReadingCarousel
 import com.ember.reader.ui.library.components.LibraryFilterSheet
 import com.ember.reader.ui.library.components.LibraryLayoutSheet
-import com.ember.reader.ui.library.components.LibrarySortMenu
 import com.ember.reader.ui.library.components.LibraryToolbar
 import com.ember.reader.ui.library.components.UnifiedBookCard
 import com.ember.reader.ui.library.components.UnifiedBookListRow
@@ -97,7 +96,6 @@ fun LocalLibraryScreen(
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
 
     var searchActive by rememberSaveable { mutableStateOf(false) }
-    var sortMenuExpanded by remember { mutableStateOf(false) }
     var filterSheetVisible by remember { mutableStateOf(false) }
     var layoutSheetVisible by remember { mutableStateOf(false) }
     var relinkBookId by remember { mutableStateOf<String?>(null) }
@@ -241,31 +239,20 @@ fun LocalLibraryScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Box {
-                LibraryToolbar(
-                    resultCount = viewState.totalCount,
-                    activeChips = activeChips,
-                    searchActive = searchActive,
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = viewModel::updateSearch,
-                    onSearchToggle = {
-                        if (searchActive) viewModel.clearSearch()
-                        searchActive = !searchActive
-                    },
-                    onFilterClick = { filterSheetVisible = true },
-                    onSortClick = { sortMenuExpanded = true },
-                    onLayoutClick = { layoutSheetVisible = true },
-                    viewMode = prefs.viewMode
-                )
-                // Sort menu anchored under the toolbar (right side); DropdownMenu auto-positions
-                LibrarySortMenu(
-                    expanded = sortMenuExpanded,
-                    prefs = prefs,
-                    onDismiss = { sortMenuExpanded = false },
-                    onSortSelected = { viewModel.setSort(it) },
-                    onGroupSelected = { viewModel.setGroupBy(it) }
-                )
-            }
+            LibraryToolbar(
+                resultCount = viewState.totalCount,
+                activeChips = activeChips,
+                searchActive = searchActive,
+                searchQuery = searchQuery,
+                onSearchQueryChange = viewModel::updateSearch,
+                onSearchToggle = {
+                    if (searchActive) viewModel.clearSearch()
+                    searchActive = !searchActive
+                },
+                onFilterClick = { filterSheetVisible = true },
+                onLayoutClick = { layoutSheetVisible = true },
+                viewMode = prefs.viewMode
+            )
 
             if (viewState.items.isEmpty()) {
                 EmptyState(
@@ -320,12 +307,11 @@ fun LocalLibraryScreen(
             }
             LibraryFilterSheet(
                 prefs = prefs,
-                formatCounts = viewState.formatCounts,
-                sourceCounts = viewState.sourceCounts,
                 sourceOptions = sourceOptions,
                 appearances = appearances,
-                statusCounts = viewState.statusCounts,
                 onDismiss = { filterSheetVisible = false },
+                onSortSelected = viewModel::setSort,
+                onGroupSelected = viewModel::setGroupBy,
                 onSourceChange = viewModel::setSource,
                 onFormatChange = viewModel::setFormat,
                 onStatusChange = viewModel::setStatus,
