@@ -55,6 +55,7 @@ object Routes {
     const val SETTINGS_DOWNLOADS = "settings/downloads"
     const val HARDCOVER = "hardcover"
     const val BOOKDROP = "bookdrop"
+    const val UPLOAD = "upload/{$ARG_SERVER_ID}"
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
@@ -73,6 +74,7 @@ object Routes {
     fun audiobookReader(bookId: String): String = "reader/audiobook/$bookId"
     fun bookDetail(bookId: String): String = "book_detail/$bookId"
     fun editMetadata(bookId: String): String = "edit_metadata/$bookId"
+    fun upload(serverId: Long): String = "upload/$serverId"
 
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
@@ -225,6 +227,7 @@ fun EmberNavHost(
                     onOpenStats = { navController.navigate(Routes.STATS) },
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                     onOpenBookdrop = { navController.navigate(Routes.BOOKDROP) },
+                    onOpenUpload = { serverId -> navController.navigate(Routes.upload(serverId)) },
                     onOpenDevLog = { navController.navigate(Routes.DEV_LOG) },
                     onOpenLicenses = { navController.navigate(Routes.LICENSES) }
                 )
@@ -258,6 +261,17 @@ fun EmberNavHost(
             }
             composable(Routes.BOOKDROP) {
                 com.ember.reader.ui.bookdrop.BookdropScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.UPLOAD,
+                arguments = listOf(
+                    navArgument(Routes.ARG_SERVER_ID) { type = NavType.LongType }
+                )
+            ) {
+                com.ember.reader.ui.upload.UploadBookScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
@@ -80,6 +81,7 @@ fun SettingsHubScreen(
     onOpenStats: () -> Unit,
     onOpenHardcover: () -> Unit,
     onOpenBookdrop: () -> Unit,
+    onOpenUpload: (Long) -> Unit,
     onOpenDevLog: () -> Unit,
     onOpenLicenses: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
@@ -208,6 +210,43 @@ fun SettingsHubScreen(
                 }
             }
 
+            val uploadableServers = servers.filter {
+                it.isGrimmory && it.canUpload == true && viewModel.isGrimmoryLoggedIn(it.id)
+            }
+            val hasBookdrop = servers.any {
+                it.isGrimmory && viewModel.isGrimmoryLoggedIn(it.id)
+            }
+            if (uploadableServers.isNotEmpty() || hasBookdrop) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsGroup(
+                    title = "Server Tools",
+                    subtitle = "Upload and manage books on your Grimmory server"
+                ) {
+                    uploadableServers.forEachIndexed { index, server ->
+                        if (index > 0) {
+                            com.ember.reader.ui.settings.components.SettingsDivider()
+                        }
+                        SettingsNavRow(
+                            icon = Icons.Default.CloudUpload,
+                            title = "Upload book",
+                            subtitle = server.name,
+                            onClick = { onOpenUpload(server.id) }
+                        )
+                    }
+                    if (hasBookdrop) {
+                        if (uploadableServers.isNotEmpty()) {
+                            com.ember.reader.ui.settings.components.SettingsDivider()
+                        }
+                        SettingsNavRow(
+                            icon = Icons.Default.Inbox,
+                            title = "Book Drop",
+                            subtitle = "Review and import pending books",
+                            onClick = onOpenBookdrop
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // App Settings
@@ -256,15 +295,6 @@ fun SettingsHubScreen(
                     title = "Hardcover",
                     subtitle = "View your reading lists",
                     onClick = onOpenHardcover
-                )
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                SettingsNavRow(
-                    icon = Icons.Default.Inbox,
-                    title = "Book Drop",
-                    subtitle = "Review and import pending books",
-                    onClick = onOpenBookdrop
                 )
             }
 
