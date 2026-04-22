@@ -179,25 +179,61 @@ class GrimmoryClientTest {
     inner class Progress {
 
         @Test
-        fun `pushProgress serializes GrimmoryProgressRequest correctly`() = runTest {
+        fun `putAppBookProgress serializes request and targets app progress endpoint`() = runTest {
             var capturedBody: String? = null
+            var capturedUrl: String? = null
+            var capturedMethod: HttpMethod? = null
             val engine = MockEngine { request ->
+                capturedUrl = request.url.toString()
+                capturedMethod = request.method
                 capturedBody = (request.body as TextContent).text
                 jsonResponse("{}")
             }
             val client = createClient(engine)
 
-            val request = GrimmoryProgressRequest(
-                bookId = 101L,
+            val request = GrimmoryUpdateProgressRequest(
                 fileProgress = GrimmoryFileProgress(bookFileId = 5L, progressPercent = 50.0f),
                 epubProgress = GrimmoryEpubProgress(cfi = "epubcfi(/6/2)", percentage = 50.0f)
             )
 
-            val result = client.pushProgress(baseUrl, serverId, request)
+            val result = client.putAppBookProgress(baseUrl, serverId, 101L, request)
 
             assertTrue(result.isSuccess)
+            assertEquals(HttpMethod.Put, capturedMethod)
+            assertTrue(capturedUrl!!.contains("/api/v1/app/books/101/progress"))
+
             val body = json.decodeFromString<JsonObject>(capturedBody!!)
-            assertEquals("101", body["bookId"]?.jsonPrimitive?.content)
+            // bookId is path-bound in the v3.0.0 endpoint, so it must NOT appear in the body.
+            assertTrue(!body.containsKey("bookId"))
+            val fileProgress = body["fileProgress"] as JsonObject
+            assertEquals("5", fileProgress["bookFileId"]?.jsonPrimitive?.content)
+        }
+
+        @Test
+        fun `getAppBookProgress deserializes response and targets app progress endpoint`() = runTest {
+            var capturedUrl: String? = null
+            val responseJson = """
+                {"readProgress":0.42,"readStatus":"READING","lastReadTime":"2026-04-22T10:00:00Z",
+                 "epubProgress":{"cfi":"epubcfi(/6/4)","href":"ch1.xhtml","percentage":42.0},
+                 "koreaderProgress":{"percentage":0.42,"device":"KOReader","deviceId":"uuid-1","lastSyncTime":"2026-04-22T10:00:00Z"}}
+            """.trimIndent()
+
+            val engine = MockEngine { request ->
+                capturedUrl = request.url.toString()
+                jsonResponse(responseJson)
+            }
+            val client = createClient(engine)
+
+            val result = client.getAppBookProgress(baseUrl, serverId, 101L)
+
+            assertTrue(result.isSuccess)
+            val progress = result.getOrNull()!!
+            assertEquals(0.42f, progress.readProgress)
+            assertEquals(ReadStatus.READING, progress.readStatus)
+            assertEquals(42.0f, progress.epubProgress!!.percentage)
+            assertEquals("KOReader", progress.koreaderProgress!!.device)
+            assertEquals(0.42f, progress.koreaderProgress!!.percentage)
+            assertTrue(capturedUrl!!.contains("/api/v1/app/books/101/progress"))
         }
     }
 

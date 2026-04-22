@@ -88,18 +88,33 @@ class GrimmoryClient @Inject constructor(
         response.body<GrimmoryBookDetail>()
     }
 
-    suspend fun pushProgress(
+    suspend fun getAppBookProgress(
         baseUrl: String,
         serverId: Long,
-        request: GrimmoryProgressRequest
+        grimmoryBookId: Long
+    ): Result<GrimmoryAppBookProgress> = tokenManager.withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId/progress") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) {
+            throw GrimmoryHttpException(response.status.value, "Get app progress failed: ${response.status}")
+        }
+        response.body<GrimmoryAppBookProgress>()
+    }
+
+    suspend fun putAppBookProgress(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+        request: GrimmoryUpdateProgressRequest
     ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
-        val response = httpClient.post("${serverOrigin(baseUrl)}/api/v1/books/progress") {
+        val response = httpClient.put("${serverOrigin(baseUrl)}/api/v1/app/books/$grimmoryBookId/progress") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
         }
         if (!response.status.isSuccess()) {
-            throw GrimmoryHttpException(response.status.value, "Push progress failed: ${response.status}")
+            throw GrimmoryHttpException(response.status.value, "Put app progress failed: ${response.status}")
         }
     }
 

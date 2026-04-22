@@ -3,6 +3,7 @@ package com.ember.reader.core.testutil
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.grimmory.GrimmoryAnnotation
+import com.ember.reader.core.grimmory.GrimmoryAppBookProgress
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
 import com.ember.reader.core.grimmory.GrimmoryBookFile
 import com.ember.reader.core.grimmory.GrimmoryBookmark
@@ -169,6 +170,14 @@ object TestFixtures {
         title = title,
         readProgress = readProgress,
         primaryFile = primaryFile,
+        koreaderProgress = koreaderProgress
+    )
+
+    fun grimmoryAppBookProgress(
+        readProgress: Float? = null,
+        koreaderProgress: GrimmoryKoreaderProgress? = null
+    ) = GrimmoryAppBookProgress(
+        readProgress = readProgress,
         koreaderProgress = koreaderProgress
     )
 }

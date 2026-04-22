@@ -48,8 +48,8 @@ Full API reference: `docs/grimmory-api.md`
 **Phase 1 — Auth & Progress:**
 - [x] JWT auth flow: `POST /api/v1/auth/login` → store access + refresh tokens securely
 - [x] Token refresh: `POST /api/v1/auth/refresh` (10hr access, 30day refresh, auto-refresh on 401)
-- [x] Push progress: `POST /api/v1/books/progress` via `fileProgress.progressPercent` on reader close + SyncWorker
-- [x] Pull progress: `GET /api/v1/app/books/{bookId}` on reader open (supplement kosync pull)
+- [x] Push progress: `PUT /api/v1/app/books/{bookId}/progress` via `fileProgress.progressPercent` on reader close + SyncWorker
+- [x] Pull progress: `GET /api/v1/app/books/{bookId}/progress` on reader open (supplement kosync pull)
 - [x] Continue Reading: `GET /api/v1/app/books/continue-reading` pulled in SyncWorker
 - [x] Read status: `PUT /api/v1/app/books/{bookId}/status` (UNREAD/READING/READ/DNF) — wired to Book Details screen
 - [x] Reading sessions: `POST /api/v1/reading-sessions` — records duration, start/end progress on reader close (skips < 30s)

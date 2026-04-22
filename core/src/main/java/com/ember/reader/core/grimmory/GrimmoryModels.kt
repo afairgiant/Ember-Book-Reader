@@ -127,12 +127,54 @@ data class GrimmoryShelfSummary(
     val name: String? = null
 )
 
+/**
+ * Body for `PUT /api/v1/app/books/{bookId}/progress` (v3.0.0). `bookId` is
+ * path-bound so it is not in the body. Per-format progress siblings
+ * (`epubProgress`, `pdfProgress`, …) are accepted by the server but marked
+ * `@Deprecated` — Ember keeps `epubProgress` populated as a backstop to cover
+ * the case where `fileProgress.bookFileId` couldn't be resolved.
+ */
 @Serializable
-data class GrimmoryProgressRequest(
-    val bookId: Long,
+data class GrimmoryUpdateProgressRequest(
     val fileProgress: GrimmoryFileProgress? = null,
     val epubProgress: GrimmoryEpubProgress? = null,
     val dateFinished: String? = null
+)
+
+/**
+ * Response from `GET /api/v1/app/books/{bookId}/progress` (v3.0.0). Matches
+ * Grimmory's `AppBookProgressResponse` — a progress-only slice of book detail
+ * used by the mobile sync path to avoid over-fetching the full detail DTO.
+ */
+@Serializable
+data class GrimmoryAppBookProgress(
+    val readProgress: Float? = null,
+    val readStatus: ReadStatus? = null,
+    val lastReadTime: String? = null,
+    val epubProgress: GrimmoryEpubProgress? = null,
+    val pdfProgress: GrimmoryPdfProgress? = null,
+    val cbxProgress: GrimmoryCbxProgress? = null,
+    val audiobookProgress: GrimmoryAudiobookProgress? = null,
+    val koreaderProgress: GrimmoryKoreaderProgress? = null
+)
+
+@Serializable
+data class GrimmoryPdfProgress(
+    val page: Int? = null,
+    val percentage: Float? = null
+)
+
+@Serializable
+data class GrimmoryCbxProgress(
+    val page: Int? = null,
+    val percentage: Float? = null
+)
+
+@Serializable
+data class GrimmoryAudiobookProgress(
+    val positionMs: Long? = null,
+    val trackIndex: Int? = null,
+    val percentage: Float? = null
 )
 
 @Serializable

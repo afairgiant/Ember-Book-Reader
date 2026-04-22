@@ -6,7 +6,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryHttpException
-import com.ember.reader.core.grimmory.GrimmoryProgressRequest
+import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
@@ -214,20 +214,20 @@ class ProgressSyncManager @Inject constructor(
         }
         Timber.d("Sync pull: trying Grimmory for '${book.title}' grimmoryBookId=$grimmoryBookId")
         return runCatchingCancellable {
-            val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrThrow()
+            val progress = grimmoryClient.getAppBookProgress(server.url, server.id, grimmoryBookId).getOrThrow()
             // Grimmory stores progress with per-source scales:
             //  - epubProgress.percentage:     0-100 (what Ember + web reader push)
             //  - koreaderProgress.percentage: 0-1   (KOReader protocol)
             //  - readProgress:                falls through to whichever stored value exists,
             //                                 so scale is ambiguous — we pick typed sources first.
-            val pct = resolveGrimmoryPercentage(detail)
-            Timber.d("Sync pull: Grimmory resolved pct=$pct (readProgress=${detail.readProgress} epub=${detail.epubProgress?.percentage} koreader=${detail.koreaderProgress?.percentage}) for '${book.title}'")
+            val pct = resolveGrimmoryPercentage(progress)
+            Timber.d("Sync pull: Grimmory resolved pct=$pct (readProgress=${progress.readProgress} epub=${progress.epubProgress?.percentage} koreader=${progress.koreaderProgress?.percentage}) for '${book.title}'")
             if (pct == null || pct <= 0f) {
                 null
             } else {
                 RemoteSyncResult(
                     progress = ReadingProgress.fromRemote(book.id, server.id, pct),
-                    source = detail.koreaderProgress?.device ?: "Grimmory"
+                    source = progress.koreaderProgress?.device ?: "Grimmory"
                 )
             }
         }.fold(
@@ -326,11 +326,11 @@ class ProgressSyncManager @Inject constructor(
             Timber.d(
                 "Sync push: Grimmory request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct cfi=$PLACEHOLDER_CFI"
             )
-            grimmoryClient.pushProgress(
+            grimmoryClient.putAppBookProgress(
                 baseUrl = server.url,
                 serverId = server.id,
-                request = GrimmoryProgressRequest(
-                    bookId = grimmoryBookId,
+                grimmoryBookId = grimmoryBookId,
+                request = GrimmoryUpdateProgressRequest(
                     fileProgress = fileId?.let { GrimmoryFileProgress(bookFileId = it, progressPercent = pct) },
                     epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
                 )
@@ -355,15 +355,15 @@ class ProgressSyncManager @Inject constructor(
      *    scale depends on that source. Heuristic: values > 1 are 0-100.)
      */
     private fun resolveGrimmoryPercentage(
-        detail: com.ember.reader.core.grimmory.GrimmoryBookDetail
+        progress: com.ember.reader.core.grimmory.GrimmoryAppBookProgress
     ): Float? {
-        detail.koreaderProgress?.percentage?.takeIf { it > 0f }?.let {
+        progress.koreaderProgress?.percentage?.takeIf { it > 0f }?.let {
             return it.coerceIn(0f, 1f)
         }
-        detail.epubProgress?.percentage?.takeIf { it > 0f }?.let {
+        progress.epubProgress?.percentage?.takeIf { it > 0f }?.let {
             return (it / 100f).coerceIn(0f, 1f)
         }
-        val raw = detail.readProgress ?: return null
+        val raw = progress.readProgress ?: return null
         if (raw <= 0f) return null
         return if (raw > 1f) {
             (raw / 100f).coerceIn(0f, 1f)

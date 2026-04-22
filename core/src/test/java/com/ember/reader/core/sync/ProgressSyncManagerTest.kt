@@ -9,6 +9,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingProgressRepository.KosyncProgressResult
 import com.ember.reader.core.testutil.TestFixtures.book
+import com.ember.reader.core.testutil.TestFixtures.grimmoryAppBookProgress
 import com.ember.reader.core.testutil.TestFixtures.grimmoryBookDetail
 import com.ember.reader.core.testutil.TestFixtures.readingProgress
 import com.ember.reader.core.testutil.TestFixtures.server
@@ -69,9 +70,9 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(KosyncProgressResult(kosyncProgress, "KOReader"))
 
-            val detail =
-                grimmoryBookDetail(readProgress = 0.50f, koreaderProgress = GrimmoryKoreaderProgress(device = "Grimmory"))
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress =
+                grimmoryAppBookProgress(readProgress = 0.50f, koreaderProgress = GrimmoryKoreaderProgress(device = "Grimmory"))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
 
@@ -86,9 +87,9 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(KosyncProgressResult(kosyncProgress, "KOReader"))
 
-            val detail =
-                grimmoryBookDetail(readProgress = 0.80f, koreaderProgress = GrimmoryKoreaderProgress(device = "Browser"))
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress =
+                grimmoryAppBookProgress(readProgress = 0.80f, koreaderProgress = GrimmoryKoreaderProgress(device = "Browser"))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
 
@@ -102,8 +103,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
 
-            val detail = grimmoryBookDetail(readProgress = null)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = null)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
             assertNull(result)
@@ -114,8 +115,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.failure(Exception("timeout"))
 
-            val detail = grimmoryBookDetail(readProgress = 0.60f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = 0.60f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
 
@@ -127,8 +128,8 @@ class ProgressSyncManagerTest {
         fun `skips kosync when no fileHash`() = runTest {
             val bookNoHash = book(fileHash = null)
 
-            val detail = grimmoryBookDetail(readProgress = 0.50f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = 0.50f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             syncManager.pullBestProgress(testServer, bookNoHash)
 
@@ -139,8 +140,8 @@ class ProgressSyncManagerTest {
         fun `skips kosync when blank kosync credentials`() = runTest {
             val serverNoCreds = server(kosyncUsername = "", kosyncPassword = "")
 
-            val detail = grimmoryBookDetail(readProgress = 0.50f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = 0.50f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             syncManager.pullBestProgress(serverNoCreds, testBook)
 
@@ -157,7 +158,7 @@ class ProgressSyncManagerTest {
 
             syncManager.pullBestProgress(testServer, bookNoGrimmory)
 
-            coVerify(exactly = 0) { grimmoryClient.getBookDetail(any(), any(), any()) }
+            coVerify(exactly = 0) { grimmoryClient.getAppBookProgress(any(), any(), any()) }
         }
 
         @Test
@@ -170,7 +171,7 @@ class ProgressSyncManagerTest {
 
             syncManager.pullBestProgress(nonGrimmoryServer, testBook)
 
-            coVerify(exactly = 0) { grimmoryClient.getBookDetail(any(), any(), any()) }
+            coVerify(exactly = 0) { grimmoryClient.getAppBookProgress(any(), any(), any()) }
         }
 
         @Test
@@ -183,7 +184,7 @@ class ProgressSyncManagerTest {
 
             syncManager.pullBestProgress(testServer, testBook)
 
-            coVerify(exactly = 0) { grimmoryClient.getBookDetail(any(), any(), any()) }
+            coVerify(exactly = 0) { grimmoryClient.getAppBookProgress(any(), any(), any()) }
         }
 
         @Test
@@ -191,8 +192,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
 
-            val detail = grimmoryBookDetail(readProgress = 0f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = 0f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
             assertNull(result)
@@ -203,8 +204,8 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
 
-            val detail = grimmoryBookDetail(readProgress = -0.5f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = -0.5f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
 
             val result = syncManager.pullBestProgress(testServer, testBook)
             assertNull(result)
@@ -242,7 +243,7 @@ class ProgressSyncManagerTest {
                 Result.failure(Exception("timeout"))
             val detail = grimmoryBookDetail()
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(testServer, testBook)
 
@@ -259,7 +260,7 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             val detail = grimmoryBookDetail()
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(testServer, streamedBook)
 
@@ -276,7 +277,7 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             val detail = grimmoryBookDetail()
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(serverNoCreds, testBook)
 
@@ -289,7 +290,7 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
                 Result.failure(Exception("timeout"))
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns
                 Result.failure(Exception("server error"))
 
             val result = syncManager.pushProgress(testServer, testBook)
@@ -323,7 +324,7 @@ class ProgressSyncManagerTest {
             // Grimmory push — keep the other channel clean so we can isolate the kosync retry.
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
                 Result.success(grimmoryBookDetail())
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(testServer, bookWithOldHash)
 
@@ -346,7 +347,7 @@ class ProgressSyncManagerTest {
             coEvery { bookRepository.getById(bookStatic.id) } returns bookStatic
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
                 Result.success(grimmoryBookDetail())
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             val result = syncManager.pushProgress(testServer, bookStatic)
 
@@ -361,7 +362,7 @@ class ProgressSyncManagerTest {
                 Result.failure(UnknownHostException("net down"))
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
                 Result.success(grimmoryBookDetail())
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns
                 Result.failure(GrimmoryAuthExpiredException(testServer.id))
 
             val result = syncManager.pushProgress(testServer, testBook)
@@ -405,8 +406,8 @@ class ProgressSyncManagerTest {
 
         @Test
         fun `pullBestProgress reports success when any source responds`() = runTest {
-            val detail = grimmoryBookDetail(readProgress = 0.50f)
-            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(detail)
+            val progress = grimmoryAppBookProgress(readProgress = 0.50f)
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
 
@@ -419,7 +420,7 @@ class ProgressSyncManagerTest {
         fun `pullBestProgress reports AuthExpired when Grimmory raises it and kosync is skipped`() =
             runTest {
                 val bookNoHash = book(fileHash = null) // skips kosync
-                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns
                     Result.failure(GrimmoryAuthExpiredException(testServer.id))
 
                 syncManager.pullBestProgress(testServer, bookNoHash)
@@ -441,7 +442,7 @@ class ProgressSyncManagerTest {
             runTest {
                 coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                     Result.failure(UnknownHostException("grimmory.invalid"))
-                coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns
                     Result.failure(GrimmoryAuthExpiredException(testServer.id))
 
                 syncManager.pullBestProgress(testServer, testBook)
@@ -467,7 +468,7 @@ class ProgressSyncManagerTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
                 Result.success(grimmoryBookDetail())
-            coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
             syncManager.pushProgress(testServer, streamedBook)
 
@@ -482,7 +483,7 @@ class ProgressSyncManagerTest {
                     Result.success(grimmoryBookDetail())
                 coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
                     Result.failure(Exception("kosync down"))
-                coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns Result.success(Unit)
+                coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
 
                 syncManager.pushProgress(testServer, testBook)
 
@@ -501,7 +502,7 @@ class ProgressSyncManagerTest {
                     Result.success(grimmoryBookDetail())
                 coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns
                     Result.failure(GrimmoryHttpException(500, "kosync 500"))
-                coEvery { grimmoryClient.pushProgress(any(), any(), any()) } returns
+                coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns
                     Result.failure(GrimmoryHttpException(502, "grimmory 502"))
 
                 syncManager.pushProgress(testServer, testBook)
