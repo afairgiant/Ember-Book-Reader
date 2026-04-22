@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -107,7 +106,8 @@ fun ReaderScaffold(
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
-                            displayBrightness = if (brightness >= 0) brightness else 0.5f
+                            val startBrightness = if (brightness >= 0) brightness else 0.5f
+                            var anchorY = 0f
                             var dragging = false
 
                             while (true) {
@@ -117,16 +117,22 @@ fun ReaderScaffold(
                                     if (dragging) showBrightnessIndicator = false
                                     break
                                 }
-                                val delta = change.positionChange()
-                                if (!dragging && abs(delta.y) > 4f) {
-                                    dragging = true
-                                    showBrightnessIndicator = true
-                                }
-                                if (dragging) {
+                                if (!dragging) {
+                                    val dySinceDown = change.position.y - down.position.y
+                                    if (abs(dySinceDown) > BRIGHTNESS_DRAG_THRESHOLD_PX) {
+                                        dragging = true
+                                        anchorY = change.position.y
+                                        displayBrightness = startBrightness
+                                        showBrightnessIndicator = true
+                                    }
+                                } else {
                                     change.consume()
-                                    val heightPx = size.height.toFloat()
-                                    val brightnessChange = -delta.y / heightPx
-                                    val newBrightness = (displayBrightness + brightnessChange).coerceIn(0.01f, 1.0f)
+                                    val newBrightness = computeBrightnessFromAnchor(
+                                        startBrightness = startBrightness,
+                                        anchorY = anchorY,
+                                        currentY = change.position.y,
+                                        heightPx = size.height.toFloat(),
+                                    )
                                     displayBrightness = newBrightness
                                     onBrightnessChange(newBrightness)
                                 }
