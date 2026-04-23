@@ -283,8 +283,11 @@ class CatalogViewModel @Inject constructor(
             )
         )
 
-        // Libraries
-        grimmoryAppClient.getLibraries(server.url, server.id)
+        // Libraries — the full /api/v1/libraries endpoint is used instead of
+        // /api/v1/app/libraries because the latter 500s on Grimmory v3.0.0
+        // (LazyInitializationException on libraryPaths) and the app variants
+        // are slated for eventual deprecation anyway. Trade-off: no bookCount.
+        grimmoryAppClient.getFullLibraries(server.url, server.id)
             .onSuccess { libraries ->
                 Timber.d("Catalog: got ${libraries.size} Grimmory libraries for server=${server.id}")
                 for (lib in libraries) {
@@ -292,13 +295,13 @@ class CatalogViewModel @Inject constructor(
                         GrimmoryCatalogLibrary(
                             libraryId = lib.id,
                             title = lib.name,
-                            bookCount = lib.bookCount,
+                            bookCount = null,
                             serverIcon = lib.icon
                         )
                     )
                 }
             }
-            .onFailure { Timber.w(it, "Catalog: getLibraries failed for server=${server.id}") }
+            .onFailure { Timber.w(it, "Catalog: getFullLibraries failed for server=${server.id}") }
 
         // Shelves
         grimmoryAppClient.getShelves(server.url, server.id)

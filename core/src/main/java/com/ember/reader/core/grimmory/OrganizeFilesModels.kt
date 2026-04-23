@@ -5,14 +5,18 @@ import kotlinx.serialization.Serializable
 /**
  * Full Grimmory library DTO as returned by GET /api/v1/libraries.
  *
- * Distinct from [GrimmoryAppLibrary], which is the lightweight variant returned
- * by /api/v1/app/libraries and does not include [paths] or [fileNamingPattern].
- * The Organize Files feature needs both fields, so it uses this full variant.
+ * Ember uses this for both Organize Files (needs [paths] and
+ * [fileNamingPattern]) and the catalog browser (needs [icon]). The
+ * `/api/v1/app/libraries` variant was dropped — on Grimmory v3.0.0+ it
+ * throws a 500 because its DTO walks a lazy relation outside a
+ * transaction, and the upstream team plans to deprecate app endpoints
+ * anyway.
  */
 @Serializable
 data class GrimmoryLibraryFull(
     val id: Long,
     val name: String,
+    val icon: String? = null,
     val fileNamingPattern: String? = null,
     val paths: List<GrimmoryLibraryPath> = emptyList()
 )

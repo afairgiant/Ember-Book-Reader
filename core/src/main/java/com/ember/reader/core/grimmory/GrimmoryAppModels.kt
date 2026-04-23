@@ -45,14 +45,6 @@ data class GrimmoryAppBook(
 )
 
 @Serializable
-data class GrimmoryAppLibrary(
-    val id: Long,
-    val name: String,
-    val icon: String? = null,
-    val bookCount: Int = 0
-)
-
-@Serializable
 data class GrimmoryAppShelf(
     val id: Long,
     val name: String,

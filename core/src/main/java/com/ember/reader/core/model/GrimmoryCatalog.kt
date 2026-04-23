@@ -23,11 +23,12 @@ sealed interface GrimmoryCatalogEntry {
 data class GrimmoryCatalogLibrary(
     val libraryId: Long,
     override val title: String,
-    val bookCount: Int,
+    /** Null when the source endpoint (GET /api/v1/libraries) omits it — render with no subtitle. */
+    val bookCount: Int?,
     override val serverIcon: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:library:$libraryId"
-    override val subtitle: String = "$bookCount books"
+    override val subtitle: String? = bookCount?.let { "$it books" }
     override val href: String = "grimmory:libraryId=$libraryId"
     override val type: CatalogEntryType = CatalogEntryType.LIBRARY
 }

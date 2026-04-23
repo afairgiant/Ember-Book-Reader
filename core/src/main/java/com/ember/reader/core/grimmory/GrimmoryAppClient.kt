@@ -81,15 +81,6 @@ class GrimmoryAppClient @Inject constructor(
             result
         }
 
-    suspend fun getLibraries(baseUrl: String, serverId: Long): Result<List<GrimmoryAppLibrary>> =
-        tokenManager.withAuth(baseUrl, serverId) { token ->
-            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/libraries") {
-                header("Authorization", "Bearer $token")
-            }
-            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get libraries failed: ${response.status}")
-            response.body<List<GrimmoryAppLibrary>>()
-        }
-
     suspend fun getShelves(baseUrl: String, serverId: Long): Result<List<GrimmoryAppShelf>> =
         tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves") {
