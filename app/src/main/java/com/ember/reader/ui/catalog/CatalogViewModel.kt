@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
@@ -263,48 +264,57 @@ class CatalogViewModel @Inject constructor(
         )
 
         // Libraries
-        grimmoryAppClient.getLibraries(server.url, server.id).onSuccess { libraries ->
-            for (lib in libraries) {
-                entries.add(
-                    GrimmoryCatalogLibrary(
-                        libraryId = lib.id,
-                        title = lib.name,
-                        bookCount = lib.bookCount,
-                        serverIcon = lib.icon
+        grimmoryAppClient.getLibraries(server.url, server.id)
+            .onSuccess { libraries ->
+                Timber.d("Catalog: got ${libraries.size} Grimmory libraries for server=${server.id}")
+                for (lib in libraries) {
+                    entries.add(
+                        GrimmoryCatalogLibrary(
+                            libraryId = lib.id,
+                            title = lib.name,
+                            bookCount = lib.bookCount,
+                            serverIcon = lib.icon
+                        )
                     )
-                )
+                }
             }
-        }
+            .onFailure { Timber.w(it, "Catalog: getLibraries failed for server=${server.id}") }
 
         // Shelves
-        grimmoryAppClient.getShelves(server.url, server.id).onSuccess { shelves ->
-            for (shelf in shelves) {
-                entries.add(
-                    GrimmoryCatalogShelf(
-                        shelfId = shelf.id,
-                        title = shelf.name,
-                        bookCount = shelf.bookCount,
-                        publicShelf = shelf.publicShelf,
-                        serverIcon = shelf.icon
+        grimmoryAppClient.getShelves(server.url, server.id)
+            .onSuccess { shelves ->
+                Timber.d("Catalog: got ${shelves.size} Grimmory shelves for server=${server.id}")
+                for (shelf in shelves) {
+                    entries.add(
+                        GrimmoryCatalogShelf(
+                            shelfId = shelf.id,
+                            title = shelf.name,
+                            bookCount = shelf.bookCount,
+                            publicShelf = shelf.publicShelf,
+                            serverIcon = shelf.icon
+                        )
                     )
-                )
+                }
             }
-        }
+            .onFailure { Timber.w(it, "Catalog: getShelves failed for server=${server.id}") }
 
         // Magic Shelves
-        grimmoryAppClient.getMagicShelves(server.url, server.id).onSuccess { magicShelves ->
-            for (magicShelf in magicShelves) {
-                entries.add(
-                    GrimmoryCatalogMagicShelf(
-                        magicShelfId = magicShelf.id,
-                        title = magicShelf.name,
-                        publicShelf = magicShelf.publicShelf,
-                        serverIcon = magicShelf.icon,
-                        iconType = magicShelf.iconType
+        grimmoryAppClient.getMagicShelves(server.url, server.id)
+            .onSuccess { magicShelves ->
+                Timber.d("Catalog: got ${magicShelves.size} Grimmory magic shelves for server=${server.id}")
+                for (magicShelf in magicShelves) {
+                    entries.add(
+                        GrimmoryCatalogMagicShelf(
+                            magicShelfId = magicShelf.id,
+                            title = magicShelf.name,
+                            publicShelf = magicShelf.publicShelf,
+                            serverIcon = magicShelf.icon,
+                            iconType = magicShelf.iconType
+                        )
                     )
-                )
+                }
             }
-        }
+            .onFailure { Timber.w(it, "Catalog: getMagicShelves failed for server=${server.id}") }
 
         // Browse
         entries.add(
