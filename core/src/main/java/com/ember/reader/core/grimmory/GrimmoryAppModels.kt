@@ -93,8 +93,8 @@ data class GrimmoryAppAuthor(
 data class GrimmoryAppFilterOptions(
     val authors: List<GrimmoryFilterItem> = emptyList(),
     val languages: List<GrimmoryLanguageItem> = emptyList(),
-    val readStatuses: List<String> = emptyList(),
-    val fileTypes: List<String> = emptyList()
+    val readStatuses: List<GrimmoryFilterItem> = emptyList(),
+    val fileTypes: List<GrimmoryFilterItem> = emptyList()
 )
 
 @Serializable
