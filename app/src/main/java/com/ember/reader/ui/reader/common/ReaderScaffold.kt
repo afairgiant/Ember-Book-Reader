@@ -76,6 +76,7 @@ fun ReaderScaffold(
     brightness: Float = -1f,
     onBrightnessChange: (Float) -> Unit = {},
     streaming: Boolean = false,
+    showProgressIndicator: Boolean = true,
     content: @Composable () -> Unit
 ) {
     var showBrightnessIndicator by remember { mutableStateOf(false) }
@@ -233,6 +234,23 @@ fun ReaderScaffold(
             ReaderBottomBar(
                 currentLocator = currentLocator,
                 onSeekToProgression = onSeekToProgression
+            )
+        }
+
+        if (showProgressIndicator && !chromeVisible && currentLocator != null) {
+            val progression = currentLocator.locations.totalProgression?.toFloat() ?: 0f
+            Text(
+                text = "${(progression * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 6.dp, bottom = 4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(4.dp),
+                    )
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
             )
         }
     }

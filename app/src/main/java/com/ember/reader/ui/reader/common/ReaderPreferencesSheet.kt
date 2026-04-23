@@ -381,6 +381,20 @@ fun ReaderPreferencesContent(
             )
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Show progress percentage", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = preferences.showProgressIndicator,
+                onCheckedChange = {
+                    onPreferencesChanged(preferences.copy(showProgressIndicator = it))
+                }
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         SectionLabel(stringResource(R.string.orientation_section))

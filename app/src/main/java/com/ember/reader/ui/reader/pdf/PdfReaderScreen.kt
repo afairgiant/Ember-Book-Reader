@@ -200,7 +200,8 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 onOpenPreferences = { showPreferences = true },
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
-                streaming = state.streaming
+                streaming = state.streaming,
+                showProgressIndicator = preferences.showProgressIndicator,
             ) {
                 NavigatorContainer(
                     key = state.publication,

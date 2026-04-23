@@ -55,6 +55,7 @@ class ReaderPreferencesRepository @Inject constructor(
         val VOLUME_PAGE_TURN = booleanPreferencesKey("volume_page_turn")
         val PDF_FIT_MODE = stringPreferencesKey("pdf_fit_mode")
         val PDF_PAGE_SPACING = floatPreferencesKey("pdf_page_spacing")
+        val SHOW_PROGRESS_INDICATOR = booleanPreferencesKey("show_progress_indicator")
     }
 
     val preferencesFlow: Flow<ReaderPreferences> =
@@ -100,7 +101,8 @@ class ReaderPreferencesRepository @Inject constructor(
                 pdfFitMode = prefs[Keys.PDF_FIT_MODE]?.let {
                     runCatching { com.ember.reader.core.model.PdfFitMode.valueOf(it) }.getOrNull()
                 } ?: com.ember.reader.core.model.PdfFitMode.WIDTH,
-                pdfPageSpacing = prefs[Keys.PDF_PAGE_SPACING] ?: 8f
+                pdfPageSpacing = prefs[Keys.PDF_PAGE_SPACING] ?: 8f,
+                showProgressIndicator = prefs[Keys.SHOW_PROGRESS_INDICATOR] ?: true,
             )
         }
 
@@ -131,6 +133,7 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.VOLUME_PAGE_TURN] = preferences.volumePageTurn
             prefs[Keys.PDF_FIT_MODE] = preferences.pdfFitMode.name
             prefs[Keys.PDF_PAGE_SPACING] = preferences.pdfPageSpacing
+            prefs[Keys.SHOW_PROGRESS_INDICATOR] = preferences.showProgressIndicator
         }
     }
 }

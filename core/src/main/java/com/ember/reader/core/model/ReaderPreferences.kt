@@ -28,7 +28,8 @@ data class ReaderPreferences(
     val rightZoneWidth: Float = 0.33f,
     val volumePageTurn: Boolean = false,
     val pdfFitMode: PdfFitMode = PdfFitMode.WIDTH,
-    val pdfPageSpacing: Float = 8f
+    val pdfPageSpacing: Float = 8f,
+    val showProgressIndicator: Boolean = true,
 )
 
 @Serializable
