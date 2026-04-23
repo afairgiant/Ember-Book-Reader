@@ -468,7 +468,14 @@ class BookRepository @Inject constructor(
                     downloadUrl = downloadUrl,
                     series = appBook.seriesName,
                     seriesIndex = appBook.seriesNumber,
-                    addedAt = serverAddedAt ?: existing.addedAt
+                    addedAt = serverAddedAt ?: existing.addedAt,
+                    // Prefer the server's current metadata, but fall back to the existing
+                    // row's values so a scrape that dropped a field doesn't wipe local state.
+                    pageCount = appBook.pageCount ?: existing.pageCount,
+                    publishedDate = appBook.publishedDate ?: existing.publishedDate,
+                    fileSizeKb = appBook.fileSizeKb ?: existing.fileSizeKb,
+                    ageRating = appBook.ageRating ?: existing.ageRating,
+                    contentRating = appBook.contentRating ?: existing.contentRating
                 )
             )
             return existing.id
@@ -484,7 +491,12 @@ class BookRepository @Inject constructor(
                 format = format,
                 series = appBook.seriesName,
                 seriesIndex = appBook.seriesNumber,
-                addedAt = serverAddedAt ?: Instant.now()
+                addedAt = serverAddedAt ?: Instant.now(),
+                pageCount = appBook.pageCount,
+                publishedDate = appBook.publishedDate,
+                fileSizeKb = appBook.fileSizeKb,
+                ageRating = appBook.ageRating,
+                contentRating = appBook.contentRating
             )
             bookDao.insert(book.toEntity())
             return book.id

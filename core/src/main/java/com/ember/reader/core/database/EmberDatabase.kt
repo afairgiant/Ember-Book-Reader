@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -246,6 +246,20 @@ abstract class EmberDatabase : RoomDatabase() {
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE servers ADD COLUMN accentColorSlot INTEGER DEFAULT NULL")
+            }
+        }
+
+        /**
+         * Migration 16→17: Adds metadata columns to books for richer list
+         * rows — file size (for download decisions), age/content ratings (for
+         * content-aware filtering). Populated from `AppBookSummary` in
+         * Grimmory v3.0.0+; older servers leave them NULL.
+         */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE books ADD COLUMN fileSizeKb INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE books ADD COLUMN ageRating INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE books ADD COLUMN contentRating TEXT DEFAULT NULL")
             }
         }
 

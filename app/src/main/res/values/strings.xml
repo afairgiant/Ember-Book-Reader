@@ -80,6 +80,7 @@
     <string name="card_progress">Progress bar</string>
     <string name="card_author">Author</string>
     <string name="card_format_badge">Format badge</string>
+    <string name="card_metadata">Metadata (pages, size, year)</string>
     <string name="quick_presets">Quick presets</string>
     <string name="format">Format</string>
     <string name="source">Source</string>

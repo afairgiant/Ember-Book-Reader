@@ -39,6 +39,7 @@ fun LibraryLayoutSheet(
     onCardShowProgressChange: (Boolean) -> Unit,
     onCardShowAuthorChange: (Boolean) -> Unit,
     onCardShowFormatBadgeChange: (Boolean) -> Unit,
+    onCardShowMetadataChange: (Boolean) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -109,6 +110,11 @@ fun LibraryLayoutSheet(
                 label = stringResource(R.string.card_format_badge),
                 checked = prefs.cardShowFormatBadge,
                 onCheckedChange = onCardShowFormatBadgeChange,
+            )
+            ToggleRow(
+                label = stringResource(R.string.card_metadata),
+                checked = prefs.cardShowMetadata,
+                onCheckedChange = onCardShowMetadataChange,
             )
             Spacer(modifier = Modifier.height(12.dp))
         }

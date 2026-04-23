@@ -101,6 +101,29 @@ class MigrationsTest {
         }
     }
 
+    @Test
+    fun migrate16To17_addsMetadataColumnsToBooks() {
+        helper.createDatabase(TEST_DB, 16).use { db ->
+            db.execSQL(
+                "INSERT INTO books(id,title,format,addedAt) VALUES('b1','T','EPUB',0)"
+            )
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            17,
+            true,
+            EmberDatabase.MIGRATION_16_17
+        )
+
+        migrated.query("SELECT fileSizeKb,ageRating,contentRating FROM books").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue("expected NULL default for fileSizeKb", c.isNull(0))
+            assertTrue("expected NULL default for ageRating", c.isNull(1))
+            assertTrue("expected NULL default for contentRating", c.isNull(2))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "ember-migrations-test"
     }

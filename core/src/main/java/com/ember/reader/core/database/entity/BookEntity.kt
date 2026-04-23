@@ -49,5 +49,8 @@ data class BookEntity(
     val language: String? = null,
     val subjects: String? = null,
     val pageCount: Int? = null,
-    val publishedDate: String? = null
+    val publishedDate: String? = null,
+    val fileSizeKb: Long? = null,
+    val ageRating: Int? = null,
+    val contentRating: String? = null
 )

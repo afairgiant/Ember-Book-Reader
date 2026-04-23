@@ -152,6 +152,7 @@ fun LocalLibraryScreen(
         showProgress = prefs.cardShowProgress,
         showAuthor = prefs.cardShowAuthor,
         showFormatBadge = prefs.cardShowFormatBadge,
+        showMetadata = prefs.cardShowMetadata,
     )
 
     val gridMinSize = when (prefs.density) {
@@ -328,7 +329,8 @@ fun LocalLibraryScreen(
                 onShowContinueReadingChange = viewModel::setShowContinueReading,
                 onCardShowProgressChange = viewModel::setCardShowProgress,
                 onCardShowAuthorChange = viewModel::setCardShowAuthor,
-                onCardShowFormatBadgeChange = viewModel::setCardShowFormatBadge
+                onCardShowFormatBadgeChange = viewModel::setCardShowFormatBadge,
+                onCardShowMetadataChange = viewModel::setCardShowMetadata
             )
         }
 

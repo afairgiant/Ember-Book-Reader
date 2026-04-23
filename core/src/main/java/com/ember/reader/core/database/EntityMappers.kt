@@ -80,7 +80,10 @@ fun BookEntity.toDomain(): Book = Book(
     language = language,
     subjects = subjects,
     pageCount = pageCount,
-    publishedDate = publishedDate
+    publishedDate = publishedDate,
+    fileSizeKb = fileSizeKb,
+    ageRating = ageRating,
+    contentRating = contentRating
 )
 
 fun Book.toEntity(): BookEntity = BookEntity(
@@ -103,7 +106,10 @@ fun Book.toEntity(): BookEntity = BookEntity(
     language = language,
     subjects = subjects,
     pageCount = pageCount,
-    publishedDate = publishedDate
+    publishedDate = publishedDate,
+    fileSizeKb = fileSizeKb,
+    ageRating = ageRating,
+    contentRating = contentRating
 )
 
 fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(

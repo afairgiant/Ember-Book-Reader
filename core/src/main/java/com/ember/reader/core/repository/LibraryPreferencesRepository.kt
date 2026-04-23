@@ -74,7 +74,8 @@ data class LibraryPrefs(
     val showContinueReading: Boolean = true,
     val cardShowProgress: Boolean = true,
     val cardShowAuthor: Boolean = true,
-    val cardShowFormatBadge: Boolean = false
+    val cardShowFormatBadge: Boolean = false,
+    val cardShowMetadata: Boolean = false
 )
 
 @Singleton
@@ -94,6 +95,7 @@ class LibraryPreferencesRepository @Inject constructor(
         val CARD_PROGRESS = booleanPreferencesKey("card_show_progress")
         val CARD_AUTHOR = booleanPreferencesKey("card_show_author")
         val CARD_FORMAT_BADGE = booleanPreferencesKey("card_show_format_badge")
+        val CARD_METADATA = booleanPreferencesKey("card_show_metadata")
     }
 
     val prefsFlow: Flow<LibraryPrefs> = context.libraryPreferencesDataStore.data.map { p ->
@@ -115,6 +117,7 @@ class LibraryPreferencesRepository @Inject constructor(
             p[Keys.CARD_PROGRESS] = next.cardShowProgress
             p[Keys.CARD_AUTHOR] = next.cardShowAuthor
             p[Keys.CARD_FORMAT_BADGE] = next.cardShowFormatBadge
+            p[Keys.CARD_METADATA] = next.cardShowMetadata
         }
     }
 
@@ -136,6 +139,7 @@ class LibraryPreferencesRepository @Inject constructor(
         showContinueReading = p[Keys.SHOW_CONTINUE_READING] ?: true,
         cardShowProgress = p[Keys.CARD_PROGRESS] ?: true,
         cardShowAuthor = p[Keys.CARD_AUTHOR] ?: true,
-        cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false
+        cardShowFormatBadge = p[Keys.CARD_FORMAT_BADGE] ?: false,
+        cardShowMetadata = p[Keys.CARD_METADATA] ?: false
     )
 }

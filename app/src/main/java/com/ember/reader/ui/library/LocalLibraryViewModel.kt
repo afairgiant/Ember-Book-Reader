@@ -404,6 +404,10 @@ class LocalLibraryViewModel @Inject constructor(
         viewModelScope.launch { prefsRepo.update { it.copy(cardShowFormatBadge = v) } }
     }
 
+    fun setCardShowMetadata(v: Boolean) {
+        viewModelScope.launch { prefsRepo.update { it.copy(cardShowMetadata = v) } }
+    }
+
     fun clearAllFilters() {
         viewModelScope.launch {
             _searchQuery.value = ""

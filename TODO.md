@@ -77,6 +77,34 @@ Full API reference: `docs/grimmory-api.md`
 - [ ] Notes: `GET/POST/PUT/DELETE /api/v2/book-notes` (V2 CFI-based notes)
 - [ ] Notebook: `GET /api/v1/app/notebook/books` + entries per book
 
+**Phase 5 — v3.0.0 Enhancements:**
+
+_High-impact (user-visible, small lift):_
+- [ ] **OIDC mobile login** — `POST /api/v1/auth/oidc/mobile/callback` so SSO users can actually sign in on the phone (today username/password is the only path)
+- [ ] **Explicit server-side logout** — `POST /api/v1/auth/logout` with the refresh token, instead of just wiping local tokens (leaves them valid on the server for ≤30 days today)
+- [ ] **Richer library list rows** — `AppBookSummary` now exposes `fileSizeKb`, `pageCount`, `publishedDate`, `ageRating`, `contentRating`, `metadataMatchScore`; add to `GrimmoryAppBook` DTO and surface as subtitles/chips
+- [ ] **Expanded filter sheet** — `BookListRequest` gained ~25 new facets (`series`, `tag`, `mood`, `narrator`, `ageRating`, `contentRating`, per-provider rating buckets, comic fields) plus `filterMode: or|and|not` and `unshelved`; `AppFilterOptions` returns counts for all of them
+- [ ] **Book recommendations** — `GET /api/v1/books/{id}/recommendations` → "you might also like" strip on book detail (partially captured above in Book Details Screen)
+
+_Medium-impact:_
+- [ ] **Library path picker on upload** — `AppLibrarySummary.paths: [{id, path}]` is now populated; surface a picker during upload so multi-path libraries are actually usable
+- [ ] **Reset progress by source** — `POST /api/v1/books/reset-progress?type=BOOKLORE|KOREADER|KOBO` lets you wipe one source at a time; power-user affordance in book-detail menu
+- [ ] **Metadata refresh (SSE)** — `POST /api/v1/books/{id}/metadata/prospective` streams candidate metadata from configured providers; in-app "refresh metadata" button for books with sparse data
+- [ ] **Audiobook listening stats** — 10 new `/user-stats/listening/**` endpoints (peak hours, weekly trend, finish funnel, longest books, …); parity with existing reading stats UI
+- [ ] **Progress timestamps** — per-format progress blocks gained `updatedAt`; support "last synced N min ago" affordances and resolve push/pull conflicts more intelligently
+
+_Nice-to-have:_
+- [ ] **"Select all matching" bulk operations** — `GET /api/v1/app/books/ids` returns every ID for a filter without pagination (useful for multi-select flows)
+- [ ] **Merge books / attach files** — `POST /api/v1/books/{targetId}/attach-file` consolidates single-format entries (e.g. EPUB + PDF of the same book) into one
+- [ ] **Duplicate detection** — `POST /api/v1/books/duplicates` surfaces dupes for library cleanup (admin-ish)
+- [ ] **Physical book tracking** — `PATCH /api/v1/books/{id}/physical?physical=true` + `POST /api/v1/books/physical` to create physical-only entries; possible home for tracking paper copies
+- [ ] **Server changelog view** — `GET /api/v1/version/changelog` to show release notes when Ember detects a server upgrade
+- [ ] **ComicInfo metadata** — `GET /api/v1/books/{id}/cbx/metadata/comicinfo` for CBX reader metadata (series, issue #, story arc)
+- [ ] **OPDS user admin** — `/api/v2/opds-users` CRUD for power users managing Basic-auth accounts from the app
+
+_Follow-up optimization (deferred from the v3.0.0 migration):_
+- [ ] Cache `primaryFileId` on the local `Book` entity so `pushGrimmory` doesn't need to re-fetch `getBookDetail` on every push (currently one extra round trip per push per book)
+
 **Infrastructure:**
 - [x] Auto-detect Grimmory servers (`GET /api/v1/healthcheck`)
 - [x] Keep kosync as fallback for non-Grimmory OPDS servers and KOReader compat

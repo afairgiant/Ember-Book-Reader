@@ -18,15 +18,30 @@ data class GrimmoryAppBook(
     val id: Long,
     val title: String,
     val libraryId: Long? = null,
+    /**
+     * Grimmory v3.0.0+ dropped `libraryName` from `AppBookSummary` — the field
+     * survives here as nullable so older servers that still send it deserialize
+     * cleanly. Fetch the detail endpoint for the current library name.
+     */
     val libraryName: String? = null,
     val readStatus: ReadStatus? = null,
     val personalRating: Int? = null,
     val authors: List<String> = emptyList(),
     val primaryFileType: String? = null,
     val coverUpdatedOn: String? = null,
+    val audiobookCoverUpdatedOn: String? = null,
     val addedOn: String? = null,
+    val lastReadTime: String? = null,
     val seriesName: String? = null,
-    val seriesNumber: Float? = null
+    val seriesNumber: Float? = null,
+    // v3.0.0 — metadata exposed on the summary for richer list rows / client-side filtering.
+    val publishedDate: String? = null,
+    val pageCount: Int? = null,
+    val ageRating: Int? = null,
+    val contentRating: String? = null,
+    val metadataMatchScore: Float? = null,
+    val fileSizeKb: Long? = null,
+    val isPhysical: Boolean? = null
 )
 
 @Serializable

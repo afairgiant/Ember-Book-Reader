@@ -22,7 +22,10 @@ data class Book(
     val language: String? = null,
     val subjects: String? = null,
     val pageCount: Int? = null,
-    val publishedDate: String? = null
+    val publishedDate: String? = null,
+    val fileSizeKb: Long? = null,
+    val ageRating: Int? = null,
+    val contentRating: String? = null
 ) {
     val isDownloaded: Boolean get() = localPath != null
     val isLocal: Boolean get() = serverId == null

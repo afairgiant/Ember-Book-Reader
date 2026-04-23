@@ -54,8 +54,37 @@ import kotlin.math.roundToInt
 data class CardInfoToggles(
     val showProgress: Boolean = true,
     val showAuthor: Boolean = true,
-    val showFormatBadge: Boolean = false
+    val showFormatBadge: Boolean = false,
+    /**
+     * When true, renders a dim subtitle line with whichever of page count, file
+     * size, and published year the server populated (`AppBookSummary` exposes
+     * these on Grimmory v3.0.0+). Off by default so existing views don't
+     * change shape.
+     */
+    val showMetadata: Boolean = false
 )
+
+/**
+ * Builds the "350 pp · 2.5 MB · 2025" line rendered under the author when
+ * [CardInfoToggles.showMetadata] is on. Returns null if no fields are
+ * populated so the caller can skip the row entirely.
+ */
+private fun metadataLine(book: Book): String? {
+    val parts = buildList {
+        book.pageCount?.takeIf { it > 0 }?.let { add("$it pp") }
+        book.fileSizeKb?.takeIf { it > 0 }?.let { add(formatFileSize(it)) }
+        // `publishedDate` is an ISO date string; the year alone is the
+        // useful part for a library subtitle.
+        book.publishedDate?.take(4)?.takeIf { it.length == 4 && it.all(Char::isDigit) }?.let(::add)
+    }
+    return if (parts.isEmpty()) null else parts.joinToString(" · ")
+}
+
+private fun formatFileSize(kb: Long): String = when {
+    kb >= 1024 * 1024 -> "%.1f GB".format(kb / 1024.0 / 1024.0)
+    kb >= 1024 -> "%.1f MB".format(kb / 1024.0)
+    else -> "$kb KB"
+}
 
 enum class SourceBadgeStyle { GRID, LIST_PILL, COMPACT_DOT }
 
@@ -303,6 +332,17 @@ fun UnifiedBookCard(
                         )
                     }
                 }
+                if (info.showMetadata) {
+                    metadataLine(book)?.let { line ->
+                        Text(
+                            text = line,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
                 if (info.showProgress && progress != null && progress > 0f) {
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
@@ -389,6 +429,17 @@ fun UnifiedBookListRow(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                if (info.showMetadata) {
+                    metadataLine(book)?.let { line ->
+                        Text(
+                            text = line,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
