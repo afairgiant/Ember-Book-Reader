@@ -16,17 +16,21 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
+import com.ember.reader.core.repository.CatalogLayoutPreferencesRepository
 import com.ember.reader.core.repository.CatalogPreferencesRepository
+import com.ember.reader.core.repository.CatalogSeriesViewMode
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -37,7 +41,8 @@ class CatalogViewModel @Inject constructor(
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val catalogPreferencesRepository: CatalogPreferencesRepository
+    private val catalogPreferencesRepository: CatalogPreferencesRepository,
+    private val catalogLayoutPreferencesRepository: CatalogLayoutPreferencesRepository,
 ) : ViewModel() {
 
     private val serverId: Long = savedStateHandle.get<Long>("serverId") ?: -1L
@@ -48,6 +53,13 @@ class CatalogViewModel @Inject constructor(
 
     private val _seriesSort = MutableStateFlow(SeriesSortOption.NAME)
     val seriesSort: StateFlow<SeriesSortOption> = _seriesSort.asStateFlow()
+
+    val seriesViewMode: StateFlow<CatalogSeriesViewMode> =
+        catalogLayoutPreferencesRepository.seriesViewModeFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = CatalogSeriesViewMode.GRID,
+        )
 
     private val _editMode = MutableStateFlow(false)
     val editMode: StateFlow<Boolean> = _editMode.asStateFlow()
@@ -213,6 +225,13 @@ class CatalogViewModel @Inject constructor(
         viewModelScope.launch { fetchGrimmorySeries(currentServer) }
     }
 
+    fun setSeriesViewMode(mode: CatalogSeriesViewMode) {
+        if (seriesViewMode.value == mode) return
+        viewModelScope.launch {
+            catalogLayoutPreferencesRepository.setSeriesViewMode(mode)
+        }
+    }
+
     private suspend fun fetchFeed() {
         val currentServer = server ?: return
 
@@ -375,30 +394,28 @@ class CatalogViewModel @Inject constructor(
     private suspend fun fetchGrimmorySeries(server: Server) {
         try {
             val sort = _seriesSort.value
-            val allEntries = mutableListOf<OpdsFeedEntry>()
+            val allEntries = mutableListOf<CatalogSeriesEntry>()
             var page = 0
             do {
                 val result = grimmoryAppClient.getSeries(server.url, server.id, page = page, size = 100, sort = sort.key, dir = sort.dir).getOrThrow()
                 result.content.forEach { series ->
-                    val subtitle = buildString {
-                        append("${series.bookCount} books")
-                        if (series.booksRead > 0) append(" · ${series.booksRead} read")
-                        if (series.authors.isNotEmpty()) append(" · ${series.authors.first()}")
-                    }
                     allEntries.add(
-                        OpdsFeedEntry(
-                            id = "grimmory:series:${series.seriesName}",
-                            title = series.seriesName,
-                            href = "grimmory:seriesName=${java.net.URLEncoder.encode(series.seriesName, "UTF-8")}",
-                            content = subtitle
+                        CatalogSeriesEntry(
+                            seriesName = series.seriesName,
+                            bookCount = series.bookCount,
+                            seriesTotal = series.seriesTotal,
+                            booksRead = series.booksRead,
+                            firstAuthor = series.authors.firstOrNull(),
+                            coverBooks = series.coverBooks,
                         )
                     )
                 }
                 page++
             } while (result.hasNext)
 
-            _uiState.value = CatalogUiState.OpdsSuccess(
-                feed = OpdsFeed(title = "Series", entries = allEntries)
+            _uiState.value = CatalogUiState.SeriesSuccess(
+                entries = allEntries,
+                serverUrl = server.url,
             )
         } catch (e: Exception) {
             _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
@@ -456,6 +473,10 @@ sealed interface CatalogUiState {
     data class GrimmorySuccess(
         val catalog: GrimmoryCatalog,
         val hiddenEntryIds: Set<String> = emptySet()
+    ) : CatalogUiState
+    data class SeriesSuccess(
+        val entries: List<CatalogSeriesEntry>,
+        val serverUrl: String,
     ) : CatalogUiState
     data class Error(val message: String) : CatalogUiState
 }

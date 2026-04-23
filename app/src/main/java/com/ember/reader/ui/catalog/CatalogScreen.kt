@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,12 +20,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -43,7 +43,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +73,7 @@ import com.ember.reader.core.model.GrimmoryCatalog
 import com.ember.reader.core.model.GrimmoryCatalogEntry
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
+import com.ember.reader.core.repository.CatalogSeriesViewMode
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 
@@ -87,6 +87,7 @@ fun CatalogScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val seriesSort by viewModel.seriesSort.collectAsStateWithLifecycle()
+    val seriesViewMode by viewModel.seriesViewMode.collectAsStateWithLifecycle()
     val editMode by viewModel.editMode.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -104,6 +105,7 @@ fun CatalogScreen(
                             when (val state = uiState) {
                                 is CatalogUiState.OpdsSuccess -> state.feed.title
                                 is CatalogUiState.GrimmorySuccess -> state.catalog.serverName
+                                is CatalogUiState.SeriesSuccess -> "Series"
                                 else -> stringResource(R.string.catalog_title)
                             }
                         },
@@ -146,6 +148,26 @@ fun CatalogScreen(
                                 Icon(Icons.Default.Edit, contentDescription = "Edit catalog")
                             }
                         }
+                        if (viewModel.isSeriesView) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.setSeriesViewMode(
+                                        when (seriesViewMode) {
+                                            CatalogSeriesViewMode.GRID -> CatalogSeriesViewMode.LIST
+                                            CatalogSeriesViewMode.LIST -> CatalogSeriesViewMode.GRID
+                                        }
+                                    )
+                                },
+                            ) {
+                                Icon(
+                                    when (seriesViewMode) {
+                                        CatalogSeriesViewMode.GRID -> Icons.Default.GridView
+                                        CatalogSeriesViewMode.LIST -> Icons.AutoMirrored.Filled.ViewList
+                                    },
+                                    contentDescription = "Toggle layout",
+                                )
+                            }
+                        }
                         IconButton(onClick = { searchActive = !searchActive }) {
                             Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                         }
@@ -177,9 +199,6 @@ fun CatalogScreen(
                             searchQuery = ""
                         }
                     },
-                    isSeriesView = viewModel.isSeriesView,
-                    seriesSort = seriesSort,
-                    onSeriesSortChange = viewModel::setSeriesSort,
                     onNavigateToFeed = onNavigateToFeed,
                     onNavigateToBooks = onNavigateToBooks,
                     onRefresh = viewModel::refresh,
@@ -187,6 +206,25 @@ fun CatalogScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                )
+            }
+            is CatalogUiState.SeriesSuccess -> {
+                SeriesCatalogContent(
+                    entries = state.entries,
+                    viewMode = seriesViewMode,
+                    seriesSort = seriesSort,
+                    onSeriesSortChange = viewModel::setSeriesSort,
+                    onSeriesClick = { seriesName ->
+                        onNavigateToBooks(
+                            "grimmory:seriesName=${java.net.URLEncoder.encode(seriesName, "UTF-8")}"
+                        )
+                    },
+                    onRefresh = viewModel::refresh,
+                    isRefreshing = isRefreshing,
+                    serverUrl = state.serverUrl,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
                 )
             }
             is CatalogUiState.GrimmorySuccess -> {
@@ -245,9 +283,6 @@ private fun OpdsCatalogContent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
-    isSeriesView: Boolean,
-    seriesSort: SeriesSortOption,
-    onSeriesSortChange: (SeriesSortOption) -> Unit,
     onNavigateToFeed: (String) -> Unit,
     onNavigateToBooks: (String) -> Unit,
     onRefresh: () -> Unit,
@@ -266,23 +301,6 @@ private fun OpdsCatalogContent(
                     onSearchQueryChange = onSearchQueryChange,
                     onSearchSubmit = onSearchSubmit
                 )
-            }
-            if (isSeriesView) {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(SeriesSortOption.entries, key = { it.name }) { option ->
-                        FilterChip(
-                            selected = seriesSort == option,
-                            onClick = { onSeriesSortChange(option) },
-                            label = { Text(option.label, style = MaterialTheme.typography.labelMedium) },
-                            modifier = Modifier.height(32.dp)
-                        )
-                    }
-                }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
