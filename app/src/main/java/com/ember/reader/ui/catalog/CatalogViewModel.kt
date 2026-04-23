@@ -60,6 +60,15 @@ class CatalogViewModel @Inject constructor(
     /** Raw entries from the API before preferences are applied. */
     private val _rawGrimmoryEntries = MutableStateFlow<List<GrimmoryCatalogEntry>>(emptyList())
 
+    /**
+     * Pull-to-refresh indicator state. Tracked independently of [uiState] so
+     * the catalog list stays rendered during a refresh (rather than flipping
+     * to a blank Loading screen) and so a refresh whose result happens to be
+     * structurally equal to the current entries still clears the spinner.
+     */
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         viewModelScope.launch { loadCatalog() }
 
@@ -181,8 +190,19 @@ class CatalogViewModel @Inject constructor(
     }
 
     fun refresh() {
-        _uiState.value = CatalogUiState.Loading
-        viewModelScope.launch { fetchFeed() }
+        // Don't flip to Loading — it would hide the catalog and, if the refetched
+        // entries happen to be structurally equal, the `combine` dedupes and uiState
+        // stays stuck. Keep the current content visible; flag isRefreshing so the
+        // pull-to-refresh spinner reflects work-in-progress.
+        if (_isRefreshing.value) return
+        _isRefreshing.value = true
+        viewModelScope.launch {
+            try {
+                fetchFeed()
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     fun setSeriesSort(sort: SeriesSortOption) {

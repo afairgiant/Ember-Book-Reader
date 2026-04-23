@@ -88,6 +88,7 @@ fun CatalogScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val seriesSort by viewModel.seriesSort.collectAsStateWithLifecycle()
     val editMode by viewModel.editMode.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
@@ -182,6 +183,7 @@ fun CatalogScreen(
                     onNavigateToFeed = onNavigateToFeed,
                     onNavigateToBooks = onNavigateToBooks,
                     onRefresh = viewModel::refresh,
+                    isRefreshing = isRefreshing,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -223,6 +225,7 @@ fun CatalogScreen(
                     onMoveUp = viewModel::moveEntryUp,
                     onMoveDown = viewModel::moveEntryDown,
                     onRefresh = viewModel::refresh,
+                    isRefreshing = isRefreshing,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -248,10 +251,11 @@ private fun OpdsCatalogContent(
     onNavigateToFeed: (String) -> Unit,
     onNavigateToBooks: (String) -> Unit,
     onRefresh: () -> Unit,
+    isRefreshing: Boolean,
     modifier: Modifier = Modifier
 ) {
     PullToRefreshBox(
-        isRefreshing = false,
+        isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = modifier
     ) {
@@ -433,12 +437,13 @@ private fun GrimmoryCatalogContent(
     onMoveUp: (entryId: String) -> Unit,
     onMoveDown: (entryId: String) -> Unit,
     onRefresh: () -> Unit,
+    isRefreshing: Boolean,
     modifier: Modifier = Modifier
 ) {
     val sections = groupIntoSections(catalog.entries)
 
     PullToRefreshBox(
-        isRefreshing = false,
+        isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = modifier
     ) {
