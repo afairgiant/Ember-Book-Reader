@@ -9,6 +9,8 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,8 +19,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
@@ -226,6 +230,12 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
             ) {
+                Box(
+                    modifier = Modifier.padding(
+                        top = preferences.marginTop.dp,
+                        bottom = preferences.marginBottom.dp,
+                    )
+                ) {
                 NavigatorContainer(
                     key = state.publication,
                     containerId = CONTAINER_ID,
@@ -309,6 +319,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         }
                     }
                 )
+                }
             }
 
             // Apply preferences to the Readium navigator whenever they change

@@ -1,8 +1,12 @@
 package com.ember.reader.ui.reader.common
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,14 +39,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
@@ -52,6 +61,8 @@ import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
 import com.ember.reader.ui.common.SectionLabel
+
+enum class ActiveMarginSlider { Side, Top, Bottom }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,13 +75,37 @@ fun ReaderPreferencesSheet(
     onResetToDefaults: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var activeMarginSlider by remember { mutableStateOf<ActiveMarginSlider?>(null) }
+    val previewingMargin = activeMarginSlider != null
+    val defaultContainerColor = BottomSheetDefaults.ContainerColor
+    val containerColor by animateColorAsState(
+        targetValue = if (previewingMargin) Color.Transparent else defaultContainerColor,
+        label = "sheet-container",
+    )
+    val scrimColor by animateColorAsState(
+        targetValue = if (previewingMargin) Color.Transparent else BottomSheetDefaults.ScrimColor,
+        label = "sheet-scrim",
+    )
+    val contentAlpha by animateFloatAsState(
+        targetValue = if (previewingMargin) 0f else 1f,
+        label = "sheet-content-alpha",
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        scrimColor = scrimColor,
+        containerColor = containerColor,
+        dragHandle = if (previewingMargin) {
+            null
+        } else {
+            { BottomSheetDefaults.DragHandle() }
+        },
     ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
+                .alpha(contentAlpha)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
@@ -109,11 +144,101 @@ fun ReaderPreferencesSheet(
             ReaderPreferencesContent(
                 preferences = preferences,
                 onPreferencesChanged = onPreferencesChanged,
-                isPdf = isPdf
+                isPdf = isPdf,
+                onMarginPreviewChanged = { activeMarginSlider = it },
             )
+        }
+
+        activeMarginSlider?.let { active ->
+            MarginPreviewOverlay(
+                active = active,
+                preferences = preferences,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 24.dp),
+            )
+        }
         }
     }
 }
+
+@Composable
+private fun MarginPreviewOverlay(
+    active: ActiveMarginSlider,
+    preferences: ReaderPreferences,
+    modifier: Modifier = Modifier,
+) {
+    val label: String
+    val value: Float
+    val valueRange: ClosedFloatingPointRange<Float>
+    val valueText: String
+    when (active) {
+        ActiveMarginSlider.Side -> {
+            label = stringResource(R.string.side_margins_section)
+            value = preferences.pageMargins
+            valueRange = 0.5f..2.5f
+            valueText = "%.2f".format(preferences.pageMargins)
+        }
+        ActiveMarginSlider.Top -> {
+            label = stringResource(R.string.top_margin_section)
+            value = preferences.marginTop.toFloat()
+            valueRange = 0f..48f
+            valueText = "${preferences.marginTop} dp"
+        }
+        ActiveMarginSlider.Bottom -> {
+            label = stringResource(R.string.bottom_margin_section)
+            value = preferences.marginBottom.toFloat()
+            valueRange = 0f..48f
+            valueText = "${preferences.marginBottom} dp"
+        }
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = label, style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = valueText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = {},
+            valueRange = valueRange,
+            enabled = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+private fun Modifier.observeTouchPresence(onChanged: (Boolean) -> Unit): Modifier =
+    this.pointerInput(Unit) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            onChanged(true)
+            try {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.changes.all { !it.pressed }) break
+                }
+            } finally {
+                onChanged(false)
+            }
+        }
+    }
 
 /**
  * The form body of the reader preferences UI, decoupled from any container.
@@ -125,8 +250,22 @@ fun ReaderPreferencesSheet(
 fun ReaderPreferencesContent(
     preferences: ReaderPreferences,
     onPreferencesChanged: (ReaderPreferences) -> Unit,
-    isPdf: Boolean = false
+    isPdf: Boolean = false,
+    onMarginPreviewChanged: (ActiveMarginSlider?) -> Unit = {},
 ) {
+    var sideTouched by remember { mutableStateOf(false) }
+    var topTouched by remember { mutableStateOf(false) }
+    var bottomTouched by remember { mutableStateOf(false) }
+    val activeSlider: ActiveMarginSlider? = when {
+        sideTouched -> ActiveMarginSlider.Side
+        topTouched -> ActiveMarginSlider.Top
+        bottomTouched -> ActiveMarginSlider.Bottom
+        else -> null
+    }
+    LaunchedEffect(activeSlider) {
+        onMarginPreviewChanged(activeSlider)
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         // PDF-specific controls
         if (isPdf) {
@@ -244,18 +383,57 @@ fun ReaderPreferencesContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel(stringResource(R.string.page_margins_section))
-            Slider(
-                value = preferences.pageMargins,
-                onValueChange = {
-                    onPreferencesChanged(preferences.copy(pageMargins = it))
-                },
-                valueRange = 0.5f..2.5f,
-                steps = 7,
-                modifier = Modifier.fillMaxWidth()
-            )
+            SectionLabel(stringResource(R.string.side_margins_section))
+            Box(modifier = Modifier.observeTouchPresence { sideTouched = it }) {
+                Slider(
+                    value = preferences.pageMargins,
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(pageMargins = it))
+                    },
+                    valueRange = 0.5f..2.5f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             Text(
-                text = "%.1f".format(preferences.pageMargins),
+                text = "%.2f".format(preferences.pageMargins),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionLabel(stringResource(R.string.top_margin_section))
+            Box(modifier = Modifier.observeTouchPresence { topTouched = it }) {
+                Slider(
+                    value = preferences.marginTop.toFloat(),
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(marginTop = it.toInt()))
+                    },
+                    valueRange = 0f..48f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Text(
+                text = "${preferences.marginTop} dp",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionLabel(stringResource(R.string.bottom_margin_section))
+            Box(modifier = Modifier.observeTouchPresence { bottomTouched = it }) {
+                Slider(
+                    value = preferences.marginBottom.toFloat(),
+                    onValueChange = {
+                        onPreferencesChanged(preferences.copy(marginBottom = it.toInt()))
+                    },
+                    valueRange = 0f..48f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Text(
+                text = "${preferences.marginBottom} dp",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

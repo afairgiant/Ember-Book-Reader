@@ -1,6 +1,7 @@
 package com.ember.reader.core.repository
 
 import android.content.Context
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -21,8 +22,28 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+private val MARGINS_MIGRATED_V1 = booleanPreferencesKey("margins_migrated_v1")
+
+private val marginResetMigration = object : DataMigration<Preferences> {
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean =
+        currentData[MARGINS_MIGRATED_V1] != true
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        val mutable = currentData.toMutablePreferences()
+        mutable.remove(intPreferencesKey("margin_top"))
+        mutable.remove(intPreferencesKey("margin_bottom"))
+        mutable[MARGINS_MIGRATED_V1] = true
+        return mutable.toPreferences()
+    }
+
+    override suspend fun cleanUp() = Unit
+}
+
 private val Context.readerPreferencesDataStore: DataStore<Preferences>
-    by preferencesDataStore(name = "reader_preferences")
+    by preferencesDataStore(
+        name = "reader_preferences",
+        produceMigrations = { listOf(marginResetMigration) },
+    )
 
 @Singleton
 class ReaderPreferencesRepository @Inject constructor(
@@ -34,7 +55,8 @@ class ReaderPreferencesRepository @Inject constructor(
         val FONT_SIZE = floatPreferencesKey("font_size")
         val LINE_HEIGHT = floatPreferencesKey("line_height")
         val MARGIN_HORIZONTAL = intPreferencesKey("margin_horizontal")
-        val MARGIN_VERTICAL = intPreferencesKey("margin_vertical")
+        val MARGIN_TOP = intPreferencesKey("margin_top")
+        val MARGIN_BOTTOM = intPreferencesKey("margin_bottom")
         val THEME = stringPreferencesKey("theme")
         val IS_PAGINATED = booleanPreferencesKey("is_paginated")
         val BRIGHTNESS = floatPreferencesKey("brightness")
@@ -66,7 +88,8 @@ class ReaderPreferencesRepository @Inject constructor(
                 fontSize = prefs[Keys.FONT_SIZE] ?: 16f,
                 lineHeight = prefs[Keys.LINE_HEIGHT] ?: 1.5f,
                 marginHorizontal = prefs[Keys.MARGIN_HORIZONTAL] ?: 16,
-                marginVertical = prefs[Keys.MARGIN_VERTICAL] ?: 16,
+                marginTop = prefs[Keys.MARGIN_TOP] ?: 0,
+                marginBottom = prefs[Keys.MARGIN_BOTTOM] ?: 0,
                 theme = prefs[Keys.THEME]?.let { ReaderTheme.valueOf(it) }
                     ?: ReaderTheme.SYSTEM,
                 isPaginated = prefs[Keys.IS_PAGINATED] ?: true,
@@ -112,7 +135,8 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.FONT_SIZE] = preferences.fontSize
             prefs[Keys.LINE_HEIGHT] = preferences.lineHeight
             prefs[Keys.MARGIN_HORIZONTAL] = preferences.marginHorizontal
-            prefs[Keys.MARGIN_VERTICAL] = preferences.marginVertical
+            prefs[Keys.MARGIN_TOP] = preferences.marginTop
+            prefs[Keys.MARGIN_BOTTOM] = preferences.marginBottom
             prefs[Keys.THEME] = preferences.theme.name
             prefs[Keys.IS_PAGINATED] = preferences.isPaginated
             prefs[Keys.BRIGHTNESS] = preferences.brightness
