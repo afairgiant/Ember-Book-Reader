@@ -35,7 +35,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.ember.reader"
+        applicationId = "app.ember.reader"
         minSdk = 28
         targetSdk = 35
         versionCode = gitVersionCode()

@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_SIGNING: ${{ secrets.SIGNING_KEYSTORE != '' }}
+      HAS_PLAY_PUBLISH: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,9 +39,9 @@ jobs:
         env:
           SIGNING_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
 
-      - name: Build release APK (signed)
+      - name: Build release APK + AAB (signed)
         if: env.HAS_SIGNING == 'true'
-        run: ./gradlew assembleRelease --parallel --build-cache -x lintDebug -x testDebugUnitTest -x lintRelease -x testReleaseUnitTest
+        run: ./gradlew assembleRelease bundleRelease --parallel --build-cache -x lintDebug -x testDebugUnitTest -x lintRelease -x testReleaseUnitTest
         env:
           SIGNING_KEYSTORE_PATH: keystore.jks
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
@@ -51,7 +52,7 @@ jobs:
         if: env.HAS_SIGNING != 'true'
         run: ./gradlew assembleRelease --parallel --build-cache -x lintDebug -x testDebugUnitTest -x lintRelease -x testReleaseUnitTest
 
-      - name: Prepare APK
+      - name: Prepare artifacts
         run: |
           mkdir -p dist
           APK=$(find app/build/outputs/apk/release -name '*.apk' -type f | head -1)
@@ -60,6 +61,10 @@ jobs:
           else
             echo "ERROR: No APK found"
             exit 1
+          fi
+          AAB=$(find app/build/outputs/bundle/release -name '*.aab' -type f | head -1)
+          if [ -n "$AAB" ]; then
+            cp "$AAB" "dist/$(basename "$AAB")"
           fi
 
       - name: Generate changelog
@@ -124,3 +129,14 @@ jobs:
         with:
           body: ${{ steps.changelog.outputs.body }}
           files: dist/*.apk
+
+      - name: Publish to Play Store (internal, draft)
+        if: startsWith(github.ref, 'refs/tags/') && env.HAS_SIGNING == 'true' && env.HAS_PLAY_PUBLISH == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: app.ember.reader
+          releaseFiles: dist/*.aab
+          track: internal
+          status: draft
+          releaseName: ${{ github.ref_name }}

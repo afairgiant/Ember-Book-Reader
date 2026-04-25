@@ -21,7 +21,8 @@ Ember is a modern Android EPUB/PDF reader app. Primary companion to self-hosted 
 - **Image Loading**: Coil
 - **Min SDK**: 28 (Android 9)
 - **Target SDK**: 35 (Android 15)
-- **Package**: com.ember.reader
+- **Package (source namespace)**: com.ember.reader
+- **Application ID (Play Store)**: app.ember.reader
 
 ### Architecture Pattern
 - **UI**: Compose screen + ViewModel (one per screen), stateless composables with state hoisting
