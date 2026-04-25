@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -170,6 +171,65 @@ class ReaderViewModelTest {
         // Dismiss should keep it null (no-op if already null, but verifies the method works)
         viewModel.dismissSyncConflict()
         assertNull(viewModel.syncConflict.value)
+    }
+
+    @Test
+    fun `scheduleSaveProgress is suppressed for a window after updatePreferences`() = runTest {
+        coEvery { bookRepository.getById(any()) } returns null
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Kick off the suppression window, then simulate the reflow-induced
+        // locator emission that Readium fires right after submitPreferences.
+        viewModel.updatePreferences(ReaderPreferences())
+        viewModel.onLocatorChanged(mockk(relaxed = true))
+
+        // Push well past the 5s debounce — the scheduled save would fire here
+        // if suppression weren't in effect.
+        advanceTimeBy(6_000)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) {
+            readingProgressRepository.updateProgress(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    @org.junit.jupiter.api.Disabled("Requires Android framework (org.json.JSONObject) — move to instrumented tests")
+    fun `saveProgressLatest persists immediately and cancels pending debounced save`() = runTest {
+        coEvery { bookRepository.getById(any()) } returns null
+        coEvery {
+            readingProgressRepository.updateProgress(any(), any(), any(), any())
+        } returns Unit
+
+        val viewModel = createViewModel(bookId = "book-123")
+        advanceUntilIdle()
+
+        val scheduledLocator = mockk<Locator>(relaxed = true)
+        every { scheduledLocator.locations } returns mockk(relaxed = true) {
+            every { totalProgression } returns 0.40
+        }
+        viewModel.onLocatorChanged(scheduledLocator)
+
+        val latestLocator = mockk<Locator>(relaxed = true)
+        every { latestLocator.locations } returns mockk(relaxed = true) {
+            every { totalProgression } returns 0.42
+        }
+        viewModel.saveProgressLatest(latestLocator)
+        advanceUntilIdle()
+
+        // saveProgressLatest should have persisted at 0.42 and the scheduled
+        // save (0.40) should not fire after the debounce expires.
+        advanceTimeBy(6_000)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            readingProgressRepository.updateProgress("book-123", any(), 0.42f, any())
+        }
+        coVerify(exactly = 0) {
+            readingProgressRepository.updateProgress("book-123", any(), 0.40f, any())
+        }
     }
 
     @Test

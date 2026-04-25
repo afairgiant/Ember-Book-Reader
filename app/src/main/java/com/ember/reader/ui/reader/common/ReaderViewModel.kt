@@ -132,6 +132,12 @@ class ReaderViewModel @Inject constructor(
     private var sessionStartProgress: Float = 0f
     private var sessionPausedAt: java.time.Instant? = null
 
+    // A pref edit triggers a Readium reflow, which emits a new locator whose
+    // page-start progression differs slightly from the pre-reflow one. Skip
+    // persisting any locator seen inside this window so the saved position
+    // stays anchored to the user's last real navigation.
+    private var suppressSaveUntil: Long = 0L
+
     init {
         viewModelScope.launch { loadBook() }
         viewModelScope.launch {
@@ -174,6 +180,17 @@ class ReaderViewModel @Inject constructor(
             initialLocator = pub.locateProgression(localProgress.percentage.toDouble())
         }
 
+        // Wait for the real (DataStore-backed) preferences before handing the
+        // fragment to the screen. If we skipped this, the fragment would be
+        // built with defaults, seek to initialLocator, render, and only then
+        // reflow when the actual prefs arrive — and the post-reflow locator
+        // emission would overwrite our saved progress a few pages back.
+        val loadedPreferences = if (bookId.isNotEmpty()) {
+            bookReaderPreferencesRepository.observeEffective(bookId).first()
+        } else {
+            readerPreferencesRepository.preferencesFlow.first()
+        }
+
         sessionStartTime = java.time.Instant.now()
         sessionStartProgress = localProgress?.percentage ?: 0f
 
@@ -181,7 +198,8 @@ class ReaderViewModel @Inject constructor(
             publication = pub,
             initialLocator = initialLocator,
             book = loadedBook,
-            streaming = streaming
+            streaming = streaming,
+            preferences = loadedPreferences,
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
@@ -327,6 +345,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun updatePreferences(preferences: ReaderPreferences) {
+        suppressSaveUntil = System.currentTimeMillis() + PREF_REFLOW_SUPPRESS_MS
         viewModelScope.launch {
             if (bookId.isNotEmpty()) {
                 // Forks the book away from global defaults — first edit creates
@@ -348,6 +367,18 @@ class ReaderViewModel @Inject constructor(
     fun saveCurrentProgress() {
         val locator = _currentLocator.value ?: return
         viewModelScope.launch { saveProgress(locator) }
+    }
+
+    /**
+     * Persist [locator] on the application scope so the write outlives the
+     * ViewModel if the user is popping back. Use this when the caller can read
+     * the navigator fragment directly — the fragment's currentLocator can hold
+     * an emission our Compose collector hasn't processed yet.
+     */
+    fun saveProgressLatest(locator: Locator) {
+        progressSaveJob?.cancel()
+        _currentLocator.value = locator
+        applicationScope.launch { saveProgress(locator) }
     }
 
     /**
@@ -397,6 +428,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun scheduleSaveProgress(locator: Locator) {
+        if (System.currentTimeMillis() < suppressSaveUntil) return
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
             delay(SAVE_DEBOUNCE_MS)
@@ -557,6 +589,9 @@ class ReaderViewModel @Inject constructor(
         private const val CONFLICT_THRESHOLD = 0.01f
         private const val MIN_SESSION_SECONDS = 30L
         private const val PAUSE_GRACE_MS = 30_000L
+        // Covers Readium's reflow + the post-reflow currentLocator emission
+        // that follows submitPreferences.
+        private const val PREF_REFLOW_SUPPRESS_MS = 1500L
     }
 }
 
@@ -566,7 +601,8 @@ sealed interface ReaderUiState {
         val publication: Publication,
         val initialLocator: Locator?,
         val book: Book,
-        val streaming: Boolean = false
+        val streaming: Boolean = false,
+        val preferences: ReaderPreferences = ReaderPreferences(),
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }

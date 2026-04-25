@@ -80,13 +80,22 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
 
+    var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
+
     // Save progress and manage reading session on lifecycle changes
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
-                    viewModel.saveCurrentProgress()
+                    // Pull directly from the fragment; the Compose collector in
+                    // NavigatorContainer can lag behind fast page turns.
+                    val latest = navigator?.currentLocator?.value
+                    if (latest != null) {
+                        viewModel.saveProgressLatest(latest)
+                    } else {
+                        viewModel.saveCurrentProgress()
+                    }
                     viewModel.onSessionPause()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
@@ -147,7 +156,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var showBookmarks by remember { mutableStateOf(false) }
     var showHighlights by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
-    var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
     var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
@@ -245,7 +253,10 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         publication = state.publication
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = preferences.toEpubPreferences(),
+                        // Seed with the real, DataStore-backed prefs captured at
+                        // load-time so Readium doesn't render with defaults and
+                        // then reflow (which emits a shifted locator).
+                        initialPreferences = state.preferences.toEpubPreferences(),
                         configuration = EpubNavigatorFragment.Configuration(
                             selectionActionModeCallback = selectionCallback
                         )

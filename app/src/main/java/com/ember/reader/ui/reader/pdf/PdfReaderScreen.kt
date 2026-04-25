@@ -52,13 +52,22 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
 
+    var navigator by remember {
+        mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null)
+    }
+
     // Save progress and manage reading session on lifecycle changes
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
-                    viewModel.saveCurrentProgress()
+                    val latest = navigator?.currentLocator?.value
+                    if (latest != null) {
+                        viewModel.saveProgressLatest(latest)
+                    } else {
+                        viewModel.saveCurrentProgress()
+                    }
                     viewModel.onSessionPause()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
@@ -117,9 +126,6 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     var showBookmarks by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
-    var navigator by remember {
-        mutableStateOf<PdfNavigatorFragment<PdfiumSettings, PdfiumPreferences>?>(null)
-    }
     val scope = rememberCoroutineScope()
 
     // Volume button page turning
@@ -213,7 +219,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                         pdfEngineProvider = PdfiumEngineProvider()
                     ).createFragmentFactory(
                         initialLocator = state.initialLocator,
-                        initialPreferences = preferences.toPdfiumPreferences()
+                        initialPreferences = state.preferences.toPdfiumPreferences()
                     ),
                     locatorFlow = { fragment ->
                         (
