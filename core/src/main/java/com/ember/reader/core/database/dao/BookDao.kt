@@ -46,7 +46,7 @@ interface BookDao {
         """
         SELECT b.* FROM books b
         INNER JOIN reading_progress rp ON b.id = rp.bookId
-        WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 1
+        WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 0.95
         ORDER BY rp.lastReadAt DESC
         LIMIT 10
         """
