@@ -40,9 +40,13 @@ suspend fun fetchCatalog(): Result<Catalog> = runCatching {
 
 ## One public class per file
 
-Each file holds one public class or interface, and the file name matches it
-(`ServerRepository` lives in `ServerRepository.kt`). The only exception is a
-small set of closely related sealed classes.
+Each file holds one public class or interface, and the file name matches it.
+The only exception is a small set of closely related sealed classes.
+
+```
+ServerRepository  ->  ServerRepository.kt
+GrimmoryApi       ->  GrimmoryApi.kt
+```
 
 ## A `@Preview` for every Compose screen
 

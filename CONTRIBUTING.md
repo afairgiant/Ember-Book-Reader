@@ -32,10 +32,17 @@ If you want a task you can do without a Grimmory server, see
 ```bash
 git clone https://github.com/afairgiant/Ember_Reading-App.git
 cd Ember_Reading-App
-./gradlew assembleDebug      # use .\gradlew.bat on Windows
 ```
 
-Then open the project in Android Studio and press **Run**. See
+1. Clone the repo (above).
+2. Open the project in Android Studio and let the initial Gradle sync finish —
+   this generates `local.properties` with your SDK path automatically.
+3. Build the debug APK with `./gradlew assembleDebug` (use `.\gradlew.bat` on
+   Windows), or just build from Android Studio.
+4. Press **Run** to launch the app on an emulator or device.
+
+Open the project in Android Studio first: the Gradle command above needs the
+SDK path in `local.properties`, which the first sync creates for you. See
 [setup.md](docs/development/setup.md) for emulator/device details and common
 gotchas.
 
