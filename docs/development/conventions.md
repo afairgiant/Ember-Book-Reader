@@ -87,6 +87,16 @@ dependencies {
 }
 ```
 
+## Formatting
+
+This project applies [ktlint](https://github.com/JLLeitschuh/ktlint-gradle) to
+every module for Kotlin formatting. Before opening a PR:
+
+```bash
+./gradlew ktlintCheck     # report formatting issues (use .\gradlew.bat on Windows)
+./gradlew ktlintFormat    # auto-fix what it can
+```
+
 ## More
 
 [CLAUDE.md](../../CLAUDE.md) lists the complete set of conventions, plus the

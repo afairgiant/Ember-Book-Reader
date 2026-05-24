@@ -34,8 +34,8 @@ You should see a version starting with `17`.
 ## 3. Clone the repository
 
 ```bash
-git clone https://github.com/afairgiant/Ember_Reading-App.git
-cd Ember_Reading-App
+git clone https://github.com/afairgiant/Ember-Book-Reader.git
+cd Ember-Book-Reader
 ```
 
 ## 4. Point the build at your SDK
@@ -51,6 +51,8 @@ If you build from the command line without opening Android Studio, set the
 ```properties
 sdk.dir=/absolute/path/to/Android/Sdk
 ```
+
+On Windows, escape the backslashes (e.g. `sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk`), or just open the project in Android Studio to avoid the issue entirely.
 
 `local.properties` is machine-specific and is not committed.
 
@@ -104,8 +106,8 @@ Ember is a standalone reader **and** a companion to a self-hosted
 [Grimmory](https://github.com/afairgiant/booklore-n) book server. You do **not**
 need a server to work on much of the app:
 
-- **Works standalone (no server):** the reader, local EPUB/PDF import, the local
-  library, themes, and reader settings.
+- **Works standalone (no server):** the reader, local EPUB/PDF import, local
+  audiobook playback, the local library, themes, and reader settings.
 - **Needs a running Grimmory server:** catalog browsing, progress sync,
   read-status tracking, reading sessions, and Book Drop.
 

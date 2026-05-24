@@ -17,9 +17,9 @@ Full step-by-step instructions are in
 
 Not sure what to work on? Browse the open issues labeled for newcomers:
 
-- [Good first issues](https://github.com/afairgiant/Ember_Reading-App/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+- [Good first issues](https://github.com/afairgiant/Ember-Book-Reader/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
   — small, well-scoped tasks ideal for a first contribution.
-- [Help wanted](https://github.com/afairgiant/Ember_Reading-App/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+- [Help wanted](https://github.com/afairgiant/Ember-Book-Reader/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
   — issues where help is especially appreciated.
 
 Comment on an issue to let others know you're taking it.
@@ -30,8 +30,8 @@ If you want a task you can do without a Grimmory server, see
 ## Quickstart
 
 ```bash
-git clone https://github.com/afairgiant/Ember_Reading-App.git
-cd Ember_Reading-App
+git clone https://github.com/afairgiant/Ember-Book-Reader.git
+cd Ember-Book-Reader
 ```
 
 1. Clone the repo (above).
@@ -41,9 +41,7 @@ cd Ember_Reading-App
    Windows), or just build from Android Studio.
 4. Press **Run** to launch the app on an emulator or device.
 
-Open the project in Android Studio first: the Gradle command above needs the
-SDK path in `local.properties`, which the first sync creates for you. See
-[setup.md](docs/development/setup.md) for emulator/device details and common
+See [setup.md](docs/development/setup.md) for emulator/device details and common
 gotchas.
 
 ## Submitting your change

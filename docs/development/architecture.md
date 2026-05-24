@@ -6,13 +6,17 @@ file fast. For the canonical architecture rules and design decisions, see
 
 ## Modules
 
-Ember is a multi-module Gradle project:
+Ember is a multi-module Gradle project. `settings.gradle.kts` declares two
+modules:
 
 | Module | Responsibility |
 |--------|----------------|
 | `:app` | UI layer — Jetpack Compose screens, ViewModels, navigation, theme, Hilt DI modules. |
 | `:core` | Data layer — models, Room database, Ktor networking, OPDS, kosync, Grimmory and Hardcover APIs, Readium integration, repositories. |
-| `:feature` | Reserved extraction point for shared feature logic. Currently thin. |
+
+All logic currently lives in `:app` and `:core`. A separate `:feature` module
+may be extracted in the future to hold shared feature logic, but it is not yet a
+build module in `settings.gradle.kts`.
 
 Source lives under `com.ember.reader` (the `:app` module) and
 `com.ember.reader.core` (the `:core` module).
