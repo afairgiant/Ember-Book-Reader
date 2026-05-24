@@ -37,6 +37,7 @@ class AppPreferencesRepository @Inject constructor(
         val SYNC_NOTIFICATIONS = booleanPreferencesKey("sync_notifications")
         val SYNC_HIGHLIGHTS = booleanPreferencesKey("sync_highlights")
         val SYNC_BOOKMARKS = booleanPreferencesKey("sync_bookmarks")
+        val BOOK_PUBLISHER_STYLES_RESET = booleanPreferencesKey("book_publisher_styles_reset_v1")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.appPreferencesDataStore.data
@@ -123,5 +124,12 @@ class AppPreferencesRepository @Inject constructor(
 
     suspend fun updateSyncBookmarks(enabled: Boolean) {
         context.appPreferencesDataStore.edit { it[Keys.SYNC_BOOKMARKS] = enabled }
+    }
+
+    suspend fun hasMigratedBookPublisherStyles(): Boolean =
+        context.appPreferencesDataStore.data.first()[Keys.BOOK_PUBLISHER_STYLES_RESET] ?: false
+
+    suspend fun markBookPublisherStylesMigrated() {
+        context.appPreferencesDataStore.edit { it[Keys.BOOK_PUBLISHER_STYLES_RESET] = true }
     }
 }
