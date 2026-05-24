@@ -10,6 +10,7 @@ import coil.memory.MemoryCache
 import com.ember.reader.core.network.CoverAuthInterceptor
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.BookReaderPreferencesPublisherStylesMigration
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
@@ -49,6 +50,9 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
     @Inject
     lateinit var coverAuthInterceptor: CoverAuthInterceptor
 
+    @Inject
+    lateinit var bookReaderPreferencesPublisherStylesMigration: BookReaderPreferencesPublisherStylesMigration
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration by lazy {
@@ -68,6 +72,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         runAutoCleanup()
         observeServersForCoverAuth()
         refreshGrimmoryPermissions()
+        runPublisherStylesMigration()
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -132,6 +137,19 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
             }.onFailure { e ->
                 Timber.w(e, "Failed to refresh Grimmory permissions on startup")
             }
+        }
+    }
+
+    /**
+     * One-time migration disabling publisher styles on existing per-book
+     * preference overrides so the user's text alignment takes effect. Runs in
+     * the background and tolerates failure — it retries next launch (the guard
+     * flag is only set on success).
+     */
+    private fun runPublisherStylesMigration() {
+        applicationScope.launch {
+            runCatching { bookReaderPreferencesPublisherStylesMigration.migrateIfNeeded() }
+                .onFailure { Timber.w(it, "Per-book publisher styles migration failed") }
         }
     }
 }
