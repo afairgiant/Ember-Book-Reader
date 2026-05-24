@@ -206,6 +206,7 @@
     <string name="bottom_margin_section">Bottom Margin</string>
     <string name="publisher_styles">Publisher Styles</string>
     <string name="hyphenation">Hyphenation</string>
+    <string name="publisher_styles_lock_hint">Turn off Publisher Styles to change this</string>
     <string name="theme_section">Theme</string>
     <string name="paginated_mode">Paginated Mode</string>
     <string name="orientation_section">Orientation</string>
