@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class FakeBookReaderPreferencesDao : BookReaderPreferencesDao {
 
     private val rows = mutableListOf<BookReaderPreferencesEntity>()
+    private val flowsByBookId = mutableMapOf<String, MutableStateFlow<BookReaderPreferencesEntity?>>()
 
     /** Snapshot of all stored rows. */
     val all: List<BookReaderPreferencesEntity> get() = rows.toList()
@@ -16,22 +17,25 @@ class FakeBookReaderPreferencesDao : BookReaderPreferencesDao {
     fun seed(entity: BookReaderPreferencesEntity) {
         rows.removeAll { it.bookId == entity.bookId }
         rows.add(entity)
+        flowsByBookId[entity.bookId]?.value = rows.find { it.bookId == entity.bookId }
     }
 
     override suspend fun get(bookId: String): BookReaderPreferencesEntity? =
         rows.find { it.bookId == bookId }
 
     override fun observe(bookId: String): Flow<BookReaderPreferencesEntity?> =
-        MutableStateFlow(rows.find { it.bookId == bookId })
+        flowsByBookId.getOrPut(bookId) { MutableStateFlow(rows.find { it.bookId == bookId }) }
 
     override suspend fun getAll(): List<BookReaderPreferencesEntity> = rows.toList()
 
     override suspend fun upsert(entity: BookReaderPreferencesEntity) {
         rows.removeAll { it.bookId == entity.bookId }
         rows.add(entity)
+        flowsByBookId[entity.bookId]?.value = rows.find { it.bookId == entity.bookId }
     }
 
     override suspend fun delete(bookId: String) {
         rows.removeAll { it.bookId == bookId }
+        flowsByBookId[bookId]?.value = null
     }
 }
