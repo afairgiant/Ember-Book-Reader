@@ -15,7 +15,7 @@ data class ReaderPreferences(
     val brightness: Float = -1f,
     val orientationLock: OrientationLock = OrientationLock.AUTO,
     val textAlign: TextAlign = TextAlign.START,
-    val publisherStyles: Boolean = true,
+    val publisherStyles: Boolean = false,
     val pageMargins: Float = 1.0f,
     val wordSpacing: Float = 0f,
     val letterSpacing: Float = 0f,

@@ -39,10 +39,32 @@ private val marginResetMigration = object : DataMigration<Preferences> {
     override suspend fun cleanUp() = Unit
 }
 
+private val PUBLISHER_STYLES_RESET_V1 = booleanPreferencesKey("publisher_styles_reset_v1")
+
+/**
+ * One-time reset of the global `publisher_styles` preference. Older builds
+ * defaulted it to `true`, which made Readium ignore the user's text alignment,
+ * line height, and hyphenation. Removing the key lets the flow fall back to the
+ * new `false` default; users who want publisher styles back simply re-toggle it.
+ */
+internal val publisherStylesResetMigration = object : DataMigration<Preferences> {
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean =
+        currentData[PUBLISHER_STYLES_RESET_V1] != true
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        val mutable = currentData.toMutablePreferences()
+        mutable.remove(booleanPreferencesKey("publisher_styles"))
+        mutable[PUBLISHER_STYLES_RESET_V1] = true
+        return mutable.toPreferences()
+    }
+
+    override suspend fun cleanUp() = Unit
+}
+
 private val Context.readerPreferencesDataStore: DataStore<Preferences>
     by preferencesDataStore(
         name = "reader_preferences",
-        produceMigrations = { listOf(marginResetMigration) },
+        produceMigrations = { listOf(marginResetMigration, publisherStylesResetMigration) },
     )
 
 @Singleton
@@ -100,7 +122,7 @@ class ReaderPreferencesRepository @Inject constructor(
                 textAlign = prefs[Keys.TEXT_ALIGN]?.let {
                     runCatching { TextAlign.valueOf(it) }.getOrNull()
                 } ?: TextAlign.START,
-                publisherStyles = prefs[Keys.PUBLISHER_STYLES] ?: true,
+                publisherStyles = prefs[Keys.PUBLISHER_STYLES] ?: false,
                 pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
                 wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
                 letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,

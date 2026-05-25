@@ -16,6 +16,9 @@ interface BookReaderPreferencesDao {
     @Query("SELECT * FROM book_reader_preferences WHERE bookId = :bookId LIMIT 1")
     fun observe(bookId: String): Flow<BookReaderPreferencesEntity?>
 
+    @Query("SELECT * FROM book_reader_preferences")
+    suspend fun getAll(): List<BookReaderPreferencesEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: BookReaderPreferencesEntity)
 

@@ -358,6 +358,7 @@ fun ReaderPreferencesContent(
                 },
                 valueRange = 1.0f..2.5f,
                 steps = 14,
+                enabled = !preferences.publisherStyles,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
@@ -365,6 +366,9 @@ fun ReaderPreferencesContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (preferences.publisherStyles) {
+                PublisherStylesLockHint()
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -376,9 +380,13 @@ fun ReaderPreferencesContent(
                     FilterChip(
                         selected = preferences.textAlign == align,
                         onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
+                        enabled = !preferences.publisherStyles,
                         label = { Text(align.displayName) }
                     )
                 }
+            }
+            if (preferences.publisherStyles) {
+                PublisherStylesLockHint()
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -464,6 +472,7 @@ fun ReaderPreferencesContent(
                 Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.hyphenate,
+                    enabled = !preferences.publisherStyles,
                     onCheckedChange = {
                         onPreferencesChanged(preferences.copy(hyphenate = it))
                     }
@@ -642,6 +651,15 @@ fun ReaderPreferencesContent(
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+@Composable
+private fun PublisherStylesLockHint() {
+    Text(
+        text = stringResource(R.string.publisher_styles_lock_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
