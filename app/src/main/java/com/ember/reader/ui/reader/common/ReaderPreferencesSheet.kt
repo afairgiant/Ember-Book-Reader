@@ -1,7 +1,12 @@
 package com.ember.reader.ui.reader.common
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -350,43 +355,75 @@ fun ReaderPreferencesContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel(stringResource(R.string.line_height_section))
-            Slider(
-                value = preferences.lineHeight,
-                onValueChange = {
-                    onPreferencesChanged(preferences.copy(lineHeight = it))
-                },
-                valueRange = 1.0f..2.5f,
-                steps = 14,
-                enabled = !preferences.publisherStyles,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "%.1f".format(preferences.lineHeight),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (preferences.publisherStyles) {
-                PublisherStylesLockHint()
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.text_align_section))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                com.ember.reader.core.model.TextAlign.entries.forEach { align ->
-                    FilterChip(
-                        selected = preferences.textAlign == align,
-                        onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
-                        enabled = !preferences.publisherStyles,
-                        label = { Text(align.displayName) }
-                    )
-                }
+                Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = preferences.publisherStyles,
+                    onCheckedChange = {
+                        onPreferencesChanged(preferences.copy(publisherStyles = it))
+                    }
+                )
             }
-            if (preferences.publisherStyles) {
-                PublisherStylesLockHint()
+
+            AnimatedVisibility(
+                visible = !preferences.publisherStyles,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    SectionLabel(stringResource(R.string.line_height_section))
+                    Slider(
+                        value = preferences.lineHeight,
+                        onValueChange = {
+                            onPreferencesChanged(preferences.copy(lineHeight = it))
+                        },
+                        valueRange = 1.0f..2.5f,
+                        steps = 14,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "%.1f".format(preferences.lineHeight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    SectionLabel(stringResource(R.string.text_align_section))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        com.ember.reader.core.model.TextAlign.entries.forEach { align ->
+                            FilterChip(
+                                selected = preferences.textAlign == align,
+                                onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
+                                label = { Text(align.displayName) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
+                        Switch(
+                            checked = preferences.hyphenate,
+                            onCheckedChange = {
+                                onPreferencesChanged(preferences.copy(hyphenate = it))
+                            }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -445,39 +482,6 @@ fun ReaderPreferencesContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = preferences.publisherStyles,
-                    onCheckedChange = {
-                        onPreferencesChanged(preferences.copy(publisherStyles = it))
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = preferences.hyphenate,
-                    enabled = !preferences.publisherStyles,
-                    onCheckedChange = {
-                        onPreferencesChanged(preferences.copy(hyphenate = it))
-                    }
-                )
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -651,15 +655,6 @@ fun ReaderPreferencesContent(
             modifier = Modifier.fillMaxWidth()
         )
     }
-}
-
-@Composable
-private fun PublisherStylesLockHint() {
-    Text(
-        text = stringResource(R.string.publisher_styles_lock_hint),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable
