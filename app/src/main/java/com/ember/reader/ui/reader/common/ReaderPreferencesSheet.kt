@@ -414,7 +414,7 @@ fun ReaderPreferencesContent(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
                         Switch(
