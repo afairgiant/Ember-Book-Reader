@@ -358,7 +358,8 @@ fun ReaderPreferencesContent(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
             ) {
                 Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
                 Switch(
