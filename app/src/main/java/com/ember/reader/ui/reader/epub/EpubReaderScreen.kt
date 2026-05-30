@@ -9,8 +9,6 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -19,10 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
@@ -238,12 +234,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
             ) {
-                Box(
-                    modifier = Modifier.padding(
-                        top = preferences.marginTop.dp,
-                        bottom = preferences.marginBottom.dp,
-                    )
-                ) {
                 NavigatorContainer(
                     key = state.publication,
                     containerId = CONTAINER_ID,
@@ -331,7 +321,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     }
                 )
                 }
-            }
 
             // Apply preferences to the Readium navigator whenever they change
             LaunchedEffect(preferences, navigator) {
@@ -381,6 +370,17 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 nav.addInputListener(listener)
             }
 
+            // Inject CSS margins into the WebView whenever the chapter changes or margin
+            // preferences change. evaluateJavascript() awaits the page load automatically,
+            // so this is safe to call immediately after a chapter navigation.
+            // currentLocator?.href changes on every chapter boundary (not on every page turn),
+            // ensuring we re-inject into each new WebView without redundant calls.
+            val currentChapterHref = currentLocator?.href?.toString()
+            LaunchedEffect(navigator, currentChapterHref, preferences.marginTop, preferences.marginBottom,) {
+                val nav = navigator ?: return@LaunchedEffect
+                nav.evaluateJavascript(buildMarginCssScript(preferences.marginTop, preferences.marginBottom))
+            }
+
             // Volume button page turning
             DisposableEffect(preferences.volumePageTurn, navigator) {
                 val nav = navigator
@@ -395,6 +395,44 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
                 onDispose {
                     com.ember.reader.MainActivity.volumeKeyHandler = null
+                }
+            }
+
+            // Apply orientation lock — restored to auto on exit
+            val context = LocalContext.current
+            DisposableEffect(preferences.orientationLock) {
+                val activity = context as? android.app.Activity
+                if (activity != null) {
+                    activity.requestedOrientation = when (preferences.orientationLock) {
+                        com.ember.reader.core.model.OrientationLock.AUTO ->
+                            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        com.ember.reader.core.model.OrientationLock.PORTRAIT ->
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        com.ember.reader.core.model.OrientationLock.LANDSCAPE ->
+                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    }
+                }
+                onDispose {
+                    (context as? android.app.Activity)?.requestedOrientation =
+                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+
+            // Apply screen brightness — negative value means "follow system"
+            DisposableEffect(preferences.brightness) {
+                val activity = context as? android.app.Activity
+                if (activity != null && preferences.brightness >= 0f) {
+                    val params = activity.window.attributes
+                    params.screenBrightness = preferences.brightness
+                    activity.window.attributes = params
+                }
+                onDispose {
+                    val act = context as? android.app.Activity
+                    if (act != null) {
+                        val params = act.window.attributes
+                        params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                        act.window.attributes = params
+                    }
                 }
             }
 
@@ -600,6 +638,39 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
         wordSpacing = wordSpacing.toDouble(),
         letterSpacing = letterSpacing.toDouble()
     )
+}
+
+/**
+ * Builds a JS snippet that applies top/bottom margins to the EPUB reading area.
+ *
+ * Readium's own setCSSProperties() works by calling
+ *   document.documentElement.style.setProperty(name, value, "important")
+ * — i.e. inline style with !important on :root, which is the highest-priority
+ * position in the CSS cascade. A <style> element (even with !important) loses to
+ * an existing inline !important set by Readium's own CSS engine.
+ *
+ * We use the identical mechanism so our padding wins the cascade reliably.
+ * When both margins are zero the properties are removed to restore Readium's defaults.
+ */
+private fun buildMarginCssScript(marginTop: Int, marginBottom: Int): String {
+    val topValue = if (marginTop > 0) "${marginTop}px" else ""
+    val bottomValue = if (marginBottom > 0) "${marginBottom}px" else ""
+    // language=JavaScript
+    return """
+        (function() {
+            var root = document.documentElement;
+            if ('$topValue'.length > 0) {
+                root.style.setProperty('padding-top', '$topValue', 'important');
+            } else {
+                root.style.removeProperty('padding-top');
+            }
+            if ('$bottomValue'.length > 0) {
+                root.style.setProperty('padding-bottom', '$bottomValue', 'important');
+            } else {
+                root.style.removeProperty('padding-bottom');
+            }
+        })();
+    """.trimIndent()
 }
 
 private fun android.content.Context.launchIntentOrFallback(intent: Intent, fallbackUrl: String) {
