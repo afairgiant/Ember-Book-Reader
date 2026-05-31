@@ -392,13 +392,13 @@ fun ReaderPreferencesContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel("Margins")
+            SectionLabel(stringResource(R.string.margins_section))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Side",
+                    text = stringResource(R.string.side_margin_label),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.width(56.dp),
                 )
@@ -421,7 +421,7 @@ fun ReaderPreferencesContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Top",
+                    text = stringResource(R.string.top_margin_label),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.width(56.dp),
                 )
@@ -444,7 +444,7 @@ fun ReaderPreferencesContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Bottom",
+                    text = stringResource(R.string.bottom_margin_label),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.width(56.dp),
                 )

@@ -398,26 +398,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
             }
 
-            // Apply orientation lock — restored to auto on exit
-            val context = LocalContext.current
-            DisposableEffect(preferences.orientationLock) {
-                val activity = context as? android.app.Activity
-                if (activity != null) {
-                    activity.requestedOrientation = when (preferences.orientationLock) {
-                        com.ember.reader.core.model.OrientationLock.AUTO ->
-                            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                        com.ember.reader.core.model.OrientationLock.PORTRAIT ->
-                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                        com.ember.reader.core.model.OrientationLock.LANDSCAPE ->
-                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    }
-                }
-                onDispose {
-                    (context as? android.app.Activity)?.requestedOrientation =
-                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                }
-            }
-
             // Apply screen brightness — negative value means "follow system"
             DisposableEffect(preferences.brightness) {
                 val activity = context as? android.app.Activity
