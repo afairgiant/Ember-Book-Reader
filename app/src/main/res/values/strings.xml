@@ -201,9 +201,13 @@
     <string name="font_size_section">Font Size</string>
     <string name="line_height_section">Line Height</string>
     <string name="text_align_section">Text Align</string>
+    <string name="margins_section">Margins</string>
     <string name="side_margins_section">Side Margins</string>
+    <string name="side_margin_label">Side</string>
     <string name="top_margin_section">Top Margin</string>
+    <string name="top_margin_label">Top</string>
     <string name="bottom_margin_section">Bottom Margin</string>
+    <string name="bottom_margin_label">Bottom</string>
     <string name="publisher_styles">Publisher Styles</string>
     <string name="hyphenation">Hyphenation</string>
     <string name="publisher_styles_lock_hint">Turn off Publisher Styles to change this</string>

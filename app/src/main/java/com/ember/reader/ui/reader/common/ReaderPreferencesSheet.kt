@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -428,60 +429,76 @@ fun ReaderPreferencesContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SectionLabel(stringResource(R.string.side_margins_section))
-            Box(modifier = Modifier.observeTouchPresence { sideTouched = it }) {
-                Slider(
-                    value = preferences.pageMargins,
-                    onValueChange = {
-                        onPreferencesChanged(preferences.copy(pageMargins = it))
-                    },
-                    valueRange = 0.5f..2.5f,
-                    modifier = Modifier.fillMaxWidth()
+            SectionLabel(stringResource(R.string.margins_section))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.side_margin_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(56.dp),
                 )
+                Box(modifier = Modifier
+                    .weight(1f)
+                    .observeTouchPresence { sideTouched = it }
+                ) {
+                    Slider(
+                        value = preferences.pageMargins,
+                        onValueChange = {
+                            onPreferencesChanged(preferences.copy(pageMargins = it))
+                        },
+                        valueRange = 0.5f..2.5f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-            Text(
-                text = "%.2f".format(preferences.pageMargins),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.top_margin_section))
-            Box(modifier = Modifier.observeTouchPresence { topTouched = it }) {
-                Slider(
-                    value = preferences.marginTop.toFloat(),
-                    onValueChange = {
-                        onPreferencesChanged(preferences.copy(marginTop = it.toInt()))
-                    },
-                    valueRange = 0f..48f,
-                    modifier = Modifier.fillMaxWidth()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.top_margin_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(56.dp),
                 )
+                Box(modifier = Modifier
+                    .weight(1f)
+                    .observeTouchPresence { topTouched = it }
+                ) {
+                    Slider(
+                        value = preferences.marginTop.toFloat(),
+                        onValueChange = {
+                            onPreferencesChanged(preferences.copy(marginTop = it.toInt()))
+                        },
+                        valueRange = 0f..48f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-            Text(
-                text = "${preferences.marginTop} dp",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.bottom_margin_section))
-            Box(modifier = Modifier.observeTouchPresence { bottomTouched = it }) {
-                Slider(
-                    value = preferences.marginBottom.toFloat(),
-                    onValueChange = {
-                        onPreferencesChanged(preferences.copy(marginBottom = it.toInt()))
-                    },
-                    valueRange = 0f..48f,
-                    modifier = Modifier.fillMaxWidth()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.bottom_margin_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(56.dp),
                 )
+                Box(modifier = Modifier
+                    .weight(1f)
+                    .observeTouchPresence { bottomTouched = it }
+                ) {
+                    Slider(
+                        value = preferences.marginBottom.toFloat(),
+                        onValueChange = {
+                            onPreferencesChanged(preferences.copy(marginBottom = it.toInt()))
+                        },
+                        valueRange = 0f..48f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-            Text(
-                text = "${preferences.marginBottom} dp",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }
