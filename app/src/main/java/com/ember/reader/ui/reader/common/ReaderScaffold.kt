@@ -1,4 +1,5 @@
 package com.ember.reader.ui.reader.common
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -95,13 +96,17 @@ fun ReaderScaffold(
                     .width(24.dp)
                     .fillMaxHeight()
                     .onGloballyPositioned { coordinates ->
-                        // Exclude from system back gesture so touches reach the app
-                        val rect = android.graphics.Rect(
-                            0, 0,
-                            coordinates.size.width,
-                            coordinates.size.height
-                        )
-                        view.systemGestureExclusionRects = listOf(rect)
+                        // Exclude from system back gesture so touches reach the app.
+                        // setSystemGestureExclusionRects is API 29+; on API 28 the
+                        // brightness strip still works but may compete with back-edge swipe.
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            val rect = android.graphics.Rect(
+                                0, 0,
+                                coordinates.size.width,
+                                coordinates.size.height
+                            )
+                            view.systemGestureExclusionRects = listOf(rect)
+                        }
                     }
                     .pointerInput(Unit) {
                         awaitEachGesture {

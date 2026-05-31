@@ -1,6 +1,7 @@
 package com.ember.reader.ui.common
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -14,6 +15,10 @@ import androidx.core.content.ContextCompat
 import com.ember.reader.MainActivity
 import com.ember.reader.R
 
+// Every notify() in this object is preceded by `if (!hasPermission(context)) return`.
+// Lint can't follow the helper call, so suppress MissingPermission at the class level.
+// Any new notify call here MUST also start with the hasPermission gate.
+@SuppressLint("MissingPermission")
 object NotificationHelper {
 
     private const val CHANNEL_DOWNLOADS = "ember_downloads"

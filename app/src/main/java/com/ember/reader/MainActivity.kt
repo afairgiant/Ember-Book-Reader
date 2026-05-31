@@ -1,6 +1,7 @@
 package com.ember.reader
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -63,6 +64,11 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // dispatchKeyEvent is a public method on android.app.Activity; lint flags it as
+    // RestrictedApi only because androidx.activity.ComponentActivity re-declares it
+    // with @RestrictedTo(LIBRARY_GROUP_PREFIX). Overriding from a downstream Activity
+    // is the intended pattern for intercepting key events.
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
