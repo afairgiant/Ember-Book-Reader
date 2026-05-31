@@ -1,6 +1,7 @@
 package com.ember.reader.core.sync.worker
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -122,6 +123,10 @@ class SyncWorker @AssistedInject constructor(
         return Result.success()
     }
 
+    // Lint can't follow the compound SDK-gated early-return guard below through to
+    // the notify() call, so suppress here — the runtime permission check is correct
+    // and is the actual gate.
+    @SuppressLint("MissingPermission")
     private suspend fun showSyncNotification() {
         if (!appPreferencesRepository.getSyncNotifications()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -258,6 +263,7 @@ class SyncWorker @AssistedInject constructor(
         }
     }
 
+    @SuppressLint("MissingPermission") // see showSyncNotification — same guard pattern
     private fun showAutoDownloadNotification(titles: List<String>) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
