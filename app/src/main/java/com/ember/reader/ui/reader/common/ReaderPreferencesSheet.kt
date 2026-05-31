@@ -360,7 +360,6 @@ fun ReaderPreferencesContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-            ) {
                 Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
                 Switch(
                     checked = preferences.publisherStyles,
