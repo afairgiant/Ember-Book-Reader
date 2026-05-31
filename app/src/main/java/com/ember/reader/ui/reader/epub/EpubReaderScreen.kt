@@ -398,23 +398,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
             }
 
-            // Apply screen brightness — negative value means "follow system"
-            DisposableEffect(preferences.brightness) {
-                val activity = context as? android.app.Activity
-                if (activity != null && preferences.brightness >= 0f) {
-                    val params = activity.window.attributes
-                    params.screenBrightness = preferences.brightness
-                    activity.window.attributes = params
-                }
-                onDispose {
-                    val act = context as? android.app.Activity
-                    if (act != null) {
-                        val params = act.window.attributes
-                        params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                        act.window.attributes = params
-                    }
-                }
-            }
 
             // Handle sync navigation (accept remote progress)
             LaunchedEffect(pendingNavigation, navigator) {
