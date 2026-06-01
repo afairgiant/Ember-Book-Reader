@@ -8,6 +8,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -56,7 +57,10 @@ class BookdropClient @Inject constructor(
             contentType(ContentType.Application.Json)
             setBody(request)
         }
-        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Bookdrop finalize failed: ${response.status}")
+        if (!response.status.isSuccess()) {
+            val body = response.bodyAsText()
+            throw GrimmoryHttpException(response.status.value, "Bookdrop finalize failed: ${response.status} — $body")
+        }
         response.body<BookdropFinalizeResult>()
     }
 
@@ -84,12 +88,12 @@ class BookdropClient @Inject constructor(
     suspend fun getLibrariesWithPaths(
         baseUrl: String,
         serverId: Long
-    ): Result<List<GrimmoryAppLibraryWithPaths>> =
+    ): Result<List<GrimmoryLibraryFull>> =
         tokenManager.withAuth(baseUrl, serverId) { token ->
-            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/libraries") {
+            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/libraries") {
                 header("Authorization", "Bearer $token")
             }
             if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Libraries failed: ${response.status}")
-            response.body<List<GrimmoryAppLibraryWithPaths>>()
+            response.body<List<GrimmoryLibraryFull>>()
         }
 }

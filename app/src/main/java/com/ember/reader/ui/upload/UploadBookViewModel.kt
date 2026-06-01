@@ -7,7 +7,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.BookdropClient
-import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
+import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryUploadClient
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
@@ -36,7 +36,7 @@ data class PickedFile(
 data class UploadBookUiState(
     val serverName: String = "",
     val destination: UploadDestination = UploadDestination.Library,
-    val libraries: List<GrimmoryAppLibraryWithPaths> = emptyList(),
+    val libraries: List<GrimmoryLibraryFull> = emptyList(),
     val librariesLoading: Boolean = false,
     val selectedLibraryId: Long? = null,
     val selectedPathId: Long? = null,
@@ -48,7 +48,7 @@ data class UploadBookUiState(
 ) {
     val isUploading: Boolean get() = uploadProgress != null
 
-    val selectedLibrary: GrimmoryAppLibraryWithPaths?
+    val selectedLibrary: GrimmoryLibraryFull?
         get() = libraries.firstOrNull { it.id == selectedLibraryId }
 
     val canUpload: Boolean

@@ -44,6 +44,8 @@ data class BookdropMetadata(
     val hardcoverReviewCount: Int? = null
 )
 
+fun BookdropMetadata.hasValues(): Boolean = this != BookdropMetadata()
+
 @Serializable
 data class BookdropNotification(
     val pendingCount: Int = 0,
@@ -71,7 +73,7 @@ data class BookdropFinalizeFile(
 data class BookdropFinalizeResult(
     val totalFiles: Int = 0,
     val successfullyImported: Int = 0,
-    val failed: Int = 0
+    val failed: Int = 0,
 )
 
 @Serializable
@@ -95,17 +97,3 @@ data class BookdropDiscardRequest(
     val selectedIds: List<Long>? = null
 )
 
-@Serializable
-data class LibraryPathSummary(
-    val id: Long,
-    val path: String
-)
-
-@Serializable
-data class GrimmoryAppLibraryWithPaths(
-    val id: Long,
-    val name: String,
-    val icon: String? = null,
-    val bookCount: Int = 0,
-    val paths: List<LibraryPathSummary> = emptyList()
-)

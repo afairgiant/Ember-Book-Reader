@@ -397,19 +397,20 @@ Request: `{ "rating": 4 }`. Value: integer 1–5. Response `200`.
 ### Libraries
 
 ```
-GET /api/v1/app/libraries
+GET /api/v1/libraries
 ```
 
-Response `200 List<AppLibrarySummary>`:
+> **Note:** `/api/v1/app/libraries` throws 500 on Grimmory v3.0.0+ due to a lazy-relation bug. Use `/api/v1/libraries` instead.
+
+Response `200 List<GrimmoryLibraryFull>`:
 ```json
 [
   {
     "id": 1,
     "name": "Library Name",
     "icon": "library_books",
-    "bookCount": 150,
-    "allowedFormats": ["EPUB", "PDF"],
-    "paths": [{ "id": 5, "path": "/books/fiction" }]
+    "fileNamingPattern": "{author}/{title}",
+    "paths": [{ "id": 5, "libraryId": 1, "path": "/books/fiction" }]
   }
 ]
 ```
@@ -1183,6 +1184,9 @@ Finalize body:
 }
 ```
 
+> **Note:** `pathId` is required. Omitting it (sending `null`) results in the file being counted as failed with no error detail returned.
+> `metadata` can be omitted (`null`) if no edits were made.
+
 Finalize response:
 ```json
 {
@@ -1190,9 +1194,11 @@ Finalize response:
   "successfullyImported": 4,
   "failed": 1,
   "processedAt": "2026-04-22T10:00:00Z",
-  "results": [...]
+  "results": []
 }
 ```
+
+> **Note:** `results` is always an empty array in observed server responses — per-file error detail is not populated. Failure reasons must be inferred from context.
 
 ---
 
