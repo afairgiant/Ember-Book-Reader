@@ -58,11 +58,11 @@ An unofficial Android EPUB/PDF/Audiobook reader built to work with [Grimmory](ht
 
 ## Install
 
-Download the latest APK from [Releases](https://github.com/afairgiant/Ember_Reading-App/releases), or build from source:
+Download the latest APK from [Releases](https://github.com/afairgiant/Ember-Book-Reader/releases), or build from source:
 
 ```bash
-git clone https://github.com/afairgiant/Ember_Reading-App.git
-cd Ember_Reading-App
+git clone https://github.com/afairgiant/Ember-Book-Reader.git
+cd Ember-Book-Reader
 ./gradlew assembleDebug
 ```
 
