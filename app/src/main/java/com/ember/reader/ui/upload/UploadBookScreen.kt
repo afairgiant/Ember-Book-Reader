@@ -54,7 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
+import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 
 private val uploadMimeTypes = arrayOf(
     "application/epub+zip",
@@ -197,9 +197,9 @@ private fun DestinationSelector(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LibrarySection(
-    libraries: List<GrimmoryAppLibraryWithPaths>,
+    libraries: List<GrimmoryLibraryFull>,
     librariesLoading: Boolean,
-    selectedLibrary: GrimmoryAppLibraryWithPaths?,
+    selectedLibrary: GrimmoryLibraryFull?,
     selectedPathId: Long?,
     enabled: Boolean,
     onSelectLibrary: (Long) -> Unit,

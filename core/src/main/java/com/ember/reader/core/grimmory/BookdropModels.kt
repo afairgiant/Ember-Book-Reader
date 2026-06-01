@@ -44,6 +44,34 @@ data class BookdropMetadata(
     val hardcoverReviewCount: Int? = null
 )
 
+fun BookdropMetadata.hasValues(): Boolean =
+    !title.isNullOrBlank() ||
+    !subtitle.isNullOrBlank() ||
+    !publisher.isNullOrBlank() ||
+    !publishedDate.isNullOrBlank() ||
+    !description.isNullOrBlank() ||
+    !seriesName.isNullOrBlank() ||
+    seriesNumber != null ||
+    seriesTotal != null ||
+    !isbn13.isNullOrBlank() ||
+    !isbn10.isNullOrBlank() ||
+    !asin.isNullOrBlank() ||
+    !language.isNullOrBlank() ||
+    pageCount != null ||
+    !authors.isNullOrEmpty() ||
+    !categories.isNullOrEmpty() ||
+    !thumbnailUrl.isNullOrBlank() ||
+    !googleId.isNullOrBlank() ||
+    !goodreadsId.isNullOrBlank() ||
+    goodreadsRating != null ||
+    goodreadsReviewCount != null ||
+    amazonRating != null ||
+    amazonReviewCount != null ||
+    !hardcoverId.isNullOrBlank() ||
+    !hardcoverBookId.isNullOrBlank() ||
+    hardcoverRating != null ||
+    hardcoverReviewCount != null
+
 @Serializable
 data class BookdropNotification(
     val pendingCount: Int = 0,
@@ -71,7 +99,7 @@ data class BookdropFinalizeFile(
 data class BookdropFinalizeResult(
     val totalFiles: Int = 0,
     val successfullyImported: Int = 0,
-    val failed: Int = 0
+    val failed: Int = 0,
 )
 
 @Serializable
@@ -95,17 +123,3 @@ data class BookdropDiscardRequest(
     val selectedIds: List<Long>? = null
 )
 
-@Serializable
-data class LibraryPathSummary(
-    val id: Long,
-    val path: String
-)
-
-@Serializable
-data class GrimmoryAppLibraryWithPaths(
-    val id: Long,
-    val name: String,
-    val icon: String? = null,
-    val bookCount: Int = 0,
-    val paths: List<LibraryPathSummary> = emptyList()
-)

@@ -8,8 +8,10 @@ import com.ember.reader.core.grimmory.BookdropFile
 import com.ember.reader.core.grimmory.BookdropFinalizeFile
 import com.ember.reader.core.grimmory.BookdropFinalizeRequest
 import com.ember.reader.core.grimmory.BookdropMetadata
-import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
+import com.ember.reader.core.grimmory.GrimmoryHttpException
+import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.grimmory.hasValues
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
@@ -37,7 +39,7 @@ sealed interface BookdropUiState {
     data object NoServer : BookdropUiState
     data class Success(
         val files: List<BookdropFileState>,
-        val libraries: List<GrimmoryAppLibraryWithPaths>
+        val libraries: List<GrimmoryLibraryFull>,
     ) : BookdropUiState
     data class Error(val message: String) : BookdropUiState
 }
@@ -54,6 +56,9 @@ class BookdropViewModel @Inject constructor(
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _errorDialog = MutableStateFlow<String?>(null)
+    val errorDialog: StateFlow<String?> = _errorDialog.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -75,6 +80,10 @@ class BookdropViewModel @Inject constructor(
 
     fun dismissMessage() {
         _message.value = null
+    }
+
+    fun dismissErrorDialog() {
+        _errorDialog.value = null
     }
 
     fun refresh() {
@@ -106,9 +115,11 @@ class BookdropViewModel @Inject constructor(
     }
 
     fun selectFileLibrary(fileId: Long, libraryId: Long?) {
+        val libraries = (_uiState.value as? BookdropUiState.Success)?.libraries ?: emptyList()
+        val firstPathId = libraries.firstOrNull { it.id == libraryId }?.paths?.firstOrNull()?.id
         updateFiles { files ->
             files.map {
-                if (it.file.id == fileId) it.copy(libraryId = libraryId, pathId = null) else it
+                if (it.file.id == fileId) it.copy(libraryId = libraryId, pathId = firstPathId) else it
             }
         }
     }
@@ -180,9 +191,7 @@ class BookdropViewModel @Inject constructor(
                     "asin" -> current.copy(asin = value.ifBlank { null })
                     "pageCount" -> current.copy(pageCount = value.toIntOrNull())
                     "categories" -> current.copy(
-                        categories = value.split(",").map {
-                            it.trim()
-                        }.filter { it.isNotEmpty() }.toSet()
+                        categories = value.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
                     )
                     "description" -> current.copy(description = value.ifBlank { null })
                     "googleId" -> current.copy(googleId = value.ifBlank { null })
@@ -214,6 +223,14 @@ class BookdropViewModel @Inject constructor(
             _message.value = "Select a library for each file"
             return
         }
+        val missingPath = checked.any { fileState ->
+            fileState.pathId == null ||
+                state.libraries.firstOrNull { it.id == fileState.libraryId }?.paths.isNullOrEmpty()
+        }
+        if (missingPath) {
+            _errorDialog.value = "One or more selected files has no library path.\n\nThe selected library may have no storage paths configured. Add a path to the library in the Grimmory web UI, then refresh and try again."
+            return
+        }
         val s = server ?: return
         viewModelScope.launch {
             _isRefreshing.value = true
@@ -223,18 +240,24 @@ class BookdropViewModel @Inject constructor(
                         fileId = fileState.file.id,
                         libraryId = fileState.libraryId!!,
                         pathId = fileState.pathId,
-                        metadata = fileState.editedMetadata
+                        metadata = fileState.editedMetadata.takeIf { it.hasValues() }
                     )
                 }
             )
             bookdropClient.finalizeImport(s.url, s.id, request)
                 .onSuccess { result ->
                     Timber.d("Bookdrop: finalized ${result.successfullyImported} imported, ${result.failed} failed")
-                    _message.value = "Imported ${result.successfullyImported} book(s)" +
-                        if (result.failed > 0) ", ${result.failed} failed" else ""
+                    if (result.failed > 0) {
+                        _errorDialog.value = buildFinalizeFailureMessage(result.successfullyImported, result.failed, result.totalFiles)
+                    } else {
+                        _message.value = "Imported ${result.successfullyImported} book(s)"
+                    }
                     loadData()
                 }
-                .onFailure { _message.value = "Finalize failed: ${it.message}" }
+                .onFailure { error ->
+                    Timber.w(error, "Bookdrop finalize failed")
+                    _errorDialog.value = buildFinalizeErrorMessage(error)
+                }
             _isRefreshing.value = false
         }
     }
@@ -291,7 +314,10 @@ class BookdropViewModel @Inject constructor(
                     editedMetadata = file.originalMetadata ?: BookdropMetadata()
                 )
             }
-            val libraries = librariesResult.getOrDefault(emptyList())
+            val libraries = librariesResult.getOrElse { error ->
+                _message.value = "Failed to load libraries: ${friendlyErrorMessage(error)}"
+                emptyList()
+            }
             _uiState.value = BookdropUiState.Success(
                 files = fileStates,
                 libraries = libraries
@@ -305,4 +331,34 @@ class BookdropViewModel @Inject constructor(
         val state = _uiState.value as? BookdropUiState.Success ?: return
         _uiState.value = state.copy(files = transform(state.files))
     }
+}
+
+private fun buildFinalizeFailureMessage(succeeded: Int, failed: Int, total: Int): String = buildString {
+    appendLine("$succeeded of $total book(s) imported, $failed failed.")
+    appendLine()
+    appendLine("Common causes:")
+    appendLine("• The library path is not accessible on the server")
+    appendLine("• The file format is not supported by this library")
+    append("• The file has already been imported")
+}
+
+private fun buildFinalizeErrorMessage(error: Throwable): String = when {
+    error is GrimmoryHttpException -> when (error.statusCode) {
+        400 -> "The server rejected the import request (400 Bad Request). The selected library or path may no longer exist."
+        403 -> "Access denied (403). Your account needs the 'canAccessBookdrop' permission — ask your Grimmory admin."
+        404 -> "Import endpoint not found (404). Check that your Grimmory server version supports Book Drop."
+        409 -> "Conflict (409). One or more files may already be imported."
+        500 -> "The server encountered an internal error (500). Check the Grimmory server logs for details."
+        502, 503, 504 -> "The server is temporarily unavailable (${error.statusCode}). Try again in a moment."
+        else -> "Server returned error ${error.statusCode}."
+    }
+    error.message?.contains("Unable to resolve host") == true ||
+        error is java.net.UnknownHostException ->
+        "Could not reach the server. Check that you are on the same network and the server is running."
+    error.message?.contains("timeout") == true ||
+        error is java.net.SocketTimeoutException ->
+        "The request timed out. The server may be overloaded or unreachable."
+    error is java.net.ConnectException ->
+        "Could not connect to the server. Check that Grimmory is running."
+    else -> "Import failed: ${error.message ?: "unknown error"}"
 }

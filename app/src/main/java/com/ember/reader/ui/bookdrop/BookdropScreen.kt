@@ -42,7 +42,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -60,19 +62,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.grimmory.BookdropMetadata
-import com.ember.reader.core.grimmory.GrimmoryAppLibraryWithPaths
+import com.ember.reader.core.grimmory.GrimmoryLibraryFull
+import com.ember.reader.core.grimmory.GrimmoryLibraryPath
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
+import com.ember.reader.ui.theme.EmberTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val errorDialog by viewModel.errorDialog.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -81,6 +88,18 @@ fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hi
             snackbarHostState.showSnackbar(it)
             viewModel.dismissMessage()
         }
+    }
+
+    errorDialog?.let { msg ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Import failed") },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissErrorDialog) { Text("OK") }
+            },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        )
     }
 
     Scaffold(
@@ -263,7 +282,7 @@ private fun BookdropContent(
 @Composable
 private fun BookdropFileCard(
     fileState: BookdropFileState,
-    libraries: List<GrimmoryAppLibraryWithPaths>,
+    libraries: List<GrimmoryLibraryFull>,
     onToggleExpanded: () -> Unit,
     onToggleChecked: () -> Unit,
     onSelectLibrary: (Long?) -> Unit,
@@ -561,7 +580,7 @@ private fun MetadataComparisonRow(
 
 @Composable
 private fun LibraryDropdown(
-    libraries: List<GrimmoryAppLibraryWithPaths>,
+    libraries: List<GrimmoryLibraryFull>,
     selectedLibraryId: Long?,
     onSelect: (Long?) -> Unit,
     modifier: Modifier = Modifier
@@ -585,14 +604,22 @@ private fun LibraryDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            libraries.forEach { library ->
+            if (libraries.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("${library.name} (${library.bookCount})") },
-                    onClick = {
-                        onSelect(library.id)
-                        expanded = false
-                    }
+                    text = { Text("No libraries available") },
+                    onClick = {},
+                    enabled = false,
                 )
+            } else {
+                libraries.forEach { library ->
+                    DropdownMenuItem(
+                        text = { Text(library.name) },
+                        onClick = {
+                            onSelect(library.id)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
@@ -600,7 +627,7 @@ private fun LibraryDropdown(
 
 @Composable
 private fun PathDropdown(
-    paths: List<com.ember.reader.core.grimmory.LibraryPathSummary>,
+    paths: List<GrimmoryLibraryPath>,
     selectedPathId: Long?,
     onSelect: (Long?) -> Unit,
     modifier: Modifier = Modifier
@@ -626,13 +653,6 @@ private fun PathDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            DropdownMenuItem(
-                text = { Text("Default") },
-                onClick = {
-                    onSelect(null)
-                    expanded = false
-                }
-            )
             paths.forEach { path ->
                 DropdownMenuItem(
                     text = { Text(path.path) },
@@ -643,5 +663,19 @@ private fun PathDropdown(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun BookdropErrorDialogPreview() {
+    EmberTheme {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Import failed") },
+            text = { Text("1 of 2 book(s) imported, 1 failed.\n\nCommon causes:\n• The library path is not accessible on the server\n• The file format is not supported by this library\n• The file has already been imported") },
+            confirmButton = { TextButton(onClick = {}) { Text("OK") } },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        )
     }
 }
