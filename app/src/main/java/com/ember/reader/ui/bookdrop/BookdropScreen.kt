@@ -62,7 +62,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.grimmory.BookdropMetadata
@@ -70,6 +72,7 @@ import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryLibraryPath
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
+import com.ember.reader.ui.theme.EmberTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,12 +92,13 @@ fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hi
 
     errorDialog?.let { msg ->
         AlertDialog(
-            onDismissRequest = viewModel::dismissErrorDialog,
+            onDismissRequest = {},
             title = { Text("Import failed") },
             text = { Text(msg) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissErrorDialog) { Text("OK") }
-            }
+            },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         )
     }
 
@@ -659,5 +663,19 @@ private fun PathDropdown(
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun BookdropErrorDialogPreview() {
+    EmberTheme {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Import failed") },
+            text = { Text("1 of 2 book(s) imported, 1 failed.\n\nCommon causes:\n• The library path is not accessible on the server\n• The file format is not supported by this library\n• The file has already been imported") },
+            confirmButton = { TextButton(onClick = {}) { Text("OK") } },
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        )
     }
 }

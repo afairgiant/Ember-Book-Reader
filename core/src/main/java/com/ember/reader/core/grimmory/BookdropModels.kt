@@ -44,7 +44,33 @@ data class BookdropMetadata(
     val hardcoverReviewCount: Int? = null
 )
 
-fun BookdropMetadata.hasValues(): Boolean = this != BookdropMetadata()
+fun BookdropMetadata.hasValues(): Boolean =
+    !title.isNullOrBlank() ||
+    !subtitle.isNullOrBlank() ||
+    !publisher.isNullOrBlank() ||
+    !publishedDate.isNullOrBlank() ||
+    !description.isNullOrBlank() ||
+    !seriesName.isNullOrBlank() ||
+    seriesNumber != null ||
+    seriesTotal != null ||
+    !isbn13.isNullOrBlank() ||
+    !isbn10.isNullOrBlank() ||
+    !asin.isNullOrBlank() ||
+    !language.isNullOrBlank() ||
+    pageCount != null ||
+    !authors.isNullOrEmpty() ||
+    !categories.isNullOrEmpty() ||
+    !thumbnailUrl.isNullOrBlank() ||
+    !googleId.isNullOrBlank() ||
+    !goodreadsId.isNullOrBlank() ||
+    goodreadsRating != null ||
+    goodreadsReviewCount != null ||
+    amazonRating != null ||
+    amazonReviewCount != null ||
+    !hardcoverId.isNullOrBlank() ||
+    !hardcoverBookId.isNullOrBlank() ||
+    hardcoverRating != null ||
+    hardcoverReviewCount != null
 
 @Serializable
 data class BookdropNotification(

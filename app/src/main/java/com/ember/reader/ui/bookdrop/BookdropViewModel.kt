@@ -39,7 +39,7 @@ sealed interface BookdropUiState {
     data object NoServer : BookdropUiState
     data class Success(
         val files: List<BookdropFileState>,
-        val libraries: List<GrimmoryLibraryFull>
+        val libraries: List<GrimmoryLibraryFull>,
     ) : BookdropUiState
     data class Error(val message: String) : BookdropUiState
 }
