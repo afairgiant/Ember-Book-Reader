@@ -62,7 +62,7 @@ Download the latest APK from [Releases](https://github.com/afairgiant/Ember-Book
 
 ```bash
 git clone https://github.com/afairgiant/Ember-Book-Reader.git
-cd Ember_Reading-App
+cd Ember-Book-Reader
 ./gradlew assembleDebug
 ```
 
