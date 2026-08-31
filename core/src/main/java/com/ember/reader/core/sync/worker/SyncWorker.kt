@@ -20,6 +20,7 @@ import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.repository.toBookFormat
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.core.sync.HighlightSyncManager
 import com.ember.reader.core.sync.ProgressSyncManager
@@ -219,6 +220,14 @@ class SyncWorker @AssistedInject constructor(
                 // Find or create the book entry, then download
                 val book = existing ?: run {
                     // Book not in DB yet — create a minimal entry for download
+                    val format = summary.toBookFormat()
+                    // Audiobook covers live at a different endpoint on Grimmory — using the
+                    // book endpoint for them 404s, leaving the cover blank in Continue Reading.
+                    val coverUrl = if (format == com.ember.reader.core.model.BookFormat.AUDIOBOOK) {
+                        com.ember.reader.core.grimmory.grimmoryAudiobookCoverUrl(server.url, summary.id, summary.coverUpdatedOn)
+                    } else {
+                        com.ember.reader.core.grimmory.grimmoryCoverUrl(server.url, summary.id, summary.coverUpdatedOn)
+                    }
                     val newBook = com.ember.reader.core.model.Book(
                         id = java.util.UUID.randomUUID().toString(),
                         serverId = server.id,
@@ -226,14 +235,8 @@ class SyncWorker @AssistedInject constructor(
                         title = summary.title,
                         author = summary.authors.firstOrNull(),
                         downloadUrl = "/api/v1/opds/${summary.id}/download",
-                        format = when (summary.primaryFileType?.uppercase()) {
-                            "PDF" -> com.ember.reader.core.model.BookFormat.PDF
-                            else -> com.ember.reader.core.model.BookFormat.EPUB
-                        },
-                        coverUrl = buildString {
-                            append("${com.ember.reader.core.network.serverOrigin(server.url)}/api/v1/media/book/${summary.id}/cover")
-                            summary.coverUpdatedOn?.let { append("?v=${java.net.URLEncoder.encode(it, "UTF-8")}") }
-                        }
+                        format = format,
+                        coverUrl = coverUrl
                     )
                     bookRepository.addLocalBook(newBook)
                     newBook

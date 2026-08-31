@@ -26,9 +26,9 @@ class CoverAuthInterceptor @Inject constructor(
     fun updateServers(servers: List<Server>) {
         serverAuth = servers.map { server ->
             ServerAuthEntry(
+                serverId = server.id,
                 origin = serverOrigin(server.url),
                 isGrimmory = server.isGrimmory,
-                token = if (server.isGrimmory) grimmoryTokenManager.getAccessToken(server.id) else null,
                 basicAuth = if (!server.isGrimmory && server.opdsUsername.isNotBlank()) {
                     basicAuthHeader(server.opdsUsername, server.opdsPassword)
                 } else {
@@ -51,9 +51,14 @@ class CoverAuthInterceptor @Inject constructor(
         for (entry in serverAuth) {
             if (!url.startsWith(entry.origin)) continue
 
-            if (entry.isGrimmory && entry.token != null) {
+            // Looked up live (not cached at updateServers() time) — the JWT is rotated
+            // independently by GrimmoryTokenManager.withAuth() on 401, which doesn't
+            // touch the Server row and so wouldn't otherwise be observed here, leaving
+            // cover requests silently using a dead token.
+            val token = if (entry.isGrimmory) grimmoryTokenManager.getAccessToken(entry.serverId) else null
+            if (token != null) {
                 val authenticatedUrl = request.url.newBuilder()
-                    .addQueryParameter("token", entry.token)
+                    .addQueryParameter("token", token)
                     .build()
                 return chain.proceed(request.newBuilder().url(authenticatedUrl).build())
             } else if (entry.basicAuth != null) {
@@ -70,9 +75,9 @@ class CoverAuthInterceptor @Inject constructor(
     }
 
     private data class ServerAuthEntry(
+        val serverId: Long,
         val origin: String,
         val isGrimmory: Boolean,
-        val token: String?,
         val basicAuth: String?
     )
 }

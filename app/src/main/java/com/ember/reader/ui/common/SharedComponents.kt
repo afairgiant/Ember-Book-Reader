@@ -19,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
+import timber.log.Timber
 
 @Composable
 fun LoadingScreen(modifier: Modifier = Modifier) {
@@ -84,13 +86,35 @@ fun SectionLabel(text: String) {
     )
 }
 
+/** [Book]-typed convenience wrapper over [CoverImage]. */
+@Composable
+fun BookCoverImage(
+    book: Book,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    onClick: (() -> Unit)? = null
+) {
+    CoverImage(
+        coverUrl = book.coverUrl,
+        title = book.title,
+        modifier = modifier,
+        contentScale = contentScale,
+        onClick = onClick
+    )
+}
+
 /**
- * Unified book-cover renderer.
+ * Loads [coverUrl] via Coil if present, over a colored placeholder (the first two
+ * letters of [title]) that stays mounted underneath. The placeholder's text size
+ * auto-scales with the box's width, so the same composable looks right at both
+ * 40dp list thumbnails and 180dp hero covers.
  *
- * Loads [book.coverUrl] via Coil if present, otherwise falls back to a colored
- * placeholder showing the first two letters of the title. The placeholder's text
- * size auto-scales with the box's width, so the same composable looks right at
- * both 40dp list thumbnails and 180dp hero covers.
+ * The placeholder is always drawn, not just when [coverUrl] is null: a cover
+ * request that fails (401 mid token-refresh, 404, timeout, ...) leaves Coil's
+ * painter empty, so without a base layer it reads as a "missing" cover rather
+ * than a load error. Composing the placeholder underneath — instead of swapping
+ * to it on error — also means a retry (e.g. on recomposition, once auth catches
+ * up) isn't blocked by any held "failed" state.
  *
  * Auth for remote covers (Grimmory JWT, OPDS Basic) is handled transparently
  * by [com.ember.reader.core.network.CoverAuthInterceptor], which is installed
@@ -100,8 +124,9 @@ fun SectionLabel(text: String) {
  * [onClick] to make the cover tappable.
  */
 @Composable
-fun BookCoverImage(
-    book: Book,
+fun CoverImage(
+    coverUrl: String?,
+    title: String,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     onClick: (() -> Unit)? = null
@@ -111,28 +136,33 @@ fun BookCoverImage(
     } else {
         Modifier
     }
-    val coverUrl = book.coverUrl
-    if (coverUrl != null) {
-        AsyncImage(
-            model = coverUrl,
-            contentDescription = book.title,
-            contentScale = contentScale,
-            modifier = modifier.then(clickableModifier)
-        )
-    } else {
-        BoxWithConstraints(
-            modifier = modifier
-                .then(clickableModifier)
-                .background(BookCoverPlaceholderColors[bookCoverColorIndex(book.title)]),
+    BoxWithConstraints(modifier = modifier.then(clickableModifier)) {
+        // Scale font with box width so one composable works for tiny thumbnails
+        // and hero covers alike. ~28% of width reads well across sizes.
+        val fontSize = (maxWidth.value * 0.28f).sp
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(BookCoverPlaceholderColors[bookCoverColorIndex(title)])
+                // Once the image is present it owns the single contentDescription for this
+                // cover; without this the placeholder's own Text would surface as a second,
+                // separately-focusable accessibility node alongside it.
+                .let { if (coverUrl != null) it.clearAndSetSemantics {} else it },
             contentAlignment = Alignment.Center
         ) {
-            // Scale font with box width so one composable works for tiny thumbnails
-            // and hero covers alike. ~28% of width reads well across sizes.
-            val fontSize = (maxWidth.value * 0.28f).sp
             Text(
-                text = book.title.take(2).uppercase(),
+                text = title.take(2).uppercase(),
                 fontSize = fontSize,
                 color = Color(0xFF5D4037)
+            )
+        }
+        if (coverUrl != null) {
+            AsyncImage(
+                model = coverUrl,
+                contentDescription = title,
+                contentScale = contentScale,
+                modifier = Modifier.matchParentSize(),
+                onError = { Timber.w(it.result.throwable, "Cover load failed for url=%s", coverUrl) }
             )
         }
     }
