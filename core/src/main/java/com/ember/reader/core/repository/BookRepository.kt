@@ -956,7 +956,7 @@ private fun GrimmoryAppBook.toBookFormat(): BookFormat = when (primaryFileType?.
     else -> BookFormat.EPUB
 }
 
-private fun GrimmoryBookSummary.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {
+internal fun GrimmoryBookSummary.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {
     "PDF" -> BookFormat.PDF
     "AUDIOBOOK" -> BookFormat.AUDIOBOOK
     else -> BookFormat.EPUB

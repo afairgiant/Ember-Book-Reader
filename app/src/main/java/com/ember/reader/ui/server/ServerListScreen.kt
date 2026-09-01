@@ -40,9 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,13 +47,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
-import com.ember.reader.ui.common.BookCoverPlaceholderColors
-import com.ember.reader.ui.common.bookCoverColorIndex
+import com.ember.reader.ui.common.CoverImage
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,8 +181,6 @@ fun ServerListScreen(
 
 @Composable
 private fun ContinueReadingCard(book: Book, percentage: Float, onClick: () -> Unit) {
-    val colorIndex = bookCoverColorIndex(book.title)
-
     Card(
         modifier = Modifier
             .width(130.dp)
@@ -199,39 +191,14 @@ private fun ContinueReadingCard(book: Book, percentage: Float, onClick: () -> Un
         shape = RoundedCornerShape(14.dp)
     ) {
         Column {
-            // Cover image
-            Box(
+            CoverImage(
+                coverUrl = book.coverUrl,
+                title = book.title,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
-            ) {
-                if (book.coverUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(book.coverUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = book.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(BookCoverPlaceholderColors[colorIndex]),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = book.title.take(2).uppercase(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFF5D4037)
-                        )
-                    }
-                }
-            }
+                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+            )
 
             // Title + progress
             Column(modifier = Modifier.padding(10.dp)) {
@@ -279,23 +246,14 @@ private fun RecentlyAddedCard(
         shape = RoundedCornerShape(14.dp)
     ) {
         Column {
-            Box(
+            CoverImage(
+                coverUrl = coverUrl,
+                title = title,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(coverUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                )
-            }
+                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+            )
 
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
