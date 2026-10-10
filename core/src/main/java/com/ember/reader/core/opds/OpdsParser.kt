@@ -47,6 +47,7 @@ object OpdsParser {
         var entryTitle = ""
         var entryHref = ""
         var entryContent: String? = null
+        var nextPagePath: String? = null
         var event = parser.eventType
 
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -68,10 +69,17 @@ object OpdsParser {
                             if (inEntry) entryId = parser.nextText()
                         }
                         "link" -> {
+                            val rel = parser.getAttributeValue(null, "rel")
                             if (inEntry) {
-                                val rel = parser.getAttributeValue(null, "rel")
                                 if (rel == "subsection" || rel == null) {
                                     entryHref = parser.getAttributeValue(null, "href") ?: ""
+                                }
+                            } else if (rel == "next") {
+                                // Only navigation feeds are paged through here; book feeds
+                                // page via parseBookFeed.
+                                val type = parser.getAttributeValue(null, "type") ?: ""
+                                if (type.contains("kind=navigation")) {
+                                    nextPagePath = parser.getAttributeValue(null, "href")
                                 }
                             }
                         }
@@ -97,7 +105,7 @@ object OpdsParser {
             event = parser.next()
         }
 
-        return OpdsFeed(title = feedTitle, entries = entries)
+        return OpdsFeed(title = feedTitle, entries = entries, nextPagePath = nextPagePath)
     }
 
     fun parseBookFeed(xml: String, baseUrl: String, serverId: Long): OpdsBookPage {

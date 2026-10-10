@@ -128,6 +128,46 @@ class OpdsParserTest {
     }
 
     @Test
+    fun `parseFeed has no next page for unpaginated feed`() {
+        assertNull(OpdsParser.parseFeed(NAVIGATION_FEED, BASE_URL).nextPagePath)
+    }
+
+    @Test
+    fun `parseFeed extracts feed-level next link of paginated navigation feed`() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Authors</title>
+              <link rel="self" href="/api/v1/opds/authors?page=1&amp;size=50" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+              <link rel="next" href="/api/v1/opds/authors?page=2&amp;size=50" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+              <entry>
+                <id>urn:author:1</id>
+                <title>Andy Weir</title>
+                <link rel="subsection" href="/api/v1/opds/catalog?author=Andy+Weir" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val feed = OpdsParser.parseFeed(xml, BASE_URL)
+
+        assertEquals("/api/v1/opds/authors?page=2&size=50", feed.nextPagePath)
+        assertEquals("/api/v1/opds/catalog?author=Andy+Weir", feed.entries.single().href)
+    }
+
+    @Test
+    fun `parseFeed ignores next link of acquisition feed`() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Catalog</title>
+              <link rel="next" href="/api/v1/opds/catalog?page=2" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+            </feed>
+        """.trimIndent()
+
+        assertNull(OpdsParser.parseFeed(xml, BASE_URL).nextPagePath)
+    }
+
+    @Test
     fun `parseFeed extracts entry content when present`() {
         val feed = OpdsParser.parseFeed(NAVIGATION_FEED, BASE_URL)
         assertEquals("Browse by shelf", feed.entries[0].content)

@@ -37,7 +37,9 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -47,6 +49,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TabletAndroid
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.Visibility
@@ -55,14 +58,16 @@ import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Maps PrimeNG icon class names (as stored by Grimmory) to Material Design icons.
- * Grimmory stores icons as "pi pi-<name>" strings.
+ * Maps Grimmory's library/shelf icon names to Material Design icons.
+ *
+ * Grimmory v3.5+ stores bare Lucide names ("house", "settings"); older servers store
+ * PrimeNG class names ("pi pi-home", "pi pi-cog"). Both are resolved here.
  */
 object GrimmoryIconMapper {
 
-    fun resolve(primeIcon: String?): ImageVector? {
-        if (primeIcon.isNullOrBlank()) return null
-        val name = primeIcon.removePrefix("pi pi-").removePrefix("pi-")
+    fun resolve(serverIcon: String?): ImageVector? {
+        if (serverIcon.isNullOrBlank()) return null
+        val name = serverIcon.removePrefix("pi pi-").removePrefix("pi-")
         return iconMap[name]
     }
 
@@ -174,6 +179,36 @@ object GrimmoryIconMapper {
         "sparkles" to Icons.Default.AutoAwesome,
         "gift" to Icons.Default.AutoStories,
         "building" to Icons.Default.Storefront,
-        "building-columns" to Icons.Default.Storefront
+        "building-columns" to Icons.Default.Storefront,
+
+        // Lucide names (Grimmory v3.5+) that differ from their PrimeNG predecessors
+        "user-pen" to Icons.Default.Person,
+        "file-text" to Icons.AutoMirrored.Filled.LibraryBooks,
+        "house" to Icons.Default.Home,
+        "settings" to Icons.Default.Settings,
+        "list-checks" to Icons.AutoMirrored.Filled.List,
+        "layout-grid" to Icons.Default.ViewModule,
+        "eye-off" to Icons.Default.VisibilityOff,
+        "languages" to Icons.Default.Language,
+        "map-pin" to Icons.Default.Place,
+        "funnel" to Icons.AutoMirrored.Filled.Label,
+        "square-pen" to Icons.Default.Edit,
+        "share-2" to Icons.Default.Share,
+        "store" to Icons.Default.Storefront,
+        "calendar-x" to Icons.Default.CalendarMonth,
+        "timer" to Icons.Default.History,
+        "circle-check" to Icons.Default.CheckCircle,
+        "square-check" to Icons.Default.CheckCircle,
+        "badge-check" to Icons.Default.CheckCircle,
+        "mail" to Icons.Default.Email,
+        "message-circle" to Icons.Default.Email,
+        "messages-square" to Icons.Default.Email,
+        "circle-play" to Icons.Default.PlayCircle,
+        "building-2" to Icons.Default.Storefront,
+
+        // Lucide-only names
+        "rocket" to Icons.Default.RocketLaunch,
+        "atom" to Icons.Default.Science,
+        "tablet" to Icons.Default.TabletAndroid
     )
 }
