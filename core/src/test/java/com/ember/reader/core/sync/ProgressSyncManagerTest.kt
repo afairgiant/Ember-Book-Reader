@@ -1,10 +1,13 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.grimmory.GrimmoryAppBookFile
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingProgressRepository.KosyncProgressResult
@@ -15,9 +18,11 @@ import com.ember.reader.core.testutil.TestFixtures.readingProgress
 import com.ember.reader.core.testutil.TestFixtures.server
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
+import io.mockk.slot
 import java.net.UnknownHostException
 import java.time.Clock
 import java.time.Instant
@@ -188,6 +193,38 @@ class ProgressSyncManagerTest {
         }
 
         @Test
+        fun `grimmory pull takes epub progress when the koreader value is stale`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.334152f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.334152f, device = "Ember"),
+                epubProgress = GrimmoryEpubProgress(cfi = "epubcfi(/6/2)", percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.344f, result!!.progress.percentage, 0.0001f)
+        }
+
+        @Test
+        fun `grimmory pull takes koreader progress when the epub value is stale`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.21f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.21f, device = "Ember"),
+                epubProgress = GrimmoryEpubProgress(cfi = "epubcfi(/6/2)", percentage = 20f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.21f, result!!.progress.percentage, 0.0001f)
+        }
+
+        @Test
         fun `grimmory readProgress of 0 is treated as no progress`() = runTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
@@ -234,6 +271,104 @@ class ProgressSyncManagerTest {
             val result = syncManager.pushProgress(testServer, testBook)
 
             assertEquals(PushResult.NothingToPush, result)
+        }
+
+        @Test
+        fun `push sends file-level progress for the primary file with the placeholder CFI`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(
+                    files = listOf(
+                        GrimmoryAppBookFile(id = 7L, bookType = "PDF", isPrimary = false),
+                        GrimmoryAppBookFile(id = 42L, bookType = "EPUB", isPrimary = true)
+                    )
+                )
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertEquals(42L, request.captured.fileProgress?.bookFileId)
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.fileProgress?.positionData)
+            assertEquals(50f, request.captured.fileProgress?.progressPercent)
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.epubProgress?.cfi)
+            assertEquals(50f, request.captured.epubProgress?.percentage)
+        }
+
+        @Test
+        fun `push falls back to epubProgress only when the detail has no primary file`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                Result.success(grimmoryBookDetail(files = null))
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertNull(request.captured.fileProgress)
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.epubProgress?.cfi)
+        }
+
+        @Test
+        fun `push retries without fileProgress when Grimmory rejects the file id with 404`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(grimmoryBookDetail())
+            val requests = mutableListOf<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(requests)) } returnsMany listOf(
+                Result.failure(GrimmoryHttpException(404, "Book file not found")),
+                Result.success(Unit)
+            )
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertEquals(2, requests.size)
+            assertNotNull(requests[0].fileProgress)
+            assertNull(requests[1].fileProgress)
+            assertEquals(50f, requests[1].epubProgress?.percentage)
+        }
+
+        @Test
+        fun `push does not retry on non-404 Grimmory failures`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(grimmoryBookDetail())
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns
+                Result.failure(GrimmoryHttpException(500, "boom"))
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Failure)
+            coVerify(exactly = 1) { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) }
+        }
+
+        @Test
+        fun `push sends Grimmory progress before kosync`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(grimmoryBookDetail())
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), any()) } returns Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            coVerifyOrder {
+                grimmoryClient.putAppBookProgress(any(), any(), any(), any())
+                readingProgressRepository.pushKosyncProgress(any(), any(), any())
+            }
+        }
+
+        @Test
+        fun `placeholder CFI has no indirection step`() {
+            // Grimmory would convert a parseable CFI into a start-of-book KOReader position.
+            assertFalse(ProgressSyncManager.PLACEHOLDER_CFI.contains('!'))
         }
 
         @Test

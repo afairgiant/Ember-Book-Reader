@@ -186,7 +186,8 @@ class GrimmoryClientTest {
             var capturedAuth: String? = null
             val responseJson = """
                 {"id":101,"title":"My Book","readProgress":0.5,"authors":["Author A"],
-                 "primaryFile":{"id":1,"fileName":"book.epub"}}
+                 "files":[{"id":7,"bookId":101,"fileName":"book.pdf","bookType":"PDF","book":true,"primary":false},
+                          {"id":1,"bookId":101,"fileName":"book.epub","bookType":"EPUB","book":true,"primary":true}]}
             """.trimIndent()
 
             val engine = MockEngine { request ->
@@ -204,8 +205,8 @@ class GrimmoryClientTest {
             assertEquals("My Book", detail.title)
             assertEquals(0.5f, detail.readProgress)
             assertEquals(listOf("Author A"), detail.authors)
-            assertNotNull(detail.primaryFile)
-            assertEquals(1L, detail.primaryFile!!.id)
+            assertEquals(2, detail.files!!.size)
+            assertEquals(1L, detail.primaryFileId)
 
             assertTrue(capturedUrl!!.contains("/api/v1/app/books/101"))
             assertEquals("Bearer test-token", capturedAuth)

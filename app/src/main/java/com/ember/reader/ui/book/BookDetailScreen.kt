@@ -282,7 +282,7 @@ fun BookDetailScreen(
                                 grimmoryDetail = gd,
                                 metadataScore = grimmoryFullBook?.metadataMatchScore,
                                 subjects = subjectList,
-                                primaryFileName = gd?.primaryFile?.fileName,
+                                primaryFileName = grimmoryFullBook?.primaryFile?.fileName,
                                 onOpenLibrary = onOpenLibrary,
                             )
                         }

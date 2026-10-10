@@ -114,26 +114,27 @@ class ProgressSyncManager @Inject constructor(
     }
 
     /**
-     * Push local progress to all available endpoints (kosync + Grimmory)
-     * concurrently. Returns a per-source [PushResult] so callers can tell
-     * "succeeded", "skipped because not applicable", and "failed" apart —
-     * hiding a channel failure behind a blanket boolean means the user
-     * thinks they're synced when they aren't.
+     * Push local progress to all available endpoints (Grimmory, then kosync).
+     * Returns a per-source [PushResult] so callers can tell "succeeded",
+     * "skipped because not applicable", and "failed" apart — hiding a channel
+     * failure behind a blanket boolean means the user thinks they're synced
+     * when they aren't.
+     *
+     * The order matters: since Grimmory v3.5 a native progress write also
+     * overwrites the user's KOReader record (device "Grimmory", no position).
+     * Pushing kosync last leaves that record with Ember's device name and
+     * locator instead of whichever request happened to land second.
      */
     suspend fun pushProgress(server: Server, book: Book): PushResult {
         val progress = readingProgressRepository.getByBookId(book.id) ?: return PushResult.NothingToPush
         if (progress.percentage <= 0f) return PushResult.NothingToPush
 
-        return coroutineScope {
-            val kosyncDeferred = async { pushKosync(server, book) }
-            val grimmoryDeferred = async { pushGrimmory(server, book, progress.percentage) }
-            val kosync = kosyncDeferred.await()
-            val grimmory = grimmoryDeferred.await()
+        val grimmory = pushGrimmory(server, book, progress.percentage)
+        val kosync = pushKosync(server, book)
 
-            reportStatus(server.id, listOf(kosync, grimmory))
+        reportStatus(server.id, listOf(kosync, grimmory))
 
-            PushResult(kosync = kosync, grimmory = grimmory)
-        }
+        return PushResult(kosync = kosync, grimmory = grimmory)
     }
 
     /**
@@ -321,20 +322,39 @@ class ProgressSyncManager @Inject constructor(
         return runCatchingCancellable {
             val pct = percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
-            val fileId = detail?.primaryFile?.id
+            val fileId = detail?.primaryFileId
+            val epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
 
             Timber.d(
                 "Sync push: Grimmory request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct cfi=$PLACEHOLDER_CFI"
             )
-            grimmoryClient.putAppBookProgress(
+            val pushed = grimmoryClient.putAppBookProgress(
                 baseUrl = server.url,
                 serverId = server.id,
                 grimmoryBookId = grimmoryBookId,
                 request = GrimmoryUpdateProgressRequest(
-                    fileProgress = fileId?.let { GrimmoryFileProgress(bookFileId = it, progressPercent = pct) },
-                    epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
+                    // The CFI has to go in positionData too: with fileProgress present the
+                    // server stores positionData as the EPUB position and ignores epubProgress.
+                    fileProgress = fileId?.let {
+                        GrimmoryFileProgress(bookFileId = it, positionData = PLACEHOLDER_CFI, progressPercent = pct)
+                    },
+                    epubProgress = epubProgress
                 )
-            ).getOrThrow()
+            )
+            val staleFileId = fileId != null &&
+                (pushed.exceptionOrNull() as? GrimmoryHttpException)?.statusCode == 404
+            if (staleFileId) {
+                // An unknown bookFileId fails the whole request, epubProgress included.
+                Timber.w("Sync push: Grimmory rejected fileId=$fileId for '${book.title}', retrying without it")
+                grimmoryClient.putAppBookProgress(
+                    baseUrl = server.url,
+                    serverId = server.id,
+                    grimmoryBookId = grimmoryBookId,
+                    request = GrimmoryUpdateProgressRequest(epubProgress = epubProgress)
+                ).getOrThrow()
+            } else {
+                pushed.getOrThrow()
+            }
             Timber.d("Sync push: Grimmory OK for '${book.title}' pct=$pct%")
         }.fold(
             onSuccess = { SourceOutcome.Ok(Unit) },
@@ -348,21 +368,20 @@ class ProgressSyncManager @Inject constructor(
     /**
      * Converts Grimmory's mixed-scale progress fields to Ember's 0-1 scale.
      *
-     * Priority:
-     * 1. `koreaderProgress.percentage` (always 0-1, KOReader protocol)
-     * 2. `epubProgress.percentage` (always 0-100, what Ember/web reader push — divide)
-     * 3. `readProgress` (ambiguous: falls through to whichever source last wrote, so
+     * 1. The further along of `koreaderProgress.percentage` (always 0-1, KOReader
+     *    protocol) and `epubProgress.percentage` (always 0-100, what Ember/web reader
+     *    push — divide). Either can be the stale one: a kosync push does not update
+     *    the EPUB value, and the KOReader value only follows native pushes when the
+     *    user has KOReader sync enabled on the server.
+     * 2. `readProgress` (ambiguous: falls through to whichever source last wrote, so
      *    scale depends on that source. Heuristic: values > 1 are 0-100.)
      */
     private fun resolveGrimmoryPercentage(
         progress: com.ember.reader.core.grimmory.GrimmoryAppBookProgress
     ): Float? {
-        progress.koreaderProgress?.percentage?.takeIf { it > 0f }?.let {
-            return it.coerceIn(0f, 1f)
-        }
-        progress.epubProgress?.percentage?.takeIf { it > 0f }?.let {
-            return (it / 100f).coerceIn(0f, 1f)
-        }
+        val koreader = progress.koreaderProgress?.percentage?.takeIf { it > 0f }?.coerceIn(0f, 1f)
+        val epub = progress.epubProgress?.percentage?.takeIf { it > 0f }?.let { (it / 100f).coerceIn(0f, 1f) }
+        listOfNotNull(koreader, epub).maxOrNull()?.let { return it }
         val raw = progress.readProgress ?: return null
         if (raw <= 0f) return null
         return if (raw > 1f) {
@@ -373,6 +392,15 @@ class ProgressSyncManager @Inject constructor(
     }
 
     companion object {
+        /**
+         * Stand-in EPUB position sent with every Grimmory push. Readium has no real CFI
+         * to offer, but Grimmory only returns `epubProgress` on pull when a CFI is stored.
+         *
+         * It must stay without a `!` step. Grimmory converts the stored CFI to a KOReader
+         * xpointer when it mirrors progress into the KOReader record; this value fails to
+         * parse there, so the mirrored position is left empty. A parseable CFI such as
+         * `epubcfi(/6/2!/4)` would instead send KOReader devices to the start of the book.
+         */
         const val PLACEHOLDER_CFI = "epubcfi(/6/2)"
     }
 }

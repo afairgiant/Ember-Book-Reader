@@ -93,8 +93,8 @@ class GrimmoryAppClient @Inject constructor(
     /**
      * Full book detail from the regular (non-app) endpoint `/api/v1/books/{id}`.
      * Unlike [GrimmoryClient.getBookDetail] which hits `/api/v1/app/books/{id}`
-     * and returns a lightweight DTO, this includes [GrimmoryBookDetail.primaryFile],
-     * [GrimmoryBookDetail.libraryPath], and other fields the Organize Files preview
+     * and returns a lightweight DTO, this includes [GrimmoryFullBook.primaryFile],
+     * [GrimmoryFullBook.libraryPath], and other fields the Organize Files preview
      * needs to render the current and new file paths.
      */
     suspend fun getBookDetailFull(

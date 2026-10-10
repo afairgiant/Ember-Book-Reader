@@ -1,5 +1,6 @@
 package com.ember.reader.core.grimmory
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -75,13 +76,16 @@ data class GrimmoryFileProgress(
     val progressPercent: Float? = null
 )
 
+/**
+ * One entry of `files[]` on `GET /api/v1/app/books/{id}`. Grimmory's Java field is the
+ * primitive `boolean isPrimary`, which Jackson serializes as `"primary"`.
+ */
 @Serializable
-data class GrimmoryBookFile(
+data class GrimmoryAppBookFile(
     val id: Long,
     val fileName: String? = null,
-    val fileType: String? = null,
-    val fileSubPath: String? = null,
-    val filePath: String? = null
+    val bookType: String? = null,
+    @SerialName("primary") val isPrimary: Boolean = false
 )
 
 @Serializable
@@ -107,17 +111,19 @@ data class GrimmoryBookDetail(
     val seriesNumber: Float? = null,
     val libraryId: Long? = null,
     val libraryName: String? = null,
-    val libraryPath: GrimmoryLibraryPath? = null,
-    val primaryFile: GrimmoryBookFile? = null,
     val primaryFileType: String? = null,
     val fileTypes: List<String>? = null,
+    val files: List<GrimmoryAppBookFile>? = null,
     val addedOn: String? = null,
     val lastReadTime: String? = null,
     val epubProgress: GrimmoryEpubProgress? = null,
     val koreaderProgress: GrimmoryKoreaderProgress? = null,
-    val shelves: List<GrimmoryShelfSummary>? = null,
-    val hardcoverBookId: Long? = null
-)
+    val shelves: List<GrimmoryShelfSummary>? = null
+) {
+    /** ID of the book's primary file, needed for file-level progress pushes. */
+    val primaryFileId: Long?
+        get() = files?.firstOrNull { it.isPrimary }?.id
+}
 
 @Serializable
 data class GrimmoryKoreaderProgress(
@@ -138,7 +144,8 @@ data class GrimmoryShelfSummary(
  * path-bound so it is not in the body. Per-format progress siblings
  * (`epubProgress`, `pdfProgress`, …) are accepted by the server but marked
  * `@Deprecated` — Ember keeps `epubProgress` populated as a backstop to cover
- * the case where `fileProgress.bookFileId` couldn't be resolved.
+ * the case where `fileProgress.bookFileId` couldn't be resolved. When
+ * `fileProgress` is present the server ignores the per-format siblings.
  */
 @Serializable
 data class GrimmoryUpdateProgressRequest(

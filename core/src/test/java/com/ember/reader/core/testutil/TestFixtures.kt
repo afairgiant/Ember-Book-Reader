@@ -5,7 +5,8 @@ import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.grimmory.GrimmoryAnnotation
 import com.ember.reader.core.grimmory.GrimmoryAppBookProgress
 import com.ember.reader.core.grimmory.GrimmoryBookDetail
-import com.ember.reader.core.grimmory.GrimmoryBookFile
+import com.ember.reader.core.grimmory.GrimmoryAppBookFile
+import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryBookmark
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
 import com.ember.reader.core.model.Book
@@ -163,21 +164,25 @@ object TestFixtures {
         id: Long = 101L,
         title: String = "Test Book",
         readProgress: Float? = null,
-        primaryFile: GrimmoryBookFile? = GrimmoryBookFile(id = 1L, fileName = "test.epub"),
+        files: List<GrimmoryAppBookFile>? = listOf(
+            GrimmoryAppBookFile(id = 1L, fileName = "test.epub", bookType = "EPUB", isPrimary = true)
+        ),
         koreaderProgress: GrimmoryKoreaderProgress? = null
     ) = GrimmoryBookDetail(
         id = id,
         title = title,
         readProgress = readProgress,
-        primaryFile = primaryFile,
+        files = files,
         koreaderProgress = koreaderProgress
     )
 
     fun grimmoryAppBookProgress(
         readProgress: Float? = null,
-        koreaderProgress: GrimmoryKoreaderProgress? = null
+        koreaderProgress: GrimmoryKoreaderProgress? = null,
+        epubProgress: GrimmoryEpubProgress? = null
     ) = GrimmoryAppBookProgress(
         readProgress = readProgress,
+        epubProgress = epubProgress,
         koreaderProgress = koreaderProgress
     )
 }
