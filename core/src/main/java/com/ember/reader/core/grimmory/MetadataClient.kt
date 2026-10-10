@@ -56,6 +56,21 @@ class MetadataClient @Inject constructor(
             ?: error("Book ${'$'}bookId has no metadata")
     }
 
+    /**
+     * Search providers the server has enabled, in UI order (Grimmory v3.5+). Fails with a
+     * 404 [GrimmoryHttpException] on older servers, which have no provider list endpoint.
+     */
+    suspend fun getEnabledSearchProviders(
+        baseUrl: String,
+        serverId: Long
+    ): Result<List<MetadataProvider>> = tokenManager.withAuth(baseUrl, serverId) { token ->
+        val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/metadata/providers") {
+            header("Authorization", "Bearer $token")
+        }
+        if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get metadata providers failed: ${response.status}")
+        response.body<List<MetadataProviderStatus>>().enabledSearchProviders()
+    }
+
     /** Update metadata. Returns the server's canonical view after save. */
     suspend fun updateMetadata(
         baseUrl: String,

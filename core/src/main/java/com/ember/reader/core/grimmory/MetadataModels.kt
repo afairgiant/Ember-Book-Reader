@@ -162,13 +162,42 @@ enum class MetadataProvider {
     @SerialName("AppleBooks") AppleBooks
 }
 
-/** Providers Ember exposes in the search form. Order matches UI. */
+/**
+ * Providers offered in the search form when the server can't say which ones it has
+ * enabled (Grimmory before v3.5, or the provider list request failed). Order matches UI.
+ */
 val searchableProviders: List<MetadataProvider> = listOf(
     MetadataProvider.Amazon,
     MetadataProvider.GoodReads,
     MetadataProvider.Google,
     MetadataProvider.Hardcover
 )
+
+/**
+ * Every provider Ember can offer in the search form, in UI order. On Grimmory v3.5+
+ * this is narrowed to the ones the server reports as enabled.
+ */
+val supportedSearchProviders: List<MetadataProvider> = searchableProviders + listOf(
+    MetadataProvider.Audible,
+    MetadataProvider.OpenLibrary,
+    MetadataProvider.AppleBooks
+)
+
+/**
+ * One entry of `GET /api/v1/metadata/providers` (Grimmory v3.5+). [name] is kept as a
+ * string so a provider this build doesn't know yet can't fail the whole list.
+ */
+@Serializable
+data class MetadataProviderStatus(
+    val name: String,
+    val enabled: Boolean = false
+)
+
+/** The [supportedSearchProviders] the server has enabled, in UI order. */
+fun List<MetadataProviderStatus>.enabledSearchProviders(): List<MetadataProvider> {
+    val enabledNames = filter { it.enabled }.map { it.name }.toSet()
+    return supportedSearchProviders.filter { it.name in enabledNames }
+}
 
 @Serializable
 data class FetchMetadataRequest(
