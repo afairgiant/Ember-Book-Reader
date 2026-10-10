@@ -268,6 +268,21 @@ class HighlightSyncManagerTest {
         }
 
         @Test
+        fun `new local highlight without selected text is not pushed`() = runTest {
+            val locatorJson = CfiLocatorConverter.buildLocatorJson("/6/8")
+            dao.insert(
+                highlightEntity(bookId = bookId, locatorJson = locatorJson, selectedText = null, remoteId = null)
+            )
+
+            coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(emptyList())
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createAnnotation(any(), any(), any()) }
+            assertEquals(null, dao.all.first().remoteId)
+        }
+
+        @Test
         fun `new local matching existing server CFI links instead of creating`() = runTest {
             val cfi = "/6/4"
             val locatorJson = CfiLocatorConverter.buildLocatorJson(cfi)

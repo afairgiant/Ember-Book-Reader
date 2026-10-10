@@ -108,8 +108,8 @@ class GrimmoryTokenManager @Inject constructor(
                 newTokens.accessToken
             }
             response.status.value in AUTH_REJECT_STATUSES -> {
-                // Grimmory returns 400 for revoked/expired refresh tokens. Clear
-                // credentials so the UI can prompt for re-login instead of looping.
+                // Grimmory returns 401 for revoked/expired refresh tokens (400 on v3.0.x).
+                // Clear credentials so the UI can prompt for re-login instead of looping.
                 Timber.w("Grimmory: refresh rejected (${response.status}), logging out server $serverId")
                 logout(serverId)
                 throw GrimmoryAuthExpiredException(

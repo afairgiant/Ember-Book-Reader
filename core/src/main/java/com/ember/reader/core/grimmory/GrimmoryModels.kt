@@ -12,7 +12,13 @@ data class GrimmoryLoginRequest(
 data class GrimmoryTokens(
     val accessToken: String,
     val refreshToken: String,
-    val isDefaultPassword: String? = null
+    /** Access token lifetime in seconds. Absent on Grimmory v3.0.x. */
+    val expires: Long? = null,
+    /**
+     * JSON boolean on Grimmory v3.5+, the string "true"/"false" on v3.0.x (lenient
+     * decoding accepts both). Omitted on refresh.
+     */
+    val isDefaultPassword: Boolean? = null
 )
 
 @Serializable
@@ -343,7 +349,8 @@ data class GrimmoryPageTurnerScore(
     val bookId: Long,
     val bookTitle: String,
     val categories: List<String> = emptyList(),
-    val pageCount: Int,
+    /** Null when the book's metadata has no page count. */
+    val pageCount: Int? = null,
     val personalRating: Int? = null,
     val gripScore: Int,
     val totalSessions: Int,

@@ -48,6 +48,7 @@ data class GrimmoryBookMetadata(
     val tags: Set<String>? = null,
 
     // Provider IDs
+    val openlibraryId: String? = null,
     val asin: String? = null,
     val goodreadsId: String? = null,
     val comicvineId: String? = null,
@@ -58,6 +59,7 @@ data class GrimmoryBookMetadata(
     val lubimyczytacId: String? = null,
     val ranobedbId: String? = null,
     val audibleId: String? = null,
+    val applebooksId: String? = null,
     val externalUrl: String? = null,
 
     // Provider ratings
@@ -73,6 +75,8 @@ data class GrimmoryBookMetadata(
     val ranobedbRating: Double? = null,
     val audibleRating: Double? = null,
     val audibleReviewCount: Int? = null,
+    val applebooksRating: Double? = null,
+    val applebooksReviewCount: Int? = null,
 
     // Misc
     val thumbnailUrl: String? = null,
@@ -120,6 +124,10 @@ data class GrimmoryBookMetadata(
     val ranobedbRatingLocked: Boolean? = null,
     val audibleRatingLocked: Boolean? = null,
     val audibleReviewCountLocked: Boolean? = null,
+    val openlibraryIdLocked: Boolean? = null,
+    val applebooksIdLocked: Boolean? = null,
+    val applebooksRatingLocked: Boolean? = null,
+    val applebooksReviewCountLocked: Boolean? = null,
     val narratorLocked: Boolean? = null,
     val abridgedLocked: Boolean? = null,
     val ageRatingLocked: Boolean? = null,
@@ -146,7 +154,12 @@ enum class MetadataProvider {
 
     @SerialName("Ranobedb") Ranobedb,
 
-    @SerialName("Audible") Audible
+    @SerialName("Audible") Audible,
+
+    // Added in Grimmory v3.5.
+    @SerialName("OpenLibrary") OpenLibrary,
+
+    @SerialName("AppleBooks") AppleBooks
 }
 
 /** Providers Ember exposes in the search form. Order matches UI. */
@@ -226,6 +239,10 @@ data class MetadataClearFlags(
     val ranobedbRating: Boolean = false,
     val audibleRating: Boolean = false,
     val audibleReviewCount: Boolean = false,
+    val openlibraryId: Boolean = false,
+    val applebooksId: Boolean = false,
+    val applebooksRating: Boolean = false,
+    val applebooksReviewCount: Boolean = false,
     val reviews: Boolean = false,
     val audiobookCover: Boolean = false
 )
