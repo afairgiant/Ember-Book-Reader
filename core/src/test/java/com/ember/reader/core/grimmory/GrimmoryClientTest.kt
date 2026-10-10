@@ -109,6 +109,59 @@ class GrimmoryClientTest {
         }
 
         @Test
+        fun `login decodes v3_5 token response with boolean isDefaultPassword and expires`() = runTest {
+            val engine = MockEngine {
+                jsonResponse(
+                    """{"accessToken":"at","refreshToken":"rt","expires":7200,"isDefaultPassword":false}"""
+                )
+            }
+
+            val tokens = createClient(engine).login(baseUrl, "admin", "pass123").getOrThrow()
+
+            assertEquals(false, tokens.isDefaultPassword)
+            assertEquals(7200L, tokens.expires)
+        }
+
+        @Test
+        fun `login decodes v3_0 token response with string isDefaultPassword`() = runTest {
+            val engine = MockEngine {
+                jsonResponse("""{"accessToken":"at","refreshToken":"rt","isDefaultPassword":"true"}""")
+            }
+
+            val tokens = createClient(engine).login(baseUrl, "admin", "pass123").getOrThrow()
+
+            assertEquals(true, tokens.isDefaultPassword)
+            assertEquals(null, tokens.expires)
+        }
+
+        @Test
+        fun `refresh decodes token response without isDefaultPassword`() = runTest {
+            val engine = MockEngine {
+                jsonResponse("""{"accessToken":"at2","refreshToken":"rt2","expires":7200}""")
+            }
+
+            val tokens = createClient(engine).refreshToken(baseUrl, "rt").getOrThrow()
+
+            assertEquals("at2", tokens.accessToken)
+            assertEquals(null, tokens.isDefaultPassword)
+        }
+
+        @Test
+        fun `page turner scores decode when pageCount is null`() = runTest {
+            val engine = MockEngine {
+                jsonResponse(
+                    """[{"bookId":1,"bookTitle":"T","categories":[],"pageCount":null,"personalRating":null,""" +
+                        """"gripScore":50,"totalSessions":3,"avgSessionDurationSeconds":10.0,""" +
+                        """"sessionAcceleration":0.0,"gapReduction":0.0,"finishBurst":false}]"""
+                )
+            }
+
+            val scores = createClient(engine).getPageTurnerScores(baseUrl, serverId).getOrThrow()
+
+            assertEquals(null, scores.single().pageCount)
+        }
+
+        @Test
         fun `login returns failure on 401`() = runTest {
             val engine = MockEngine {
                 jsonResponse("""{"error":"Invalid credentials"}""", HttpStatusCode.Unauthorized)

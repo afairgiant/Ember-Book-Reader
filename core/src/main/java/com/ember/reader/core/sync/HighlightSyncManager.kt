@@ -138,6 +138,12 @@ class HighlightSyncManager @Inject constructor(
                     continue
                 }
 
+                // Grimmory rejects annotations without text (400), so pushing would fail on every sync.
+                if (local.selectedText.isNullOrBlank()) {
+                    Timber.w("HighlightSync: skipping push of local highlight %d — no selected text", local.id)
+                    continue
+                }
+
                 val chapterTitle = CfiLocatorConverter.extractTitle(local.locatorJson)
                 grimmoryClient.createAnnotation(
                     server.url, server.id,
