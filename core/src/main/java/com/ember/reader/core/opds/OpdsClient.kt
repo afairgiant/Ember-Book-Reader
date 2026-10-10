@@ -53,15 +53,25 @@ class OpdsClient @Inject constructor(
         password: String,
         path: String? = null
     ): Result<OpdsFeed> = runCatching {
-        val url = if (path != null) resolveUrl(baseUrl, path) else normalizeUrl(baseUrl)
-        val response = httpClient.get(url) {
-            headers[HttpHeaders.Accept] = "application/atom+xml"
-            header("Authorization", basicAuth(username, password))
+        var url = if (path != null) resolveUrl(baseUrl, path) else normalizeUrl(baseUrl)
+        var title = ""
+        val entries = mutableListOf<OpdsFeedEntry>()
+        // Grimmory pages its author/series navigation feeds (50 per page), so keep
+        // following rel="next" until the feed is exhausted.
+        for (pageIndex in 0 until MAX_NAVIGATION_PAGES) {
+            val response = httpClient.get(url) {
+                headers[HttpHeaders.Accept] = "application/atom+xml"
+                header("Authorization", basicAuth(username, password))
+            }
+            if (!response.status.isSuccess()) {
+                error("OPDS fetch failed: ${response.status}")
+            }
+            val page = OpdsParser.parseFeed(requireXmlBody(response), serverOrigin(baseUrl))
+            if (pageIndex == 0) title = page.title
+            entries += page.entries
+            url = resolveUrl(baseUrl, page.nextPagePath ?: break)
         }
-        if (!response.status.isSuccess()) {
-            error("OPDS fetch failed: ${response.status}")
-        }
-        OpdsParser.parseFeed(requireXmlBody(response), serverOrigin(baseUrl))
+        OpdsFeed(title = title, entries = entries)
     }
 
     suspend fun fetchBooks(
@@ -150,11 +160,18 @@ class OpdsClient @Inject constructor(
 
     private fun basicAuth(username: String, password: String): String =
         basicAuthHeader(username, password)
+
+    private companion object {
+        /** Upper bound on navigation feed pages followed, in case a server loops its next links. */
+        const val MAX_NAVIGATION_PAGES = 50
+    }
 }
 
 data class OpdsFeed(
     val title: String,
-    val entries: List<OpdsFeedEntry>
+    val entries: List<OpdsFeedEntry>,
+    /** Feed-level rel="next" link of a paginated navigation feed, if any. */
+    val nextPagePath: String? = null
 )
 
 data class OpdsFeedEntry(
