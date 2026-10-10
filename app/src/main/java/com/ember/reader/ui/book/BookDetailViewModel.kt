@@ -195,8 +195,8 @@ class BookDetailViewModel @Inject constructor(
         if (_hardcoverMatch.value != null) return // already loaded
 
         viewModelScope.launch {
-            // Tier 1: Direct ID from Grimmory metadata
-            val directId = _grimmoryDetail.value?.hardcoverBookId?.toInt()
+            // Tier 1: Direct ID from Grimmory metadata (only the full book endpoint carries it)
+            val directId = _grimmoryFullBook.value?.metadata?.hardcoverBookId?.toIntOrNull()
             val bookId = if (directId != null) {
                 directId
             } else {
