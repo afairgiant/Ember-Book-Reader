@@ -171,7 +171,9 @@ data class SearchForm(
     val author: String = "",
     val isbn: String = "",
     val asin: String = "",
-    val providers: Set<MetadataProvider> = searchableProviders.toSet()
+    /** Providers shown as chips: the ones enabled on the server, or the static fallback. */
+    val availableProviders: List<MetadataProvider> = searchableProviders,
+    val providers: Set<MetadataProvider> = availableProviders.toSet()
 )
 
 enum class SearchPhase { Idle, Running, Done, Error }
@@ -262,6 +264,10 @@ class EditMetadataViewModel @Inject constructor(
     private suspend fun loadGrimmoryMetadata(book: Book, server: Server, grimmoryBookId: Long) {
         metadataClient.getBookMetadata(server.url, server.id, grimmoryBookId)
             .onSuccess { metadata ->
+                // Servers before Grimmory v3.5 have no provider list; keep the static set there.
+                val availableProviders = metadataClient.getEnabledSearchProviders(server.url, server.id)
+                    .onFailure { Timber.d(it, "Metadata provider list unavailable, using defaults") }
+                    .getOrDefault(searchableProviders)
                 _uiState.value = EditMetadataUiState.Success(
                     EditMetadataSuccess(
                         bookId = bookId,
@@ -275,7 +281,8 @@ class EditMetadataViewModel @Inject constructor(
                             title = metadata.title.orEmpty(),
                             author = metadata.authors?.firstOrNull().orEmpty(),
                             isbn = metadata.isbn13.orEmpty(),
-                            asin = metadata.asin.orEmpty()
+                            asin = metadata.asin.orEmpty(),
+                            availableProviders = availableProviders
                         ),
                         readOnly = metadata.allMetadataLocked == true
                     )
@@ -341,7 +348,8 @@ class EditMetadataViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             try {
                 val req = FetchMetadataRequest(
-                    providers = current.searchForm.providers.toList().ifEmpty { searchableProviders },
+                    providers = current.searchForm.providers.toList()
+                        .ifEmpty { current.searchForm.availableProviders },
                     title = current.searchForm.title.ifBlank { null },
                     author = current.searchForm.author.ifBlank { null },
                     isbn = current.searchForm.isbn.ifBlank { null },

@@ -3,6 +3,8 @@ package com.ember.reader.ui.editmetadata.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,10 +43,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.ember.reader.core.grimmory.GrimmoryBookMetadata
 import com.ember.reader.core.grimmory.MetadataProvider
-import com.ember.reader.core.grimmory.searchableProviders
 import com.ember.reader.ui.editmetadata.SearchForm
 import com.ember.reader.ui.editmetadata.SearchPhase
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchMetadataSection(
     form: SearchForm,
@@ -117,19 +119,27 @@ fun SearchMetadataSection(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    searchableProviders.forEach { p ->
-                        FilterChip(
-                            selected = p in form.providers,
-                            onClick = { onToggleProvider(p) },
-                            label = { Text(p.name) },
-                        )
+                if (form.availableProviders.isEmpty()) {
+                    Text(
+                        "No metadata providers are enabled on this server.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        form.availableProviders.forEach { p ->
+                            FilterChip(
+                                selected = p in form.providers,
+                                onClick = { onToggleProvider(p) },
+                                label = { Text(p.name) },
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row {
                     Button(
                         onClick = { if (phase == SearchPhase.Running) onCancel() else onStart() },
+                        enabled = form.availableProviders.isNotEmpty(),
                     ) {
                         Text(if (phase == SearchPhase.Running) "Cancel" else "Search")
                     }
