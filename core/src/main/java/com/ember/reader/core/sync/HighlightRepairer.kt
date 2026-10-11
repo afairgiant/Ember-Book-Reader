@@ -60,7 +60,7 @@ class HighlightRepairer @Inject constructor(
         val needCfi = lacking.filter { local ->
             val serverCfi = local.remoteId?.let { annotationsById[it] }?.cfi
             if (EpubCfi.isRealCfi(serverCfi)) {
-                highlightDao.update(local.copy(cfi = serverCfi))
+                highlightDao.update(local.withCfi(serverCfi!!))
                 repaired++
                 false
             } else {
@@ -75,7 +75,7 @@ class HighlightRepairer @Inject constructor(
             val done = when {
                 // Never synced, or its annotation is gone: the normal sync takes it from here.
                 !remote || old == null -> {
-                    highlightDao.update(local.copy(cfi = cfi))
+                    highlightDao.update(local.withCfi(cfi))
                     true
                 }
                 else -> replaceOnServer(server!!, grimmoryBookId!!, local, old, cfi, annotations)
@@ -84,6 +84,23 @@ class HighlightRepairer @Inject constructor(
         }
         Summary(repaired = repaired, unresolved = lacking.size - repaired)
     }.onFailure { Timber.w(it, "HighlightRepair: failed for book=%s", bookId) }
+
+    /**
+     * Stores the real CFI. A highlight that came from the server and has not been placed in
+     * the book keeps its CFI in its locator too, where the old fake one still is; that is
+     * replaced as well, so the highlight can be placed the next time its chapter opens.
+     */
+    private fun HighlightEntity.withCfi(cfi: String): HighlightEntity {
+        if (!locatorJson.contains("\"href\":\"\"")) return copy(cfi = cfi)
+        return copy(
+            cfi = cfi,
+            locatorJson = CfiLocatorConverter.buildLocatorJson(
+                cfi = cfi,
+                selectedText = selectedText,
+                chapterTitle = CfiLocatorConverter.extractTitle(locatorJson),
+            ),
+        )
+    }
 
     /**
      * Creates the replacement first and deletes the old annotation last, so a failure in
@@ -124,7 +141,7 @@ class HighlightRepairer @Inject constructor(
             // This row is the leftover copy of an annotation that was already replaced.
             highlightDao.deleteById(local.id)
         } else {
-            highlightDao.update(local.copy(remoteId = replacementId, cfi = cfi))
+            highlightDao.update(local.withCfi(cfi).copy(remoteId = replacementId))
         }
 
         grimmoryClient.deleteAnnotation(server.url, server.id, old.id).onFailure {

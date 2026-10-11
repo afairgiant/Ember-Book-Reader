@@ -227,11 +227,20 @@
     <!-- Reader: Highlights -->
     <string name="highlights_title">Highlights</string>
     <string name="no_highlights">No highlights yet</string>
-    <string name="highlight_repair_offer">%1$d highlights can\'t be shown in Grimmory\'s web reader. Repairing replaces them on the server, which resets their date there.</string>
+    <plurals name="highlight_repair_offer">
+        <item quantity="one">%1$d highlight can\'t be shown in Grimmory\'s web reader. Repairing replaces it on the server, which resets its date there.</item>
+        <item quantity="other">%1$d highlights can\'t be shown in Grimmory\'s web reader. Repairing replaces them on the server, which resets their date there.</item>
+    </plurals>
     <string name="highlight_repair_action">Repair</string>
     <string name="highlight_repair_running">Repairing highlights…</string>
-    <string name="highlight_repair_done">Repaired %1$d highlights.</string>
-    <string name="highlight_repair_done_partial">Repaired %1$d highlights. %2$d could not be matched to the book\'s text and were left as they are.</string>
+    <plurals name="highlight_repair_done">
+        <item quantity="one">Repaired %1$d highlight.</item>
+        <item quantity="other">Repaired %1$d highlights.</item>
+    </plurals>
+    <plurals name="highlight_repair_unmatched">
+        <item quantity="one">%1$d could not be matched to the book\'s text and was left as it is.</item>
+        <item quantity="other">%1$d could not be matched to the book\'s text and were left as they are.</item>
+    </plurals>
     <string name="highlight_repair_failed">Couldn\'t reach the server to repair highlights.</string>
     <string name="highlight_action">Highlight</string>
     <string name="add_note">Add Note</string>
