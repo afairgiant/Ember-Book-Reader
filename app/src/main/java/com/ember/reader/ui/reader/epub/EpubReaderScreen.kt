@@ -258,7 +258,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     onNavigatorReady = { fragment ->
                         val nav = fragment as? EpubNavigatorFragment ?: return@NavigatorContainer
                         navigator = nav
-                        val manager = HighlightDecorationManager(nav)
+                        val manager = HighlightDecorationManager(nav, state.publication, state.spine)
                         highlightManager = manager
 
                         // Set up selection action handler
@@ -411,7 +411,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
             // Apply highlight decorations when navigator ready or highlights change
             LaunchedEffect(highlightManager, highlights) {
-                highlightManager?.applyHighlights(highlights, state.publication)
+                highlightManager?.applyHighlights(highlights)
             }
 
             // Color picker dialog (after selecting text and tapping Highlight)

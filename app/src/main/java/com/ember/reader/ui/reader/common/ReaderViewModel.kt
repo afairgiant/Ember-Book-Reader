@@ -3,6 +3,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.coroutine.ApplicationScope
+import com.ember.reader.core.epub.EpubSpine
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
@@ -14,6 +15,7 @@ import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
+import com.ember.reader.core.readium.loadEpubSpine
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
@@ -33,7 +35,9 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -170,6 +174,8 @@ class ReaderViewModel @Inject constructor(
             }
         }
         publication = pub
+        // Read alongside the progress and preference lookups below, and parsed off the main thread.
+        val spine = viewModelScope.async(Dispatchers.Default) { pub.loadEpubSpine() }
 
         val localProgress = readingProgressRepository.getByBookId(bookId)
         // Try to restore position from saved Readium locator first,
@@ -200,6 +206,7 @@ class ReaderViewModel @Inject constructor(
             book = loadedBook,
             streaming = streaming,
             preferences = loadedPreferences,
+            spine = spine.await(),
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
@@ -603,6 +610,8 @@ sealed interface ReaderUiState {
         val book: Book,
         val streaming: Boolean = false,
         val preferences: ReaderPreferences = ReaderPreferences(),
+        /** The EPUB's spine as its package document lists it; null for other formats. */
+        val spine: EpubSpine? = null,
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
