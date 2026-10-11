@@ -2,7 +2,6 @@ package com.ember.reader.ui.reader.epub
 
 import com.ember.reader.core.epub.EpubSpine
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -20,88 +19,87 @@ class CfiBridgeTest {
     )
 
     /** A stand-in for the WebView: answers `emberCfi` calls once the install script has run. */
-    private class FakePage(private val answer: (script: String) -> String?) {
+    private class FakePage(private val answer: () -> String?) {
         var installed = false
-        val scripts = mutableListOf<String>()
+        var installs = 0
 
         fun evaluate(script: String): String? {
-            scripts += script
-            if (script == INSTALL) {
+            if (script.startsWith(INSTALL)) {
                 installed = true
-                return "null"
+                installs++
             }
-            if (!installed) return notInstalled(script)
-            return answer(script)
+            return if (installed) answer() else "false"
         }
-
-        private fun notInstalled(script: String): String =
-            JsonPrimitive(Regex("return '([^']+)'").find(script)!!.groupValues[1]).toString()
     }
 
-    private fun bridge(
-        page: FakePage,
-        href: String? = "OEBPS/chapter1.xhtml",
-        spine: EpubSpine? = this.spine,
-    ) = CfiBridge(
+    private fun bridge(page: FakePage) = CfiBridge(
         evaluate = page::evaluate,
-        currentHref = { href },
         spine = spine,
         installScript = { INSTALL },
     )
 
-    /** What the WebView returns for a script that returned `JSON.stringify(value)`. */
-    private fun returned(json: String) = JsonPrimitive(json).toString()
-
-    private fun returnedString(value: String) = returned(JsonPrimitive(value).toString())
+    /** What the page returns: its own path and the function's result, as JSON. */
+    private fun reply(value: String, path: String = "/publication/OEBPS/chapter1.xhtml") =
+        """{"path":"$path","value":$value}"""
 
     @Test
-    fun `selectionCfi passes the chapter's base and returns the script's CFI`() = runTest {
-        val page = FakePage { returnedString("epubcfi(/6/4[ref1]!/4/2,/1:0,/1:5)") }
+    fun `selectionCfi adds the spine step of the chapter the page reports`() = runTest {
+        val page = FakePage { reply(""""epubcfi(/4/2,/1:0,/1:5)"""") }
 
-        val cfi = bridge(page).selectionCfi()
+        assertEquals("epubcfi(/6/4[ref1]!/4/2,/1:0,/1:5)", bridge(page).selectionCfi())
+    }
 
-        assertEquals("epubcfi(/6/4[ref1]!/4/2,/1:0,/1:5)", cfi)
-        assertTrue(page.scripts.last().contains("""forSelection("epubcfi(/6/4[ref1])")"""))
+    @Test
+    fun `the spine step follows the page, whichever chapter it is`() = runTest {
+        val page = FakePage { reply(""""epubcfi(/4/2/1:0)"""", path = "/publication/OEBPS/chapter2.xhtml") }
+
+        assertEquals("epubcfi(/6/6!/4/2/1:0)", bridge(page).visibleStartCfi())
     }
 
     @Test
     fun `the script is installed on first use and not again`() = runTest {
-        val page = FakePage { returnedString("epubcfi(/6/4[ref1]!/4/2/1:0)") }
+        val page = FakePage { reply(""""epubcfi(/4/2/1:0)"""") }
         val bridge = bridge(page)
 
         bridge.visibleStartCfi()
         bridge.visibleStartCfi()
 
-        assertEquals(1, page.scripts.count { it == INSTALL })
-        assertEquals(4, page.scripts.size)
+        assertEquals(1, page.installs)
     }
 
     @Test
-    fun `no CFI when nothing is selected or the script failed`() = runTest {
-        assertNull(bridge(FakePage { returned("null") }).selectionCfi())
+    fun `no CFI when nothing is selected, the function threw or the page returned garbage`() = runTest {
+        assertNull(bridge(FakePage { reply("null") }).selectionCfi())
+        assertNull(bridge(FakePage { """{"error":"TypeError: boom"}""" }).selectionCfi())
         assertNull(bridge(FakePage { "null" }).selectionCfi())
+        assertNull(bridge(FakePage { "not json" }).selectionCfi())
         assertNull(bridge(FakePage { null }).selectionCfi())
     }
 
     @Test
-    fun `a result that is not a real CFI is discarded`() = runTest {
-        assertNull(bridge(FakePage { returnedString("epubcfi(/6/4[ref1])") }).visibleStartCfi())
-        assertNull(bridge(FakePage { returnedString("0.42") }).visibleStartCfi())
+    fun `no CFI when the script never installs`() = runTest {
+        val page = FakePage { "false" }
+
+        assertNull(bridge(page).selectionCfi())
+        assertEquals(1, page.installs)
     }
 
     @Test
-    fun `no CFI and no script call without a spine or for a chapter outside it`() = runTest {
-        val page = FakePage { returnedString("epubcfi(/6/4!/4/2/1:0)") }
+    fun `no CFI for a page that is not a chapter of the book`() = runTest {
+        val page = FakePage { reply(""""epubcfi(/4/2/1:0)"""", path = "/publication/OEBPS/unknown.xhtml") }
 
-        assertNull(bridge(page, spine = null).selectionCfi())
-        assertNull(bridge(page, href = "OEBPS/unknown.xhtml").selectionCfi())
-        assertNull(bridge(page, href = null).selectionCfi())
-        assertTrue(page.scripts.isEmpty())
+        assertNull(bridge(page).selectionCfi())
     }
 
     @Test
-    fun `resolve returns the text for a CFI in the chapter on screen`() = runTest {
-        val page = FakePage { returned("""{"exact":"fox","before":"brown ","after":" jumps"}""") }
+    fun `a result that does not make a real CFI is discarded`() = runTest {
+        assertNull(bridge(FakePage { reply(""""0.42"""") }).visibleStartCfi())
+        assertNull(bridge(FakePage { reply("""{"not":"a string"}""") }).visibleStartCfi())
+    }
+
+    @Test
+    fun `resolve returns the text for a CFI in the page's chapter`() = runTest {
+        val page = FakePage { reply("""{"exact":"fox","before":"brown ","after":" jumps"}""") }
 
         val resolved = bridge(page).resolve("epubcfi(/6/4!/4/2,/1:16,/1:19)")
 
@@ -109,17 +107,23 @@ class CfiBridgeTest {
     }
 
     @Test
-    fun `resolve refuses a CFI from another chapter, a placeholder and empty text`() = runTest {
-        val page = FakePage { returned("""{"exact":"","before":"","after":""}""") }
-        val bridge = bridge(page)
+    fun `resolve refuses a CFI from another chapter and empty text`() = runTest {
+        val found = FakePage { reply("""{"exact":"fox","before":"","after":""}""") }
+        val empty = FakePage { reply("""{"exact":"","before":"","after":""}""") }
 
-        assertNull(bridge.resolve("epubcfi(/6/6!/4/2/1:0)"))
-        assertNull(bridge.resolve("epubcfi(/6/2)"))
-        assertTrue(page.scripts.isEmpty())
-        assertNull(bridge.resolve("epubcfi(/6/4!/4/2/1:0)"))
+        assertNull(bridge(found).resolve("epubcfi(/6/6!/4/2/1:0)"))
+        assertNull(bridge(empty).resolve("epubcfi(/6/4!/4/2/1:0)"))
+    }
+
+    @Test
+    fun `resolve does not touch the page for something that is not a real CFI`() = runTest {
+        val page = FakePage { error("the page should not be asked") }
+
+        assertNull(bridge(page).resolve("epubcfi(/6/2)"))
+        assertTrue(page.installs == 0)
     }
 
     private companion object {
-        const val INSTALL = "install-script"
+        const val INSTALL = "install-script;"
     }
 }

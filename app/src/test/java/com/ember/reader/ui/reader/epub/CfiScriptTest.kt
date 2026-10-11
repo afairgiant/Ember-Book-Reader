@@ -1,7 +1,6 @@
 package com.ember.reader.ui.reader.epub
 
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import java.io.File
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -33,6 +32,24 @@ class CfiScriptTest {
         assertTrue(CfiScript.install("", "").startsWith("(function(){if(window.emberCfi)return;"))
     }
 
+    /**
+     * [CfiScript.install] can only turn the module into a script while every export is a
+     * line-leading `export const` and nothing is imported. If an update to the bundled file
+     * breaks that, fail here rather than silently producing no CFIs on a device.
+     */
+    @Test
+    fun `the bundled foliate module has only the export shape install can handle`() {
+        val lines = File("src/main/assets/cfi/epubcfi.js").readLines()
+
+        val exports = lines.filter { Regex("\\bexport\\b").containsMatchIn(it) }
+        assertTrue(exports.isNotEmpty())
+        assertEquals(emptyList<String>(), exports.filterNot { it.startsWith("export const ") })
+        assertEquals(emptyList<String>(), lines.filter { it.trimStart().startsWith("import ") })
+        for (name in listOf("fromRange", "toRange", "parse")) {
+            assertTrue(exports.any { it.startsWith("export const $name = ") }, "missing export $name")
+        }
+    }
+
     @Test
     fun `call quotes its arguments as JavaScript strings`() {
         val script = CfiScript.call("resolve", "epubcfi(/6/4[it's \"x\"]!/4)")
@@ -41,40 +58,7 @@ class CfiScriptTest {
     }
 
     @Test
-    fun `decode reads a string result`() {
-        // evaluateJavascript JSON-encodes the script's return value, which is itself JSON.
-        val raw = JsonPrimitive(JsonPrimitive("epubcfi(/6/4!/4/2/1:0)").toString()).toString()
-
-        assertEquals(
-            CfiScript.Result.Value(JsonPrimitive("epubcfi(/6/4!/4/2/1:0)")),
-            CfiScript.decode(raw),
-        )
-    }
-
-    @Test
-    fun `decode reads an object result`() {
-        val raw = JsonPrimitive("""{"exact":"fox","before":"brown ","after":" jumps"}""").toString()
-
-        val value = (CfiScript.decode(raw) as CfiScript.Result.Value).value as JsonObject
-
-        assertEquals(JsonPrimitive("fox"), value["exact"])
-    }
-
-    @Test
-    fun `decode reports a page without the script`() {
-        val script = CfiScript.call("forSelection", "epubcfi(/6/4)")
-        val marker = Regex("return '([^']+)'").find(script)!!.groupValues[1]
-
-        assertEquals(CfiScript.Result.NotInstalled, CfiScript.decode(JsonPrimitive(marker).toString()))
-    }
-
-    @Test
-    fun `decode treats null, a thrown error and garbage as no value`() {
-        val none = CfiScript.Result.Value(null)
-
-        assertEquals(none, CfiScript.decode(null))
-        assertEquals(none, CfiScript.decode("null"))
-        assertEquals(none, CfiScript.decode(JsonPrimitive("null").toString()))
-        assertEquals(none, CfiScript.decode("not json"))
+    fun `call takes no arguments for a function that needs none`() {
+        assertTrue(CfiScript.call("forSelection").contains("window.emberCfi.forSelection()"))
     }
 }

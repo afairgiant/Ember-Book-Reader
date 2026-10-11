@@ -1,8 +1,11 @@
 // Ember's entry points into foliate-js's epubcfi.js.
 //
 // CfiScript.kt concatenates epubcfi.js (with its `export` keywords removed) and this file
-// inside one function, so foliate's joinIndir, fromRange, toRange and parse are plain
-// local names here. The page is a chapter document rendered by Readium.
+// inside one function, so foliate's fromRange, toRange and parse are plain local names
+// here. The page is a chapter document rendered by Readium.
+//
+// CFIs going out are the part after the `!` only, wrapped in `epubcfi(...)`. CfiBridge.kt
+// adds the spine step, which it works out from this page's own URL.
 
 // Readium appends its own nodes to the end of <body>: one container per decoration group
 // and a spacer that pads the last column. They are not part of the book.
@@ -15,8 +18,6 @@ const skipReadiumNodes = node =>
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT
 
-const cfiFor = (base, range) => joinIndir(base, fromRange(range, skipReadiumNodes))
-
 // The first text position on screen. Probes down the left edge and the middle of the
 // viewport, because the corner itself is usually page margin.
 const visibleStartRange = () => {
@@ -28,43 +29,47 @@ const visibleStartRange = () => {
                 node?.nodeType === Node.TEXT_NODE &&
                 node.nodeValue.trim() &&
                 !node.parentElement?.closest(READIUM_NODES)
-            ) {
-                range.collapse(true)
-                return range
-            }
+            ) return range
         }
     }
     return null
 }
 
-// Up to 64 characters of chapter text just before or just after the range.
-const contextOf = (range, before) => {
-    const context = document.createRange()
-    context.selectNodeContents(document.body)
-    const readiumNode = [...document.body.children].find(el => el.matches(READIUM_NODES))
-    if (readiumNode) context.setEndBefore(readiumNode)
-    if (before) context.setEnd(range.startContainer, range.startOffset)
-    else context.setStart(range.endContainer, range.endOffset)
-    const text = context.toString()
-    return before ? text.slice(-64) : text.slice(0, 64)
+// Up to `length` characters of book text just before (backwards) or just after a range,
+// collected one text node at a time so a long chapter is never serialised. Empty when
+// that end of the range sits between elements rather than inside text.
+const contextOf = (range, backwards, length = 64) => {
+    const container = backwards ? range.startContainer : range.endContainer
+    const offset = backwards ? range.startOffset : range.endOffset
+    if (container.nodeType !== Node.TEXT_NODE) return ''
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, node =>
+        node.parentElement.closest(READIUM_NODES) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT)
+    walker.currentNode = container
+    let text = backwards ? container.nodeValue.slice(0, offset) : container.nodeValue.slice(offset)
+    while (text.length < length) {
+        const node = backwards ? walker.previousNode() : walker.nextNode()
+        if (!node) break
+        text = backwards ? node.nodeValue + text : text + node.nodeValue
+    }
+    return backwards ? text.slice(-length) : text.slice(0, length)
 }
 
 window.emberCfi = {
-    // CFI of the current text selection, or null when nothing is selected.
-    forSelection(base) {
+    // Content CFI of the current text selection, or null when nothing is selected.
+    forSelection() {
         const selection = window.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null
-        return cfiFor(base, selection.getRangeAt(0))
+        return fromRange(selection.getRangeAt(0), skipReadiumNodes)
     },
 
-    // CFI of the first text position on screen, or null when none is found.
-    forVisibleStart(base) {
+    // Content CFI of the first text position on screen, or null when none is found.
+    forVisibleStart() {
         const range = visibleStartRange()
-        return range ? cfiFor(base, range) : null
+        return range ? fromRange(range, skipReadiumNodes) : null
     },
 
-    // The text a CFI in this chapter points at, with context on both sides. The caller
-    // checks that the CFI's base belongs to this chapter.
+    // The text a full CFI points at in this chapter, with context on both sides. The
+    // caller checks that the CFI's spine step belongs to this chapter.
     resolve(cfi) {
         const parts = parse(cfi)
         ;(parts.parent ?? parts).shift()

@@ -150,6 +150,29 @@ class EpubSpineTest {
     }
 
     @Test
+    fun `hrefForPath finds the chapter under a renderer's own prefix`() {
+        val spine = parsed(PLAIN)
+
+        assertEquals("OEBPS/text/chapter%201.xhtml", spine.hrefForPath("/publication/OEBPS/text/chapter%201.xhtml"))
+        assertEquals("OEBPS/cover.xhtml", spine.hrefForPath("OEBPS/cover.xhtml"))
+        assertNull(spine.hrefForPath("/publication/OEBPS/other.xhtml"))
+        assertNull(spine.hrefForPath("/publication/OEBPS/not-cover.xhtml"))
+    }
+
+    @Test
+    fun `hrefForPath prefers the longest matching href`() {
+        val spine = EpubSpine(
+            spineStep = 6,
+            itemrefs = listOf("ch1.xhtml", "part2/ch1.xhtml").map {
+                EpubSpine.Itemref(idref = it, id = null, linear = true, href = it)
+            },
+        )
+
+        assertEquals("part2/ch1.xhtml", spine.hrefForPath("/publication/part2/ch1.xhtml"))
+        assertEquals("ch1.xhtml", spine.hrefForPath("/publication/ch1.xhtml"))
+    }
+
+    @Test
     fun `baseCfiFor and hrefFor round trip`() {
         val spine = parsed(NON_LINEAR_FIRST)
 

@@ -264,7 +264,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         navigator = nav
                         val manager = HighlightDecorationManager(nav, state.publication, state.spine)
                         highlightManager = manager
-                        cfiBridge = CfiBridge.create(context, nav, state.spine)
+                        cfiBridge = state.spine?.let { CfiBridge.create(context, nav, it) }
 
                         // Set up selection action handler
                         selectionActionHandler.value = { actionId ->
