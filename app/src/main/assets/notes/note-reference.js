@@ -6,8 +6,12 @@
 // by Readium. The signs it looks for are the ones foliate-js's footnote handler uses.
 function (targetPath, targetFragment) {
     const OPS = 'http://www.idpf.org/2007/ops'
-    const REFERENCE = /\b(noteref|biblioref|glossref|doc-noteref|doc-biblioref|doc-glossref)\b/
-    const NOTE = /\b(footnote|endnote|rearnote|note|footnotes|endnotes|doc-footnote|doc-endnote|doc-endnotes)\b/
+    // Matched against `epub:type` and `role` together. A hyphen is a word boundary, so each
+    // word also covers its ARIA form (`doc-noteref`, `doc-endnotes`). NOTE lists what a
+    // reference cannot sit inside, a single note or a section of them; FootnoteExtractor.kt
+    // has the list of what counts as a note to show. Keep the two in step.
+    const REFERENCE = /\b(noteref|biblioref|glossref)\b/
+    const NOTE = /\b(footnotes?|endnotes?|rearnotes?|note)\b/
     const BLOCK = 'p, li, div, td, dd, blockquote, aside, section, h1, h2, h3, h4, h5, h6, body'
     // "1", "[12]", "(3)", "*", a dagger: what a note marker looks like when it is not raised.
     const MARKER = /^[\[(]?(\d{1,4}|[*†‡§¶]{1,3})[\])]?$/
@@ -20,7 +24,6 @@ function (targetPath, targetFragment) {
         ' ' + (element.getAttribute('role') ?? '')
 
     const isRaised = element => {
-        if (!element) return false
         if (element.closest('sup')) return true
         const align = getComputedStyle(element).verticalAlign
         return align === 'super' || align === 'top' || align === 'text-top' || parseFloat(align) > 0

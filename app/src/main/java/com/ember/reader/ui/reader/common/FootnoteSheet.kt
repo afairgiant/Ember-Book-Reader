@@ -12,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -37,10 +36,7 @@ fun FootnoteSheet(
     onGoToNote: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
-    ) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
         FootnoteContent(noteHtml = noteHtml, onGoToNote = onGoToNote)
     }
 }
@@ -51,8 +47,7 @@ private fun FootnoteContent(noteHtml: String, onGoToNote: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 16.dp)
+            .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
     ) {
         Text(
             text = stringResource(R.string.footnote_title),

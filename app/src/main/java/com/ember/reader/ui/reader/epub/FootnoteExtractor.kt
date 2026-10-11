@@ -10,11 +10,14 @@ object FootnoteExtractor {
     /** Longer than this and the target is a passage of the book, not a note. */
     private const val MAX_NOTE_LENGTH = 4000
 
-    private val NOTE_TYPE = Regex("""\b(footnote|endnote|rearnote|note|doc-footnote|doc-endnote)\b""")
-    private val BACKLINK_TYPE = Regex("""\b(backlink|doc-backlink)\b""")
+    // Matched against `epub:type` and `role` together. A hyphen is a word boundary, so each
+    // word also covers its ARIA form (`doc-footnote`, `doc-backlink`). `note-reference.js`
+    // has its own list for the containers a reference cannot sit in; keep the two in step.
+    private val NOTE_TYPE = Regex("""\b(footnote|endnote|rearnote|note)\b""")
+    private val BACKLINK_TYPE = Regex("""\bbacklink\b""")
 
     /** What a link back to the text looks like when it is not marked as one. */
-    private val BACKLINK_TEXT = Regex("""^[\s↩↵↑⤴⏎^︎️]+$""")
+    private val BACKLINK_TEXT = Regex("""[\s↩↵↑⤴⏎^︎️]+""")
 
     private val INLINE = setOf("a", "sup", "sub", "span", "small", "b", "i", "em", "strong")
     private val NOTE_HTML: Safelist = Safelist.basic().removeTags("a")
@@ -32,11 +35,9 @@ object FootnoteExtractor {
         note.select("a").filter { it.isBacklink() }.forEach { it.remove() }
         val length = note.text().length
         if (length == 0 || length > MAX_NOTE_LENGTH) return null
-        return clean(note.html())
+        // Basic text formatting only: no links, images, styles or scripts.
+        return Jsoup.clean(note.html(), NOTE_HTML).trim()
     }
-
-    /** Reduces note HTML to basic text formatting: no links, images, styles or scripts. */
-    fun clean(html: String): String = Jsoup.clean(html, NOTE_HTML).trim()
 
     private fun Element.types(): String = attr("epub:type") + " " + attr("role")
 

@@ -175,21 +175,17 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var dictionaryWord by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    // A tapped link that refers to a note opens the note over the page. Readium tells us
-    // itself when the book marks the link as one; for the rest the page is asked, which
-    // takes a moment, so the link is held back and followed afterwards if it is not a note.
+    // A tapped link that refers to a note opens the note over the page. Finding out means
+    // asking the page, which takes a moment, so the link is held back and followed
+    // afterwards if it is not a note. Readium passes a context with its own copy of the
+    // note for links the book marks as references; those are resolved the same way as the
+    // rest, so every note is found and tidied by the same rules.
     val linkListener = remember {
         object : EpubNavigatorFragment.Listener {
             override fun shouldFollowInternalLink(
                 link: Link,
                 context: HyperlinkNavigator.LinkContext?
             ): Boolean {
-                if (context is HyperlinkNavigator.FootnoteContext) {
-                    val html = FootnoteExtractor.clean(context.noteContent)
-                    if (html.isEmpty()) return true
-                    footnote = Footnote(html, link)
-                    return false
-                }
                 val url = link.url()
                 val fragment = url.fragment ?: return true
                 val resolver = footnoteResolver ?: return true

@@ -38,6 +38,11 @@ class FootnoteResolverTest {
     }
 
     @Test
+    fun `a page script that fails leaves the link alone`() = runTest {
+        assertNull(resolver(pageAnswer = "\"TypeError: x is not a function\"").noteFor("text/notes.html", "fn1"))
+    }
+
+    @Test
     fun `a reference whose target cannot be read or found is left alone`() = runTest {
         assertNull(resolver(pageAnswer = "true", chapters = emptyMap()).noteFor("text/notes.html", "fn1"))
         assertNull(resolver(pageAnswer = "true").noteFor("text/notes.html", "missing"))
