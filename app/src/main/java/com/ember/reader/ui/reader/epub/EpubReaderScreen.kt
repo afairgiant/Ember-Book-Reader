@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.BuildConfig
 import com.ember.reader.R
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReaderPreferences
@@ -44,6 +45,7 @@ import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
 import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -57,6 +59,7 @@ import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.services.locateProgression
+import timber.log.Timber
 
 private const val FRAGMENT_TAG = "epub_navigator"
 private const val CONTAINER_ID = 0x7F_FF_00_01
@@ -155,6 +158,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var dirNavAdapter by remember { mutableStateOf<DirectionalNavigationAdapter?>(null) }
     var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
+    var cfiBridge by remember { mutableStateOf<CfiBridge?>(null) }
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showAnnotationDialog by remember { mutableStateOf(false) }
@@ -260,11 +264,15 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         navigator = nav
                         val manager = HighlightDecorationManager(nav, state.publication, state.spine)
                         highlightManager = manager
+                        cfiBridge = state.spine?.let { CfiBridge.create(context, nav, it) }
 
                         // Set up selection action handler
                         selectionActionHandler.value = { actionId ->
                             scope.launch {
                                 val selection = manager.currentSelection() ?: return@launch
+                                if (BuildConfig.DEBUG) {
+                                    Timber.d("CFI selection: %s", cfiBridge?.selectionCfi())
+                                }
                                 when (actionId) {
                                     R.id.action_highlight -> {
                                         pendingSelection = selection
@@ -407,6 +415,16 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     nav.go(it)
                 }
                 viewModel.onNavigationHandled()
+            }
+
+            // Debug builds log the CFI of each settled position, to compare against
+            // Grimmory's web reader until progress sync starts using it.
+            if (BuildConfig.DEBUG) {
+                LaunchedEffect(cfiBridge, currentLocator) {
+                    val bridge = cfiBridge ?: return@LaunchedEffect
+                    delay(500)
+                    Timber.d("CFI position: %s", bridge.visibleStartCfi())
+                }
             }
 
             // Apply highlight decorations when navigator ready or highlights change

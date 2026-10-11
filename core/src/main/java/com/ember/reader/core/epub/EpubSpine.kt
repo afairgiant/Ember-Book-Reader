@@ -55,6 +55,19 @@ data class EpubSpine(
         return itemrefs.getOrNull(step.index / 2 - 1)?.href
     }
 
+    /**
+     * The chapter a served URL path belongs to: the one whose href the path ends with,
+     * preferring the longest. A renderer serves `OEBPS/ch1.xhtml` under some prefix of its
+     * own, such as `/publication/OEBPS/ch1.xhtml`.
+     */
+    fun hrefForPath(path: String): String? {
+        val served = comparable(path)
+        return itemrefs
+            .mapNotNull { it.href }
+            .filter { href -> comparable(href).let { served == it || served.endsWith("/$it") } }
+            .maxByOrNull { it.length }
+    }
+
     companion object {
 
         private val parserFactory: XmlPullParserFactory by lazy {
