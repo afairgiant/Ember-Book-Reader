@@ -1,0 +1,8 @@
+epubcfi.js
+Repository: https://github.com/johnfactotum/foliate-js
+Commit: 6b11e1744346f60504b727984f7d42f0fef3ab54
+License: MIT (foliate-LICENSE.txt)
+
+Copied unmodified. Do not edit it: Grimmory's web reader uses the same file, and Ember's
+CFIs only match Grimmory's while both run the same algorithm. To update, replace the file
+with the upstream version and change the commit above.

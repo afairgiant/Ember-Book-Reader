@@ -169,6 +169,7 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.serialization.json)
 
     // AboutLibraries (OSS Licenses)
     implementation(libs.aboutlibraries.compose)
