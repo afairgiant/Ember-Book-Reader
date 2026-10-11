@@ -82,51 +82,40 @@ data class EpubSpine(
         fun parse(opfXml: String, opfPath: String): EpubSpine? = runCatching {
             val parser = createParser(opfXml)
             val manifest = mutableMapOf<String, String>()
-            val itemrefs = mutableListOf<Triple<String, String?, Boolean>>()
+            val itemrefs = mutableListOf<Itemref>()
             var spineStep: Int? = null
             var packageChildren = 0
-            var depth = 0
             var section: String? = null
             var event = parser.eventType
             while (event != XmlPullParser.END_DOCUMENT) {
-                when (event) {
-                    XmlPullParser.START_TAG -> {
-                        depth++
-                        if (depth == 2) {
+                if (event == XmlPullParser.START_TAG) {
+                    when (parser.depth) {
+                        2 -> {
                             packageChildren++
                             section = parser.name
                             if (section == "spine") spineStep = packageChildren * 2
-                        } else if (depth == 3 && section == "manifest" && parser.name == "item") {
-                            val id = parser.getAttributeValue(null, "id")
-                            val href = parser.getAttributeValue(null, "href")
-                            if (id != null && href != null) manifest[id] = href
-                        } else if (depth == 3 && section == "spine" && parser.name == "itemref") {
+                        }
+                        3 -> when {
+                            section == "manifest" && parser.name == "item" -> {
+                                val id = parser.getAttributeValue(null, "id")
+                                val href = parser.getAttributeValue(null, "href")
+                                if (id != null && href != null) manifest[id] = href
+                            }
                             // Counted even without an idref: its position still takes a CFI step.
-                            itemrefs += Triple(
-                                parser.getAttributeValue(null, "idref").orEmpty(),
-                                parser.getAttributeValue(null, "id")?.takeIf { it.isNotEmpty() },
-                                parser.getAttributeValue(null, "linear") != "no",
+                            section == "spine" && parser.name == "itemref" -> itemrefs += Itemref(
+                                idref = parser.getAttributeValue(null, "idref").orEmpty(),
+                                id = parser.getAttributeValue(null, "id")?.takeIf { it.isNotEmpty() },
+                                linear = parser.getAttributeValue(null, "linear") != "no",
+                                href = null,
                             )
                         }
-                    }
-                    XmlPullParser.END_TAG -> {
-                        if (depth == 2) section = null
-                        depth--
                     }
                 }
                 event = parser.next()
             }
-            val step = spineStep ?: return null
             EpubSpine(
-                spineStep = step,
-                itemrefs = itemrefs.map { (idref, id, linear) ->
-                    Itemref(
-                        idref = idref,
-                        id = id,
-                        linear = linear,
-                        href = manifest[idref]?.let { resolve(opfPath, it) },
-                    )
-                },
+                spineStep = spineStep ?: return null,
+                itemrefs = itemrefs.map { it.copy(href = manifest[it.idref]?.let { href -> resolve(opfPath, href) }) },
             )
         }.getOrNull()
 

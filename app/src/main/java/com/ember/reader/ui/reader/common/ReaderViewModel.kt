@@ -35,7 +35,9 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -172,6 +174,8 @@ class ReaderViewModel @Inject constructor(
             }
         }
         publication = pub
+        // Read alongside the progress and preference lookups below, and parsed off the main thread.
+        val spine = viewModelScope.async(Dispatchers.Default) { pub.loadEpubSpine() }
 
         val localProgress = readingProgressRepository.getByBookId(bookId)
         // Try to restore position from saved Readium locator first,
@@ -202,7 +206,7 @@ class ReaderViewModel @Inject constructor(
             book = loadedBook,
             streaming = streaming,
             preferences = loadedPreferences,
-            spine = pub.loadEpubSpine(),
+            spine = spine.await(),
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)

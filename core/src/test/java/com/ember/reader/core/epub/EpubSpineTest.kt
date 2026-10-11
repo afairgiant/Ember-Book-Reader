@@ -51,6 +51,8 @@ class EpubSpineTest {
         )
     }
 
+    private fun parsed(opf: String) = EpubSpine.parse(opf, "OEBPS/content.opf")!!
+
     @Test
     fun `rootfilePath reads the package document path`() {
         assertEquals("OEBPS/content.opf", EpubSpine.rootfilePath(CONTAINER))
@@ -64,7 +66,7 @@ class EpubSpineTest {
 
     @Test
     fun `parse resolves manifest hrefs against the OPF directory`() {
-        val spine = EpubSpine.parse(PLAIN, "OEBPS/content.opf")!!
+        val spine = parsed(PLAIN)
 
         assertEquals(
             listOf("OEBPS/cover.xhtml", "OEBPS/text/chapter%201.xhtml", "OEBPS/text/chapter2.xhtml"),
@@ -82,7 +84,7 @@ class EpubSpineTest {
 
     @Test
     fun `parse keeps non-linear itemrefs in place`() {
-        val spine = EpubSpine.parse(NON_LINEAR_FIRST, "OEBPS/content.opf")!!
+        val spine = parsed(NON_LINEAR_FIRST)
 
         assertEquals(listOf(false, true, true), spine.itemrefs.map { it.linear })
         assertEquals(listOf(null, "ref-one", null), spine.itemrefs.map { it.id })
@@ -104,7 +106,7 @@ class EpubSpineTest {
 
     @Test
     fun `hrefFor resolves by position over every itemref`() {
-        val spine = EpubSpine.parse(NON_LINEAR_FIRST, "OEBPS/content.opf")!!
+        val spine = parsed(NON_LINEAR_FIRST)
 
         // /6/4 is the second itemref. Indexing a reading order that skips the non-linear
         // cover would land on chapter2 instead.
@@ -114,7 +116,7 @@ class EpubSpineTest {
 
     @Test
     fun `hrefFor prefers the itemref id and falls back to position when the id is unknown`() {
-        val spine = EpubSpine.parse(NON_LINEAR_FIRST, "OEBPS/content.opf")!!
+        val spine = parsed(NON_LINEAR_FIRST)
 
         assertEquals("OEBPS/text/chapter%201.xhtml", spine.hrefFor("epubcfi(/6/6[ref-one]!/4)"))
         assertEquals("OEBPS/text/chapter2.xhtml", spine.hrefFor("epubcfi(/6/6[gone]!/4)"))
@@ -122,7 +124,7 @@ class EpubSpineTest {
 
     @Test
     fun `hrefFor accepts a bare base and doubled wrapping`() {
-        val spine = EpubSpine.parse(PLAIN, "OEBPS/content.opf")!!
+        val spine = parsed(PLAIN)
 
         assertEquals("OEBPS/cover.xhtml", spine.hrefFor("/6/2"))
         assertEquals("OEBPS/text/chapter2.xhtml", spine.hrefFor("epubcfi(epubcfi(/6/6!/4))"))
@@ -130,7 +132,7 @@ class EpubSpineTest {
 
     @Test
     fun `hrefFor returns null for an out-of-range, odd or non-CFI value`() {
-        val spine = EpubSpine.parse(PLAIN, "OEBPS/content.opf")!!
+        val spine = parsed(PLAIN)
 
         assertNull(spine.hrefFor("epubcfi(/6/8!/4)"))
         assertNull(spine.hrefFor("epubcfi(/6/3!/4)"))
@@ -139,7 +141,7 @@ class EpubSpineTest {
 
     @Test
     fun `baseCfiFor includes the itemref id and ignores fragment and encoding differences`() {
-        val spine = EpubSpine.parse(NON_LINEAR_FIRST, "OEBPS/content.opf")!!
+        val spine = parsed(NON_LINEAR_FIRST)
 
         assertEquals("/6/4[ref-one]", spine.baseCfiFor("OEBPS/text/chapter%201.xhtml"))
         assertEquals("/6/4[ref-one]", spine.baseCfiFor("OEBPS/text/chapter 1.xhtml#para3"))
@@ -149,7 +151,7 @@ class EpubSpineTest {
 
     @Test
     fun `baseCfiFor and hrefFor round trip`() {
-        val spine = EpubSpine.parse(NON_LINEAR_FIRST, "OEBPS/content.opf")!!
+        val spine = parsed(NON_LINEAR_FIRST)
 
         for (itemref in spine.itemrefs) {
             val base = spine.baseCfiFor(itemref.href!!)!!

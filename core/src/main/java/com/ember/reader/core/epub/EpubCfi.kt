@@ -44,40 +44,14 @@ object EpubCfi {
      * is the shape of a base. Returns null if the path is not made of `/N` steps.
      */
     fun steps(path: String): List<Step>? {
-        if (!path.startsWith("/")) return null
-        val steps = mutableListOf<Step>()
-        var position = 0
-        while (position < path.length) {
-            if (path[position] != '/') return null
-            position++
-            val digitsStart = position
-            while (position < path.length && path[position].isDigit()) position++
-            val index = path.substring(digitsStart, position).toIntOrNull() ?: return null
-            var id: String? = null
-            if (position < path.length && path[position] == '[') {
-                val text = StringBuilder()
-                position++
-                var closed = false
-                while (position < path.length) {
-                    val char = path[position]
-                    if (char == '^' && position + 1 < path.length) {
-                        text.append(path[position + 1])
-                        position += 2
-                    } else if (char == ']') {
-                        closed = true
-                        position++
-                        break
-                    } else {
-                        text.append(char)
-                        position++
-                    }
-                }
-                if (!closed) return null
-                id = text.toString().ifEmpty { null }
-            }
-            steps += Step(index, id)
+        val matches = STEP.findAll(path).toList()
+        if (matches.isEmpty() || matches.sumOf { it.value.length } != path.length) return null
+        return matches.map { match ->
+            Step(
+                index = match.groupValues[1].toIntOrNull() ?: return null,
+                id = match.groups[2]?.value?.replace(ESCAPE, "$1")?.ifEmpty { null },
+            )
         }
-        return steps.ifEmpty { null }
     }
 
     /** Formats one step, escaping the characters CFI reserves inside an `[id]`. */
@@ -119,4 +93,6 @@ object EpubCfi {
     }
 
     private val RESERVED = Regex("[\\^\\[\\](),;=]")
+    private val STEP = Regex("""/(\d+)(?:\[((?:\^[\s\S]|[^\]^])*)])?""")
+    private val ESCAPE = Regex("""\^([\s\S])""")
 }

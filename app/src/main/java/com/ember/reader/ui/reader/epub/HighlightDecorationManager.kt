@@ -19,8 +19,21 @@ import timber.log.Timber
  * Wraps SelectableNavigator and DecorableNavigator APIs.
  */
 class HighlightDecorationManager(
-    private val navigator: EpubNavigatorFragment
+    private val navigator: EpubNavigatorFragment,
+    private val publication: Publication,
+    spine: EpubSpine?,
 ) {
+    /**
+     * A CFI's spine step counts every itemref in the package document. Readium's reading
+     * order leaves out non-linear items, so it only stands in when the OPF could not be read.
+     */
+    private val spine: EpubSpine = spine ?: EpubSpine(
+        spineStep = 6,
+        itemrefs = publication.readingOrder.map {
+            EpubSpine.Itemref(idref = "", id = null, linear = true, href = it.url().toString())
+        },
+    )
+
     companion object {
         const val DECORATION_GROUP = "highlights"
     }
@@ -29,14 +42,10 @@ class HighlightDecorationManager(
      * Converts stored Highlights to Readium Decorations and applies them.
      * Readium internally diffs against the previous list for efficiency.
      */
-    suspend fun applyHighlights(
-        highlights: List<Highlight>,
-        publication: Publication? = null,
-        spine: EpubSpine? = null,
-    ) {
+    suspend fun applyHighlights(highlights: List<Highlight>) {
         val decorations = highlights.mapNotNull { highlight ->
             val locator = highlight.locatorJson.toLocator()
-                ?: buildLocatorFromJson(highlight, publication, spine)
+                ?: buildLocatorFromJson(highlight)
                 ?: return@mapNotNull null
 
             Decoration(
@@ -55,20 +64,15 @@ class HighlightDecorationManager(
      * Build a Locator manually from stored JSON when Readium's fromJSON fails
      * (e.g. synced highlights with empty href). Resolves href from the CFI's spine step.
      */
-    private fun buildLocatorFromJson(
-        highlight: Highlight,
-        publication: Publication?,
-        spine: EpubSpine?,
-    ): Locator? {
-        if (publication == null) return null
-        return runCatching {
+    private fun buildLocatorFromJson(highlight: Highlight): Locator? =
+        runCatching {
             val json = JSONObject(highlight.locatorJson)
             val locations = json.optJSONObject("locations") ?: return null
             val fragments = locations.optJSONArray("fragments") ?: return null
             if (fragments.length() == 0) return null
 
             val fragment = fragments.getString(0)
-            val href = resolveHrefFromFragment(fragment, publication, spine) ?: return null
+            val href = resolveHrefFromFragment(fragment) ?: return null
 
             val textObj = json.optJSONObject("text")
             val highlightText = textObj?.optString("highlight")?.ifBlank { null }
@@ -82,36 +86,11 @@ class HighlightDecorationManager(
         }.onFailure {
             Timber.w(it, "HighlightDecoration: failed to build locator for highlight %d", highlight.id)
         }.getOrNull()
-    }
 
-    /**
-     * Resolve an href from a CFI fragment string. A CFI's spine step counts every itemref
-     * in the package document, so [spine] is the right source. Readium's reading order
-     * leaves out non-linear items and is only used when the spine could not be read.
-     */
-    private fun resolveHrefFromFragment(
-        fragment: String,
-        publication: Publication,
-        spine: EpubSpine?,
-    ): Url? {
-        if (spine != null) {
-            val url = spine.hrefFor(fragment)?.let { Url(it) } ?: return null
-            return publication.linkWithHref(url)?.url() ?: url
-        }
-        // Strip all epubcfi() wrapping
-        var cfi = fragment
-        while (cfi.startsWith("epubcfi(") && cfi.endsWith(")")) {
-            cfi = cfi.removePrefix("epubcfi(").removeSuffix(")")
-        }
-        // CFI format: /6/N!... where N is the spine position (even numbers)
-        val spineMatch = Regex("^/6/(\\d+)").find(cfi) ?: return null
-        val spinePosition = spineMatch.groupValues[1].toIntOrNull() ?: return null
-        // EPUB CFI: /6/2 = spine[0], /6/4 = spine[1], etc.
-        val spineIndex = (spinePosition / 2) - 1
-
-        val readingOrder = publication.readingOrder
-        if (spineIndex < 0 || spineIndex >= readingOrder.size) return null
-        return readingOrder[spineIndex].url()
+    /** Resolve the chapter a CFI fragment string points into. */
+    private fun resolveHrefFromFragment(fragment: String): Url? {
+        val url = spine.hrefFor(fragment)?.let { Url(it) } ?: return null
+        return publication.linkWithHref(url)?.url() ?: url
     }
 
     /**

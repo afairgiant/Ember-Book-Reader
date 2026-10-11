@@ -1,5 +1,6 @@
 package com.ember.reader.core.sync
 
+import com.ember.reader.core.epub.EpubCfi
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
@@ -20,12 +21,7 @@ object CfiLocatorConverter {
         // Try fragments array first (Readium 3.x format)
         val fragments = locations.optJSONArray("fragments")
         if (fragments != null && fragments.length() > 0) {
-            val fragment = fragments.getString(0)
-            // Strip "epubcfi(" prefix and ")" suffix if present
-            return@runCatching fragment
-                .removePrefix("epubcfi(")
-                .removeSuffix(")")
-                .ifBlank { null }
+            return@runCatching EpubCfi.unwrap(fragments.getString(0)).ifBlank { null }
         }
 
         // Fall back to progression-based identifier
@@ -44,7 +40,7 @@ object CfiLocatorConverter {
         chapterTitle: String? = null
     ): String {
         // Normalize: ensure single epubcfi() wrapping
-        val normalizedCfi = if (cfi.startsWith("epubcfi(")) cfi else "epubcfi($cfi)"
+        val normalizedCfi = EpubCfi.wrap(cfi)
         val locations = JSONObject().apply {
             put("fragments", JSONArray().put(normalizedCfi))
         }
