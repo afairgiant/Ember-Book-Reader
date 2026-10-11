@@ -29,10 +29,34 @@ const visibleStartRange = () => {
                 node?.nodeType === Node.TEXT_NODE &&
                 node.nodeValue.trim() &&
                 !node.parentElement?.closest(READIUM_NODES)
-            ) return range
+            ) return toLineStart(range)
         }
     }
     return null
+}
+
+// caretRangeFromPoint snaps to the nearest gap between characters, which is usually a
+// character or more into the line. Walk back to the first character of that line that is
+// on screen: earlier text in the node is on the line above or on the previous page.
+const toLineStart = range => {
+    const node = range.startContainer
+    const probe = document.createRange()
+    const rectOf = index => {
+        probe.setStart(node, index)
+        probe.setEnd(node, index + 1)
+        return probe.getBoundingClientRect()
+    }
+    let offset = range.startOffset
+    const line = rectOf(Math.min(offset, node.length - 1))
+    while (offset > 0) {
+        const previous = rectOf(offset - 1)
+        const sameLine = Math.abs(previous.top - line.top) < line.height / 2
+        if (previous.width === 0 || previous.left < 0 || !sameLine) break
+        offset--
+    }
+    range.setStart(node, offset)
+    range.collapse(true)
+    return range
 }
 
 // Up to `length` characters of book text just before (backwards) or just after a range,
