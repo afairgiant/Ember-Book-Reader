@@ -11,8 +11,8 @@ import timber.log.Timber
 object CfiLocatorConverter {
 
     /**
-     * Extract CFI string from a Readium Locator JSON string.
-     * Readium stores CFI in locations.fragments[] array.
+     * The CFI kept in `locations.fragments` of a locator from [buildLocatorJson], without
+     * its `epubcfi(...)` wrapper. Null for a locator Readium made, which has none.
      */
     fun extractCfi(locatorJson: String): String? = runCatching {
         val json = JSONObject(locatorJson)
@@ -23,9 +23,7 @@ object CfiLocatorConverter {
         if (fragments != null && fragments.length() > 0) {
             return@runCatching EpubCfi.unwrap(fragments.getString(0)).ifBlank { null }
         }
-
-        // Fall back to progression-based identifier
-        locations.optString("progression").ifBlank { null }
+        null
     }.onFailure {
         Timber.w(it, "CfiLocatorConverter: failed to extract CFI from locator")
     }.getOrNull()

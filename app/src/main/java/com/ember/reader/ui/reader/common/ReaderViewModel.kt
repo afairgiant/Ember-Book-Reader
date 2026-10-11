@@ -317,13 +317,15 @@ class ReaderViewModel @Inject constructor(
         return false
     }
 
-    fun addBookmark(title: String) {
+    /** @param cfi the real CFI of the page's first text, when the reader could compute one. */
+    fun addBookmark(title: String, cfi: String? = null) {
         val locator = _currentLocator.value ?: return
         viewModelScope.launch {
             bookmarkRepository.addBookmark(
                 bookId = bookId,
                 locatorJson = locator.toJsonString(),
-                title = title.ifBlank { locator.title ?: "Bookmark" }
+                title = title.ifBlank { locator.title ?: "Bookmark" },
+                cfi = cfi,
             )
         }
     }

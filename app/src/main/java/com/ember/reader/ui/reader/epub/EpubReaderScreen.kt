@@ -541,7 +541,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 BookmarkNameDialog(
                     chapterTitle = currentLocator?.title ?: "",
                     onSave = { name ->
-                        viewModel.addBookmark(name)
+                        scope.launch { viewModel.addBookmark(name, cfiBridge?.visibleStartCfi()) }
                         showBookmarkDialog = false
                     },
                     onDismiss = { showBookmarkDialog = false },
