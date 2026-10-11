@@ -7,10 +7,10 @@ import kotlinx.serialization.Serializable
  *
  * Ember uses this for both Organize Files (needs [paths] and
  * [fileNamingPattern]) and the catalog browser (needs [icon]). The
- * `/api/v1/app/libraries` variant was dropped — on Grimmory v3.0.0+ it
+ * `/api/v1/app/libraries` variant was dropped — on Grimmory v3.0.0 it
  * throws a 500 because its DTO walks a lazy relation outside a
- * transaction, and the upstream team plans to deprecate app endpoints
- * anyway.
+ * transaction (still a 500 on v3.5.0), and the upstream team plans to
+ * deprecate app endpoints anyway.
  */
 @Serializable
 data class GrimmoryLibraryFull(

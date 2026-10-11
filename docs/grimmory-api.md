@@ -1,7 +1,19 @@
 # Grimmory API Reference
 
-Reverse-engineered from Grimmory source (Spring Boot / Java 25) at tag **v3.0.0**.
+Reverse-engineered from Grimmory source (Spring Boot / Java 25) at tag **v3.0.0**, with the parts Ember depends on re-checked against **v3.5.0**.
 Base URL: `http(s)://<server>:<port>` (default port 6060).
+
+> **v3.5.0 changes that affect Ember** (sections not listed here were not re-audited and still describe v3.0.0):
+> - Login and refresh return `isDefaultPassword` as a JSON boolean and add `expires` (seconds). Access tokens last 2 hours.
+> - Bad credentials and rejected refresh tokens return `401` (v3.0.0 returned `400`).
+> - A native progress write also overwrites the user's KOReader progress record. See [KOReader mirroring](#koreader-mirroring).
+> - `AppBookDetail.files[]` entries carry `"primary": true` for the primary file. The detail has never had `primaryFile`, `libraryPath` or `hardcoverBookId`; those are on the full `Book` DTO.
+> - Library and shelf icons are bare Lucide names (`"icon": "rocket"`, `"iconType": "LUCIDE"`); existing PrimeNG names were migrated.
+> - OPDS authors and series navigation feeds are paginated.
+> - OPDS entries for audiobooks now include cover links.
+> - New `GET /api/v1/metadata/providers`; a disabled provider returns no search results and no error.
+> - `MetadataProvider` adds `OpenLibrary` and `AppleBooks`; `BookMetadata` adds `openlibraryId`, `applebooksId`, `applebooksRating`, `applebooksReviewCount` and their `*Locked` flags.
+> - App book lists now include physical books (no file, `isPhysical: true`, `primaryFileType: null`).
 
 > **v3.0.0 highlights** (vs previous doc):
 > - Entire `/api/v1/user-stats/**` subsystem now documented (previously undocumented, already used by Ember).
@@ -52,7 +64,7 @@ Base URL: `http(s)://<server>:<port>` (default port 6060).
 
 ### JWT Token Flow
 
-JWT Bearer tokens for most endpoints. Access tokens expire in **10 hours**, refresh tokens in **30 days**.
+JWT Bearer tokens for most endpoints. Access tokens expire in **2 hours**, refresh tokens in **30 days**.
 
 #### Login
 
@@ -73,11 +85,14 @@ Response `200`:
 {
   "accessToken": "eyJhbGc...",
   "refreshToken": "eyJhbGc...",
-  "isDefaultPassword": "false"
+  "expires": 7200,
+  "isDefaultPassword": false
 }
 ```
 
-> `isDefaultPassword` is a string ("true"/"false"), not a boolean. Omitted on refresh.
+> `isDefaultPassword` is a JSON boolean since v3.5.0 (v3.0.0 sent the string `"true"`/`"false"`). Omitted on refresh. `expires` is the access token lifetime in seconds and is new in v3.5.0.
+
+Invalid credentials return `401` (`400` on v3.0.0).
 
 #### Refresh Token
 
@@ -87,7 +102,13 @@ POST /api/v1/auth/refresh
 
 Request: `{"refreshToken": "string"}`
 
-Response `200`: `{"accessToken": "...", "refreshToken": "..."}`
+Response `200`: `{"accessToken": "...", "refreshToken": "...", "expires": 7200}`
+
+A rejected refresh token returns `401` (`400` on v3.0.0). Ember treats `400`, `401` and `403` alike: it clears the stored tokens and asks the user to sign in again.
+
+> **Refresh tokens are not valid immediately.** They carry `nbf = issue time + 2 minutes`, so a refresh attempted within two minutes of login is rejected. In practice this only happens if an access token is rejected that soon after it was issued.
+
+> **After v3.5.0 (unreleased at the time of writing):** access tokens must carry the scope `api`, and refresh tokens are looked up by JWT ID. Tokens issued by v3.0.0 have neither, so the first request after the server is upgraded forces one re-login. v3.5.0 itself does not do this yet.
 
 #### Logout
 
@@ -308,7 +329,7 @@ Response `200 AppBookDetail`:
   "readProgress": 0.42,
   "primaryFileType": "EPUB",
   "fileTypes": ["EPUB", "PDF"],
-  "files": [{ "id": 456, "fileName": "book.epub", "fileType": "EPUB" }],
+  "files": [{ "id": 456, "bookId": 123, "fileName": "book.epub", "bookType": "EPUB", "book": true, "primary": true }],
   "coverUpdatedOn": "2026-01-15T10:30:00Z",
   "audiobookCoverUpdatedOn": null,
   "isPhysical": false,
@@ -337,6 +358,12 @@ Response `200 AppBookDetail`:
 
 > The per-format progress response shapes **do not** include `ttsPositionCfi` or `trackPositionMs`. Those remain on the write-side DTOs (`EpubProgress`, `AudiobookProgress`) but not on the read-side.
 
+> `files[]` entries are `AppBookFile`: `id`, `bookId`, `fileName`, `bookType`, `archiveType`, `fileSizeKb`, `extension`, `addedOn`, plus the booleans `book`, `folderBased` and `primary`. The Java fields are `isBook` and `isPrimary`; the `is` prefix is stripped on serialisation, as with [Permissions](#permissions). Ember takes the file ID for progress pushes from the entry with `"primary": true`.
+
+> This response has no `primaryFile`, `libraryPath` or `hardcoverBookId`. For the primary file name or the Hardcover ID, use the full book (`GET /api/v1/books/{bookId}`): `primaryFile.fileName` and `metadata.hardcoverBookId` (a string).
+
+> Percentages are on different scales: `koreaderProgress.percentage` is 0–1, the per-format ones (`epubProgress.percentage` and siblings) are 0–100, and `readProgress` is 0–1. `readProgress` prefers the KOReader value, then Kobo, then the per-format value, so it can be stale when the per-format value is newer. `epubProgress` is only present when a CFI is stored.
+
 ### Book Progress (Standalone)
 
 ```
@@ -356,14 +383,32 @@ Request `UpdateProgressRequest`:
     "bookFileId": 456,
     "positionData": "epubcfi(/6/4...)",
     "positionHref": "chapter1.xhtml",
-    "progressPercent": 0.42,
+    "progressPercent": 42.0,
     "ttsPositionCfi": null
   },
   "dateFinished": null
 }
 ```
 
-Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobookProgress`) are still accepted but marked `@Deprecated`. Exactly one progress source or `dateFinished` must be set. Response `200 OK`.
+Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobookProgress`) are still accepted but marked `@Deprecated`. Response `200 OK`.
+
+- `bookFileId` and `progressPercent` (0–100) are required in `fileProgress`.
+- When `fileProgress` is present the server stores `positionData` as the EPUB CFI and ignores `epubProgress`.
+- A `bookFileId` that does not exist fails the whole request with `404 Book file not found`, even if `epubProgress` is also present.
+- If no CFI is stored (null `positionData`, or legacy `epubProgress` with a null `cfi`), later reads omit `epubProgress` entirely.
+
+#### How Ember pushes
+
+Ember has no real CFI (see Known Limitations in `CLAUDE.md`), so it sends the placeholder `epubcfi(/6/2)` to keep `epubProgress` readable, and navigates by percentage only. It sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`.
+
+#### KOReader mirroring
+
+Since v3.5.0 every native progress write also overwrites the user's KOReader progress record for that book: device and device ID `"Grimmory"`, percentage = percent / 100, and `progress` = an xpointer converted from the stored CFI, or null if the CFI cannot be converted. The last writer wins, so a later kosync push replaces it and vice versa. A kosync push does not update the per-format progress.
+
+- On v3.5.0 this happens only when the KOReader user has both sync and "sync with web reader" enabled. After v3.5.0 that toggle is removed and mirroring happens whenever KOReader sync is enabled.
+- Ember therefore pushes to Grimmory first and kosync second, which leaves Ember's device name and locator in the KOReader record.
+- **The placeholder CFI must not contain a `!` step.** `epubcfi(/6/2)` fails to parse in the CFI-to-xpointer conversion, so the mirrored `progress` stays null. A parseable CFI would be converted to a start-of-book xpointer and handed to KOReader devices on the same account. What a KOReader device does with a null `progress` has not been tested.
+- On pull, Ember takes the further along of `koreaderProgress` and `epubProgress`, since either can be the stale one.
 
 ### Search / Home Feeds
 
@@ -400,7 +445,7 @@ Request: `{ "rating": 4 }`. Value: integer 1–5. Response `200`.
 GET /api/v1/libraries
 ```
 
-> **Note:** `/api/v1/app/libraries` throws 500 on Grimmory v3.0.0+ due to a lazy-relation bug. Use `/api/v1/libraries` instead.
+> **Note:** `/api/v1/app/libraries` throws 500 due to a lazy-relation bug. First seen on v3.0.0 and still the case on a live v3.5.0 server. Use `/api/v1/libraries` instead.
 
 Response `200 List<GrimmoryLibraryFull>`:
 ```json
@@ -408,12 +453,15 @@ Response `200 List<GrimmoryLibraryFull>`:
   {
     "id": 1,
     "name": "Library Name",
-    "icon": "library_books",
+    "icon": "rocket",
+    "iconType": "LUCIDE",
     "fileNamingPattern": "{author}/{title}",
     "paths": [{ "id": 5, "libraryId": 1, "path": "/books/fiction" }]
   }
 ]
 ```
+
+> Since v3.5.0 `icon` is a bare Lucide name for libraries and shelves, and existing PrimeNG names were migrated (for example `home` → `house`, `cog` → `settings`). Older servers still send PrimeNG names, so `GrimmoryIconMapper` accepts both.
 
 ### Authors
 
@@ -669,17 +717,17 @@ Request `ReadProgressRequest`:
     "bookFileId": 456,
     "positionData": "epubcfi(/6/4[chap1]!/4/2/16,/1:0,/1:100)",
     "positionHref": "chapter1.xhtml",
-    "progressPercent": 0.42,
+    "progressPercent": 42.0,
     "ttsPositionCfi": null
   },
   "dateFinished": null
 }
 ```
 
-At least one of `fileProgress`, the deprecated per-format siblings, or `dateFinished` must be present.
+At least one of `fileProgress`, the deprecated per-format siblings, or `dateFinished` must be present. The rules under [Book Progress (Standalone)](#book-progress-standalone), including [KOReader mirroring](#koreader-mirroring), apply to this endpoint as well.
 
 **Deprecated but still accepted** (siblings of `fileProgress`):
-- `epubProgress`: `{ cfi, href, percentage, ttsPositionCfi }` — `cfi` and `percentage` required
+- `epubProgress`: `{ cfi, href, percentage, ttsPositionCfi }` — `percentage` required; `cfi` is no longer required, but without it reads omit `epubProgress`
 - `pdfProgress`: `{ page, percentage }` — both required
 - `cbxProgress`: `{ page, percentage }` — both required
 - `audiobookProgress`: `{ positionMs, trackIndex, trackPositionMs, percentage }` — `positionMs` and `percentage` required
@@ -919,6 +967,15 @@ GET /api/v1/opds/series
 
 All return `application/atom+xml;profile=opds-catalog;kind=navigation`.
 
+Since v3.5.0 the `authors` and `series` feeds are paginated: `?page=1&size=50` (one-based, default 50, maximum 100). A feed with more pages carries a feed-level link:
+
+```xml
+<link rel="next" href="/api/v1/opds/authors?page=2&amp;size=50"
+      type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+```
+
+Ember follows `rel="next"` on navigation feeds until it runs out (capped at 50 pages) so the whole list is shown. Acquisition feeds are paginated the same way and are paged on demand.
+
 ### Acquisition Feeds
 
 ```
@@ -941,6 +998,8 @@ GET /api/v1/opds/{bookId}/download
 GET /api/v1/opds/{bookId}/download?fileId=789       # specific format
 GET /api/v1/opds/{bookId}/cover
 ```
+
+Since v3.5.0 audiobook entries include cover links and the cover endpoint falls back to the audiobook cover. On v3.0.0 audiobooks had no cover link in OPDS.
 
 ### OPDS User Admin (v2)
 
@@ -1047,6 +1106,10 @@ PATCH /api/v1/koreader-users/me/sync-progress-with-booklore?enabled=true
 ```
 
 `KoreaderUser` response includes `username`, `password`, `passwordMD5`, `syncEnabled`, `syncWithBookloreReader`. Requires `canSyncKoReader` or admin.
+
+> The `sync-progress-with-booklore` toggle and `syncWithBookloreReader` exist up to v3.5.0 and are removed after it. See [KOReader mirroring](#koreader-mirroring) for what the toggle controls.
+
+> A progress record written by the server's own mirroring has device `"Grimmory"` and may have a null `progress`. A book that is known but has no KOReader progress returns `200` with `percentage: null`; an unknown hash returns `404`.
 
 ---
 
@@ -1232,6 +1295,25 @@ POST /api/v1/books/{bookId}/metadata/prospective
 
 Returns a `text/event-stream` of candidate `BookMetadata` records fetched from configured providers. Body: optional `FetchMetadataRequest`.
 
+A provider that is disabled on the server returns nothing and no error. `provider` is set only on these candidates; it is not stored with the book.
+
+### Providers
+
+```
+GET /api/v1/metadata/providers
+```
+
+New in v3.5.0 (`404` on older servers). Any authenticated user. Response `200`:
+
+```json
+[
+  { "name": "Amazon", "enabled": true },
+  { "name": "Google", "enabled": false }
+]
+```
+
+`name` is a `MetadataProvider` value; `OpenLibrary` and `AppleBooks` are new in v3.5.0 and disabled by default. Ember offers only the enabled providers in the search form and falls back to Amazon, GoodReads, Google and Hardcover when this endpoint is missing.
+
 ### Save Metadata
 
 ```
@@ -1397,7 +1479,7 @@ Hex string `#RRGGBB` (e.g., `#FFFF00`).
 
 ### Percentage
 
-Float `0.0` to `1.0`.
+Float `0.0` to `1.0` for kosync, `koreaderProgress` and `readProgress`. Per-format progress (`epubProgress.percentage`, `fileProgress.progressPercent` and siblings) is `0` to `100`.
 
 ### CFI
 
