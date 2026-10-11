@@ -209,6 +209,86 @@ class ProgressSyncManagerTest {
         }
 
         @Test
+        fun `grimmory pull carries the real CFI of the epub progress`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 34.4f,
+                // What Grimmory mirrors from Ember's own kosync push: same position, more digits.
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.34437f, device = "Ember"),
+                epubProgress = GrimmoryEpubProgress(cfi = REAL_CFI, percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(REAL_CFI, result!!.progress.cfi)
+        }
+
+        @Test
+        fun `grimmory pull carries no CFI for the placeholder`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 34.4f,
+                epubProgress = GrimmoryEpubProgress(cfi = ProgressSyncManager.PLACEHOLDER_CFI, percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertNull(result!!.progress.cfi)
+        }
+
+        @Test
+        fun `grimmory pull carries no CFI when the koreader record is further along`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.5f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.5f, device = "KOReader"),
+                epubProgress = GrimmoryEpubProgress(cfi = REAL_CFI, percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.5f, result!!.progress.percentage, 0.0001f)
+            assertNull(result.progress.cfi)
+        }
+
+        @Test
+        fun `kosync result takes Grimmory's CFI when both describe the same position`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(KosyncProgressResult(readingProgress(percentage = 0.34437f), "Ember"))
+            val progress = grimmoryAppBookProgress(
+                readProgress = 34.4f,
+                epubProgress = GrimmoryEpubProgress(cfi = REAL_CFI, percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.34437f, result!!.progress.percentage, 0.0001f)
+            assertEquals(REAL_CFI, result.progress.cfi)
+        }
+
+        @Test
+        fun `kosync result further along than Grimmory takes no CFI`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(KosyncProgressResult(readingProgress(percentage = 0.6f), "KOReader"))
+            val progress = grimmoryAppBookProgress(
+                readProgress = 34.4f,
+                epubProgress = GrimmoryEpubProgress(cfi = REAL_CFI, percentage = 34.4f)
+            )
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertNull(result!!.progress.cfi)
+        }
+
+        @Test
         fun `grimmory pull takes koreader progress when the epub value is stale`() = runTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
@@ -691,5 +771,9 @@ class ProgressSyncManagerTest {
 
             assertEquals(SyncStatus.Unknown, syncStatusRepository.get(testServer.id))
         }
+    }
+
+    private companion object {
+        const val REAL_CFI = "epubcfi(/6/14!/4/22/1:152)"
     }
 }

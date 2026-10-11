@@ -123,8 +123,8 @@ class ReaderViewModel @Inject constructor(
     val currentLocator: StateFlow<Locator?> = _currentLocator.asStateFlow()
 
     // Navigation request that the screen should execute on the navigator
-    private val _pendingNavigation = MutableStateFlow<Float?>(null)
-    val pendingNavigation: StateFlow<Float?> = _pendingNavigation.asStateFlow()
+    private val _pendingNavigation = MutableStateFlow<PendingNavigation?>(null)
+    val pendingNavigation: StateFlow<PendingNavigation?> = _pendingNavigation.asStateFlow()
 
     fun onNavigationHandled() {
         _pendingNavigation.value = null
@@ -280,8 +280,12 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             readingProgressRepository.applyRemoteProgress(conflict.remoteProgress)
         }
-        // Navigate by percentage — works regardless of progress format (Locator, XPointer, CFI)
-        _pendingNavigation.value = conflict.remotePercentage
+        // The percentage works whatever the remote position's format (Locator, XPointer,
+        // CFI). A real CFI, when the remote has one, lands on the exact text.
+        _pendingNavigation.value = PendingNavigation(
+            percentage = conflict.remotePercentage,
+            cfi = conflict.remoteProgress.cfi,
+        )
     }
 
     fun dismissSyncConflict() {
@@ -673,6 +677,17 @@ sealed interface ReaderUiState {
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }
+
+/**
+ * A position accepted from another device, for the reader to open.
+ *
+ * @param cfi its real EPUB CFI when the remote had one; the reader falls back to
+ * [percentage] when it is null or cannot be opened.
+ */
+data class PendingNavigation(
+    val percentage: Float,
+    val cfi: String? = null,
+)
 
 data class SyncConflict(
     val remotePercentage: Float,

@@ -147,8 +147,11 @@ const findQuote = (chapter, quote) => {
 
 // How far into the chapter a range starts, from 0 to 1, in the direction the chapter
 // scrolls: across for paginated columns, down otherwise. This is the same measure Readium
-// uses for a locator's progression. Null when layout gives no answer; a position that
-// cannot be measured must not stop its text from being found.
+// uses for a locator's progression. In paginated columns it is the start of the page the
+// range is on, as Readium's own locators are: Readium rounds a progression to the nearest
+// page, so one from the right-hand half of a page would open the page after it. Null when
+// layout gives no answer; a position that cannot be measured must not stop its text from
+// being found.
 const progressionOf = range => {
     try {
         const visible = range.cloneRange()
@@ -160,7 +163,7 @@ const progressionOf = range => {
         const root = document.scrollingElement
         if (!root || (rect.width === 0 && rect.height === 0)) return null
         const progression = root.scrollWidth > root.clientWidth
-            ? (rect.left + root.scrollLeft) / root.scrollWidth
+            ? Math.floor((rect.left + root.scrollLeft) / root.clientWidth) * root.clientWidth / root.scrollWidth
             : (rect.top + root.scrollTop) / root.scrollHeight
         return Number.isFinite(progression) ? Math.min(1, Math.max(0, progression)) : null
     } catch {
