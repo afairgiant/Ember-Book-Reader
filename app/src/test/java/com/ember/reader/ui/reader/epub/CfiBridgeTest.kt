@@ -128,28 +128,41 @@ class CfiBridgeTest {
     }
 
     @Test
-    fun `resolve returns the text for a CFI in the page's chapter`() = runTest {
-        val page = FakePage { reply("""{"exact":"fox","before":"brown ","after":" jumps"}""") }
+    fun `resolve returns what each CFI in the page's chapter points at`() = runTest {
+        val page = FakePage {
+            reply("""[{"exact":"fox","before":"brown ","after":" jumps","progression":0.25},""" +
+                """{"exact":"","before":"lazy ","after":"dog","progression":null}]""")
+        }
 
-        val resolved = bridge(page).resolve("epubcfi(/6/4!/4/2,/1:16,/1:19)")
+        val resolved = bridge(page).resolve(listOf("epubcfi(/6/4!/4/2,/1:16,/1:19)", "epubcfi(/6/4!/4/2/1:40)"))
 
-        assertEquals(ResolvedCfi(exact = "fox", before = "brown ", after = " jumps"), resolved)
+        assertEquals(
+            listOf(
+                ResolvedCfi("OEBPS/chapter1.xhtml", exact = "fox", before = "brown ", after = " jumps", progression = 0.25),
+                ResolvedCfi("OEBPS/chapter1.xhtml", exact = "", before = "lazy ", after = "dog", progression = null),
+            ),
+            resolved,
+        )
     }
 
     @Test
-    fun `resolve refuses a CFI from another chapter and empty text`() = runTest {
-        val found = FakePage { reply("""{"exact":"fox","before":"","after":""}""") }
-        val empty = FakePage { reply("""{"exact":"","before":"","after":""}""") }
+    fun `resolve answers null for a CFI from another chapter, a fake one and one the page could not resolve`() = runTest {
+        val text = """{"exact":"fox","before":"","after":""}"""
+        val page = FakePage { reply("[$text,$text,null]") }
 
-        assertNull(bridge(found).resolve("epubcfi(/6/6!/4/2/1:0)"))
-        assertNull(bridge(empty).resolve("epubcfi(/6/4!/4/2/1:0)"))
+        val resolved = bridge(page).resolve(
+            listOf("epubcfi(/6/6!/4/2/1:0)", "0.4231", "epubcfi(/6/4!/4/2/1:0)"),
+        )
+
+        assertEquals(listOf(null, null, null), resolved)
     }
 
     @Test
-    fun `resolve does not touch the page for something that is not a real CFI`() = runTest {
+    fun `resolve does not touch the page when no CFI is real`() = runTest {
         val page = FakePage { error("the page should not be asked") }
 
-        assertNull(bridge(page).resolve("epubcfi(/6/2)"))
+        assertEquals(listOf(null), bridge(page).resolve(listOf("epubcfi(/6/2)")))
+        assertEquals(emptyList<ResolvedCfi?>(), bridge(page).resolve(emptyList()))
         assertTrue(page.installs == 0)
     }
 

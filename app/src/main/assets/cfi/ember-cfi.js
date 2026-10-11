@@ -145,6 +145,29 @@ const findQuote = (chapter, quote) => {
     return { range, matches }
 }
 
+// How far into the chapter a range starts, from 0 to 1, in the direction the chapter
+// scrolls: across for paginated columns, down otherwise. This is the same measure Readium
+// uses for a locator's progression. Null when layout gives no answer; a position that
+// cannot be measured must not stop its text from being found.
+const progressionOf = range => {
+    try {
+        const visible = range.cloneRange()
+        const node = range.startContainer
+        if (visible.collapsed && node.nodeType === Node.TEXT_NODE && range.startOffset < node.length) {
+            visible.setEnd(node, range.startOffset + 1)
+        }
+        const rect = visible.getClientRects()[0] ?? visible.getBoundingClientRect()
+        const root = document.scrollingElement
+        if (!root || (rect.width === 0 && rect.height === 0)) return null
+        const progression = root.scrollWidth > root.clientWidth
+            ? (rect.left + root.scrollLeft) / root.scrollWidth
+            : (rect.top + root.scrollTop) / root.scrollHeight
+        return Number.isFinite(progression) ? Math.min(1, Math.max(0, progression)) : null
+    } catch {
+        return null
+    }
+}
+
 window.emberCfi = {
     // Content CFI of the current text selection, or null when nothing is selected.
     forSelection() {
@@ -159,17 +182,25 @@ window.emberCfi = {
         return range ? fromRange(range, skipReadiumNodes) : null
     },
 
-    // The text a full CFI points at in this chapter, with context on both sides. The
-    // caller checks that the CFI's spine step belongs to this chapter.
-    resolve(cfi) {
-        const parts = parse(cfi)
-        ;(parts.parent ?? parts).shift()
-        const range = toRange(document, parts, skipReadiumNodes)
-        return {
-            exact: range.toString(),
-            before: contextOf(range, true),
-            after: contextOf(range, false),
-        }
+    // What each full CFI in a JSON array points at in this chapter: its text (empty for a
+    // position), the text around it, and how far into the chapter it is. Null for one that
+    // does not resolve. The caller checks that each CFI's spine step belongs to this chapter.
+    resolve(cfisJson) {
+        return JSON.parse(cfisJson).map(cfi => {
+            try {
+                const parts = parse(cfi)
+                ;(parts.parent ?? parts).shift()
+                const range = toRange(document, parts, skipReadiumNodes)
+                return {
+                    exact: range.toString(),
+                    before: contextOf(range, true),
+                    after: contextOf(range, false),
+                    progression: progressionOf(range),
+                }
+            } catch {
+                return null
+            }
+        })
     },
 
     // Content CFIs for passages known only by their text: a JSON array of

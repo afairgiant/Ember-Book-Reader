@@ -15,16 +15,26 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import timber.log.Timber
 
-/** The text a CFI points at, with up to 64 characters of chapter text on each side. */
+/**
+ * What a CFI points at in its chapter.
+ *
+ * @param href the chapter, as the package document names it.
+ * @param exact the text of a range, or empty for a position.
+ * @param before up to 64 characters of chapter text before it, and [after] the same after.
+ * @param progression how far into the chapter it is, from 0 to 1, when layout could tell.
+ */
 data class ResolvedCfi(
+    val href: String,
     val exact: String,
     val before: String,
     val after: String,
+    val progression: Double?,
 )
 
 /** A passage known by its text, with the text around it when that is known. */
@@ -65,17 +75,26 @@ class CfiBridge(
     /** CFI of the first text position on screen. */
     suspend fun visibleStartCfi(): String? = cfiFrom("forVisibleStart")
 
-    /** The text [cfi] points at. Null unless its chapter is the one in the page. */
-    suspend fun resolve(cfi: String): ResolvedCfi? {
-        if (!EpubCfi.isRealCfi(cfi)) return null
-        val reply = call("resolve", cfi) ?: return null
-        if (spine.hrefFor(cfi) != reply.href) return null
-        val text = reply.value as? JsonObject ?: return null
-        return ResolvedCfi(
-            exact = text.string("exact")?.takeIf { it.isNotEmpty() } ?: return null,
-            before = text.string("before").orEmpty(),
-            after = text.string("after").orEmpty(),
-        )
+    /**
+     * What each of [cfis] points at. The answer has one entry per CFI, null for one that is
+     * not real, does not resolve, or belongs to a chapter other than the one in the page.
+     */
+    suspend fun resolve(cfis: List<String>): List<ResolvedCfi?> {
+        val none = List<ResolvedCfi?>(cfis.size) { null }
+        if (cfis.none { EpubCfi.isRealCfi(it) }) return none
+        val reply = call("resolve", JsonArray(cfis.map { JsonPrimitive(it) }).toString()) ?: return none
+        val answers = reply.value as? JsonArray ?: return none
+        return cfis.mapIndexed { index, cfi ->
+            val answer = answers.getOrNull(index) as? JsonObject ?: return@mapIndexed null
+            if (!EpubCfi.isRealCfi(cfi) || spine.hrefFor(cfi) != reply.href) return@mapIndexed null
+            ResolvedCfi(
+                href = reply.href,
+                exact = answer.string("exact").orEmpty(),
+                before = answer.string("before").orEmpty(),
+                after = answer.string("after").orEmpty(),
+                progression = (answer["progression"] as? JsonPrimitive)?.doubleOrNull,
+            )
+        }
     }
 
     /**

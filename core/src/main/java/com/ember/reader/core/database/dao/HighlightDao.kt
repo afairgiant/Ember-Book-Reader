@@ -28,6 +28,10 @@ interface HighlightDao {
     @Query("UPDATE highlights SET deletedAt = :deletedAt, updatedAt = :deletedAt WHERE id = :id")
     suspend fun softDeleteById(id: Long, deletedAt: Long)
 
+    /** Replaces only the locator, leaving `updatedAt` alone so sync does not see an edit. */
+    @Query("UPDATE highlights SET locatorJson = :locatorJson WHERE id = :id")
+    suspend fun updateLocator(id: Long, locatorJson: String)
+
     @Query("DELETE FROM highlights WHERE id = :id")
     suspend fun deleteById(id: Long)
 

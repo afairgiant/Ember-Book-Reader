@@ -50,6 +50,11 @@ class HighlightRepository @Inject constructor(
         )
     }
 
+    /** Stores where synced highlights were found in the book; see `SyncedPositionPlacer`. */
+    suspend fun placeHighlights(locatorsById: Map<Long, String>) {
+        locatorsById.forEach { (id, locatorJson) -> highlightDao.updateLocator(id, locatorJson) }
+    }
+
     suspend fun deleteHighlight(id: Long) {
         if (appPreferencesRepository.getSyncHighlights()) {
             highlightDao.softDeleteById(id, Instant.now().toEpochMilli())

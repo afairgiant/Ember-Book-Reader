@@ -36,6 +36,10 @@ class FakeBookmarkDao : BookmarkDao {
         return id
     }
 
+    override suspend fun updateLocator(id: Long, locatorJson: String) {
+        bookmarks.firstOrNull { it.id == id }?.let { update(it.copy(locatorJson = locatorJson)) }
+    }
+
     override suspend fun update(bookmark: BookmarkEntity) {
         val index = bookmarks.indexOfFirst { it.id == bookmark.id }
         if (index >= 0) {

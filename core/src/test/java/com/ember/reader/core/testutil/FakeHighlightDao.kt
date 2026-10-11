@@ -36,6 +36,10 @@ class FakeHighlightDao : HighlightDao {
         return id
     }
 
+    override suspend fun updateLocator(id: Long, locatorJson: String) {
+        highlights.firstOrNull { it.id == id }?.let { update(it.copy(locatorJson = locatorJson)) }
+    }
+
     override suspend fun update(highlight: HighlightEntity) {
         val index = highlights.indexOfFirst { it.id == highlight.id }
         if (index >= 0) {

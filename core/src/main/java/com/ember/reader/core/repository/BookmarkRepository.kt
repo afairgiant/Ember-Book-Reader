@@ -32,6 +32,11 @@ class BookmarkRepository @Inject constructor(
         )
     }
 
+    /** Stores where synced bookmarks were found in the book; see `SyncedPositionPlacer`. */
+    suspend fun placeBookmarks(locatorsById: Map<Long, String>) {
+        locatorsById.forEach { (id, locatorJson) -> bookmarkDao.updateLocator(id, locatorJson) }
+    }
+
     suspend fun deleteBookmark(id: Long) {
         if (appPreferencesRepository.getSyncBookmarks()) {
             bookmarkDao.softDeleteById(id, Instant.now().toEpochMilli())
