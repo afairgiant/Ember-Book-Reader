@@ -9,6 +9,8 @@ data class Highlight(
     val color: HighlightColor = HighlightColor.YELLOW,
     val annotation: String? = null,
     val selectedText: String? = null,
+    /** The highlight's real EPUB CFI, when one is known. See `EpubCfi.isRealCfi`. */
+    val cfi: String? = null,
     val createdAt: Instant = Instant.now(),
     val remoteId: Long? = null,
     val updatedAt: Instant = Instant.now(),

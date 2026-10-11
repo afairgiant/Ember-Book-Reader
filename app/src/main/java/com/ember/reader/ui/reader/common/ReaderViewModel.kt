@@ -334,10 +334,11 @@ class ReaderViewModel @Inject constructor(
         locatorJson: String,
         color: HighlightColor,
         annotation: String? = null,
-        selectedText: String? = null
+        selectedText: String? = null,
+        cfi: String? = null,
     ) {
         viewModelScope.launch {
-            highlightRepository.addHighlight(bookId, locatorJson, color, annotation, selectedText)
+            highlightRepository.addHighlight(bookId, locatorJson, color, annotation, selectedText, cfi)
         }
     }
 

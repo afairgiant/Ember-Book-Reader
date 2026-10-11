@@ -2,6 +2,7 @@ package com.ember.reader.core.sync
 
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.database.entity.HighlightEntity
+import com.ember.reader.core.epub.EpubCfi
 import com.ember.reader.core.grimmory.CreateAnnotationRequest
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateAnnotationRequest
@@ -63,6 +64,9 @@ class HighlightSyncManager @Inject constructor(
                     if (updated.color != serverColor) {
                         updated = updated.copy(color = serverColor)
                     }
+                    if (updated.cfi == null && EpubCfi.isRealCfi(cfi)) {
+                        updated = updated.copy(cfi = cfi)
+                    }
                     if (updated !== local) {
                         highlightDao.update(updated)
                         Timber.d("HighlightSync: refreshed highlight %d (color=%s)", local.id, serverColor)
@@ -107,6 +111,7 @@ class HighlightSyncManager @Inject constructor(
                         color = HighlightColor.fromHex(serverAnnotation.color),
                         annotation = serverAnnotation.note,
                         selectedText = serverAnnotation.text,
+                        cfi = cfi.takeIf { EpubCfi.isRealCfi(it) },
                         createdAt = parseTimestamp(serverAnnotation.createdAt) ?: now,
                         remoteId = serverAnnotation.id,
                         updatedAt = parseTimestamp(serverAnnotation.updatedAt) ?: now
@@ -117,16 +122,14 @@ class HighlightSyncManager @Inject constructor(
         }
 
         // Process local highlights
-        // KNOWN LIMITATION: Readium Kotlin doesn't expose EPUB CFI for text selections.
-        // Locally-created highlights push with progression as "CFI" which Grimmory stores
-        // but can't render in the web reader. Pull (Grimmory → Ember) works correctly.
-        // See CLAUDE.md "Known Limitations" for details.
         for (local in localHighlights) {
             if (local.remoteId == null && local.deletedAt == null) {
-                // New local → push to server
-                val cfi = CfiLocatorConverter.extractCfi(local.locatorJson)
+                // New local → push to server. Grimmory's web reader can only draw a
+                // highlight from a real CFI, and a stored CFI cannot be changed later, so a
+                // highlight without one stays on this device until it has one.
+                val cfi = local.cfi?.takeIf { EpubCfi.isRealCfi(it) }
                 if (cfi == null) {
-                    Timber.w("HighlightSync: no CFI for local highlight %d, locator: %s", local.id, local.locatorJson.take(150))
+                    Timber.d("HighlightSync: holding local highlight %d, no real CFI yet", local.id)
                     continue
                 }
 

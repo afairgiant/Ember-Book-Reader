@@ -73,6 +73,34 @@ class HighlightSyncManagerTest {
             }
 
         @Test
+        fun `a real CFI from the server is kept on the local highlight`() = runTest {
+            coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(
+                listOf(
+                    grimmoryAnnotation(id = 10, cfi = REAL_CFI),
+                    // What Ember pushed before it had real CFIs: a progression number.
+                    grimmoryAnnotation(id = 11, cfi = "0.4231"),
+                )
+            )
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(REAL_CFI, dao.all.first { it.remoteId == 10L }.cfi)
+            assertEquals(null, dao.all.first { it.remoteId == 11L }.cfi)
+        }
+
+        @Test
+        fun `an already linked highlight picks up the server's real CFI`() = runTest {
+            dao.insert(highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = null, remoteId = 10))
+            coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(
+                listOf(grimmoryAnnotation(id = 10, cfi = REAL_CFI))
+            )
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(REAL_CFI, dao.all.first().cfi)
+        }
+
+        @Test
         fun `server annotation with null cfi is skipped`() = runTest {
             val serverAnn = grimmoryAnnotation(id = 10, cfi = null)
             coEvery {
@@ -238,19 +266,18 @@ class HighlightSyncManagerTest {
     inner class LocalToServer {
 
         @Test
-        fun `new local highlight pushes to server and stores remoteId`() = runTest {
-            val locatorJson = CfiLocatorConverter.buildLocatorJson("/6/8", selectedText = "my text", chapterTitle = "Ch 2")
+        fun `new local highlight pushes its real CFI to the server and stores remoteId`() = runTest {
             dao.insert(
                 highlightEntity(
-                    bookId = bookId, locatorJson = locatorJson,
+                    bookId = bookId, locatorJson = READIUM_LOCATOR,
                     color = HighlightColor.BLUE, annotation = "note", selectedText = "my text",
-                    remoteId = null
+                    cfi = REAL_CFI, remoteId = null
                 )
             )
 
             coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(emptyList())
             coEvery { grimmoryClient.createAnnotation(any(), any(), any()) } returns Result.success(
-                grimmoryAnnotation(id = 88, cfi = "/6/8")
+                grimmoryAnnotation(id = 88, cfi = REAL_CFI)
             )
 
             syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
@@ -260,7 +287,7 @@ class HighlightSyncManagerTest {
             val requestSlot = slot<CreateAnnotationRequest>()
             coVerify { grimmoryClient.createAnnotation(any(), any(), capture(requestSlot)) }
             assertEquals(grimmoryBookId, requestSlot.captured.bookId)
-            assertEquals("/6/8", requestSlot.captured.cfi)
+            assertEquals(REAL_CFI, requestSlot.captured.cfi)
             assertEquals("my text", requestSlot.captured.text)
             assertEquals(HighlightColor.BLUE.hex, requestSlot.captured.color)
             assertEquals("note", requestSlot.captured.note)
@@ -268,10 +295,29 @@ class HighlightSyncManagerTest {
         }
 
         @Test
-        fun `new local highlight without selected text is not pushed`() = runTest {
-            val locatorJson = CfiLocatorConverter.buildLocatorJson("/6/8")
+        fun `local highlight without a real CFI is held on the device`() = runTest {
+            // Before real CFIs, the locator's progression was sent as the "CFI".
+            dao.insert(highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = null, remoteId = null))
             dao.insert(
-                highlightEntity(bookId = bookId, locatorJson = locatorJson, selectedText = null, remoteId = null)
+                highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = "epubcfi(/6/2)", remoteId = null)
+            )
+
+            coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(emptyList())
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createAnnotation(any(), any(), any()) }
+            assertEquals(2, dao.all.size)
+            assertTrue(dao.all.all { it.remoteId == null })
+        }
+
+        @Test
+        fun `new local highlight without selected text is not pushed`() = runTest {
+            dao.insert(
+                highlightEntity(
+                    bookId = bookId, locatorJson = READIUM_LOCATOR, selectedText = null,
+                    cfi = REAL_CFI, remoteId = null
+                )
             )
 
             coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } returns Result.success(emptyList())
@@ -284,11 +330,9 @@ class HighlightSyncManagerTest {
 
         @Test
         fun `new local matching existing server CFI links instead of creating`() = runTest {
-            val cfi = "/6/4"
-            val locatorJson = CfiLocatorConverter.buildLocatorJson(cfi)
-            dao.insert(highlightEntity(bookId = bookId, locatorJson = locatorJson, remoteId = null))
+            dao.insert(highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = REAL_CFI, remoteId = null))
 
-            val serverAnn = grimmoryAnnotation(id = 50, cfi = cfi)
+            val serverAnn = grimmoryAnnotation(id = 50, cfi = REAL_CFI)
             coEvery {
                 grimmoryClient.getAnnotations(any(), any(), any())
             } returns Result.success(listOf(serverAnn))
@@ -389,5 +433,14 @@ class HighlightSyncManagerTest {
 
             assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
         }
+    }
+
+    private companion object {
+        const val REAL_CFI = "epubcfi(/6/8!/4/2,/1:0,/1:7)"
+
+        /** A locator as Readium produces it for a selection: no CFI in it. */
+        const val READIUM_LOCATOR =
+            """{"href":"OEBPS/ch2.xhtml","type":"application/xhtml+xml","title":"Ch 2",""" +
+                """"locations":{"progression":0.4231},"text":{"highlight":"my text"}}"""
     }
 }

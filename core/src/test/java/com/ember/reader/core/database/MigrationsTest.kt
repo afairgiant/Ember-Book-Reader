@@ -124,6 +124,31 @@ class MigrationsTest {
         }
     }
 
+    @Test
+    fun migrate17To18_addsCfiColumnToHighlightsAndBookmarks() {
+        helper.createDatabase(TEST_DB, 17).use { db ->
+            db.execSQL("INSERT INTO books(id,title,format,addedAt) VALUES('b1','T','EPUB',0)")
+            db.execSQL(
+                "INSERT INTO highlights(bookId,locatorJson,color,createdAt,updatedAt) VALUES('b1','{}','YELLOW',0,0)"
+            )
+            db.execSQL("INSERT INTO bookmarks(bookId,locatorJson,createdAt,updatedAt) VALUES('b1','{}',0,0)")
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            18,
+            true,
+            EmberDatabase.MIGRATION_17_18
+        )
+
+        for (table in listOf("highlights", "bookmarks")) {
+            migrated.query("SELECT cfi FROM $table").use { c ->
+                assertTrue(c.moveToFirst())
+                assertTrue("expected NULL default for $table.cfi", c.isNull(0))
+            }
+        }
+    }
+
     private companion object {
         const val TEST_DB = "ember-migrations-test"
     }

@@ -160,6 +160,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
     var cfiBridge by remember { mutableStateOf<CfiBridge?>(null) }
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
+    var pendingSelectionCfi by remember { mutableStateOf<String?>(null) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showAnnotationDialog by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
@@ -270,9 +271,10 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         selectionActionHandler.value = { actionId ->
                             scope.launch {
                                 val selection = manager.currentSelection() ?: return@launch
-                                if (BuildConfig.DEBUG) {
-                                    Timber.d("CFI selection: %s", cfiBridge?.selectionCfi())
-                                }
+                                // Read while the text is still selected: the dialogs
+                                // that follow clear the selection before a highlight is saved.
+                                pendingSelectionCfi = cfiBridge?.selectionCfi()
+                                Timber.d("CFI selection: %s", pendingSelectionCfi)
                                 when (actionId) {
                                     R.id.action_highlight -> {
                                         pendingSelection = selection
@@ -439,7 +441,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         val selection = pendingSelection ?: return@SelectionColorPickerDialog
                         val locatorJson = selection.locator.toJsonString()
                         val selectedText = selection.locator.text.highlight
-                        viewModel.addHighlight(locatorJson, color, selectedText = selectedText)
+                        viewModel.addHighlight(locatorJson, color, selectedText = selectedText, cfi = pendingSelectionCfi)
                         highlightManager?.clearSelection()
                         showColorPicker = false
                         pendingSelection = null
@@ -458,7 +460,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         val selection = pendingSelection ?: return@AnnotationDialog
                         val locatorJson = selection.locator.toJsonString()
                         val selectedText = selection.locator.text.highlight
-                        viewModel.addHighlight(locatorJson, color, annotation, selectedText)
+                        viewModel.addHighlight(locatorJson, color, annotation, selectedText, pendingSelectionCfi)
                         highlightManager?.clearSelection()
                         showAnnotationDialog = false
                         pendingSelection = null

@@ -26,7 +26,8 @@ class HighlightRepository @Inject constructor(
         locatorJson: String,
         color: HighlightColor,
         annotation: String? = null,
-        selectedText: String? = null
+        selectedText: String? = null,
+        cfi: String? = null,
     ): Long {
         val now = Instant.now()
         return highlightDao.insert(
@@ -36,6 +37,7 @@ class HighlightRepository @Inject constructor(
                 color = color,
                 annotation = annotation,
                 selectedText = selectedText,
+                cfi = cfi,
                 createdAt = now,
                 updatedAt = now
             )
