@@ -125,6 +125,7 @@ class ReaderViewModelTest {
             readingSessionRepository = readingSessionRepository,
             appPreferencesRepository = appPreferencesRepository,
             progressSyncManager = progressSyncManager,
+            highlightRepairer = io.mockk.mockk(relaxed = true),
             dictionaryRepository = dictionaryRepository,
             applicationScope = applicationScope
         )

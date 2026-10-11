@@ -7,11 +7,16 @@ import com.ember.reader.core.epub.EpubSpine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.put
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import timber.log.Timber
 
@@ -20,6 +25,19 @@ data class ResolvedCfi(
     val exact: String,
     val before: String,
     val after: String,
+)
+
+/** A passage known by its text, with the text around it when that is known. */
+data class TextQuote(
+    val exact: String,
+    val before: String? = null,
+    val after: String? = null,
+)
+
+/** Where a [TextQuote] was found. [matches] is how often its text occurs in that chapter. */
+data class QuoteMatch(
+    val cfi: String,
+    val matches: Int,
 )
 
 /**
@@ -58,6 +76,33 @@ class CfiBridge(
             before = text.string("before").orEmpty(),
             after = text.string("after").orEmpty(),
         )
+    }
+
+    /**
+     * CFIs for passages known only by their text, searched for in the page's chapter. The
+     * answer has one entry per quote, null where the chapter does not contain it.
+     */
+    suspend fun quoteCfis(quotes: List<TextQuote>): List<QuoteMatch?> {
+        val none = List<QuoteMatch?>(quotes.size) { null }
+        if (quotes.isEmpty()) return none
+        val json = buildJsonArray {
+            quotes.forEach { quote ->
+                addJsonObject {
+                    put("exact", quote.exact)
+                    put("before", quote.before)
+                    put("after", quote.after)
+                }
+            }
+        }.toString()
+        val reply = call("forQuotes", json) ?: return none
+        val base = spine.baseCfiFor(reply.href) ?: return none
+        val answers = reply.value as? JsonArray ?: return none
+        return quotes.indices.map { index ->
+            val answer = answers.getOrNull(index) as? JsonObject ?: return@map null
+            val cfi = answer.string("cfi")?.let { EpubCfi.join(base, EpubCfi.unwrap(it)) }
+            if (!EpubCfi.isRealCfi(cfi)) return@map null
+            QuoteMatch(cfi = cfi!!, matches = (answer["matches"] as? JsonPrimitive)?.intOrNull ?: 1)
+        }
     }
 
     private suspend fun cfiFrom(function: String): String? {
@@ -110,7 +155,7 @@ class CfiBridge(
             )
         }
 
-        private suspend fun installScript(assets: AssetManager): String =
+        suspend fun installScript(assets: AssetManager): String =
             cachedInstallScript ?: withContext(Dispatchers.IO) {
                 fun asset(name: String) = assets.open("cfi/$name").bufferedReader().use { it.readText() }
                 CfiScript.install(asset("epubcfi.js"), asset("ember-cfi.js"))

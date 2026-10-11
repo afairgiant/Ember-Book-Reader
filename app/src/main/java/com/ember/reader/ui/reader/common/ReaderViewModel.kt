@@ -15,6 +15,7 @@ import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
+import com.ember.reader.core.sync.HighlightRepairer
 import com.ember.reader.core.readium.loadEpubSpine
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -69,6 +70,7 @@ class ReaderViewModel @Inject constructor(
     private val readingSessionRepository: com.ember.reader.core.repository.ReadingSessionRepository,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
+    private val highlightRepairer: HighlightRepairer,
     val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
@@ -328,6 +330,32 @@ class ReaderViewModel @Inject constructor(
 
     fun deleteBookmark(id: Long) {
         viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
+    }
+
+    private val _highlightRepair = MutableStateFlow<HighlightRepairState>(HighlightRepairState.Idle)
+    val highlightRepair: StateFlow<HighlightRepairState> = _highlightRepair.asStateFlow()
+
+    /**
+     * Gives real CFIs to this book's highlights that lack one, replacing on the server
+     * those that were pushed without one. Started by the user: it rewrites server data.
+     *
+     * @param computeCfis places highlights in the book by their text; see `OffscreenCfiResolver`.
+     */
+    fun repairHighlights(computeCfis: suspend (List<Highlight>) -> Map<Long, String>) {
+        if (_highlightRepair.value == HighlightRepairState.Running) return
+        _highlightRepair.value = HighlightRepairState.Running
+        viewModelScope.launch {
+            // With highlight sync off, the server is left alone and CFIs are only stored.
+            val server = book?.serverId
+                ?.takeIf { appPreferencesRepository.getSyncHighlights() }
+                ?.let { serverRepository.getById(it) }
+            _highlightRepair.value = highlightRepairer
+                .repair(server, bookId, book?.grimmoryBookId, computeCfis)
+                .fold(
+                    onSuccess = { HighlightRepairState.Done(it.repaired, it.unresolved) },
+                    onFailure = { HighlightRepairState.Failed },
+                )
+        }
     }
 
     fun addHighlight(
@@ -601,6 +629,13 @@ class ReaderViewModel @Inject constructor(
         // that follows submitPreferences.
         private const val PREF_REFLOW_SUPPRESS_MS = 1500L
     }
+}
+
+sealed interface HighlightRepairState {
+    data object Idle : HighlightRepairState
+    data object Running : HighlightRepairState
+    data class Done(val repaired: Int, val unresolved: Int) : HighlightRepairState
+    data object Failed : HighlightRepairState
 }
 
 sealed interface ReaderUiState {

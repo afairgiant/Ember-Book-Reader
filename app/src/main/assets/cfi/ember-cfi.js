@@ -78,6 +78,73 @@ const contextOf = (range, backwards, length = 64) => {
     return backwards ? text.slice(-length) : text.slice(0, length)
 }
 
+// The chapter's text with all whitespace removed, and where each remaining character
+// lives. A selection's text and the DOM's text nodes disagree about whitespace (a line
+// break between two paragraphs is in one and not the other), so passages are matched
+// without it.
+const WHITESPACE = /\s/
+const squeeze = text => (text ?? '').replace(/\s+/g, '')
+const chapterText = () => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, node =>
+        node.parentElement.closest(READIUM_NODES + ', script, style')
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT)
+    const characters = []
+    const nodes = []
+    const offsets = []
+    for (let node; (node = walker.nextNode());) {
+        const value = node.nodeValue
+        for (let offset = 0; offset < value.length; offset++) {
+            if (WHITESPACE.test(value[offset])) continue
+            characters.push(value[offset])
+            nodes.push(node)
+            offsets.push(offset)
+        }
+    }
+    return { text: characters.join(''), nodes, offsets }
+}
+
+const commonSuffix = (a, b) => {
+    let length = 0
+    while (length < a.length && length < b.length &&
+        a[a.length - 1 - length] === b[b.length - 1 - length]) length++
+    return length
+}
+const commonPrefix = (a, b) => {
+    let length = 0
+    while (length < a.length && length < b.length && a[length] === b[length]) length++
+    return length
+}
+
+// Finds a passage by its text. When it occurs more than once, the occurrence whose
+// surroundings best match `before` and `after` wins, and the first one on a tie.
+const findQuote = (chapter, quote) => {
+    const exact = squeeze(quote.exact)
+    if (!exact) return null
+    const before = squeeze(quote.before)
+    const after = squeeze(quote.after)
+    let best = -1
+    let bestScore = -1
+    let matches = 0
+    for (let at = chapter.text.indexOf(exact); at >= 0; at = chapter.text.indexOf(exact, at + 1)) {
+        matches++
+        const end = at + exact.length
+        const score =
+            commonSuffix(chapter.text.slice(Math.max(0, at - before.length), at), before) +
+            commonPrefix(chapter.text.slice(end, end + after.length), after)
+        if (score > bestScore) {
+            best = at
+            bestScore = score
+        }
+    }
+    if (best < 0) return null
+    const last = best + exact.length - 1
+    const range = document.createRange()
+    range.setStart(chapter.nodes[best], chapter.offsets[best])
+    range.setEnd(chapter.nodes[last], chapter.offsets[last] + 1)
+    return { range, matches }
+}
+
 window.emberCfi = {
     // Content CFI of the current text selection, or null when nothing is selected.
     forSelection() {
@@ -103,5 +170,16 @@ window.emberCfi = {
             before: contextOf(range, true),
             after: contextOf(range, false),
         }
+    },
+
+    // Content CFIs for passages known only by their text: a JSON array of
+    // {exact, before, after}. Answers in the same order with {cfi, matches}, or null for a
+    // passage this chapter does not contain. `matches` is how often `exact` occurs here.
+    forQuotes(quotesJson) {
+        const chapter = chapterText()
+        return JSON.parse(quotesJson).map(quote => {
+            const found = findQuote(chapter, quote)
+            return found && { cfi: fromRange(found.range, skipReadiumNodes), matches: found.matches }
+        })
     },
 }
