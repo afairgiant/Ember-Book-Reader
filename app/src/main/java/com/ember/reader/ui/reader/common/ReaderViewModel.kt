@@ -3,6 +3,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.coroutine.ApplicationScope
+import com.ember.reader.core.epub.EpubSpine
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
@@ -14,6 +15,7 @@ import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
+import com.ember.reader.core.readium.loadEpubSpine
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.core.readium.toPercentage
@@ -200,6 +202,7 @@ class ReaderViewModel @Inject constructor(
             book = loadedBook,
             streaming = streaming,
             preferences = loadedPreferences,
+            spine = pub.loadEpubSpine(),
         )
 
         pullRemoteProgressOnOpen(loadedBook, localProgress)
@@ -603,6 +606,8 @@ sealed interface ReaderUiState {
         val book: Book,
         val streaming: Boolean = false,
         val preferences: ReaderPreferences = ReaderPreferences(),
+        /** The EPUB's spine as its package document lists it; null for other formats. */
+        val spine: EpubSpine? = null,
     ) : ReaderUiState
     data class Error(val message: String) : ReaderUiState
 }

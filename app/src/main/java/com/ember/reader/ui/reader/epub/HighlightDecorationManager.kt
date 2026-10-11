@@ -1,6 +1,7 @@
 package com.ember.reader.ui.reader.epub
 
 import android.graphics.RectF
+import com.ember.reader.core.epub.EpubSpine
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.readium.toLocator
 import org.json.JSONObject
@@ -28,10 +29,14 @@ class HighlightDecorationManager(
      * Converts stored Highlights to Readium Decorations and applies them.
      * Readium internally diffs against the previous list for efficiency.
      */
-    suspend fun applyHighlights(highlights: List<Highlight>, publication: Publication? = null) {
+    suspend fun applyHighlights(
+        highlights: List<Highlight>,
+        publication: Publication? = null,
+        spine: EpubSpine? = null,
+    ) {
         val decorations = highlights.mapNotNull { highlight ->
             val locator = highlight.locatorJson.toLocator()
-                ?: buildLocatorFromJson(highlight, publication)
+                ?: buildLocatorFromJson(highlight, publication, spine)
                 ?: return@mapNotNull null
 
             Decoration(
@@ -48,9 +53,13 @@ class HighlightDecorationManager(
 
     /**
      * Build a Locator manually from stored JSON when Readium's fromJSON fails
-     * (e.g. synced highlights with empty href). Resolves href from CFI spine index.
+     * (e.g. synced highlights with empty href). Resolves href from the CFI's spine step.
      */
-    private fun buildLocatorFromJson(highlight: Highlight, publication: Publication?): Locator? {
+    private fun buildLocatorFromJson(
+        highlight: Highlight,
+        publication: Publication?,
+        spine: EpubSpine?,
+    ): Locator? {
         if (publication == null) return null
         return runCatching {
             val json = JSONObject(highlight.locatorJson)
@@ -59,7 +68,7 @@ class HighlightDecorationManager(
             if (fragments.length() == 0) return null
 
             val fragment = fragments.getString(0)
-            val href = resolveHrefFromFragment(fragment, publication) ?: return null
+            val href = resolveHrefFromFragment(fragment, publication, spine) ?: return null
 
             val textObj = json.optJSONObject("text")
             val highlightText = textObj?.optString("highlight")?.ifBlank { null }
@@ -76,10 +85,19 @@ class HighlightDecorationManager(
     }
 
     /**
-     * Resolve an href from a CFI fragment string by extracting the spine index
-     * and mapping it to the publication's reading order.
+     * Resolve an href from a CFI fragment string. A CFI's spine step counts every itemref
+     * in the package document, so [spine] is the right source. Readium's reading order
+     * leaves out non-linear items and is only used when the spine could not be read.
      */
-    private fun resolveHrefFromFragment(fragment: String, publication: Publication): Url? {
+    private fun resolveHrefFromFragment(
+        fragment: String,
+        publication: Publication,
+        spine: EpubSpine?,
+    ): Url? {
+        if (spine != null) {
+            val url = spine.hrefFor(fragment)?.let { Url(it) } ?: return null
+            return publication.linkWithHref(url)?.url() ?: url
+        }
         // Strip all epubcfi() wrapping
         var cfi = fragment
         while (cfi.startsWith("epubcfi(") && cfi.endsWith(")")) {
