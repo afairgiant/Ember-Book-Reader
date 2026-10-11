@@ -98,6 +98,36 @@ class CfiBridgeTest {
     }
 
     @Test
+    fun `quoteCfis sends the quotes as JSON and adds the spine step to each answer`() = runTest {
+        var script = ""
+        val page = FakePage {
+            reply("""[{"cfi":"epubcfi(/4/2,/1:16,/1:19)","matches":2},null]""")
+        }
+        val bridge = CfiBridge(
+            evaluate = { script = it; page.evaluate(it) },
+            spine = spine,
+            installScript = { INSTALL },
+        )
+
+        val matches = bridge.quoteCfis(
+            listOf(TextQuote(exact = "fox", before = "brown "), TextQuote(exact = "it's \"gone\"")),
+        )
+
+        assertEquals(listOf(QuoteMatch("epubcfi(/6/4[ref1]!/4/2,/1:16,/1:19)", matches = 2), null), matches)
+        // The quotes travel as one JSON string argument, so their quotation marks are escaped.
+        assertTrue(script.contains("""forQuotes("[{\"exact\":\"fox\",\"before\":\"brown \",\"after\":null}"""))
+    }
+
+    @Test
+    fun `quoteCfis answers null for every quote when the page gives nothing usable`() = runTest {
+        val quotes = listOf(TextQuote("fox"), TextQuote("dog"))
+
+        assertEquals(listOf(null, null), bridge(FakePage { reply("null") }).quoteCfis(quotes))
+        assertEquals(listOf(null, null), bridge(FakePage { reply("""[{"cfi":"0.4"}]""") }).quoteCfis(quotes))
+        assertEquals(emptyList<QuoteMatch?>(), bridge(FakePage { error("not asked") }).quoteCfis(emptyList()))
+    }
+
+    @Test
     fun `resolve returns the text for a CFI in the page's chapter`() = runTest {
         val page = FakePage { reply("""{"exact":"fox","before":"brown ","after":" jumps"}""") }
 

@@ -159,6 +159,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
     var cfiBridge by remember { mutableStateOf<CfiBridge?>(null) }
+    val highlightRepair by viewModel.highlightRepair.collectAsStateWithLifecycle()
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
     var pendingSelectionCfi by remember { mutableStateOf<String?>(null) }
     var showColorPicker by remember { mutableStateOf(false) }
@@ -275,6 +276,20 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                 // that follow clear the selection before a highlight is saved.
                                 pendingSelectionCfi = cfiBridge?.selectionCfi()
                                 Timber.d("CFI selection: %s", pendingSelectionCfi)
+                                // Debug builds also place the same words through the offscreen
+                                // path the repair uses; the two CFIs should be the same passage.
+                                if (BuildConfig.DEBUG) {
+                                    state.spine?.let { spine ->
+                                        val probe = Highlight(
+                                            bookId = "",
+                                            locatorJson = selection.locator.toJsonString(),
+                                            selectedText = selection.locator.text.highlight,
+                                        )
+                                        val offscreen = OffscreenCfiResolver(context, state.publication, spine)
+                                            .cfisFor(listOf(probe))[probe.id]
+                                        Timber.d("CFI offscreen: %s", offscreen)
+                                    }
+                                }
                                 when (actionId) {
                                     R.id.action_highlight -> {
                                         pendingSelection = selection
@@ -559,6 +574,13 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
             if (showHighlights) {
                 HighlightsSheet(
                     highlights = highlights,
+                    repairState = highlightRepair,
+                    onRepair = state.spine?.let { spine ->
+                        {
+                            val resolver = OffscreenCfiResolver(context, state.publication, spine)
+                            viewModel.repairHighlights(resolver::cfisFor)
+                        }
+                    },
                     onNavigate = { highlight ->
                         highlight.locatorJson.toLocator()?.let { locator ->
                             scope.launch { navigator?.go(locator) }
