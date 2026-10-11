@@ -304,8 +304,9 @@ class CatalogViewModel @Inject constructor(
 
         // Libraries — the full /api/v1/libraries endpoint is used instead of
         // /api/v1/app/libraries because the latter 500s on Grimmory v3.0.0
-        // (LazyInitializationException on libraryPaths) and the app variants
-        // are slated for eventual deprecation anyway. Trade-off: no bookCount.
+        // (LazyInitializationException on libraryPaths), still does on v3.5.0,
+        // and the app variants are slated for eventual deprecation anyway.
+        // Trade-off: no bookCount.
         grimmoryAppClient.getFullLibraries(server.url, server.id)
             .onSuccess { libraries ->
                 Timber.d("Catalog: got ${libraries.size} Grimmory libraries for server=${server.id}")

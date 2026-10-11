@@ -108,8 +108,8 @@ Highlights created in Ember push to Grimmory but **don't render in Grimmory's we
 ### EPUB Scroll Mode Infinite Scroll
 Horizontal swipe is the only way to change chapters in scroll mode. True continuous/infinite vertical scrolling across chapters is not yet implemented. Requires deeper integration with Readium's CSS `overflow: scrolled-continuous` or loading multiple chapters into a single scrollable WebView.
 
-### Grimmory Audiobook Covers in OPDS
-Grimmory's OPDS feed doesn't include cover links for audiobooks (checks `coverUpdatedOn` but audiobooks use `audiobookCoverUpdatedOn`). Ember works around this by using `/api/v1/audiobooks/{id}/cover` directly. A Grimmory-side fix would resolve this for all OPDS clients.
+### Grimmory Audiobook Covers in OPDS (fixed upstream in v3.5)
+Grimmory before v3.5 doesn't include cover links for audiobooks in its OPDS feed (it checked `coverUpdatedOn` but audiobooks use `audiobookCoverUpdatedOn`). Grimmory v3.5 emits them. Ember still uses `/api/v1/audiobooks/{id}/cover` directly so covers work on older servers.
 
 ## Current Status
 - **Phase**: 5 — Release Prep
