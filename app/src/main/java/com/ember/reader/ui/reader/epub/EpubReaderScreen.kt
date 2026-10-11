@@ -284,12 +284,12 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     fragmentFactory = EpubNavigatorFactory(
                         publication = state.publication
                     ).createFragmentFactory(
+                        listener = linkListener,
                         initialLocator = state.initialLocator,
                         // Seed with the real, DataStore-backed prefs captured at
                         // load-time so Readium doesn't render with defaults and
                         // then reflow (which emits a shifted locator).
                         initialPreferences = state.preferences.toEpubPreferences(),
-                        listener = linkListener,
                         configuration = EpubNavigatorFragment.Configuration(
                             selectionActionModeCallback = selectionCallback
                         )
