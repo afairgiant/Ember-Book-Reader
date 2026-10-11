@@ -98,12 +98,14 @@ Response contains: document, progress, percentage, device, device_id, timestamp
 
 ## Known Limitations
 
-### Highlight/Bookmark Push to Grimmory
-Highlights created in Ember push to Grimmory but **don't render in Grimmory's web reader**. Readium Kotlin uses `href + progression + text` locators without EPUB CFI. Grimmory's web reader requires CFI (`epubcfi(/6/112!/4/2...)`) to render highlights. The data IS stored on Grimmory and syncs correctly between Ember devices — it just can't be visualized in the web reader. Pull (Grimmory → Ember) works correctly because Grimmory's web reader generates real CFIs.
+### EPUB CFIs (highlights, bookmarks, progress)
+Ember computes real EPUB CFIs by injecting foliate-js's `epubcfi.js` (the library Grimmory's web reader uses) into Readium's WebView (`app/src/main/assets/cfi/`, `CfiBridge`). Highlights, bookmarks and progress pushed to Grimmory carry them, and items pulled from Grimmory are placed in the book from their CFI. What remains:
 
-**Root cause**: Readium Kotlin Toolkit doesn't expose EPUB CFI for text selections. Readium.js (used by Grimmory's web reader) does.
-
-**Potential fix**: Inject JavaScript into Readium's WebView at selection time to extract CFI from the DOM. Complex and fragile.
+- **No CFI, no push.** A highlight or bookmark without a real CFI stays on the device: fixed-layout EPUBs, PDFs (PDF bookmarks are not synced at all), and any page where the script fails. Progress falls back to the placeholder `epubcfi(/6/2)` and the percentage.
+- **Older highlights.** Highlights pushed before Ember had real CFIs sit on the server with a fake one and do not render in the web reader. The "repair" action in the highlights sheet replaces them (create new, delete old; the server cannot change an annotation's CFI). There is no repair for bookmarks yet.
+- **Placement is lazy.** A synced highlight or bookmark is placed the first time its chapter is opened in the reader, not at sync time.
+- **Verified in paginated mode only.** Scroll mode and fixed-layout books have not been checked on a device.
+- **The CFI depends on the book file.** If the server's copy of the EPUB changes, existing CFIs may no longer resolve; Ember then leaves the item where it was, or opens progress by percentage.
 
 ### EPUB Scroll Mode Infinite Scroll
 Horizontal swipe is the only way to change chapters in scroll mode. True continuous/infinite vertical scrolling across chapters is not yet implemented. Requires deeper integration with Readium's CSS `overflow: scrolled-continuous` or loading multiple chapters into a single scrollable WebView.

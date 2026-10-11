@@ -399,7 +399,13 @@ Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobo
 
 #### How Ember pushes
 
-Ember has no real CFI (see Known Limitations in `CLAUDE.md`), so it sends the placeholder `epubcfi(/6/2)` to keep `epubProgress` readable, and navigates by percentage only. It sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`.
+Ember sends the real CFI of the first text on the open page, computed with the same foliate-js code the web reader uses, so the web reader opens on the same text. When it has no CFI (a PDF, a fixed-layout book, a page with no text) it sends the placeholder `epubcfi(/6/2)`, which only keeps `epubProgress` readable. The CFI goes in both `fileProgress.positionData` and `epubProgress.cfi`. Ember sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`.
+
+Ember does not send `positionHref` or `contentSourceProgressPercent`. The web reader sends a table-of-contents href in the first and never sends the second.
+
+#### How Ember pulls
+
+Which side is further along is decided by percentage. When the user accepts a remote position whose `epubProgress.cfi` is real, Ember opens the CFI's chapter and goes to the text it points at; otherwise, or if the CFI does not resolve in the local file, it goes to the percentage. The CFI is used only when `epubProgress` is the position the chosen percentage came from (within 0.2%), so a KOReader position that is further along is opened by percentage.
 
 #### KOReader mirroring
 
@@ -408,6 +414,7 @@ Since v3.5.0 every native progress write also overwrites the user's KOReader pro
 - On v3.5.0 this happens only when the KOReader user has both sync and "sync with web reader" enabled. After v3.5.0 that toggle is removed and mirroring happens whenever KOReader sync is enabled.
 - Ember therefore pushes to Grimmory first and kosync second, which leaves Ember's device name and locator in the KOReader record.
 - **The placeholder CFI must not contain a `!` step.** `epubcfi(/6/2)` fails to parse in the CFI-to-xpointer conversion, so the mirrored `progress` stays null. A parseable CFI would be converted to a start-of-book xpointer and handed to KOReader devices on the same account. What a KOReader device does with a null `progress` has not been tested.
+- **A real CFI is mirrored as a real position.** When Ember pushes a real CFI, the mirrored `progress` is the xpointer converted from it. With kosync enabled in Ember that record is replaced a moment later by Ember's own push; with it disabled, the mirrored record stays. Neither case has been checked against a KOReader device.
 - On pull, Ember takes the further along of `koreaderProgress` and `epubProgress`, since either can be the stale one.
 
 ### Search / Home Feeds
@@ -850,6 +857,12 @@ PUT    /api/v1/annotations/{annotationId}    # body: { color, style, note }
 DELETE /api/v1/annotations/{annotationId}    # 204
 ```
 
+The CFI of an annotation cannot be changed after it is created.
+
+### How Ember syncs highlights
+
+A highlight is pushed with the real CFI of its selection and is held on the device when it has none. A highlight pulled from the server is placed in the book from its CFI the first time its chapter is opened. Highlights an older Ember pushed with a number in `cfi` are replaced by the repair action in the highlights sheet: it creates a copy with a real CFI and then deletes the original.
+
 ---
 
 ## Bookmarks
@@ -903,6 +916,10 @@ Create request:
 ```
 
 Update request (all optional): `title` (max 255), `cfi` (max 500), `color` (hex), `notes` (max 2000), `priority` (1–5), `pageNumber` (min 1).
+
+### How Ember syncs bookmarks
+
+An EPUB bookmark is pushed with the real CFI of the first text on its page and is held on the device when it has none. Ember does not send `pageNumber`, so PDF bookmarks are not synced.
 
 ---
 
