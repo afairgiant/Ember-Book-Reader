@@ -25,6 +25,7 @@ data class ReadingProgressEntity(
     val percentage: Float = 0f,
     val locatorJson: String? = null,
     val kosyncProgress: String? = null,
+    val cfi: String? = null,
     val lastReadAt: Instant,
     val syncedAt: Instant? = null,
     val needsSync: Boolean = false

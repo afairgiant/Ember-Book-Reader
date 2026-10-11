@@ -149,6 +149,28 @@ class MigrationsTest {
         }
     }
 
+    @Test
+    fun migrate18To19_addsCfiColumnToReadingProgress() {
+        helper.createDatabase(TEST_DB, 18).use { db ->
+            db.execSQL("INSERT INTO books(id,title,format,addedAt) VALUES('b1','T','EPUB',0)")
+            db.execSQL(
+                "INSERT INTO reading_progress(bookId,percentage,lastReadAt,needsSync) VALUES('b1',0.5,0,0)"
+            )
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            TEST_DB,
+            19,
+            true,
+            EmberDatabase.MIGRATION_18_19
+        )
+
+        migrated.query("SELECT cfi FROM reading_progress").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue("expected NULL default for reading_progress.cfi", c.isNull(0))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "ember-migrations-test"
     }

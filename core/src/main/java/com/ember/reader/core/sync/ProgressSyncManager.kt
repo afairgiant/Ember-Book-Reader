@@ -1,6 +1,7 @@
 package com.ember.reader.core.sync
 
 import com.ember.reader.core.coroutine.runCatchingCancellable
+import com.ember.reader.core.epub.EpubCfi
 import com.ember.reader.core.grimmory.GrimmoryAuthExpiredException
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
@@ -129,7 +130,7 @@ class ProgressSyncManager @Inject constructor(
         val progress = readingProgressRepository.getByBookId(book.id) ?: return PushResult.NothingToPush
         if (progress.percentage <= 0f) return PushResult.NothingToPush
 
-        val grimmory = pushGrimmory(server, book, progress.percentage)
+        val grimmory = pushGrimmory(server, book, progress)
         val kosync = pushKosync(server, book)
 
         reportStatus(server.id, listOf(kosync, grimmory))
@@ -311,7 +312,7 @@ class ProgressSyncManager @Inject constructor(
     private suspend fun pushGrimmory(
         server: Server,
         book: Book,
-        percentage: Float
+        progress: ReadingProgress
     ): SourceOutcome<Unit> {
         val grimmoryBookId = book.grimmoryBookId
             ?: return SourceOutcome.Skipped(SkipReason.NoGrimmoryBookId)
@@ -320,13 +321,16 @@ class ProgressSyncManager @Inject constructor(
             return SourceOutcome.Skipped(SkipReason.GrimmoryNotLoggedIn)
         }
         return runCatchingCancellable {
-            val pct = percentage.toGrimmoryPercentage()
+            val pct = progress.percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
             val fileId = detail?.primaryFileId
-            val epubProgress = GrimmoryEpubProgress(cfi = PLACEHOLDER_CFI, percentage = pct)
+            // The real position when the reader computed one, so Grimmory's web reader
+            // opens on the same text; otherwise the placeholder that keeps the percentage readable.
+            val cfi = progress.cfi?.takeIf { EpubCfi.isRealCfi(it) } ?: PLACEHOLDER_CFI
+            val epubProgress = GrimmoryEpubProgress(cfi = cfi, percentage = pct)
 
             Timber.d(
-                "Sync push: Grimmory request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct cfi=$PLACEHOLDER_CFI"
+                "Sync push: Grimmory request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct cfi=$cfi"
             )
             val pushed = grimmoryClient.putAppBookProgress(
                 baseUrl = server.url,
@@ -336,7 +340,7 @@ class ProgressSyncManager @Inject constructor(
                     // The CFI has to go in positionData too: with fileProgress present the
                     // server stores positionData as the EPUB position and ignores epubProgress.
                     fileProgress = fileId?.let {
-                        GrimmoryFileProgress(bookFileId = it, positionData = PLACEHOLDER_CFI, progressPercent = pct)
+                        GrimmoryFileProgress(bookFileId = it, positionData = cfi, progressPercent = pct)
                     },
                     epubProgress = epubProgress
                 )

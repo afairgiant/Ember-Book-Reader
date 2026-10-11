@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -272,6 +272,16 @@ abstract class EmberDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE highlights ADD COLUMN cfi TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE bookmarks ADD COLUMN cfi TEXT DEFAULT NULL")
+            }
+        }
+
+        /**
+         * Migration 18→19: a nullable `cfi` column on reading_progress for the real EPUB
+         * CFI of the saved position. Existing rows stay NULL and push the placeholder.
+         */
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reading_progress ADD COLUMN cfi TEXT DEFAULT NULL")
             }
         }
 

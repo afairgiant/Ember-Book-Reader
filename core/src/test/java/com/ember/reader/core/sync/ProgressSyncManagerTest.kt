@@ -274,7 +274,44 @@ class ProgressSyncManagerTest {
         }
 
         @Test
-        fun `push sends file-level progress for the primary file with the placeholder CFI`() = runTest {
+        fun `push sends the real CFI of the saved position when there is one`() = runTest {
+            val cfi = "epubcfi(/6/14!/4/22/1:152)"
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, cfi = cfi)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "EPUB", isPrimary = true)))
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            assertEquals(cfi, request.captured.fileProgress?.positionData)
+            assertEquals(cfi, request.captured.epubProgress?.cfi)
+        }
+
+        @Test
+        fun `push falls back to the placeholder for a saved CFI that is not real`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, cfi = "0.4231")
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "EPUB", isPrimary = true)))
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.fileProgress?.positionData)
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.epubProgress?.cfi)
+        }
+
+        @Test
+        fun `push sends file-level progress for the primary file with the placeholder CFI when no CFI was saved`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns readingProgress(percentage = 0.5f)
             coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
