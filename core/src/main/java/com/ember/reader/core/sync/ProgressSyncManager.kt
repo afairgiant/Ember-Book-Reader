@@ -17,6 +17,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
@@ -106,12 +107,27 @@ class ProgressSyncManager @Inject constructor(
 
         reportStatus(server.id, outcomes)
 
-        val best = outcomes
+        val results = outcomes
             .filterIsInstance<SourceOutcome.Ok<RemoteSyncResult>>()
             .mapNotNull { it.value }
-            .maxByOrNull { it.progress.percentage }
-        Timber.d("Sync pull: best=${best?.let { "${it.progress.percentage} from ${it.source}" } ?: "none"}")
+        val best = results.maxByOrNull { it.progress.percentage }?.withCfiFrom(results)
+        Timber.d(
+            "Sync pull: best=${best?.let { "${it.progress.percentage} from ${it.source} cfi=${it.progress.cfi}" } ?: "none"}"
+        )
         best
+    }
+
+    /**
+     * Kosync carries no CFI. When it wins while Grimmory holds a CFI for the same position
+     * (Ember pushes both, and they differ only by rounding), the CFI comes along so the
+     * reader can open on the exact text.
+     */
+    private fun RemoteSyncResult.withCfiFrom(results: List<RemoteSyncResult>): RemoteSyncResult {
+        if (progress.cfi != null) return this
+        val cfi = results.firstNotNullOfOrNull { other ->
+            other.progress.cfi?.takeIf { isSamePosition(other.progress.percentage, progress.percentage) }
+        } ?: return this
+        return copy(progress = progress.copy(cfi = cfi))
     }
 
     /**
@@ -228,7 +244,7 @@ class ProgressSyncManager @Inject constructor(
                 null
             } else {
                 RemoteSyncResult(
-                    progress = ReadingProgress.fromRemote(book.id, server.id, pct),
+                    progress = ReadingProgress.fromRemote(book.id, server.id, pct, cfi = positionCfi(progress, pct)),
                     source = progress.koreaderProgress?.device ?: "Grimmory"
                 )
             }
@@ -395,7 +411,31 @@ class ProgressSyncManager @Inject constructor(
         }
     }
 
+    /**
+     * The real CFI stored with Grimmory's EPUB progress, when that progress is the position
+     * [percentage] was taken from. Null for the placeholder, and when the KOReader record
+     * is the one further along: its position is not the one the CFI points at.
+     */
+    private fun positionCfi(
+        progress: com.ember.reader.core.grimmory.GrimmoryAppBookProgress,
+        percentage: Float
+    ): String? {
+        val epub = progress.epubProgress ?: return null
+        val epubPercentage = epub.percentage?.let { (it / 100f).coerceIn(0f, 1f) } ?: return null
+        if (!isSamePosition(epubPercentage, percentage)) return null
+        return epub.cfi?.takeIf { EpubCfi.isRealCfi(it) }
+    }
+
+    private fun isSamePosition(a: Float, b: Float): Boolean = abs(a - b) <= SAME_POSITION_TOLERANCE
+
     companion object {
+        /**
+         * How far apart two percentages (0-1) may be and still describe one position.
+         * Grimmory keeps one decimal of a percent, so the same position read back from
+         * two records differs by up to 0.0005.
+         */
+        private const val SAME_POSITION_TOLERANCE = 0.002f
+
         /**
          * Stand-in EPUB position sent with every Grimmory push. Readium has no real CFI
          * to offer, but Grimmory only returns `epubProgress` on pull when a CFI is stored.

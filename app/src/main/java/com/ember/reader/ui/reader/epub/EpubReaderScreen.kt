@@ -427,10 +427,14 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
             // Handle sync navigation (accept remote progress)
             LaunchedEffect(pendingNavigation, navigator) {
-                val progression = pendingNavigation ?: return@LaunchedEffect
+                val pending = pendingNavigation ?: return@LaunchedEffect
                 val nav = navigator ?: return@LaunchedEffect
-                state.publication.locateProgression(progression.toDouble())?.let {
-                    nav.go(it)
+                val openedByCfi = pending.cfi != null &&
+                    nav.goToCfi(pending.cfi, state.publication, state.spine, cfiBridge)
+                if (!openedByCfi) {
+                    state.publication.locateProgression(pending.percentage.toDouble())?.let {
+                        nav.go(it)
+                    }
                 }
                 viewModel.onNavigationHandled()
             }

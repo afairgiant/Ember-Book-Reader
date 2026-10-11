@@ -15,11 +15,17 @@ data class ReadingProgress(
     val needsSync: Boolean = false
 ) {
     companion object {
-        fun fromRemote(bookId: String, serverId: Long, percentage: Float): ReadingProgress =
+        fun fromRemote(
+            bookId: String,
+            serverId: Long,
+            percentage: Float,
+            cfi: String? = null,
+        ): ReadingProgress =
             ReadingProgress(
                 bookId = bookId,
                 serverId = serverId,
                 percentage = percentage,
+                cfi = cfi,
                 lastReadAt = Instant.now(),
                 syncedAt = Instant.now(),
                 needsSync = false
