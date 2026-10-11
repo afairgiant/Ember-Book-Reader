@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ember.reader.R
+import com.ember.reader.core.fonts.CustomFont
 import com.ember.reader.core.model.FontFamily
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
@@ -77,6 +78,7 @@ fun ReaderPreferencesSheet(
     onPreferencesChanged: (ReaderPreferences) -> Unit,
     onDismiss: () -> Unit,
     isPdf: Boolean = false,
+    customFonts: List<CustomFont> = emptyList(),
     hasOverride: Boolean = false,
     onResetToDefaults: (() -> Unit)? = null
 ) {
@@ -151,6 +153,7 @@ fun ReaderPreferencesSheet(
                 preferences = preferences,
                 onPreferencesChanged = onPreferencesChanged,
                 isPdf = isPdf,
+                customFonts = customFonts,
                 onMarginPreviewChanged = { activeMarginSlider = it },
             )
         }
@@ -257,6 +260,7 @@ fun ReaderPreferencesContent(
     preferences: ReaderPreferences,
     onPreferencesChanged: (ReaderPreferences) -> Unit,
     isPdf: Boolean = false,
+    customFonts: List<CustomFont> = emptyList(),
     onMarginPreviewChanged: (ActiveMarginSlider?) -> Unit = {},
 ) {
     var sideTouched by remember { mutableStateOf(false) }
@@ -315,11 +319,21 @@ fun ReaderPreferencesContent(
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // A selected custom font that has since been removed selects nothing here;
+                // the reader falls back to the built-in family.
+                val activeCustomFont = preferences.customFont?.takeIf { name -> customFonts.any { it.name == name } }
                 FontFamily.entries.forEach { font ->
                     FilterChip(
-                        selected = preferences.fontFamily == font,
-                        onClick = { onPreferencesChanged(preferences.copy(fontFamily = font)) },
+                        selected = activeCustomFont == null && preferences.fontFamily == font,
+                        onClick = { onPreferencesChanged(preferences.copy(fontFamily = font, customFont = null)) },
                         label = { Text(font.displayName) }
+                    )
+                }
+                customFonts.forEach { font ->
+                    FilterChip(
+                        selected = activeCustomFont == font.name,
+                        onClick = { onPreferencesChanged(preferences.copy(customFont = font.name)) },
+                        label = { Text(font.name) }
                     )
                 }
             }

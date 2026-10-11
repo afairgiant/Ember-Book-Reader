@@ -1,6 +1,7 @@
 package com.ember.reader.core.readium
 
 import android.content.Context
+import com.ember.reader.core.fonts.CustomFontRepository
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
@@ -26,8 +27,14 @@ import timber.log.Timber
 class BookOpener @Inject constructor(
     @ApplicationContext private val context: Context,
     private val grimmoryTokenManager: GrimmoryTokenManager,
-    private val grimmoryClient: GrimmoryClient
+    private val grimmoryClient: GrimmoryClient,
+    private val customFontRepository: CustomFontRepository
 ) {
+
+    /** Adds the user's fonts to a publication's resources so the reader page can load them. */
+    private val withCustomFonts: Publication.Builder.() -> Unit = {
+        container = CustomFontContainer(container, customFontRepository.directory)
+    }
 
     private val httpClient = DefaultHttpClient()
 
@@ -50,7 +57,8 @@ class BookOpener @Inject constructor(
             }
         }
 
-        return when (val result = publicationOpener.open(asset, allowUserInteraction = false)) {
+        val opened = publicationOpener.open(asset, allowUserInteraction = false, onCreatePublication = withCustomFonts)
+        return when (val result = opened) {
             is Try.Success -> Result.success(result.value)
             is Try.Failure -> {
                 Timber.e("Failed to open publication: ${file.name}")
@@ -120,7 +128,8 @@ class BookOpener @Inject constructor(
             }
         }
 
-        return when (val result = streamingOpener.open(asset, allowUserInteraction = false)) {
+        val opened = streamingOpener.open(asset, allowUserInteraction = false, onCreatePublication = withCustomFonts)
+        return when (val result = opened) {
             is Try.Success -> Result.success(result.value)
             is Try.Failure -> {
                 Timber.e("Streaming: failed to open publication: ${result.value}")

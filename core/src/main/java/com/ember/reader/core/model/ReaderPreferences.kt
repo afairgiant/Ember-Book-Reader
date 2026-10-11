@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ReaderPreferences(
     val fontFamily: FontFamily = FontFamily.SYSTEM,
+    /** The name of a font the user added, used in place of [fontFamily] while it exists. */
+    val customFont: String? = null,
     val fontSize: Float = 16f,
     val lineHeight: Float = 1.5f,
     val marginHorizontal: Int = 16,
