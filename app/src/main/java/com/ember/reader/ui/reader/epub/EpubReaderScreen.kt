@@ -32,6 +32,7 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.reader.common.AnnotationDialog
 import com.ember.reader.ui.reader.common.BookmarksSheet
 import com.ember.reader.ui.reader.common.DictionarySheet
+import com.ember.reader.ui.reader.common.FootnoteSheet
 import com.ember.reader.ui.reader.common.HighlightsSheet
 import com.ember.reader.ui.reader.common.NavigatorContainer
 import com.ember.reader.ui.reader.common.ReaderPreferencesSheet
@@ -46,6 +47,7 @@ import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
@@ -57,7 +59,9 @@ import org.readium.r2.navigator.preferences.FontFamily as ReadiumFontFamily
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.services.locateProgression
+import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 import timber.log.Timber
 
@@ -159,6 +163,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var currentTapListener by remember { mutableStateOf<InputListener?>(null) }
     var highlightManager by remember { mutableStateOf<HighlightDecorationManager?>(null) }
     var cfiBridge by remember { mutableStateOf<CfiBridge?>(null) }
+    var footnoteResolver by remember { mutableStateOf<FootnoteResolver?>(null) }
+    var footnote by remember { mutableStateOf<Footnote?>(null) }
     val highlightRepair by viewModel.highlightRepair.collectAsStateWithLifecycle()
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
     var pendingSelectionCfi by remember { mutableStateOf<String?>(null) }
@@ -168,6 +174,36 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var editingHighlight by remember { mutableStateOf<Highlight?>(null) }
     var dictionaryWord by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // A tapped link that refers to a note opens the note over the page. Readium tells us
+    // itself when the book marks the link as one; for the rest the page is asked, which
+    // takes a moment, so the link is held back and followed afterwards if it is not a note.
+    val linkListener = remember {
+        object : EpubNavigatorFragment.Listener {
+            override fun shouldFollowInternalLink(
+                link: Link,
+                context: HyperlinkNavigator.LinkContext?
+            ): Boolean {
+                if (context is HyperlinkNavigator.FootnoteContext) {
+                    val html = FootnoteExtractor.clean(context.noteContent)
+                    if (html.isEmpty()) return true
+                    footnote = Footnote(html, link)
+                    return false
+                }
+                val url = link.url()
+                val fragment = url.fragment ?: return true
+                val resolver = footnoteResolver ?: return true
+                scope.launch {
+                    val html = resolver.noteFor(url.removeFragment().toString(), fragment)
+                    if (html != null) footnote = Footnote(html, link) else navigator?.go(link)
+                }
+                return false
+            }
+
+            // Links out of the book did nothing before this listener existed; still so.
+            override fun onExternalLinkActivated(url: AbsoluteUrl) = Unit
+        }
+    }
 
     // Selection action handler — called from ActionMode.Callback
     val selectionActionHandler = remember { mutableStateOf<((Int) -> Unit)?>(null) }
@@ -253,6 +289,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         // load-time so Readium doesn't render with defaults and
                         // then reflow (which emits a shifted locator).
                         initialPreferences = state.preferences.toEpubPreferences(),
+                        listener = linkListener,
                         configuration = EpubNavigatorFragment.Configuration(
                             selectionActionModeCallback = selectionCallback
                         )
@@ -267,6 +304,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         val manager = HighlightDecorationManager(nav, state.publication, state.spine)
                         highlightManager = manager
                         cfiBridge = state.spine?.let { CfiBridge.create(context, nav, it) }
+                        footnoteResolver = FootnoteResolver.create(context, nav, state.publication)
 
                         // Set up selection action handler
                         selectionActionHandler.value = { actionId ->
@@ -564,6 +602,17 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 )
             }
 
+            footnote?.let { note ->
+                FootnoteSheet(
+                    noteHtml = note.html,
+                    onGoToNote = {
+                        footnote = null
+                        scope.launch { navigator?.go(note.link) }
+                    },
+                    onDismiss = { footnote = null }
+                )
+            }
+
             dictionaryWord?.let { word ->
                 DictionarySheet(
                     word = word,
@@ -696,3 +745,6 @@ private fun android.content.Context.launchIntentOrFallback(intent: Intent, fallb
         startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(fallbackUrl)))
     }
 }
+
+/** A note opened from a link in the text, and the link to where it sits in the book. */
+private data class Footnote(val html: String, val link: Link)
