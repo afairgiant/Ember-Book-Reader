@@ -69,6 +69,25 @@ class BookmarkSyncManagerTest {
         }
 
         @Test
+        fun `a real CFI from the server is kept on the local bookmark`() = runTest {
+            dao.insert(bookmarkEntity(bookId = bookId, cfi = null, remoteId = 12))
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(
+                listOf(
+                    grimmoryBookmark(id = 10, cfi = REAL_CFI),
+                    // What Ember pushed before it had real CFIs: a progression number.
+                    grimmoryBookmark(id = 11, cfi = "0.4231"),
+                    grimmoryBookmark(id = 12, cfi = REAL_CFI),
+                )
+            )
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(REAL_CFI, dao.all.first { it.remoteId == 10L }.cfi)
+            assertEquals(null, dao.all.first { it.remoteId == 11L }.cfi)
+            assertEquals(REAL_CFI, dao.all.first { it.remoteId == 12L }.cfi)
+        }
+
+        @Test
         fun `server bookmark with null cfi is skipped`() = runTest {
             val serverBm = grimmoryBookmark(id = 10, cfi = null)
             coEvery {
@@ -230,13 +249,12 @@ class BookmarkSyncManagerTest {
     inner class LocalToServer {
 
         @Test
-        fun `new local bookmark pushes to server and stores remoteId`() = runTest {
-            val locatorJson = CfiLocatorConverter.buildLocatorJson("/6/4!/4/2", chapterTitle = "Ch 1")
-            dao.insert(bookmarkEntity(bookId = bookId, locatorJson = locatorJson, title = "Ch 1", remoteId = null))
+        fun `new local bookmark pushes its real CFI to the server and stores remoteId`() = runTest {
+            dao.insert(bookmarkEntity(bookId = bookId, title = "Ch 1", cfi = REAL_CFI, remoteId = null))
 
             coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
             coEvery { grimmoryClient.createBookmark(any(), any(), any()) } returns Result.success(
-                grimmoryBookmark(id = 99, cfi = "/6/4!/4/2", title = "Ch 1")
+                grimmoryBookmark(id = 99, cfi = REAL_CFI, title = "Ch 1")
             )
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
@@ -247,16 +265,33 @@ class BookmarkSyncManagerTest {
             val requestSlot = slot<CreateBookmarkRequest>()
             coVerify { grimmoryClient.createBookmark(any(), any(), capture(requestSlot)) }
             assertEquals(grimmoryBookId, requestSlot.captured.bookId)
-            assertEquals("/6/4!/4/2", requestSlot.captured.cfi)
+            assertEquals(REAL_CFI, requestSlot.captured.cfi)
+        }
+
+        @Test
+        fun `local bookmark without a real CFI is held on the device`() = runTest {
+            // A Readium locator has no CFI; its progression used to be sent in place of one.
+            dao.insert(
+                bookmarkEntity(
+                    bookId = bookId, cfi = null, remoteId = null,
+                    locatorJson = """{"href":"/chapter1.xhtml","locations":{"progression":0.4231}}""",
+                )
+            )
+            dao.insert(bookmarkEntity(bookId = bookId, cfi = "epubcfi(/6/2)", remoteId = null))
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createBookmark(any(), any(), any()) }
+            assertEquals(2, dao.all.size)
+            assertTrue(dao.all.all { it.remoteId == null })
         }
 
         @Test
         fun `new local matching existing server CFI links instead of creating`() = runTest {
-            val cfi = "/6/4!/4/2"
-            val locatorJson = CfiLocatorConverter.buildLocatorJson(cfi)
-            dao.insert(bookmarkEntity(bookId = bookId, locatorJson = locatorJson, remoteId = null))
+            dao.insert(bookmarkEntity(bookId = bookId, cfi = REAL_CFI, remoteId = null))
 
-            val serverBm = grimmoryBookmark(id = 50, cfi = cfi)
+            val serverBm = grimmoryBookmark(id = 50, cfi = REAL_CFI)
             coEvery {
                 grimmoryClient.getBookmarks(any(), any(), any())
             } returns Result.success(listOf(serverBm))
@@ -270,9 +305,8 @@ class BookmarkSyncManagerTest {
 
         @Test
         fun `409 conflict recovery re-fetches and links by CFI`() = runTest {
-            val cfi = "/6/8!/4/2"
-            val locatorJson = CfiLocatorConverter.buildLocatorJson(cfi)
-            dao.insert(bookmarkEntity(bookId = bookId, locatorJson = locatorJson, remoteId = null))
+            val cfi = REAL_CFI
+            dao.insert(bookmarkEntity(bookId = bookId, cfi = cfi, remoteId = null))
 
             coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returnsMany listOf(
                 Result.success(emptyList()), // initial fetch returns nothing
@@ -313,10 +347,9 @@ class BookmarkSyncManagerTest {
             // 3. Tombstoned, remoteId=20 → should delete from server
             // 4. Linked to remote 30, no longer on server → should be deleted locally
 
-            val locatorWithCfi = CfiLocatorConverter.buildLocatorJson("/6/100")
 
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 10, title = "Updated locally", updatedAt = Instant.parse("2026-01-02T00:00:00Z")))
-            dao.insert(bookmarkEntity(bookId = bookId, remoteId = null, locatorJson = locatorWithCfi, title = "Brand new"))
+            dao.insert(bookmarkEntity(bookId = bookId, remoteId = null, cfi = REAL_CFI, title = "Brand new"))
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 20, deletedAt = Instant.parse("2026-01-01T06:00:00Z")))
             dao.insert(bookmarkEntity(bookId = bookId, remoteId = 30, title = "Server deleted this"))
 
@@ -338,7 +371,7 @@ class BookmarkSyncManagerTest {
             } returns Result.success(grimmoryBookmark(id = 10))
             coEvery {
                 grimmoryClient.createBookmark(any(), any(), any())
-            } returns Result.success(grimmoryBookmark(id = 60, cfi = "/6/100"))
+            } returns Result.success(grimmoryBookmark(id = 60, cfi = REAL_CFI))
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
@@ -409,5 +442,9 @@ class BookmarkSyncManagerTest {
 
             assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
         }
+    }
+
+    private companion object {
+        const val REAL_CFI = "epubcfi(/6/8!/4/2/1:0)"
     }
 }

@@ -19,13 +19,14 @@ class BookmarkRepository @Inject constructor(
     fun observeByBookId(bookId: String): Flow<List<Bookmark>> =
         bookmarkDao.observeByBookId(bookId).map { entities -> entities.map { it.toDomain() } }
 
-    suspend fun addBookmark(bookId: String, locatorJson: String, title: String?): Long {
+    suspend fun addBookmark(bookId: String, locatorJson: String, title: String?, cfi: String? = null): Long {
         val now = Instant.now()
         return bookmarkDao.insert(
             BookmarkEntity(
                 bookId = bookId,
                 locatorJson = locatorJson,
                 title = title,
+                cfi = cfi,
                 createdAt = now,
                 updatedAt = now
             )

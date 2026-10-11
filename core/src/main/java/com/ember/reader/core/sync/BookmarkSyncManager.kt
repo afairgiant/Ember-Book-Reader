@@ -2,6 +2,7 @@ package com.ember.reader.core.sync
 
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.entity.BookmarkEntity
+import com.ember.reader.core.epub.EpubCfi
 import com.ember.reader.core.grimmory.CreateBookmarkRequest
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateBookmarkRequest
@@ -43,12 +44,18 @@ class BookmarkSyncManager @Inject constructor(
                         .onSuccess { Timber.d("BookmarkSync: deleted remote bookmark %d", serverBookmark.id) }
                         .onFailure { Timber.w(it, "BookmarkSync: failed to delete remote bookmark %d", serverBookmark.id) }
                 } else {
+                    // Keep a real CFI the server has for a bookmark stored before Ember kept them
+                    val known = if (local.cfi == null && EpubCfi.isRealCfi(serverBookmark.cfi)) {
+                        local.copy(cfi = serverBookmark.cfi).also { bookmarkDao.update(it) }
+                    } else {
+                        local
+                    }
                     // Both active → compare timestamps, update loser
                     val serverTime = parseTimestamp(serverBookmark.updatedAt)
                     if (serverTime != null && serverTime.isAfter(local.updatedAt)) {
                         // Server is newer → update local
                         bookmarkDao.update(
-                            local.copy(
+                            known.copy(
                                 title = serverBookmark.title ?: local.title,
                                 updatedAt = serverTime
                             )
@@ -75,6 +82,7 @@ class BookmarkSyncManager @Inject constructor(
                         bookId = bookId,
                         locatorJson = locatorJson,
                         title = serverBookmark.title,
+                        cfi = cfi.takeIf { EpubCfi.isRealCfi(it) },
                         createdAt = parseTimestamp(serverBookmark.createdAt) ?: now,
                         remoteId = serverBookmark.id,
                         updatedAt = parseTimestamp(serverBookmark.updatedAt) ?: now
@@ -87,8 +95,13 @@ class BookmarkSyncManager @Inject constructor(
         // Process local bookmarks
         for (local in localBookmarks) {
             if (local.remoteId == null && local.deletedAt == null) {
-                // New local → push to server
-                val cfi = CfiLocatorConverter.extractCfi(local.locatorJson) ?: continue
+                // New local → push to server. Grimmory's web reader can only open a
+                // bookmark from a real CFI, so one without it stays on this device.
+                val cfi = local.cfi?.takeIf { EpubCfi.isRealCfi(it) }
+                if (cfi == null) {
+                    Timber.d("BookmarkSync: holding local bookmark %d, no real CFI", local.id)
+                    continue
+                }
 
                 // Check if server already has this CFI (match by position)
                 val existingOnServer = serverBookmarks.find { it.cfi == cfi }

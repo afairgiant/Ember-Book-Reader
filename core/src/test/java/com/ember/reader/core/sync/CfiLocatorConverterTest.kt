@@ -44,7 +44,7 @@ class CfiLocatorConverterTest {
         }
 
         @Test
-        fun `falls back to progression when no fragments`() {
+        fun `returns null for a Readium locator, which has no fragments`() {
             val json = JSONObject().apply {
                 put("href", "/chapter1.xhtml")
                 put(
@@ -55,7 +55,7 @@ class CfiLocatorConverterTest {
                 )
             }.toString()
 
-            assertEquals("0.5", CfiLocatorConverter.extractCfi(json))
+            assertNull(CfiLocatorConverter.extractCfi(json))
         }
 
         @Test
