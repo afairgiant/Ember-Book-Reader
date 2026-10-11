@@ -198,6 +198,11 @@
     <string name="bookmark_cd">Bookmark</string>
     <string name="search_cd">Search</string>
     <string name="font_section">Font</string>
+    <string name="custom_fonts_title">Your fonts</string>
+    <string name="custom_font_add">Add a font</string>
+    <string name="custom_font_add_hint">TTF or OTF file. Appears in the font list for EPUBs.</string>
+    <string name="custom_font_remove">Remove %1$s</string>
+    <string name="font_import_failed">That file is not a TTF or OTF font Ember can use.</string>
     <string name="font_size_section">Font Size</string>
     <string name="line_height_section">Line Height</string>
     <string name="text_align_section">Text Align</string>
@@ -331,9 +336,4 @@
     <string name="no_log_entries">No log entries yet</string>
     <string name="logs_appear_hint">Logs will appear as the app runs</string>
     <string name="logs_copied">Logs copied to clipboard</string>
-    <string name="custom_fonts_title">Your fonts</string>
-    <string name="custom_font_add">Add a font</string>
-    <string name="custom_font_add_hint">TTF or OTF file. Appears in the font list for EPUBs.</string>
-    <string name="custom_font_remove">Remove %1$s</string>
-    <string name="font_import_failed">That file is not a TTF or OTF font Ember can use.</string>
 </resources>
