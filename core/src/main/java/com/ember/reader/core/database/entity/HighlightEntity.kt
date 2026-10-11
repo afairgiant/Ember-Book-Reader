@@ -27,6 +27,7 @@ data class HighlightEntity(
     val color: HighlightColor = HighlightColor.YELLOW,
     val annotation: String? = null,
     val selectedText: String? = null,
+    val cfi: String? = null,
     val createdAt: Instant,
     val remoteId: Long? = null,
     val updatedAt: Instant = Instant.now(),

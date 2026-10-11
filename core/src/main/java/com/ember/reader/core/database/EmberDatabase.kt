@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -260,6 +260,18 @@ abstract class EmberDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE books ADD COLUMN fileSizeKb INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE books ADD COLUMN ageRating INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE books ADD COLUMN contentRating TEXT DEFAULT NULL")
+            }
+        }
+
+        /**
+         * Migration 17→18: a nullable `cfi` column on highlights and bookmarks for the
+         * real EPUB CFI. Existing rows stay NULL: what they hold in their locator is a
+         * Readium position (or, for synced rows, the server's CFI in `fragments`).
+         */
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE highlights ADD COLUMN cfi TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE bookmarks ADD COLUMN cfi TEXT DEFAULT NULL")
             }
         }
 
