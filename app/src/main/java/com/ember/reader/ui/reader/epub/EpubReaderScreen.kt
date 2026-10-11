@@ -59,6 +59,7 @@ import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.services.locateProgression
+import org.readium.r2.shared.util.Url
 import timber.log.Timber
 
 private const val FRAGMENT_TAG = "epub_navigator"
@@ -444,6 +445,25 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
             }
 
+            // Place highlights and bookmarks synced from Grimmory once the chapter they
+            // belong to is on screen. Placing rewrites their stored locators, which
+            // re-runs this with nothing left to do for the chapter.
+            val placer = remember(cfiBridge, state.spine) {
+                val bridge = cfiBridge ?: return@remember null
+                val spine = state.spine ?: return@remember null
+                SyncedPositionPlacer(bridge, spine) { href ->
+                    Url(href)?.let { state.publication.linkWithHref(it)?.url()?.toString() } ?: href
+                }
+            }
+            LaunchedEffect(placer, currentChapterHref, highlights, bookmarks) {
+                val href = currentChapterHref ?: return@LaunchedEffect
+                placer ?: return@LaunchedEffect
+                viewModel.placeSyncedPositions(
+                    highlights = placer.place(href, highlights.associate { it.id to it.locatorJson }, requireText = true),
+                    bookmarks = placer.place(href, bookmarks.associate { it.id to it.locatorJson }, requireText = false),
+                )
+            }
+
             // Apply highlight decorations when navigator ready or highlights change
             LaunchedEffect(highlightManager, highlights) {
                 highlightManager?.applyHighlights(highlights)
@@ -532,7 +552,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 BookmarksSheet(
                     bookmarks = bookmarks,
                     onNavigate = { bookmark ->
-                        bookmark.locatorJson.toLocator()?.let { locator ->
+                        bookmark.locatorJson.toLocator(state.publication, state.spine)?.let { locator ->
                             scope.launch { navigator?.go(locator) }
                         }
                         showBookmarks = false
@@ -582,7 +602,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         }
                     },
                     onNavigate = { highlight ->
-                        highlight.locatorJson.toLocator()?.let { locator ->
+                        highlight.locatorJson.toLocator(state.publication, state.spine)?.let { locator ->
                             scope.launch { navigator?.go(locator) }
                         }
                         showHighlights = false

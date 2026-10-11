@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,14 +104,24 @@ private fun HighlightRepairRow(lackingCfi: Int, state: HighlightRepairState, onR
     val message = when (state) {
         HighlightRepairState.Running -> stringResource(R.string.highlight_repair_running)
         HighlightRepairState.Failed -> stringResource(R.string.highlight_repair_failed)
-        is HighlightRepairState.Done ->
+        is HighlightRepairState.Done -> {
+            val done = pluralStringResource(R.plurals.highlight_repair_done, state.repaired, state.repaired)
             if (state.unresolved == 0) {
-                stringResource(R.string.highlight_repair_done, state.repaired)
+                done
             } else {
-                stringResource(R.string.highlight_repair_done_partial, state.repaired, state.unresolved)
+                done + " " + pluralStringResource(
+                    R.plurals.highlight_repair_unmatched,
+                    state.unresolved,
+                    state.unresolved,
+                )
             }
+        }
         HighlightRepairState.Idle ->
-            if (lackingCfi == 0) return else stringResource(R.string.highlight_repair_offer, lackingCfi)
+            if (lackingCfi == 0) {
+                return
+            } else {
+                pluralStringResource(R.plurals.highlight_repair_offer, lackingCfi, lackingCfi)
+            }
     }
     Row(
         modifier = Modifier

@@ -215,4 +215,72 @@ class CfiLocatorConverterTest {
             assertEquals("My Chapter", CfiLocatorConverter.extractTitle(locatorJson))
         }
     }
+
+    @Nested
+    inner class Placement {
+
+        private val synced = CfiLocatorConverter.buildLocatorJson(
+            "epubcfi(/6/4!/4/2,/1:16,/1:19)",
+            selectedText = "fox",
+            chapterTitle = "Ch 1",
+        )
+
+        @Test
+        fun `unplacedCfi returns the CFI of a synced locator with no chapter yet`() {
+            assertEquals("epubcfi(/6/4!/4/2,/1:16,/1:19)", CfiLocatorConverter.unplacedCfi(synced))
+            // Older rows stored the CFI without its wrapper.
+            assertEquals(
+                "epubcfi(/6/4!/4/2/1:0)",
+                CfiLocatorConverter.unplacedCfi("""{"href":"","locations":{"fragments":["/6/4!/4/2/1:0"]}}"""),
+            )
+        }
+
+        @Test
+        fun `unplacedCfi is null for a placed locator, a local one and a fake CFI`() {
+            val placed = CfiLocatorConverter.placedLocatorJson(synced, "OEBPS/ch1.xhtml", "fox", "", "", null)
+
+            assertEquals(null, CfiLocatorConverter.unplacedCfi(placed))
+            assertEquals(
+                null,
+                CfiLocatorConverter.unplacedCfi("""{"href":"OEBPS/ch1.xhtml","locations":{"progression":0.4}}"""),
+            )
+            assertEquals(null, CfiLocatorConverter.unplacedCfi(CfiLocatorConverter.buildLocatorJson("0.4231")))
+            assertEquals(null, CfiLocatorConverter.unplacedCfi("not json"))
+        }
+
+        @Test
+        fun `placedLocatorJson adds chapter, context and position and keeps the rest`() {
+            val placed = JSONObject(
+                CfiLocatorConverter.placedLocatorJson(
+                    synced, href = "OEBPS/ch1.xhtml", exact = "fox", before = "brown ", after = " jumps",
+                    progression = 0.25,
+                )
+            )
+
+            assertEquals("OEBPS/ch1.xhtml", placed.getString("href"))
+            assertEquals("Ch 1", placed.getString("title"))
+            assertEquals(0.25, placed.getJSONObject("locations").getDouble("progression"))
+            assertEquals(
+                "epubcfi(/6/4!/4/2,/1:16,/1:19)",
+                placed.getJSONObject("locations").getJSONArray("fragments").getString(0),
+            )
+            val text = placed.getJSONObject("text")
+            assertEquals("fox", text.getString("highlight"))
+            assertEquals("brown ", text.getString("before"))
+            assertEquals(" jumps", text.getString("after"))
+        }
+
+        @Test
+        fun `placedLocatorJson for a position leaves out empty text and an unknown progression`() {
+            val bookmark = CfiLocatorConverter.buildLocatorJson("epubcfi(/6/4!/4/2/1:40)")
+
+            val placed = JSONObject(
+                CfiLocatorConverter.placedLocatorJson(bookmark, "OEBPS/ch1.xhtml", exact = "", before = "", after = "dog", progression = null)
+            )
+
+            assertEquals(false, placed.getJSONObject("locations").has("progression"))
+            assertEquals(false, placed.getJSONObject("text").has("highlight"))
+            assertEquals("dog", placed.getJSONObject("text").getString("after"))
+        }
+    }
 }

@@ -183,6 +183,8 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.androidx.paging.testing)
+    // Real org.json for JVM tests; the Android stub returns defaults. Same as :core.
+    testImplementation("org.json:json:20231013")
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
     androidTestImplementation(platform(libs.compose.bom))

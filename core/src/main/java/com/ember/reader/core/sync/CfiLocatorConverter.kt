@@ -57,6 +57,41 @@ object CfiLocatorConverter {
     }
 
     /**
+     * The CFI of a locator from [buildLocatorJson] that has not been placed in the book
+     * yet: no chapter, and a real CFI to find one with. Null for any other locator.
+     */
+    fun unplacedCfi(locatorJson: String): String? = runCatching {
+        val json = JSONObject(locatorJson)
+        if (json.optString("href").isNotEmpty()) return@runCatching null
+        val fragment = json.optJSONObject("locations")?.optJSONArray("fragments")?.optString(0)
+        fragment?.let { EpubCfi.wrap(it) }?.takeIf { EpubCfi.isRealCfi(it) }
+    }.getOrNull()
+
+    /**
+     * Rewrites a locator from [buildLocatorJson] once its CFI has been resolved in the
+     * book: the chapter, the text around it so the right occurrence is found, and how far
+     * into the chapter it is. The CFI stays in `fragments`.
+     */
+    fun placedLocatorJson(
+        locatorJson: String,
+        href: String,
+        exact: String,
+        before: String,
+        after: String,
+        progression: Double?,
+    ): String {
+        val json = JSONObject(locatorJson)
+        json.put("href", href)
+        val locations = json.optJSONObject("locations") ?: JSONObject().also { json.put("locations", it) }
+        if (progression != null) locations.put("progression", progression)
+        val text = json.optJSONObject("text") ?: JSONObject().also { json.put("text", it) }
+        if (exact.isNotEmpty()) text.put("highlight", exact)
+        if (before.isNotEmpty()) text.put("before", before)
+        if (after.isNotEmpty()) text.put("after", after)
+        return json.toString()
+    }
+
+    /**
      * Extract chapter title from a Readium Locator JSON string.
      */
     fun extractTitle(locatorJson: String): String? = runCatching {

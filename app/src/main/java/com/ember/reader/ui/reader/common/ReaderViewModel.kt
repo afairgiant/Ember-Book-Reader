@@ -332,6 +332,15 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
     }
 
+    /** Stores where synced highlights and bookmarks were found in the book. */
+    fun placeSyncedPositions(highlights: Map<Long, String>, bookmarks: Map<Long, String>) {
+        if (highlights.isEmpty() && bookmarks.isEmpty()) return
+        viewModelScope.launch {
+            highlightRepository.placeHighlights(highlights)
+            bookmarkRepository.placeBookmarks(bookmarks)
+        }
+    }
+
     private val _highlightRepair = MutableStateFlow<HighlightRepairState>(HighlightRepairState.Idle)
     val highlightRepair: StateFlow<HighlightRepairState> = _highlightRepair.asStateFlow()
 
