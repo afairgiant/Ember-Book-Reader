@@ -397,15 +397,13 @@ class ProgressSyncManager @Inject constructor(
 
     companion object {
         /**
-         * Stand-in EPUB position for a Grimmory push that has no real CFI: a PDF, a
-         * fixed-layout book, or a page the reader could not compute one for. Grimmory only
-         * returns `epubProgress` on pull when a CFI is stored, so something has to be sent.
+         * Stand-in EPUB position sent with every Grimmory push. Readium has no real CFI
+         * to offer, but Grimmory only returns `epubProgress` on pull when a CFI is stored.
          *
          * It must stay without a `!` step. Grimmory converts the stored CFI to a KOReader
          * xpointer when it mirrors progress into the KOReader record; this value fails to
          * parse there, so the mirrored position is left empty. A parseable CFI such as
          * `epubcfi(/6/2!/4)` would instead send KOReader devices to the start of the book.
-         * A real CFI is converted to a real position, which is the intended result.
          */
         const val PLACEHOLDER_CFI = "epubcfi(/6/2)"
     }
