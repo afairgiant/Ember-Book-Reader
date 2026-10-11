@@ -435,14 +435,16 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 viewModel.onNavigationHandled()
             }
 
-            // Debug builds log the CFI of each settled position, to compare against
-            // Grimmory's web reader until progress sync starts using it.
-            if (BuildConfig.DEBUG) {
-                LaunchedEffect(cfiBridge, currentLocator) {
-                    val bridge = cfiBridge ?: return@LaunchedEffect
-                    delay(500)
-                    Timber.d("CFI position: %s", bridge.visibleStartCfi())
-                }
+            // Once a page has settled, work out its real CFI so the progress saved for it
+            // can carry one. Progress is saved a few seconds after a page turn, by which
+            // time this has answered.
+            LaunchedEffect(cfiBridge, currentLocator) {
+                val bridge = cfiBridge ?: return@LaunchedEffect
+                val locator = currentLocator ?: return@LaunchedEffect
+                delay(500)
+                val cfi = bridge.visibleStartCfi()
+                Timber.d("CFI position: %s", cfi)
+                viewModel.onPositionCfi(locator, cfi)
             }
 
             // Place highlights and bookmarks synced from Grimmory once the chapter they

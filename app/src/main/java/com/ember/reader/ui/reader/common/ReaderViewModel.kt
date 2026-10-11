@@ -288,6 +288,14 @@ class ReaderViewModel @Inject constructor(
         _syncConflict.value = null
     }
 
+    /** The real CFI the reader computed for a position, kept until that position is saved. */
+    private var positionCfi: Pair<Locator, String>? = null
+
+    /** Reported by the EPUB reader once a page has settled; null when it has no CFI. */
+    fun onPositionCfi(locator: Locator, cfi: String?) {
+        positionCfi = cfi?.let { locator to it }
+    }
+
     fun onLocatorChanged(locator: Locator) {
         _currentLocator.value = locator
         scheduleSaveProgress(locator)
@@ -516,7 +524,10 @@ class ReaderViewModel @Inject constructor(
             bookId = bookId,
             serverId = book?.serverId,
             percentage = percentage,
-            locatorJson = locator.toJsonString()
+            locatorJson = locator.toJsonString(),
+            // Only when it was computed for this very position; a stale CFI would send
+            // other clients somewhere else.
+            cfi = positionCfi?.takeIf { it.first == locator }?.second,
         )
     }
 

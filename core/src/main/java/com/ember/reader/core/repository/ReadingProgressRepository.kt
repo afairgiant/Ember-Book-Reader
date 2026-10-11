@@ -35,7 +35,9 @@ class ReadingProgressRepository @Inject constructor(
         bookId: String,
         serverId: Long?,
         percentage: Float,
-        locatorJson: String?
+        locatorJson: String?,
+        /** The real CFI of this same position. Null clears any CFI saved for an earlier one. */
+        cfi: String? = null,
     ) {
         val progress = ReadingProgress(
             bookId = bookId,
@@ -43,6 +45,7 @@ class ReadingProgressRepository @Inject constructor(
             percentage = percentage,
             locatorJson = locatorJson,
             kosyncProgress = locatorJson,
+            cfi = cfi,
             lastReadAt = Instant.now(),
             needsSync = serverId != null
         )

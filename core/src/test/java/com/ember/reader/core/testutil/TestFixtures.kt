@@ -121,12 +121,14 @@ object TestFixtures {
         serverId: Long? = 1L,
         percentage: Float = 0.5f,
         locatorJson: String? = null,
-        needsSync: Boolean = false
+        needsSync: Boolean = false,
+        cfi: String? = null,
     ) = ReadingProgress(
         bookId = bookId,
         serverId = serverId,
         percentage = percentage,
         locatorJson = locatorJson,
+        cfi = cfi,
         needsSync = needsSync
     )
 

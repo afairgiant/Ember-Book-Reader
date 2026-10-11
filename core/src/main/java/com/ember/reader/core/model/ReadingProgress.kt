@@ -8,6 +8,8 @@ data class ReadingProgress(
     val percentage: Float = 0f,
     val locatorJson: String? = null,
     val kosyncProgress: String? = null,
+    /** The real EPUB CFI of this position, when the reader could compute one. */
+    val cfi: String? = null,
     val lastReadAt: Instant = Instant.now(),
     val syncedAt: Instant? = null,
     val needsSync: Boolean = false
