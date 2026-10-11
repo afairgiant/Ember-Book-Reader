@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ember.reader.BuildConfig
 import com.ember.reader.R
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReaderPreferences
@@ -277,20 +276,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                                 // that follow clear the selection before a highlight is saved.
                                 pendingSelectionCfi = cfiBridge?.selectionCfi()
                                 Timber.d("CFI selection: %s", pendingSelectionCfi)
-                                // Debug builds also place the same words through the offscreen
-                                // path the repair uses; the two CFIs should be the same passage.
-                                if (BuildConfig.DEBUG) {
-                                    state.spine?.let { spine ->
-                                        val probe = Highlight(
-                                            bookId = "",
-                                            locatorJson = selection.locator.toJsonString(),
-                                            selectedText = selection.locator.text.highlight,
-                                        )
-                                        val offscreen = OffscreenCfiResolver(context, state.publication, spine)
-                                            .cfisFor(listOf(probe))[probe.id]
-                                        Timber.d("CFI offscreen: %s", offscreen)
-                                    }
-                                }
                                 when (actionId) {
                                     R.id.action_highlight -> {
                                         pendingSelection = selection
