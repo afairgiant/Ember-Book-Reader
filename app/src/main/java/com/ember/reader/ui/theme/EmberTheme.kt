@@ -61,8 +61,14 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF201A18),
     surfaceVariant = Color(0xFFFFF0E8),
     onSurfaceVariant = Color(0xFF534340),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFFFF1EA),
+    surfaceContainer = Color(0xFFFCEAE2),
+    surfaceContainerHigh = Color(0xFFF6E4DC),
+    surfaceContainerHighest = Color(0xFFF0DED6),
     background = Color(0xFFFFF8F5),
-    outline = Color(0xFFD4A898)
+    outline = Color(0xFFD4A898),
+    outlineVariant = Color(0xFFE3CFC7)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -80,8 +86,14 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = Color(0xFFEDE0DB),
     surfaceVariant = Color(0xFF2E2220),
     onSurfaceVariant = Color(0xFFD8C2BA),
+    surfaceContainerLowest = Color(0xFF140E0C),
+    surfaceContainerLow = Color(0xFF221917),
+    surfaceContainer = Color(0xFF261D1B),
+    surfaceContainerHigh = Color(0xFF312725),
+    surfaceContainerHighest = Color(0xFF3C3230),
     background = Color(0xFF1A1210),
-    outline = Color(0xFF7D5D53)
+    outline = Color(0xFF7D5D53),
+    outlineVariant = Color(0xFF53433F)
 )
 
 /** The colour an accent is shown as in its swatch, and the one its scheme is built from. */
@@ -110,7 +122,8 @@ fun emberColorScheme(darkTheme: Boolean, oledBlack: Boolean, accent: AppAccent):
             surfaceContainerLow = Color(0xFF12100F),
             surfaceContainer = Color(0xFF171413),
             surfaceContainerHigh = Color(0xFF1F1B1A),
-            surfaceContainerHighest = Color(0xFF292423)
+            surfaceContainerHighest = Color(0xFF292423),
+            outlineVariant = Color(0xFF3A322F)
         )
     }
     if (accent != AppAccent.EMBER) {
