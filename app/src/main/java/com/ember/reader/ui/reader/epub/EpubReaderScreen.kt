@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
+import com.ember.reader.core.fonts.CustomFont
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
@@ -80,6 +81,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val highlights by viewModel.highlights.collectAsStateWithLifecycle()
     val syncConflict by viewModel.syncConflict.collectAsStateWithLifecycle()
     val pendingNavigation by viewModel.pendingNavigation.collectAsStateWithLifecycle()
+    val customFonts by viewModel.customFonts.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
 
@@ -285,10 +287,10 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         // Seed with the real, DataStore-backed prefs captured at
                         // load-time so Readium doesn't render with defaults and
                         // then reflow (which emits a shifted locator).
-                        initialPreferences = state.preferences.toEpubPreferences(),
+                        initialPreferences = state.preferences.toEpubPreferences(customFonts),
                         configuration = EpubNavigatorFragment.Configuration(
                             selectionActionModeCallback = selectionCallback
-                        )
+                        ).apply { declareCustomFonts(customFonts) }
                     ),
                     locatorFlow = { fragment ->
                         (fragment as? EpubNavigatorFragment)?.currentLocator
@@ -370,7 +372,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
             // Apply preferences to the Readium navigator whenever they change
             LaunchedEffect(preferences, navigator) {
                 val nav = navigator ?: return@LaunchedEffect
-                nav.submitPreferences(preferences.toEpubPreferences())
+                nav.submitPreferences(preferences.toEpubPreferences(customFonts))
 
                 // Remove old listeners
                 dirNavAdapter?.let { nav.removeInputListener(it) }
@@ -622,6 +624,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     preferences = preferences,
                     onPreferencesChanged = viewModel::updatePreferences,
                     onDismiss = { showPreferences = false },
+                    customFonts = customFonts,
                     hasOverride = hasBookOverride,
                     onResetToDefaults = viewModel::resetPreferencesToDefaults
                 )
@@ -668,7 +671,25 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     }
 }
 
-private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
+/**
+ * Tells Readium about the user's fonts. Each is served from the publication's own URL
+ * space (see `CustomFontContainer`), so it loads from the same origin as the chapters.
+ */
+@OptIn(ExperimentalReadiumApi::class)
+private fun EpubNavigatorFragment.Configuration.declareCustomFonts(fonts: List<CustomFont>) {
+    fonts.forEach { font ->
+        val source = Url(PUBLICATION_BASE_URL + CustomFont.RESOURCE_PREFIX + font.fileName) ?: return@forEach
+        addFontFamilyDeclaration(ReadiumFontFamily(font.name)) {
+            addFontFace { addSource(source) }
+        }
+    }
+}
+
+/** Where Readium's navigator serves a publication's resources to its WebViews. */
+private const val PUBLICATION_BASE_URL = "https://readium/publication/"
+
+/** @param customFonts the fonts declared to the reader; a selected one that is gone is ignored. */
+private fun ReaderPreferences.toEpubPreferences(customFonts: List<CustomFont> = emptyList()): EpubPreferences {
     // Built-in themes use Readium's Theme enum; custom themes pass colors directly
     val readiumTheme = when (theme) {
         ReaderTheme.LIGHT -> Theme.LIGHT
@@ -681,7 +702,8 @@ private fun ReaderPreferences.toEpubPreferences(): EpubPreferences {
     val fgColor = if (!theme.isBuiltIn) ReadiumColor(theme.foregroundColor.toInt()) else null
 
     return EpubPreferences(
-        fontFamily = fontFamily.cssValue?.let { ReadiumFontFamily(it) },
+        fontFamily = (customFont?.takeIf { name -> customFonts.any { it.name == name } } ?: fontFamily.cssValue)
+            ?.let { ReadiumFontFamily(it) },
         fontSize = fontSize.toDouble() / 16.0,
         lineHeight = lineHeight.toDouble(),
         scroll = !isPaginated,

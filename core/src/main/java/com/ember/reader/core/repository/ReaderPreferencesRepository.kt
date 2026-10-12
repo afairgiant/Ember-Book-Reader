@@ -74,6 +74,7 @@ class ReaderPreferencesRepository @Inject constructor(
 
     private object Keys {
         val FONT_FAMILY = stringPreferencesKey("font_family")
+        val CUSTOM_FONT = stringPreferencesKey("custom_font")
         val FONT_SIZE = floatPreferencesKey("font_size")
         val LINE_HEIGHT = floatPreferencesKey("line_height")
         val MARGIN_HORIZONTAL = intPreferencesKey("margin_horizontal")
@@ -107,6 +108,7 @@ class ReaderPreferencesRepository @Inject constructor(
             ReaderPreferences(
                 fontFamily = prefs[Keys.FONT_FAMILY]?.let { FontFamily.valueOf(it) }
                     ?: FontFamily.SYSTEM,
+                customFont = prefs[Keys.CUSTOM_FONT],
                 fontSize = prefs[Keys.FONT_SIZE] ?: 16f,
                 lineHeight = prefs[Keys.LINE_HEIGHT] ?: 1.5f,
                 marginHorizontal = prefs[Keys.MARGIN_HORIZONTAL] ?: 16,
@@ -154,6 +156,7 @@ class ReaderPreferencesRepository @Inject constructor(
     suspend fun updatePreferences(preferences: ReaderPreferences) {
         context.readerPreferencesDataStore.edit { prefs ->
             prefs[Keys.FONT_FAMILY] = preferences.fontFamily.name
+            preferences.customFont?.let { prefs[Keys.CUSTOM_FONT] = it } ?: prefs.remove(Keys.CUSTOM_FONT)
             prefs[Keys.FONT_SIZE] = preferences.fontSize
             prefs[Keys.LINE_HEIGHT] = preferences.lineHeight
             prefs[Keys.MARGIN_HORIZONTAL] = preferences.marginHorizontal

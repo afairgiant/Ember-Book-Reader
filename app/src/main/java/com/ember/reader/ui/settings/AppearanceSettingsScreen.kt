@@ -1,5 +1,9 @@
 package com.ember.reader.ui.settings
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +13,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ScreenLockPortrait
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -21,8 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +54,18 @@ fun AppearanceSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val readerDefaults by readerDefaultsViewModel.preferences.collectAsStateWithLifecycle()
+    val customFonts by readerDefaultsViewModel.customFonts.collectAsStateWithLifecycle()
+    val fontImportFailed by readerDefaultsViewModel.fontImportFailed.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(readerDefaultsViewModel::importFont)
+    }
+    LaunchedEffect(fontImportFailed) {
+        if (fontImportFailed) {
+            Toast.makeText(context, R.string.font_import_failed, Toast.LENGTH_LONG).show()
+            readerDefaultsViewModel.onFontImportFailureShown()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -106,9 +127,30 @@ fun AppearanceSettingsScreen(
                     ReaderPreferencesContent(
                         preferences = readerDefaults,
                         onPreferencesChanged = readerDefaultsViewModel::updatePreferences,
-                        isPdf = false
+                        isPdf = false,
+                        customFonts = customFonts
                     )
                 }
+            }
+
+            SettingsGroup(title = stringResource(R.string.custom_fonts_title)) {
+                customFonts.forEach { font ->
+                    SettingsDetailRow(icon = Icons.Default.TextFields, title = font.name) {
+                        IconButton(onClick = { readerDefaultsViewModel.deleteFont(font) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.custom_font_remove, font.name)
+                            )
+                        }
+                    }
+                }
+                SettingsDetailRow(
+                    icon = Icons.Default.Add,
+                    title = stringResource(R.string.custom_font_add),
+                    subtitle = stringResource(R.string.custom_font_add_hint),
+                    // Font files have no dependable MIME type across file providers.
+                    modifier = Modifier.clickable { fontPicker.launch(arrayOf("*/*")) }
+                )
             }
         }
     }

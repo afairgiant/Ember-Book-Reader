@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.epub.EpubSpine
+import com.ember.reader.core.fonts.CustomFont
+import com.ember.reader.core.fonts.CustomFontRepository
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
@@ -71,9 +73,13 @@ class ReaderViewModel @Inject constructor(
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
     private val highlightRepairer: HighlightRepairer,
+    customFontRepository: CustomFontRepository,
     val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
+
+    /** Fonts the user added in Settings. They are declared to the reader when a book opens. */
+    val customFonts: StateFlow<List<CustomFont>> = customFontRepository.fonts
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
     private val streaming: Boolean = savedStateHandle.get<String>("mode") == "stream"
