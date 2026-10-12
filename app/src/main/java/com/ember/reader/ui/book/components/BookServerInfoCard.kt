@@ -46,7 +46,7 @@ fun BookServerInfoCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 8.dp)
                         .then(
                             if (libraryId != null) {
                                 Modifier.clickable { onOpenLibrary(server.id, libraryId) }
@@ -123,7 +123,7 @@ private fun MetadataScoreRow(score: Float) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

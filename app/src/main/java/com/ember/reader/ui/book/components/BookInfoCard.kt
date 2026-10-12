@@ -57,7 +57,7 @@ internal fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
