@@ -2,10 +2,8 @@ package com.ember.reader.ui.book.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +82,7 @@ fun BookDetailHero(
         Text(
             text = book.title,
             style = MaterialTheme.typography.headlineSmall,
+            fontFamily = FontFamily.Serif,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 3,
@@ -127,42 +127,22 @@ fun BookDetailHero(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = book.format.name,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-            val pct = progress?.percentage
-            if (pct != null && pct > 0f) {
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "${(pct * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
         val pct = progress?.percentage
         if (pct != null && pct > 0f) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             LinearProgressIndicator(
                 progress = { pct },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
                 trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "${(pct * 100).roundToInt()}% read",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

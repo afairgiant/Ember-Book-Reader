@@ -3,6 +3,7 @@ package com.ember.reader.ui.book
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,11 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
+import com.ember.reader.core.grimmory.ReadStatus
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.book.components.BookAboutCard
 import com.ember.reader.ui.book.components.BookDetailActionButtons
 import com.ember.reader.ui.book.components.BookDetailHero
 import com.ember.reader.ui.book.components.BookInfoCard
+import com.ember.reader.ui.book.components.BookMarksSection
 import com.ember.reader.ui.book.components.BookRatingsCard
 import com.ember.reader.ui.book.components.BookReadStatusCard
 import com.ember.reader.ui.book.components.BookSeriesCarousel
@@ -76,6 +79,7 @@ fun BookDetailScreen(
     val hardcoverMatch by viewModel.hardcoverMatch.collectAsStateWithLifecycle()
     val hardcoverUserEntry by viewModel.hardcoverUserEntry.collectAsStateWithLifecycle()
     val seriesBooks by viewModel.seriesBooks.collectAsStateWithLifecycle()
+    val marks by viewModel.marks.collectAsStateWithLifecycle()
     val grimmoryFullBook by viewModel.grimmoryFullBook.collectAsStateWithLifecycle()
     val sourceAppearance by viewModel.sourceAppearance.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
@@ -99,10 +103,12 @@ fun BookDetailScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { },
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -213,6 +219,7 @@ fun BookDetailScreen(
                             book = currentBook,
                             server = server,
                             progress = progress,
+                            readStatus = readStatus,
                             downloading = downloading,
                             onOpenReader = onOpenReader,
                             onOpenStreamingReader = onOpenStreamingReader,
@@ -224,6 +231,7 @@ fun BookDetailScreen(
                                     )
                                 }
                             },
+                            onMarkFinished = { viewModel.updateReadStatus(ReadStatus.READ) },
                         )
 
                         val gd = grimmoryDetail
@@ -237,12 +245,11 @@ fun BookDetailScreen(
                             )?.let(::formatPublishedDate)
                         val language = currentBook.language ?: gd?.language
 
-                        if (bookDescription != null || pageCount != null) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        if (bookDescription != null) {
                             BookAboutCard(description = bookDescription)
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
                         BookInfoCard(
                             format = currentBook.format.name,
                             series = currentBook.series ?: gd?.seriesName,
@@ -254,9 +261,10 @@ fun BookDetailScreen(
                             isbn = gd?.isbn13,
                         )
 
+                        BookMarksSection(marks = marks)
+
                         val fullMeta = grimmoryFullBook?.metadata
                         if (gd != null) {
-                            Spacer(modifier = Modifier.height(12.dp))
                             BookRatingsCard(
                                 personalRating = gd.personalRating,
                                 goodreadsRating = fullMeta?.goodreadsRating,
@@ -276,7 +284,6 @@ fun BookDetailScreen(
                                     ?: gd?.categories?.toList()
                                     ?: currentBook.subjects?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
                                     ?: emptyList()
-                            Spacer(modifier = Modifier.height(12.dp))
                             BookServerInfoCard(
                                 server = currentServer,
                                 grimmoryDetail = gd,
@@ -288,7 +295,6 @@ fun BookDetailScreen(
                         }
 
                         if (currentServer?.isGrimmory == true && currentBook.grimmoryBookId != null) {
-                            Spacer(modifier = Modifier.height(12.dp))
                             BookReadStatusCard(
                                 currentStatus = readStatus,
                                 onStatusChange = { viewModel.updateReadStatus(it) },
@@ -296,7 +302,6 @@ fun BookDetailScreen(
                         }
 
                         if (seriesBooks.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
                             BookSeriesCarousel(
                                 seriesBooks = seriesBooks,
                                 onBookClick = { item ->
