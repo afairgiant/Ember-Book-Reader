@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,6 +46,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +81,7 @@ import com.ember.reader.core.opds.OpdsFeedEntry
 import com.ember.reader.core.repository.CatalogSeriesViewMode
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
+import com.ember.reader.ui.settings.components.SettingsLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +115,7 @@ fun CatalogScreen(
                                 else -> stringResource(R.string.catalog_title)
                             }
                         },
+                        fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -304,12 +311,13 @@ private fun OpdsCatalogContent(
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                items(feed.entries, key = { it.id }) { entry ->
+                itemsIndexed(feed.entries, key = { _, entry -> entry.id }) { index, entry ->
                     OpdsCatalogEntryCard(
                         entry = entry,
+                        first = index == 0,
+                        last = index == feed.entries.lastIndex,
                         onClick = {
                             when {
                                 entry.href == "grimmory:series" ||
@@ -350,64 +358,22 @@ private fun iconForOpdsFeedEntry(title: String): ImageVector = when {
 }
 
 @Composable
-private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(16.dp)
+private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, first: Boolean, last: Boolean, onClick: () -> Unit) {
+    CatalogRow(
+        icon = iconForOpdsFeedEntry(entry.title),
+        iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        iconTint = MaterialTheme.colorScheme.primary,
+        title = entry.title,
+        subtitle = entry.content,
+        first = first,
+        last = last,
+        onClick = onClick
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    iconForOpdsFeedEntry(entry.title),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp)
-            ) {
-                Text(
-                    text = entry.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                entry.content?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.NavigateNext,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Icon(
+            Icons.AutoMirrored.Filled.NavigateNext,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -475,27 +441,25 @@ private fun GrimmoryCatalogContent(
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(16.dp)
             ) {
                 for (section in sections) {
-                    section.label?.let { label ->
-                        item(key = "header:$label") {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(
-                                    top = if (section == sections.first()) 0.dp else 8.dp,
-                                    bottom = 4.dp
-                                )
-                            )
+                    item(key = "header:${section.label ?: section.entries.firstOrNull()?.id}") {
+                        Column {
+                            if (section != sections.first()) {
+                                Spacer(modifier = Modifier.height(20.dp))
+                            }
+                            section.label?.let { label ->
+                                SettingsLabel(label, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                            }
                         }
                     }
-                    items(section.entries, key = { it.id }) { entry ->
+                    itemsIndexed(section.entries, key = { _, entry -> entry.id }) { index, entry ->
                         val isHidden = entry.id in hiddenEntryIds
                         GrimmoryCatalogEntryCard(
                             entry = entry,
+                            first = index == 0,
+                            last = index == section.entries.lastIndex,
                             editMode = editMode,
                             isHidden = isHidden,
                             onClick = { if (!editMode) onEntryClick(entry) },
@@ -513,6 +477,8 @@ private fun GrimmoryCatalogContent(
 @Composable
 private fun GrimmoryCatalogEntryCard(
     entry: GrimmoryCatalogEntry,
+    first: Boolean,
+    last: Boolean,
     editMode: Boolean,
     isHidden: Boolean,
     onClick: () -> Unit,
@@ -522,51 +488,133 @@ private fun GrimmoryCatalogEntryCard(
 ) {
     val (defaultIcon, iconBackground, iconTint) = iconStyleForType(entry.type)
     val resolvedIcon = GrimmoryIconMapper.resolve(entry.serverIcon) ?: defaultIcon
-    val contentAlpha = if (editMode && isHidden) 0.4f else 1f
 
-    Card(
+    CatalogRow(
+        icon = resolvedIcon,
+        iconBackground = iconBackground,
+        iconTint = iconTint,
+        title = entry.title,
+        subtitle = entry.subtitle,
+        first = first,
+        last = last,
+        contentAlpha = if (editMode && isHidden) 0.4f else 1f,
+        onClick = if (editMode) null else onClick
+    ) {
+        if (editMode) {
+            IconButton(onClick = onMoveUp, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Move up",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onMoveDown, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Move down",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onToggleHidden, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    if (isHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = if (isHidden) "Show" else "Hide",
+                    tint = if (isHidden) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        } else {
+            Icon(
+                Icons.AutoMirrored.Filled.NavigateNext,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private val GroupCorner = 24.dp
+private val IconTileShape = RoundedCornerShape(12.dp)
+
+/**
+ * One row of a catalogue list. Consecutive rows read as a single rounded group: only the
+ * [first] row has rounded top corners and only the [last] has rounded bottom ones, with a
+ * hairline between rows. The rows stay separate lazy items so a long feed still scrolls well.
+ */
+@Composable
+private fun CatalogRow(
+    icon: ImageVector,
+    iconBackground: Color,
+    iconTint: Color,
+    title: String,
+    subtitle: String?,
+    first: Boolean,
+    last: Boolean,
+    contentAlpha: Float = 1f,
+    onClick: (() -> Unit)?,
+    trailing: @Composable () -> Unit
+) {
+    val shape = RoundedCornerShape(
+        topStart = if (first) GroupCorner else 0.dp,
+        topEnd = if (first) GroupCorner else 0.dp,
+        bottomStart = if (last) GroupCorner else 0.dp,
+        bottomEnd = if (last) GroupCorner else 0.dp
+    )
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (!editMode) Modifier.clickable(onClick = onClick) else Modifier),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = contentAlpha)
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
+        if (!first) {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                modifier = Modifier.padding(start = 72.dp, end = 16.dp)
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = if (editMode) 10.dp else 16.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 12.dp,
+                    top = if (first) 14.dp else 10.dp,
+                    bottom = if (last) 14.dp else 10.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(iconBackground.copy(alpha = contentAlpha)),
+                    .size(40.dp)
+                    .clip(IconTileShape)
+                    .background(iconBackground.copy(alpha = iconBackground.alpha * contentAlpha)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    resolvedIcon,
+                    icon,
                     contentDescription = null,
                     tint = iconTint.copy(alpha = contentAlpha),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 14.dp)
+                    .padding(start = 16.dp)
             ) {
                 Text(
-                    text = entry.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
                 )
-                entry.subtitle?.let {
+                subtitle?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
@@ -576,39 +624,7 @@ private fun GrimmoryCatalogEntryCard(
                     )
                 }
             }
-            if (editMode) {
-                IconButton(onClick = onMoveUp, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Move up",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onMoveDown, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Move down",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onToggleHidden, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        if (isHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (isHidden) "Show" else "Hide",
-                        tint = if (isHidden) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.NavigateNext,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            trailing()
         }
     }
 }
@@ -619,50 +635,23 @@ private data class IconStyle(
     val tint: Color
 )
 
+/**
+ * The icon for each kind of entry, in a soft tile of its own colour: the accent for libraries
+ * and magic shelves, the tertiary colour for the reading shortcuts, and neutral for the rest.
+ */
 @Composable
 private fun iconStyleForType(type: CatalogEntryType): IconStyle {
     val colorScheme = MaterialTheme.colorScheme
+    fun style(icon: ImageVector, color: Color) = IconStyle(icon, color.copy(alpha = 0.14f), color)
     return when (type) {
-        CatalogEntryType.CONTINUE_READING -> IconStyle(
-            icon = Icons.Default.AutoStories,
-            background = colorScheme.tertiaryContainer,
-            tint = colorScheme.onTertiaryContainer
-        )
-        CatalogEntryType.RECENTLY_ADDED -> IconStyle(
-            icon = Icons.Default.NewReleases,
-            background = colorScheme.tertiaryContainer,
-            tint = colorScheme.onTertiaryContainer
-        )
-        CatalogEntryType.LIBRARY -> IconStyle(
-            icon = Icons.AutoMirrored.Filled.LibraryBooks,
-            background = colorScheme.primaryContainer,
-            tint = colorScheme.onPrimaryContainer
-        )
-        CatalogEntryType.SHELF -> IconStyle(
-            icon = Icons.Default.CollectionsBookmark,
-            background = colorScheme.secondaryContainer,
-            tint = colorScheme.onSecondaryContainer
-        )
-        CatalogEntryType.MAGIC_SHELF -> IconStyle(
-            icon = Icons.Default.AutoAwesome,
-            background = colorScheme.inversePrimary,
-            tint = colorScheme.onPrimaryContainer
-        )
-        CatalogEntryType.SERIES -> IconStyle(
-            icon = Icons.Default.CollectionsBookmark,
-            background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant
-        )
-        CatalogEntryType.AUTHORS -> IconStyle(
-            icon = Icons.Default.Person,
-            background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant
-        )
-        CatalogEntryType.ALL_BOOKS -> IconStyle(
-            icon = Icons.AutoMirrored.Filled.MenuBook,
-            background = colorScheme.surfaceVariant,
-            tint = colorScheme.onSurfaceVariant
-        )
+        CatalogEntryType.CONTINUE_READING -> style(Icons.Default.AutoStories, colorScheme.tertiary)
+        CatalogEntryType.RECENTLY_ADDED -> style(Icons.Default.NewReleases, colorScheme.tertiary)
+        CatalogEntryType.LIBRARY -> style(Icons.AutoMirrored.Filled.LibraryBooks, colorScheme.primary)
+        CatalogEntryType.SHELF -> style(Icons.Default.CollectionsBookmark, colorScheme.secondary)
+        CatalogEntryType.MAGIC_SHELF -> style(Icons.Default.AutoAwesome, colorScheme.primary)
+        CatalogEntryType.SERIES -> style(Icons.Default.CollectionsBookmark, colorScheme.onSurfaceVariant)
+        CatalogEntryType.AUTHORS -> style(Icons.Default.Person, colorScheme.onSurfaceVariant)
+        CatalogEntryType.ALL_BOOKS -> style(Icons.AutoMirrored.Filled.MenuBook, colorScheme.onSurfaceVariant)
     }
 }
 
