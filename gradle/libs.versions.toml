@@ -9,6 +9,7 @@ room = "2.6.1"
 ktor = "3.0.3"
 coil = "2.7.0"
 readium = "3.1.2"
+jsoup = "1.18.1"
 coroutines = "1.9.0"
 lifecycle = "2.8.7"
 navigation = "2.8.5"
@@ -95,6 +96,7 @@ serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-jso
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 # Readium
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
