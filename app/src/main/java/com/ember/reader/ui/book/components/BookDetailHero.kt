@@ -1,5 +1,6 @@
 package com.ember.reader.ui.book.components
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +63,7 @@ fun BookDetailHero(
                 book = book,
                 modifier = Modifier
                     .fillMaxSize()
+                    .shadow(12.dp, RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp)),
                 onClick = if (book.coverUrl != null) onCoverClick else null,
             )
@@ -145,6 +151,38 @@ fun BookDetailHero(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * A blurred, dimmed copy of the cover, drawn behind the top of the book page. It fades into
+ * the page background at both ends so there is no edge under the status bar. Blur needs Android 12; older versions and books with no cover get
+ * the plain background.
+ */
+@Composable
+fun BookCoverBackdrop(book: Book, modifier: Modifier = Modifier) {
+    if (book.coverUrl == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val background = MaterialTheme.colorScheme.background
+    Box(modifier = modifier) {
+        BookCoverImage(
+            book = book,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(48.dp)
+                .alpha(0.6f),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to background,
+                        0.3f to background.copy(alpha = 0.4f),
+                        0.7f to background.copy(alpha = 0.8f),
+                        1f to background,
+                    ),
+                ),
+        )
     }
 }
 
