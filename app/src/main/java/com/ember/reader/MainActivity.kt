@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.ember.reader.core.repository.AppAccent
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.ThemeMode
 import com.ember.reader.navigation.EmberNavHost
@@ -38,13 +39,19 @@ class MainActivity : FragmentActivity() {
         setContent {
             val themeMode by appPreferencesRepository.themeModeFlow
                 .collectAsState(initial = ThemeMode.SYSTEM)
+            val oledBlack by appPreferencesRepository.oledBlackFlow
+                .collectAsState(initial = false)
+            val accent by appPreferencesRepository.accentFlow
+                .collectAsState(initial = AppAccent.EMBER)
 
             EmberTheme(
                 darkTheme = when (themeMode) {
                     ThemeMode.LIGHT -> false
                     ThemeMode.DARK -> true
                     ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-                }
+                },
+                oledBlack = oledBlack,
+                accent = accent
             ) {
                 EmberNavHost(initialRoute = pendingNavRoute.value)
             }

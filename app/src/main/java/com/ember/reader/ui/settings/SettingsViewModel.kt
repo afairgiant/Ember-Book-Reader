@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.SyncFrequency
+import com.ember.reader.core.repository.AppAccent
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -40,6 +41,12 @@ class SettingsViewModel @Inject constructor(
 
     val themeMode: StateFlow<ThemeMode> = appPreferencesRepository.themeModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
+
+    val oledBlack: StateFlow<Boolean> = appPreferencesRepository.oledBlackFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val accent: StateFlow<AppAccent> = appPreferencesRepository.accentFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppAccent.EMBER)
 
     val keepScreenOn: StateFlow<Boolean> = appPreferencesRepository.keepScreenOnFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -118,6 +125,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updateThemeMode(mode: ThemeMode) {
         viewModelScope.launch { appPreferencesRepository.updateThemeMode(mode) }
+    }
+
+    fun updateOledBlack(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateOledBlack(enabled) }
+    }
+
+    fun updateAccent(accent: AppAccent) {
+        viewModelScope.launch { appPreferencesRepository.updateAccent(accent) }
     }
 
     fun updateKeepScreenOn(enabled: Boolean) {

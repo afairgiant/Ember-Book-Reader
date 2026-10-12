@@ -2,6 +2,7 @@ package com.ember.reader.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -9,7 +10,10 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.ember.reader.core.repository.AppAccent
 
 private val EmberOrange = Color(0xFFE65100)
 private val EmberOrangeLight = Color(0xFFFF833A)
@@ -80,10 +84,54 @@ private val DarkColorScheme = darkColorScheme(
     outline = Color(0xFF7D5D53)
 )
 
+/** The colour an accent is shown as in its swatch, and the one its scheme is built from. */
+val AppAccent.seed: Color
+    get() = when (this) {
+        AppAccent.EMBER -> EmberOrange
+        AppAccent.RED -> Color(0xFFE0503E)
+        AppAccent.AMBER -> Color(0xFFE0A100)
+        AppAccent.BLUE -> Color(0xFF3F8FE0)
+        AppAccent.TEAL -> Color(0xFF2FB5C8)
+        AppAccent.GREEN -> Color(0xFF43B85C)
+        AppAccent.PURPLE -> Color(0xFF9B5DE0)
+    }
+
+/**
+ * The app's colours for the chosen theme. [oledBlack] only applies to the dark theme, where
+ * it makes the background pure black. [AppAccent.EMBER] leaves the built-in scheme as it is.
+ */
+fun emberColorScheme(darkTheme: Boolean, oledBlack: Boolean, accent: AppAccent): ColorScheme {
+    var scheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    if (darkTheme && oledBlack) {
+        scheme = scheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerLow = Color(0xFF12100F),
+            surfaceContainer = Color(0xFF171413),
+            surfaceContainerHigh = Color(0xFF1F1B1A),
+            surfaceContainerHighest = Color(0xFF292423)
+        )
+    }
+    if (accent != AppAccent.EMBER) {
+        // Darkened on a light background so text and icons in the accent stay readable.
+        val primary = if (darkTheme) accent.seed else lerp(accent.seed, Color.Black, 0.25f)
+        scheme = scheme.copy(
+            primary = primary,
+            onPrimary = if (primary.luminance() > 0.4f) Color(0xFF1A1210) else Color.White,
+            primaryContainer = lerp(scheme.surface, primary, 0.3f),
+            onPrimaryContainer = scheme.onSurface
+        )
+    }
+    return scheme
+}
+
 @Composable
 fun EmberTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    oledBlack: Boolean = false,
+    accent: AppAccent = AppAccent.EMBER,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -91,8 +139,7 @@ fun EmberTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> emberColorScheme(darkTheme, oledBlack, accent)
     }
 
     MaterialTheme(

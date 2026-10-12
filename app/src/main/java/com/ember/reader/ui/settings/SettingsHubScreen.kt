@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -37,16 +36,12 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -67,8 +62,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.Server
 import com.ember.reader.ui.settings.components.PermissionChip
+import com.ember.reader.ui.settings.components.SettingsDetailRow
+import com.ember.reader.ui.settings.components.SettingsDivider
 import com.ember.reader.ui.settings.components.SettingsGroup
+import com.ember.reader.ui.settings.components.SettingsIconTile
 import com.ember.reader.ui.settings.components.SettingsNavRow
+import com.ember.reader.ui.settings.components.SettingsRowTextInset
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -88,90 +88,18 @@ fun SettingsHubScreen(
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { padding ->
+    Scaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header card
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(R.mipmap.ic_launcher_foreground),
-                        contentDescription = null,
-                        modifier = Modifier.size(56.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.ember_reader),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Customize your reading experience",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        val hasGrimmory = servers.any {
-                            it.isGrimmory && viewModel.isGrimmoryLoggedIn(it.id)
-                        }
-                        if (hasGrimmory) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        Color(0xFF2E7D32),
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    text = "Grimmory connected",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            SettingsScreenHeader(overline = stringResource(R.string.ember_reader), title = "Settings")
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Connected Servers
             val expandedServers = remember { mutableStateMapOf<Long, Boolean>() }
-            SettingsGroup(
-                title = "Connected Servers",
-                subtitle = "Manage your book server connections"
-            ) {
-                servers.forEachIndexed { index, server ->
-                    if (index > 0) {
-                        com.ember.reader.ui.settings.components.SettingsDivider()
-                    }
+            SettingsGroup(title = "Servers") {
+                servers.forEach { server ->
                     val expanded = expandedServers[server.id] == true
                     ServerRow(
                         server = server,
@@ -182,32 +110,13 @@ fun SettingsHubScreen(
                             expandedServers[server.id] = !expanded
                         }
                     )
+                    SettingsDivider()
                 }
-                if (servers.isNotEmpty()) {
-                    androidx.compose.material3.HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onAddServer)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = stringResource(R.string.add_server),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                SettingsNavRow(
+                    icon = Icons.Default.Add,
+                    title = stringResource(R.string.add_server),
+                    onClick = onAddServer
+                )
             }
 
             val uploadableServers = servers.filter {
@@ -217,14 +126,10 @@ fun SettingsHubScreen(
                 it.isGrimmory && viewModel.isGrimmoryLoggedIn(it.id)
             }
             if (uploadableServers.isNotEmpty() || hasBookdrop) {
-                Spacer(modifier = Modifier.height(8.dp))
-                SettingsGroup(
-                    title = "Server Tools",
-                    subtitle = "Upload and manage books on your Grimmory server"
-                ) {
+                SettingsGroup(title = "Server tools") {
                     uploadableServers.forEachIndexed { index, server ->
                         if (index > 0) {
-                            com.ember.reader.ui.settings.components.SettingsDivider()
+                            SettingsDivider()
                         }
                         SettingsNavRow(
                             icon = Icons.Default.CloudUpload,
@@ -235,7 +140,7 @@ fun SettingsHubScreen(
                     }
                     if (hasBookdrop) {
                         if (uploadableServers.isNotEmpty()) {
-                            com.ember.reader.ui.settings.components.SettingsDivider()
+                            SettingsDivider()
                         }
                         SettingsNavRow(
                             icon = Icons.Default.Inbox,
@@ -247,49 +152,21 @@ fun SettingsHubScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // App Settings
-            SettingsGroup(
-                title = "App Settings",
-                subtitle = "Appearance, sync, and storage options"
-            ) {
+            SettingsGroup(title = "Reading") {
                 SettingsNavRow(
                     icon = Icons.Default.Palette,
                     title = "Appearance",
-                    subtitle = "Theme, keep screen on",
+                    subtitle = "Theme, accent, reader defaults, and fonts",
                     onClick = onOpenAppearance
                 )
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                SettingsNavRow(
-                    icon = Icons.Default.Sync,
-                    title = "Sync",
-                    subtitle = "Frequency, highlights, bookmarks",
-                    onClick = onOpenSync
-                )
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                SettingsNavRow(
-                    icon = Icons.Default.Download,
-                    title = "Downloads & Storage",
-                    subtitle = "Auto download, cleanup, manage files",
-                    onClick = onOpenDownloads
-                )
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                SettingsDivider()
                 SettingsNavRow(
                     icon = Icons.Default.BarChart,
                     title = "Reading Statistics",
                     subtitle = "History, streaks, and Grimmory stats",
                     onClick = onOpenStats
                 )
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                SettingsDivider()
                 SettingsNavRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = "Hardcover",
@@ -298,40 +175,33 @@ fun SettingsHubScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            SettingsGroup(title = "Sync & storage") {
+                SettingsNavRow(
+                    icon = Icons.Default.Sync,
+                    title = "Sync",
+                    subtitle = "Frequency, highlights, bookmarks",
+                    onClick = onOpenSync
+                )
+                SettingsDivider()
+                SettingsNavRow(
+                    icon = Icons.Default.Download,
+                    title = "Downloads & Storage",
+                    subtitle = "Auto download, cleanup, manage files",
+                    onClick = onOpenDownloads
+                )
+            }
 
-            // About
             SettingsGroup(title = "About") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            onClick = {},
-                            onLongClick = onOpenDevLog
-                        )
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
+                SettingsDetailRow(
+                    icon = Icons.Default.Info,
+                    title = "Ember Reader",
+                    subtitle = "v${com.ember.reader.BuildConfig.VERSION_NAME} \u00B7 Long press for dev logs",
+                    modifier = Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = onOpenDevLog
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = "Ember Reader",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = "v${com.ember.reader.BuildConfig.VERSION_NAME} \u00B7 Long press for dev logs",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                com.ember.reader.ui.settings.components.SettingsDivider()
+                )
+                SettingsDivider()
                 val uriHandler = LocalUriHandler.current
                 SettingsNavRow(
                     icon = Icons.Default.Code,
@@ -341,7 +211,7 @@ fun SettingsHubScreen(
                         uriHandler.openUri("https://github.com/afairgiant/Ember-Book-Reader")
                     }
                 )
-                com.ember.reader.ui.settings.components.SettingsDivider()
+                SettingsDivider()
                 SettingsNavRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = "Open Source Licenses",
@@ -368,29 +238,32 @@ private fun ServerRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (server.isGrimmory) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_grimmory),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(22.dp)
-                )
-            } else {
-                Icon(
-                    Icons.Default.CloudQueue,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
+            SettingsIconTile {
+                if (server.isGrimmory) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_grimmory),
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.CloudQueue,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = server.name,
                     style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -437,7 +310,7 @@ private fun GrimmoryPermissionsPanel(server: Server) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 54.dp, end = 16.dp, bottom = 12.dp)
+            .padding(start = SettingsRowTextInset, end = 16.dp, bottom = 12.dp)
     ) {
         if (fetchedAt == null) {
             Text(
