@@ -681,18 +681,22 @@ class BookRepository @Inject constructor(
 
     suspend fun deleteBook(bookId: String) {
         val book = bookDao.getById(bookId)
-        book?.localPath?.let { path ->
-            File(path).delete()
-        }
+        book?.localPath?.let(::deleteLocalCopy)
         bookDao.deleteById(bookId)
     }
 
     suspend fun removeDownload(bookId: String) {
         val book = bookDao.getById(bookId)
-        book?.localPath?.let { path ->
-            File(path).delete()
-        }
+        book?.localPath?.let(::deleteLocalCopy)
         bookDao.updateLocalPath(bookId, null, null)
+    }
+
+    /**
+     * Deletes a book's copy on the device. An audiobook downloaded as separate tracks is a
+     * folder, which a plain `File.delete()` leaves in place because it is not empty.
+     */
+    private fun deleteLocalCopy(path: String) {
+        File(path).deleteRecursively()
     }
 
     suspend fun cleanupOldDownloads(daysOld: Int = 90): Int {
@@ -700,7 +704,7 @@ class BookRepository @Inject constructor(
         val oldBooks = bookDao.getOldServerDownloads(cutoff)
         var cleaned = 0
         for (entity in oldBooks) {
-            entity.localPath?.let { path -> File(path).delete() }
+            entity.localPath?.let(::deleteLocalCopy)
             bookDao.updateLocalPath(entity.id, null, null)
             cleaned++
         }
