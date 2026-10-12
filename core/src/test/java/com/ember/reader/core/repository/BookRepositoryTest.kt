@@ -22,6 +22,7 @@ import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -285,5 +286,79 @@ class BookRepositoryTest {
         )
         assertEquals(listOf(BookFormat.PDF, BookFormat.EPUB), inserted.map { it.format })
         assertEquals(listOf("Saga", "Saga"), inserted.map { it.series })
+    }
+
+    private fun downloadedAudiobook(id: String): Pair<BookEntity, File> {
+        val folder = File(tempDir, "books/audiobook_$id").apply { mkdirs() }
+        File(folder, "001_chapter.mp3").writeText("audio")
+        File(folder, "002_chapter.mp3").writeText("audio")
+        val entity = BookEntity(
+            id = id,
+            serverId = 1L,
+            title = "Audiobook",
+            format = BookFormat.AUDIOBOOK,
+            localPath = folder.absolutePath,
+            addedAt = Instant.EPOCH
+        )
+        return entity to folder
+    }
+
+    @Test
+    fun `deleteBook removes an audiobook's folder of tracks`() = runTest {
+        val (entity, folder) = downloadedAudiobook("audio-1")
+        coEvery { bookDao.getById("audio-1") } returns entity
+        coEvery { bookDao.deleteById("audio-1") } returns Unit
+
+        repository.deleteBook("audio-1")
+
+        assertFalse(folder.exists())
+        coVerify { bookDao.deleteById("audio-1") }
+    }
+
+    @Test
+    fun `removeDownload removes an audiobook's folder of tracks and keeps the book`() = runTest {
+        val (entity, folder) = downloadedAudiobook("audio-2")
+        coEvery { bookDao.getById("audio-2") } returns entity
+        coEvery { bookDao.updateLocalPath("audio-2", null, null) } returns Unit
+
+        repository.removeDownload("audio-2")
+
+        assertFalse(folder.exists())
+        coVerify { bookDao.updateLocalPath("audio-2", null, null) }
+        coVerify(exactly = 0) { bookDao.deleteById(any()) }
+    }
+
+    @Test
+    fun `cleanupOldDownloads removes an audiobook's folder of tracks`() = runTest {
+        val (entity, folder) = downloadedAudiobook("audio-3")
+        coEvery { bookDao.getOldServerDownloads(any()) } returns listOf(entity)
+        coEvery { bookDao.updateLocalPath("audio-3", null, null) } returns Unit
+
+        val cleaned = repository.cleanupOldDownloads()
+
+        assertEquals(1, cleaned)
+        assertFalse(folder.exists())
+    }
+
+    @Test
+    fun `deleteBook removes a single-file book`() = runTest {
+        val file = File(tempDir, "books/book-1.epub").apply {
+            parentFile?.mkdirs()
+            writeText("epub")
+        }
+        val entity = BookEntity(
+            id = "book-1",
+            title = "Book",
+            format = BookFormat.EPUB,
+            localPath = file.absolutePath,
+            addedAt = Instant.EPOCH
+        )
+        coEvery { bookDao.getById("book-1") } returns entity
+        coEvery { bookDao.deleteById("book-1") } returns Unit
+
+        repository.deleteBook("book-1")
+
+        assertFalse(file.exists())
+        assertTrue(file.parentFile!!.exists())
     }
 }
