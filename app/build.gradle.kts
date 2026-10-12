@@ -30,6 +30,11 @@ fun gitVersionCode(): Int {
     }
 }
 
+// Libraries bundled as files rather than Gradle dependencies are listed by hand in this folder.
+aboutLibraries {
+    configPath = "config/aboutlibraries"
+}
+
 android {
     namespace = "com.ember.reader"
     compileSdk = 35

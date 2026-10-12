@@ -1,0 +1,19 @@
+{
+  "uniqueId": "foliate-js",
+  "artifactVersion": "6b11e17",
+  "name": "foliate-js",
+  "description": "EPUB CFI parsing and generation (epubcfi.js), bundled unmodified in the reader.",
+  "website": "https://github.com/johnfactotum/foliate-js",
+  "developers": [
+    {
+      "name": "John Factotum",
+      "organisationUrl": "https://github.com/johnfactotum"
+    }
+  ],
+  "scm": {
+    "url": "https://github.com/johnfactotum/foliate-js"
+  },
+  "licenses": [
+    "MIT"
+  ]
+}
