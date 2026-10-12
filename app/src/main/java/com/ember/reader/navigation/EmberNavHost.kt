@@ -93,9 +93,13 @@ object Routes {
     fun library(serverId: Long, path: String? = null, title: String? = null): String =
         "library/$serverId" + query(ARG_PATH to path, ARG_TITLE to title)
 
+    // URLEncoder writes a space as "+", which navigation hands back as a literal plus sign,
+    // so spaces are sent as %20.
     private fun query(vararg params: Pair<String, String?>): String = params
         .filter { it.second != null }
-        .joinToString("&") { (name, value) -> "$name=${java.net.URLEncoder.encode(value, "UTF-8")}" }
+        .joinToString("&") { (name, value) ->
+            "$name=${java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")}"
+        }
         .let { if (it.isEmpty()) it else "?$it" }
 
     fun epubReader(bookId: String, streaming: Boolean = false): String = if (streaming) {
@@ -332,6 +336,9 @@ fun EmberNavHost(
                     },
                     onNavigateToBooks = { path, title ->
                         navController.navigate(Routes.library(serverId, path, title))
+                    },
+                    onOpenBookDetail = { bookId ->
+                        navController.navigate(Routes.bookDetail(bookId))
                     }
                 )
             }

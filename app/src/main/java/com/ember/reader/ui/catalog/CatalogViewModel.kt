@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
+import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.CatalogEntryType
 import com.ember.reader.core.model.GrimmoryCatalog
@@ -16,6 +18,7 @@ import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.CatalogLayoutPreferencesRepository
 import com.ember.reader.core.repository.CatalogPreferencesRepository
 import com.ember.reader.core.repository.CatalogSeriesViewMode
@@ -31,6 +34,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -40,6 +44,8 @@ class CatalogViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryClient: GrimmoryClient,
+    private val bookRepository: BookRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val catalogPreferencesRepository: CatalogPreferencesRepository,
     private val catalogLayoutPreferencesRepository: CatalogLayoutPreferencesRepository,
@@ -63,6 +69,13 @@ class CatalogViewModel @Inject constructor(
 
     private val _editMode = MutableStateFlow(false)
     val editMode: StateFlow<Boolean> = _editMode.asStateFlow()
+
+    /**
+     * The first few books behind each reading shortcut on a Grimmory catalogue's first page.
+     * A type with no entry is still loading; an empty list means there is nothing to show.
+     */
+    private val _shelfPreviews = MutableStateFlow<Map<CatalogEntryType, List<CatalogShelfBook>>>(emptyMap())
+    val shelfPreviews: StateFlow<Map<CatalogEntryType, List<CatalogShelfBook>>> = _shelfPreviews.asStateFlow()
 
     val isSeriesView: Boolean get() = path == "grimmory:series"
     val isGrimmoryCatalogRoot: Boolean get() = path.isEmpty() && server?.isGrimmory == true
@@ -272,9 +285,52 @@ class CatalogViewModel @Inject constructor(
     private suspend fun fetchGrimmoryCatalog(server: Server) {
         try {
             fetchGrimmoryCatalogInner(server)
+            loadShelfPreviews(server)
         } catch (e: Exception) {
             _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
         }
+    }
+
+    /** Loads the shortcut previews without holding up the catalogue itself. */
+    private fun loadShelfPreviews(server: Server) {
+        viewModelScope.launch {
+            launch {
+                loadShelfPreview(server, CatalogEntryType.CONTINUE_READING) {
+                    grimmoryClient.getContinueReading(server.url, server.id, limit = SHELF_PREVIEW_SIZE)
+                }
+            }
+            launch {
+                loadShelfPreview(server, CatalogEntryType.RECENTLY_ADDED) {
+                    grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = SHELF_PREVIEW_SIZE)
+                }
+            }
+        }
+    }
+
+    private suspend fun loadShelfPreview(
+        server: Server,
+        type: CatalogEntryType,
+        fetch: suspend () -> Result<List<GrimmoryBookSummary>>
+    ) {
+        val books = try {
+            val summaries = fetch().getOrThrow()
+            val localIds = bookRepository.upsertGrimmorySummaries(server, summaries)
+            summaries.zip(localIds) { summary, localId ->
+                CatalogShelfBook(
+                    localBookId = localId,
+                    title = summary.title,
+                    author = summary.authors.firstOrNull(),
+                    coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn)
+                )
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The shortcut falls back to its plain row.
+            Timber.w(e, "Catalog: preview for $type failed for server=${server.id}")
+            emptyList()
+        }
+        _shelfPreviews.update { it + (type to books) }
     }
 
     private suspend fun fetchGrimmoryCatalogInner(server: Server) {
@@ -488,3 +544,13 @@ enum class SeriesSortOption(val key: String, val dir: String, val label: String)
     READ_PROGRESS("readprogress", "desc", "Most Read"),
     RECENTLY_ADDED("recentlyAdded", "desc", "Recent")
 }
+
+/** A book in a reading shortcut's preview row on the catalogue. */
+data class CatalogShelfBook(
+    val localBookId: String,
+    val title: String,
+    val author: String?,
+    val coverUrl: String
+)
+
+private const val SHELF_PREVIEW_SIZE = 10

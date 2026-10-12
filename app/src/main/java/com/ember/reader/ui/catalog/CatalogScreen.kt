@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -50,8 +53,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -79,6 +85,7 @@ import com.ember.reader.core.model.GrimmoryCatalogEntry
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
 import com.ember.reader.core.repository.CatalogSeriesViewMode
+import com.ember.reader.ui.common.CoverImage
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.settings.components.SettingsLabel
@@ -90,6 +97,7 @@ fun CatalogScreen(
     onNavigateToFeed: (path: String) -> Unit,
     onNavigateToBooks: (path: String, title: String?) -> Unit,
     showBack: Boolean = true,
+    onOpenBookDetail: (bookId: String) -> Unit = {},
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,8 +105,8 @@ fun CatalogScreen(
     val seriesViewMode by viewModel.seriesViewMode.collectAsStateWithLifecycle()
     val editMode by viewModel.editMode.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val shelfPreviews by viewModel.shelfPreviews.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var searchActive by rememberSaveable { mutableStateOf(false) }
     var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -176,9 +184,6 @@ fun CatalogScreen(
                                 )
                             }
                         }
-                        IconButton(onClick = { searchActive = !searchActive }) {
-                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -197,7 +202,6 @@ fun CatalogScreen(
             is CatalogUiState.OpdsSuccess -> {
                 OpdsCatalogContent(
                     feed = state.feed,
-                    searchActive = searchActive,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
@@ -206,7 +210,6 @@ fun CatalogScreen(
                                 "grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}",
                                 searchQuery
                             )
-                            searchActive = false
                             searchQuery = ""
                         }
                     },
@@ -243,8 +246,9 @@ fun CatalogScreen(
                 GrimmoryCatalogContent(
                     catalog = state.catalog,
                     hiddenEntryIds = state.hiddenEntryIds,
+                    shelfPreviews = shelfPreviews,
+                    onOpenBook = onOpenBookDetail,
                     editMode = editMode,
-                    searchActive = searchActive,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
@@ -253,7 +257,6 @@ fun CatalogScreen(
                                 "grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}",
                                 searchQuery
                             )
-                            searchActive = false
                             searchQuery = ""
                         }
                     },
@@ -294,7 +297,6 @@ fun CatalogScreen(
 @Composable
 private fun OpdsCatalogContent(
     feed: OpdsFeed,
-    searchActive: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -310,7 +312,7 @@ private fun OpdsCatalogContent(
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (searchActive) {
+            run {
                 CatalogSearchField(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
@@ -419,12 +421,13 @@ private fun groupIntoSections(entries: List<GrimmoryCatalogEntry>): List<Catalog
 private fun GrimmoryCatalogContent(
     catalog: GrimmoryCatalog,
     hiddenEntryIds: Set<String>,
+    shelfPreviews: Map<CatalogEntryType, List<CatalogShelfBook>>,
     editMode: Boolean,
-    searchActive: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onEntryClick: (GrimmoryCatalogEntry) -> Unit,
+    onOpenBook: (bookId: String) -> Unit,
     onToggleHidden: (entryId: String, isCurrentlyHidden: Boolean) -> Unit,
     onMoveUp: (entryId: String) -> Unit,
     onMoveDown: (entryId: String) -> Unit,
@@ -440,7 +443,7 @@ private fun GrimmoryCatalogContent(
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (searchActive && !editMode) {
+            if (!editMode) {
                 CatalogSearchField(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
@@ -449,25 +452,39 @@ private fun GrimmoryCatalogContent(
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 for (section in sections) {
-                    item(key = "header:${section.label ?: section.entries.firstOrNull()?.id}") {
-                        Column {
-                            if (section != sections.first()) {
-                                Spacer(modifier = Modifier.height(20.dp))
+                    // A reading shortcut is a row of covers unless it is being edited or
+                    // turned out to be empty; then it is an ordinary row like the rest.
+                    val (shelves, rows) = section.entries.partition { entry ->
+                        !editMode && entry.type in SHELF_TYPES && shelfPreviews[entry.type]?.isEmpty() != true
+                    }
+                    items(shelves, key = { "shelf:${it.id}" }) { entry ->
+                        CatalogShelf(
+                            title = entry.title,
+                            books = shelfPreviews[entry.type],
+                            onSeeAll = { onEntryClick(entry) },
+                            onOpenBook = onOpenBook
+                        )
+                    }
+                    if (rows.isEmpty()) continue
+                    item(key = "header:${section.label ?: rows.first().id}") {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            if (section != sections.first() || shelves.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
                             section.label?.let { label ->
                                 SettingsLabel(label, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                             }
                         }
                     }
-                    itemsIndexed(section.entries, key = { _, entry -> entry.id }) { index, entry ->
+                    itemsIndexed(rows, key = { _, entry -> entry.id }) { index, entry ->
                         val isHidden = entry.id in hiddenEntryIds
                         GrimmoryCatalogEntryCard(
                             entry = entry,
                             first = index == 0,
-                            last = index == section.entries.lastIndex,
+                            last = index == rows.lastIndex,
                             editMode = editMode,
                             isHidden = isHidden,
                             onClick = { if (!editMode) onEntryClick(entry) },
@@ -476,11 +493,14 @@ private fun GrimmoryCatalogContent(
                             onMoveDown = { onMoveDown(entry.id) }
                         )
                     }
+                    item(key = "gap:${rows.first().id}") { Spacer(modifier = Modifier.height(8.dp)) }
                 }
             }
         }
     }
 }
+
+private val SHELF_TYPES = setOf(CatalogEntryType.CONTINUE_READING, CatalogEntryType.RECENTLY_ADDED)
 
 @Composable
 private fun GrimmoryCatalogEntryCard(
@@ -505,6 +525,7 @@ private fun GrimmoryCatalogEntryCard(
         subtitle = entry.subtitle,
         first = first,
         last = last,
+        modifier = Modifier.padding(horizontal = 16.dp),
         contentAlpha = if (editMode && isHidden) 0.4f else 1f,
         onClick = if (editMode) null else onClick
     ) {
@@ -561,6 +582,7 @@ private fun CatalogRow(
     subtitle: String?,
     first: Boolean,
     last: Boolean,
+    modifier: Modifier = Modifier,
     contentAlpha: Float = 1f,
     onClick: (() -> Unit)?,
     trailing: @Composable () -> Unit
@@ -572,7 +594,7 @@ private fun CatalogRow(
         bottomEnd = if (last) GroupCorner else 0.dp
     )
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
@@ -671,15 +693,28 @@ private fun CatalogSearchField(
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit
 ) {
-    androidx.compose.material3.OutlinedTextField(
+    OutlinedTextField(
         value = searchQuery,
         onValueChange = onSearchQueryChange,
         placeholder = { Text(stringResource(R.string.search_catalog)) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (searchQuery.isNotEmpty()) {
+                IconButton(onClick = { onSearchQueryChange("") }) {
+                    Icon(Icons.Default.Close, contentDescription = "Clear search")
+                }
+            }
+        },
         singleLine = true,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = CircleShape,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(
             onSearch = { onSearchSubmit() }
         ),
@@ -687,4 +722,83 @@ private fun CatalogSearchField(
             imeAction = androidx.compose.ui.text.input.ImeAction.Search
         )
     )
+}
+
+private val ShelfCoverShape = RoundedCornerShape(12.dp)
+private val ShelfCoverWidth = 104.dp
+
+/**
+ * A reading shortcut shown as a row of covers with a way to the full list. [books] is null
+ * while the row is loading, which shows blank covers so the page does not jump when it fills.
+ */
+@Composable
+private fun CatalogShelf(
+    title: String,
+    books: List<CatalogShelfBook>?,
+    onSeeAll: () -> Unit,
+    onOpenBook: (bookId: String) -> Unit
+) {
+    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SettingsLabel(title, modifier = Modifier.weight(1f))
+            TextButton(onClick = onSeeAll) { Text("See all") }
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (books == null) {
+                items(4) {
+                    Box(
+                        modifier = Modifier
+                            .width(ShelfCoverWidth)
+                            .aspectRatio(0.67f)
+                            .clip(ShelfCoverShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    )
+                }
+            } else {
+                items(books, key = { it.localBookId }) { book ->
+                    Column(
+                        modifier = Modifier
+                            .width(ShelfCoverWidth)
+                            .clip(ShelfCoverShape)
+                            .clickable { onOpenBook(book.localBookId) }
+                    ) {
+                        CoverImage(
+                            coverUrl = book.coverUrl,
+                            title = book.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(0.67f)
+                                .clip(ShelfCoverShape)
+                        )
+                        Text(
+                            text = book.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp)
+                        )
+                        book.author?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
