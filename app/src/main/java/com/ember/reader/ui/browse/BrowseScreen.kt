@@ -47,6 +47,7 @@ import com.ember.reader.ui.settings.components.SettingsScreenHeader
 fun BrowseScreen(
     onOpenLibrary: (Long) -> Unit,
     onOpenHardcover: () -> Unit = {},
+    onAutoOpenLibrary: (Long) -> Unit = onOpenLibrary,
     viewModel: BrowseViewModel = hiltViewModel()
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
@@ -58,7 +59,7 @@ fun BrowseScreen(
     LaunchedEffect(servers, hardcoverConnected) {
         if (servers.size == 1 && !hardcoverConnected && !autoNavigated) {
             autoNavigated = true
-            onOpenLibrary(servers.first().id)
+            onAutoOpenLibrary(servers.first().id)
         }
     }
 

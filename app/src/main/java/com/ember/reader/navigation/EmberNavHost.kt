@@ -42,6 +42,8 @@ object Routes {
     const val ARG_BOOK_ID = "bookId"
     const val ARG_PATH = "path"
     const val ARG_MODE = "mode"
+    const val ARG_TITLE = "title"
+    const val ARG_ROOT = "root"
     const val MODE_STREAM = "stream"
 
     // Top-level (bottom nav)
@@ -60,8 +62,8 @@ object Routes {
 
     // Detail screens
     const val SERVER_FORM = "server_form?$ARG_SERVER_ID={$ARG_SERVER_ID}"
-    const val CATALOG = "catalog/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
-    const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}"
+    const val CATALOG = "catalog/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}&$ARG_ROOT={$ARG_ROOT}"
+    const val LIBRARY = "library/{$ARG_SERVER_ID}?$ARG_PATH={$ARG_PATH}&$ARG_TITLE={$ARG_TITLE}"
     const val EPUB_READER = "reader/epub/{$ARG_BOOK_ID}?$ARG_MODE={$ARG_MODE}"
     const val PDF_READER = "reader/pdf/{$ARG_BOOK_ID}?$ARG_MODE={$ARG_MODE}"
     const val AUDIOBOOK_READER = "reader/audiobook/{$ARG_BOOK_ID}"
@@ -80,17 +82,21 @@ object Routes {
     fun serverForm(serverId: Long? = null): String =
         if (serverId != null) "server_form?$ARG_SERVER_ID=$serverId" else "server_form"
 
-    fun catalog(serverId: Long, path: String? = null): String = if (path != null) {
-        "catalog/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
-    } else {
-        "catalog/$serverId"
-    }
+    /**
+     * A server's catalogue. [root] marks the catalogue Browse opened by itself because there is
+     * only one server, which has no list of servers worth going back to.
+     */
+    fun catalog(serverId: Long, path: String? = null, root: Boolean = false): String =
+        "catalog/$serverId" + query(ARG_PATH to path, ARG_ROOT to root.takeIf { it }?.toString())
 
-    fun library(serverId: Long, path: String? = null): String = if (path != null) {
-        "library/$serverId?$ARG_PATH=${java.net.URLEncoder.encode(path, "UTF-8")}"
-    } else {
-        "library/$serverId"
-    }
+    /** A server's book list. [title] is what the list is called, e.g. the library's name. */
+    fun library(serverId: Long, path: String? = null, title: String? = null): String =
+        "library/$serverId" + query(ARG_PATH to path, ARG_TITLE to title)
+
+    private fun query(vararg params: Pair<String, String?>): String = params
+        .filter { it.second != null }
+        .joinToString("&") { (name, value) -> "$name=${java.net.URLEncoder.encode(value, "UTF-8")}" }
+        .let { if (it.isEmpty()) it else "?$it" }
 
     fun epubReader(bookId: String, streaming: Boolean = false): String = if (streaming) {
         "reader/epub/$bookId?$ARG_MODE=$MODE_STREAM"
@@ -205,6 +211,9 @@ fun EmberNavHost(
             composable(Routes.BROWSE) {
                 com.ember.reader.ui.browse.BrowseScreen(
                     onOpenLibrary = { serverId -> navController.navigate(Routes.catalog(serverId)) },
+                    onAutoOpenLibrary = { serverId ->
+                        navController.navigate(Routes.catalog(serverId, root = true))
+                    },
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) }
                 )
             }
@@ -261,7 +270,7 @@ fun EmberNavHost(
                     onNavigateBack = { navController.popBackStack() },
                     onSearchGrimmory = { serverId, query ->
                         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-                        navController.navigate(Routes.library(serverId, "grimmory:search=$encodedQuery"))
+                        navController.navigate(Routes.library(serverId, "grimmory:search=$encodedQuery", query))
                     }
                 )
             }
@@ -307,17 +316,22 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
                         defaultValue = ""
+                    },
+                    navArgument(Routes.ARG_ROOT) {
+                        type = NavType.BoolType
+                        defaultValue = false
                     }
                 )
             ) { backStackEntry ->
                 val serverId = backStackEntry.arguments?.getLong(Routes.ARG_SERVER_ID) ?: return@composable
                 CatalogScreen(
+                    showBack = backStackEntry.arguments?.getBoolean(Routes.ARG_ROOT) != true,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToFeed = { path ->
                         navController.navigate(Routes.catalog(serverId, path))
                     },
-                    onNavigateToBooks = { path ->
-                        navController.navigate(Routes.library(serverId, path))
+                    onNavigateToBooks = { path, title ->
+                        navController.navigate(Routes.library(serverId, path, title))
                     }
                 )
             }
@@ -330,12 +344,18 @@ fun EmberNavHost(
                     navArgument(Routes.ARG_PATH) {
                         type = NavType.StringType
                         defaultValue = ""
+                    },
+                    navArgument(Routes.ARG_TITLE) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 )
             ) { backStackEntry ->
                 val serverId = backStackEntry.arguments?.getLong(Routes.ARG_SERVER_ID) ?: return@composable
                 LibraryScreen(
                     serverId = serverId,
+                    title = backStackEntry.arguments?.getString(Routes.ARG_TITLE),
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToServerEdit = { id ->
                         navController.navigate(Routes.serverForm(id))

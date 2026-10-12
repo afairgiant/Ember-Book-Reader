@@ -88,7 +88,8 @@ import com.ember.reader.ui.settings.components.SettingsLabel
 fun CatalogScreen(
     onNavigateBack: () -> Unit,
     onNavigateToFeed: (path: String) -> Unit,
-    onNavigateToBooks: (path: String) -> Unit,
+    onNavigateToBooks: (path: String, title: String?) -> Unit,
+    showBack: Boolean = true,
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -124,7 +125,7 @@ fun CatalogScreen(
                         IconButton(onClick = { viewModel.toggleEditMode() }) {
                             Icon(Icons.Default.Close, contentDescription = "Done editing")
                         }
-                    } else {
+                    } else if (showBack) {
                         IconButton(onClick = onNavigateBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                         }
@@ -201,7 +202,10 @@ fun CatalogScreen(
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
                         if (searchQuery.isNotBlank()) {
-                            onNavigateToBooks("grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                            onNavigateToBooks(
+                                "grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}",
+                                searchQuery
+                            )
                             searchActive = false
                             searchQuery = ""
                         }
@@ -223,7 +227,8 @@ fun CatalogScreen(
                     onSeriesSortChange = viewModel::setSeriesSort,
                     onSeriesClick = { seriesName ->
                         onNavigateToBooks(
-                            "grimmory:seriesName=${java.net.URLEncoder.encode(seriesName, "UTF-8")}"
+                            "grimmory:seriesName=${java.net.URLEncoder.encode(seriesName, "UTF-8")}",
+                            seriesName
                         )
                     },
                     onRefresh = viewModel::refresh,
@@ -244,7 +249,10 @@ fun CatalogScreen(
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
                         if (searchQuery.isNotBlank()) {
-                            onNavigateToBooks("grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}")
+                            onNavigateToBooks(
+                                "grimmory:search=${java.net.URLEncoder.encode(searchQuery, "UTF-8")}",
+                                searchQuery
+                            )
                             searchActive = false
                             searchQuery = ""
                         }
@@ -256,7 +264,7 @@ fun CatalogScreen(
                                 onNavigateToFeed(entry.href)
                             }
                             else -> {
-                                onNavigateToBooks(entry.href)
+                                onNavigateToBooks(entry.href, entry.title)
                             }
                         }
                     },
@@ -291,7 +299,7 @@ private fun OpdsCatalogContent(
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onNavigateToFeed: (String) -> Unit,
-    onNavigateToBooks: (String) -> Unit,
+    onNavigateToBooks: (path: String, title: String?) -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean,
     modifier: Modifier = Modifier
@@ -325,13 +333,13 @@ private fun OpdsCatalogContent(
                                     onNavigateToFeed(entry.href)
                                 }
                                 entry.href.startsWith("grimmory:") -> {
-                                    onNavigateToBooks(entry.href)
+                                    onNavigateToBooks(entry.href, entry.title)
                                 }
                                 entry.href.contains("catalog") ||
                                     entry.href.contains("?page=") ||
                                     entry.href.contains("recent") ||
                                     entry.href.contains("surprise") -> {
-                                    onNavigateToBooks(entry.href)
+                                    onNavigateToBooks(entry.href, entry.title)
                                 }
                                 else -> {
                                     onNavigateToFeed(entry.href)
