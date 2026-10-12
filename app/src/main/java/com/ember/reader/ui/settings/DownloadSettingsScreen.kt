@@ -49,7 +49,7 @@ fun DownloadSettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsScreenHeader(overline = "Settings", title = "Downloads & storage", onNavigateBack = onNavigateBack)
+            SettingsScreenHeader(overline = "Settings", title = "Downloads", onNavigateBack = onNavigateBack)
             SettingsGroup(title = "Automatic") {
                 SettingsToggleRow(
                     icon = Icons.Default.CleaningServices,

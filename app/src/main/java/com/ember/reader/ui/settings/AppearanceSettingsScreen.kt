@@ -6,16 +6,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -159,21 +159,25 @@ fun AppearanceSettingsScreen(
     }
 }
 
-/** One round swatch per accent; the chosen one has a ring around it. */
+/**
+ * One round swatch per accent; the chosen one has a ring around it. The swatches share the
+ * row's width so all of them show on a narrow screen.
+ */
 @Composable
 private fun AccentSwatches(selected: AppAccent, onSelect: (AppAccent) -> Unit) {
     Row(
         modifier = Modifier
+            .widthIn(max = 420.dp)
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         AppAccent.entries.forEach { accent ->
             val isSelected = accent == selected
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .weight(1f)
+                    .aspectRatio(1f)
                     .clip(CircleShape)
                     .then(
                         if (isSelected) {
