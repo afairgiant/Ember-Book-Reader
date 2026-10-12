@@ -49,7 +49,28 @@
     <string name="toggle_view">Toggle view</string>
 
     <!-- Library toolbar / filters / sort / layout -->
-    <string name="library_count">%d books</string>
+    <string name="library_shelves">Shelves</string>
+    <string name="library_everything">Everything</string>
+    <string name="library_all_sources">All sources</string>
+    <string name="library_tab_books">Books</string>
+    <string name="library_tab_authors">Authors</string>
+    <string name="library_no_series">None of these books are part of a series.</string>
+    <plurals name="library_in_your_library">
+        <item quantity="one">%1$d in your library</item>
+        <item quantity="other">%1$d in your library</item>
+    </plurals>
+    <plurals name="library_books">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <plurals name="library_series">
+        <item quantity="one">%1$d series</item>
+        <item quantity="other">%1$d series</item>
+    </plurals>
+    <plurals name="library_authors">
+        <item quantity="one">%1$d author</item>
+        <item quantity="other">%1$d authors</item>
+    </plurals>
     <string name="filter">Filter</string>
     <string name="sort">Sort</string>
     <string name="sort_and_filter">Sort &amp; filter</string>
@@ -81,7 +102,6 @@
     <string name="card_author">Author</string>
     <string name="card_format_badge">Format badge</string>
     <string name="card_metadata">Metadata (pages, size, year)</string>
-    <string name="quick_presets">Quick presets</string>
     <string name="format">Format</string>
     <string name="source">Source</string>
     <string name="status">Status</string>
@@ -89,10 +109,6 @@
     <string name="status_unread">Unread</string>
     <string name="status_finished">Finished</string>
     <string name="preset_currently_reading">Currently Reading</string>
-    <string name="preset_unread">Unread</string>
-    <string name="preset_finished">Finished</string>
-    <string name="preset_downloaded">Downloaded</string>
-    <string name="preset_audiobooks">Audiobooks</string>
     <string name="clear_filters">Clear filters</string>
     <string name="no_matches">No matches</string>
 

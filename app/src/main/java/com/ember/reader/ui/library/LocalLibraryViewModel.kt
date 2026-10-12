@@ -71,13 +71,20 @@ sealed interface LibraryListItem {
     data class BookEntry(val book: Book) : LibraryListItem
 }
 
+/**
+ * [items] holds the books to show; on the Series and Authors tabs, until one is opened, it is
+ * empty and [groups] holds the list instead. [totalCount] counts whichever is shown.
+ */
 data class LibraryViewState(
     val items: List<LibraryListItem> = emptyList(),
+    val groups: List<LibraryGroup> = emptyList(),
     val totalCount: Int = 0,
+    /** Every book on the device, whatever the filters. */
+    val libraryCount: Int = 0,
     val inProgress: List<Book> = emptyList(),
-    val formatCounts: Map<LibraryFormat, Int> = emptyMap(),
     val sourceCounts: Map<LibrarySourceFilter, Int> = emptyMap(),
-    val statusCounts: Map<LibraryStatus, Int> = emptyMap(),
+    /** Books each status chip would show, within the current source and format. */
+    val shelfCounts: Map<LibraryStatus, Int> = emptyMap(),
 )
 
 @HiltViewModel
@@ -125,13 +132,21 @@ class LocalLibraryViewModel @Inject constructor(
     val appearances: StateFlow<Map<Long, ServerAppearance>> = serverAppearanceResolver.appearances
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    private val _tab = MutableStateFlow(LibraryTab.BOOKS)
+    val tab: StateFlow<LibraryTab> = _tab.asStateFlow()
+
+    /** The series or author opened from its tab; null while the tab shows its list. */
+    private val _openGroup = MutableStateFlow<String?>(null)
+    val openGroup: StateFlow<String?> = _openGroup.asStateFlow()
+
     val viewState: StateFlow<LibraryViewState> = combine(
         combine(allDownloadedBooks, progressInfo, prefs) { b, p, pr -> Triple(b, p, pr) },
         _searchQuery,
         servers,
-        appearances
-    ) { (books, progress, p), query, srv, appMap ->
-        buildViewState(books, progress, p, query, srv, appMap)
+        appearances,
+        combine(_tab, _openGroup) { t, g -> t to g }
+    ) { (books, progress, p), query, srv, appMap, (tab, group) ->
+        buildViewState(books, progress, p, query, srv, appMap, tab, group)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryViewState())
 
@@ -155,14 +170,10 @@ class LocalLibraryViewModel @Inject constructor(
         prefs: LibraryPrefs,
         query: String,
         servers: List<Server>,
-        appearances: Map<Long, ServerAppearance>
+        appearances: Map<Long, ServerAppearance>,
+        tab: LibraryTab,
+        openGroup: String?
     ): LibraryViewState {
-        // Counts always reflect the *unfiltered* set so the filter sheet shows true totals.
-        val formatCounts = mapOf(
-            LibraryFormat.ALL to books.size,
-            LibraryFormat.BOOKS to books.count { it.format == BookFormat.EPUB || it.format == BookFormat.PDF },
-            LibraryFormat.AUDIOBOOKS to books.count { it.format == BookFormat.AUDIOBOOK }
-        )
         val countsByServerId: Map<Long?, Int> = books.groupingBy { it.serverId }.eachCount()
         val sourceCounts: Map<LibrarySourceFilter, Int> = buildMap {
             put(LibrarySourceFilter.All, books.size)
@@ -171,22 +182,15 @@ class LocalLibraryViewModel @Inject constructor(
                 put(LibrarySourceFilter.Server(server.id), countsByServerId[server.id] ?: 0)
             }
         }
-        val statusCounts = mapOf(
-            LibraryStatus.ALL to books.size,
-            LibraryStatus.READING to books.count { statusOf(it, progress) == LibraryStatus.READING },
-            LibraryStatus.UNREAD to books.count { statusOf(it, progress) == LibraryStatus.UNREAD },
-            LibraryStatus.FINISHED to books.count { statusOf(it, progress) == LibraryStatus.FINISHED }
-        )
+        val inSource = books.filter {
+            matchesSource(it, prefs.sourceFilter) && matchesFormat(it, prefs.formatFilter)
+        }
+        val shelfCounts = LibraryStatus.values().associateWith { status ->
+            inSource.count { matchesStatus(it, progress, status) }
+        }
 
-        val filtered = books.asSequence()
-            .filter { matchesSource(it, prefs.sourceFilter) }
-            .filter { matchesFormat(it, prefs.formatFilter) }
-            .filter { matchesStatus(it, progress, prefs.statusFilter) }
-            .filter { matchesQuery(it, query) }
-            .toList()
-
-        val sorted = sortBooks(filtered, progress, prefs.sortKey).let {
-            if (prefs.sortReversed) it.reversed() else it
+        val filtered = inSource.filter {
+            matchesStatus(it, progress, prefs.statusFilter) && matchesQuery(it, query)
         }
 
         // In-progress carousel — independent of current filters, drives "resume reading."
@@ -198,7 +202,29 @@ class LocalLibraryViewModel @Inject constructor(
             .sortedByDescending { progress[it.id]?.lastReadAt }
             .take(10)
 
-        val items: List<LibraryListItem> = if (prefs.groupBy == LibraryGroupBy.NONE) {
+        if (tab != LibraryTab.BOOKS && openGroup == null) {
+            val groups = libraryGroups(filtered, tab)
+            return LibraryViewState(
+                groups = groups,
+                totalCount = groups.size,
+                libraryCount = books.size,
+                inProgress = inProgress,
+                sourceCounts = sourceCounts,
+                shelfCounts = shelfCounts,
+            )
+        }
+
+        val shown = if (openGroup == null) filtered else filtered.filter { it.groupName(tab) == openGroup }
+        val sorted = if (tab == LibraryTab.SERIES && openGroup != null) {
+            shown.inSeriesOrder()
+        } else {
+            sortBooks(shown, progress, prefs.sortKey).let {
+                if (prefs.sortReversed) it.reversed() else it
+            }
+        }
+
+        // An opened series or author is already one group, so it is never grouped again.
+        val items: List<LibraryListItem> = if (openGroup != null || prefs.groupBy == LibraryGroupBy.NONE) {
             sorted.map { LibraryListItem.BookEntry(it) }
         } else {
             buildGrouped(sorted, progress, prefs.groupBy, servers, appearances)
@@ -207,10 +233,10 @@ class LocalLibraryViewModel @Inject constructor(
         return LibraryViewState(
             items = items,
             totalCount = sorted.size,
+            libraryCount = books.size,
             inProgress = inProgress,
-            formatCounts = formatCounts,
             sourceCounts = sourceCounts,
-            statusCounts = statusCounts,
+            shelfCounts = shelfCounts,
         )
     }
 
@@ -244,7 +270,8 @@ class LocalLibraryViewModel @Inject constructor(
     private fun matchesQuery(book: Book, query: String): Boolean {
         if (query.isBlank()) return true
         return book.title.contains(query, ignoreCase = true) ||
-            book.author?.contains(query, ignoreCase = true) == true
+            book.author?.contains(query, ignoreCase = true) == true ||
+            book.series?.contains(query, ignoreCase = true) == true
     }
 
     private fun sortBooks(
@@ -351,6 +378,20 @@ class LocalLibraryViewModel @Inject constructor(
         _searchQuery.value = ""
     }
 
+    // ----- Tabs -----
+    fun selectTab(tab: LibraryTab) {
+        _tab.value = tab
+        _openGroup.value = null
+    }
+
+    fun openGroup(name: String) {
+        _openGroup.value = name
+    }
+
+    fun closeGroup() {
+        _openGroup.value = null
+    }
+
     // ----- Preferences mutations -----
     fun setSort(key: LibrarySortKey) {
         viewModelScope.launch {
@@ -420,40 +461,6 @@ class LocalLibraryViewModel @Inject constructor(
                     sortReversed = false,
                     groupBy = LibraryGroupBy.NONE
                 )
-            }
-        }
-    }
-
-    fun applyPreset(preset: LibraryPreset) {
-        viewModelScope.launch {
-            prefsRepo.update {
-                when (preset) {
-                    LibraryPreset.CURRENTLY_READING -> it.copy(
-                        sourceFilter = LibrarySourceFilter.All,
-                        formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.READING
-                    )
-                    LibraryPreset.UNREAD -> it.copy(
-                        sourceFilter = LibrarySourceFilter.All,
-                        formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.UNREAD
-                    )
-                    LibraryPreset.FINISHED -> it.copy(
-                        sourceFilter = LibrarySourceFilter.All,
-                        formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.FINISHED
-                    )
-                    LibraryPreset.DOWNLOADED -> it.copy(
-                        sourceFilter = LibrarySourceFilter.Local,
-                        formatFilter = LibraryFormat.ALL,
-                        statusFilter = LibraryStatus.ALL
-                    )
-                    LibraryPreset.AUDIOBOOKS -> it.copy(
-                        sourceFilter = LibrarySourceFilter.All,
-                        formatFilter = LibraryFormat.AUDIOBOOKS,
-                        statusFilter = LibraryStatus.ALL
-                    )
-                }
             }
         }
     }
@@ -669,8 +676,6 @@ class LocalLibraryViewModel @Inject constructor(
         }
     }
 }
-
-enum class LibraryPreset { CURRENTLY_READING, UNREAD, FINISHED, DOWNLOADED, AUDIOBOOKS }
 
 private fun LibraryStatus.displayLabel(): String = when (this) {
     LibraryStatus.READING -> "Reading"
