@@ -7,7 +7,6 @@ import com.ember.reader.core.grimmory.GrimmoryBookSummary
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
-import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
@@ -135,20 +134,8 @@ class ServerListViewModel @Inject constructor(
     private suspend fun loadRecentlyAdded(server: Server) {
         grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = 10)
             .onSuccess { books ->
-                val result = books.map { summary ->
-                    val opdsEntryId = "urn:booklore:book:${summary.id}"
-                    val localBook = bookRepository.getByOpdsEntryId(opdsEntryId, server.id)
-                    val localId = localBook?.id ?: bookRepository.ensureBookExists(
-                        serverId = server.id,
-                        opdsEntryId = opdsEntryId,
-                        title = summary.title,
-                        author = summary.authors.joinToString(", ").ifBlank { null },
-                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),
-                        format = when (summary.primaryFileType?.uppercase()) {
-                            "PDF" -> BookFormat.PDF
-                            else -> BookFormat.EPUB
-                        }
-                    )
+                val localIds = bookRepository.upsertGrimmorySummaries(server, books)
+                val result = books.zip(localIds) { summary, localId ->
                     RecentlyAddedBook(
                         summary = summary,
                         coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),

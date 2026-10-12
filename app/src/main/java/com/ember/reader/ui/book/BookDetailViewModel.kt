@@ -161,30 +161,16 @@ class BookDetailViewModel @Inject constructor(
         grimmoryAppClient.getSeriesBooks(server.url, server.id, seriesName)
             .onSuccess { page ->
                 val currentBookId = _book.value?.grimmoryBookId
-                _seriesBooks.value = page.content
-                    .filter { it.id != currentBookId } // exclude current book
-                    .map { appBook ->
-                        SeriesBookItem(
-                            grimmoryBookId = appBook.id,
-                            title = appBook.title,
-                            author = appBook.authors.firstOrNull(),
-                            coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
-                            // resolved below
-                            localBookId = null
-                        )
-                    }
-                // Ensure local book entries exist (same as recently added)
-                _seriesBooks.value = _seriesBooks.value.map { item ->
-                    val opdsEntryId = "urn:booklore:book:${item.grimmoryBookId}"
-                    val localId = bookRepository.ensureBookExists(
-                        serverId = server.id,
-                        opdsEntryId = opdsEntryId,
-                        title = item.title,
-                        author = item.author,
-                        coverUrl = item.coverUrl,
-                        format = com.ember.reader.core.model.BookFormat.EPUB
+                val others = page.content.filter { it.id != currentBookId } // exclude current book
+                val localIds = bookRepository.upsertGrimmoryBooks(server, others)
+                _seriesBooks.value = others.zip(localIds) { appBook, localId ->
+                    SeriesBookItem(
+                        grimmoryBookId = appBook.id,
+                        title = appBook.title,
+                        author = appBook.authors.firstOrNull(),
+                        coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
+                        localBookId = localId
                     )
-                    item.copy(localBookId = localId)
                 }
             }
             .onFailure { Timber.w(it, "Failed to load series books for $seriesName") }
