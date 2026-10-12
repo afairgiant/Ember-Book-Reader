@@ -168,6 +168,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     var footnoteResolver by remember { mutableStateOf<FootnoteResolver?>(null) }
     var footnote by remember { mutableStateOf<Footnote?>(null) }
     val highlightRepair by viewModel.highlightRepair.collectAsStateWithLifecycle()
+    val bookmarkRepair by viewModel.bookmarkRepair.collectAsStateWithLifecycle()
     var pendingSelection by remember { mutableStateOf<Selection?>(null) }
     var pendingSelectionCfi by remember { mutableStateOf<String?>(null) }
     var showColorPicker by remember { mutableStateOf(false) }
@@ -585,7 +586,14 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         showBookmarks = false
                     },
                     onDelete = viewModel::deleteBookmark,
-                    onDismiss = { showBookmarks = false }
+                    onDismiss = { showBookmarks = false },
+                    repairState = bookmarkRepair,
+                    onRepair = state.spine?.let { spine ->
+                        {
+                            val resolver = OffscreenCfiResolver(context, state.publication, spine)
+                            viewModel.repairBookmarks(resolver::cfisForBookmarks)
+                        }
+                    }
                 )
             }
 

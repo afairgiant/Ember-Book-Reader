@@ -88,6 +88,25 @@ class BookmarkSyncManagerTest {
         }
 
         @Test
+        fun `a bookmark that arrived with a fake CFI can be placed once the server has a real one`() = runTest {
+            dao.insert(
+                bookmarkEntity(
+                    bookId = bookId,
+                    cfi = null,
+                    remoteId = 12,
+                    locatorJson = CfiLocatorConverter.buildLocatorJson(cfi = "0.4231", chapterTitle = "Ch 2"),
+                )
+            )
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(
+                listOf(grimmoryBookmark(id = 12, cfi = REAL_CFI))
+            )
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(REAL_CFI, CfiLocatorConverter.unplacedCfi(dao.all.single().locatorJson))
+        }
+
+        @Test
         fun `server bookmark with null cfi is skipped`() = runTest {
             val serverBm = grimmoryBookmark(id = 10, cfi = null)
             coEvery {

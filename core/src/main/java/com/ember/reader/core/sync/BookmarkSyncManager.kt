@@ -44,9 +44,15 @@ class BookmarkSyncManager @Inject constructor(
                         .onSuccess { Timber.d("BookmarkSync: deleted remote bookmark %d", serverBookmark.id) }
                         .onFailure { Timber.w(it, "BookmarkSync: failed to delete remote bookmark %d", serverBookmark.id) }
                 } else {
-                    // Keep a real CFI the server has for a bookmark stored before Ember kept them
-                    val known = if (local.cfi == null && EpubCfi.isRealCfi(serverBookmark.cfi)) {
-                        local.copy(cfi = serverBookmark.cfi).also { bookmarkDao.update(it) }
+                    // Keep a real CFI the server has for a bookmark stored before Ember kept
+                    // them. One that arrived with a fake CFI has not been placed in the book;
+                    // its locator takes the real one too, so it can be.
+                    val serverCfi = serverBookmark.cfi
+                    val known = if (local.cfi == null && serverCfi != null && EpubCfi.isRealCfi(serverCfi)) {
+                        local.copy(
+                            cfi = serverCfi,
+                            locatorJson = CfiLocatorConverter.withUnplacedCfi(local.locatorJson, serverCfi),
+                        ).also { bookmarkDao.update(it) }
                     } else {
                         local
                     }

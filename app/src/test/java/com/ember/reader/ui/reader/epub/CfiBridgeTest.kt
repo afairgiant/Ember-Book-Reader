@@ -128,6 +128,18 @@ class CfiBridgeTest {
     }
 
     @Test
+    fun `progressionCfis adds the spine step to each answer and keeps the gaps`() = runTest {
+        val page = FakePage { reply("""["epubcfi(/4/2/1:0)",null,"0.4"]""") }
+
+        assertEquals(
+            listOf("epubcfi(/6/4[ref1]!/4/2/1:0)", null, null),
+            bridge(page).progressionCfis(listOf(0.0, 0.5, 0.9)),
+        )
+        assertEquals(listOf(null, null), bridge(FakePage { reply("null") }).progressionCfis(listOf(0.1, 0.2)))
+        assertEquals(emptyList<String?>(), bridge(FakePage { error("not asked") }).progressionCfis(emptyList()))
+    }
+
+    @Test
     fun `resolve returns what each CFI in the page's chapter points at`() = runTest {
         val page = FakePage {
             reply("""[{"exact":"fox","before":"brown ","after":" jumps","progression":0.25},""" +

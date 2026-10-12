@@ -66,6 +66,20 @@ object CfiLocatorConverter {
     }.getOrNull()
 
     /**
+     * Gives a locator from [buildLocatorJson] that has not been placed in the book a new
+     * CFI to be placed by, keeping its text and title. An item that came from the server
+     * with a fake CFI still has it here; this is how a real one replaces it. Any other
+     * locator already knows its chapter and is returned as it is.
+     */
+    fun withUnplacedCfi(locatorJson: String, cfi: String): String = runCatching {
+        val json = JSONObject(locatorJson)
+        if (json.optString("href").isNotEmpty()) return@runCatching locatorJson
+        val locations = json.optJSONObject("locations") ?: JSONObject().also { json.put("locations", it) }
+        locations.put("fragments", JSONArray().put(EpubCfi.wrap(cfi)))
+        json.toString()
+    }.getOrDefault(locatorJson)
+
+    /**
      * Rewrites a locator from [buildLocatorJson] once its CFI has been resolved in the
      * book: the chapter, the text around it so the right occurrence is found, and how far
      * into the chapter it is. The CFI stays in `fragments`.

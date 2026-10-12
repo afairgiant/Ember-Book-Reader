@@ -249,6 +249,24 @@ class CfiLocatorConverterTest {
         }
 
         @Test
+        fun `withUnplacedCfi replaces the CFI of an unplaced locator and keeps its text and title`() {
+            val synced = CfiLocatorConverter.buildLocatorJson("0.4231", selectedText = "fox", chapterTitle = "Ch 2")
+
+            val updated = CfiLocatorConverter.withUnplacedCfi(synced, "epubcfi(/6/4!/4/2/1:40)")
+
+            assertEquals("epubcfi(/6/4!/4/2/1:40)", CfiLocatorConverter.unplacedCfi(updated))
+            assertEquals("fox", JSONObject(updated).getJSONObject("text").getString("highlight"))
+            assertEquals("Ch 2", CfiLocatorConverter.extractTitle(updated))
+        }
+
+        @Test
+        fun `withUnplacedCfi leaves a locator that knows its chapter alone`() {
+            val local = """{"href":"OEBPS/ch1.xhtml","locations":{"progression":0.4}}"""
+
+            assertEquals(local, CfiLocatorConverter.withUnplacedCfi(local, "epubcfi(/6/4!/4/2/1:40)"))
+        }
+
+        @Test
         fun `placedLocatorJson adds chapter, context and position and keeps the rest`() {
             val placed = JSONObject(
                 CfiLocatorConverter.placedLocatorJson(

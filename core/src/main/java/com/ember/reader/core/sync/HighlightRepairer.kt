@@ -28,9 +28,6 @@ class HighlightRepairer @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
 ) {
 
-    /** @param unresolved highlights that still have no real CFI, usually because their text was not found. */
-    data class Summary(val repaired: Int, val unresolved: Int)
-
     /**
      * @param server the book's Grimmory server and [grimmoryBookId], or null for a book that
      * does not sync; its highlights then only get a CFI stored.
@@ -42,10 +39,10 @@ class HighlightRepairer @Inject constructor(
         bookId: String,
         grimmoryBookId: Long?,
         computeCfis: suspend (List<Highlight>) -> Map<Long, String>,
-    ): Result<Summary> = runCatching {
+    ): Result<RepairSummary> = runCatching {
         val lacking = highlightDao.getAllByBookId(bookId)
             .filter { it.deletedAt == null && !EpubCfi.isRealCfi(it.cfi) }
-        if (lacking.isEmpty()) return@runCatching Summary(repaired = 0, unresolved = 0)
+        if (lacking.isEmpty()) return@runCatching RepairSummary(repaired = 0, unresolved = 0)
 
         val remote = server != null && grimmoryBookId != null
         val annotations = if (server != null && grimmoryBookId != null) {
@@ -82,7 +79,7 @@ class HighlightRepairer @Inject constructor(
             }
             if (done) repaired++
         }
-        Summary(repaired = repaired, unresolved = lacking.size - repaired)
+        RepairSummary(repaired = repaired, unresolved = lacking.size - repaired)
     }.onFailure { Timber.w(it, "HighlightRepair: failed for book=%s", bookId) }
 
     /**
@@ -90,17 +87,8 @@ class HighlightRepairer @Inject constructor(
      * the book keeps its CFI in its locator too, where the old fake one still is; that is
      * replaced as well, so the highlight can be placed the next time its chapter opens.
      */
-    private fun HighlightEntity.withCfi(cfi: String): HighlightEntity {
-        if (!locatorJson.contains("\"href\":\"\"")) return copy(cfi = cfi)
-        return copy(
-            cfi = cfi,
-            locatorJson = CfiLocatorConverter.buildLocatorJson(
-                cfi = cfi,
-                selectedText = selectedText,
-                chapterTitle = CfiLocatorConverter.extractTitle(locatorJson),
-            ),
-        )
-    }
+    private fun HighlightEntity.withCfi(cfi: String): HighlightEntity =
+        copy(cfi = cfi, locatorJson = CfiLocatorConverter.withUnplacedCfi(locatorJson, cfi))
 
     /**
      * Creates the replacement first and deletes the old annotation last, so a failure in
