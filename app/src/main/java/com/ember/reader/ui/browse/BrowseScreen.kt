@@ -23,7 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,8 +54,10 @@ fun BrowseScreen(
     val syncStatuses by viewModel.syncStatuses.collectAsStateWithLifecycle()
     val hardcoverConnected = viewModel.isHardcoverConnected
 
-    // Auto-navigate if only one server and no Hardcover
-    var autoNavigated by remember { mutableStateOf(false) }
+    // Auto-navigate if only one server and no Hardcover. The flag is saved with the screen, so
+    // coming back from the catalogue shows this list instead of bouncing into the catalogue
+    // again, which made Back appear to do nothing.
+    var autoNavigated by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(servers, hardcoverConnected) {
         if (servers.size == 1 && !hardcoverConnected && !autoNavigated) {
             autoNavigated = true

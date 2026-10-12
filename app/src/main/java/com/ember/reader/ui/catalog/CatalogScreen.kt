@@ -106,6 +106,7 @@ fun CatalogScreen(
     val editMode by viewModel.editMode.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val shelfPreviews by viewModel.shelfPreviews.collectAsStateWithLifecycle()
+    val searchAvailable by viewModel.searchAvailable.collectAsStateWithLifecycle()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
 
@@ -159,7 +160,10 @@ fun CatalogScreen(
                             }
                         }
                     } else {
-                        if (viewModel.isGrimmoryCatalogRoot) {
+                        // Read from the UI state, which recomposes this bar when the catalogue
+                        // arrives. The view model's own flag is not observable, so the button
+                        // used to appear only after something else redrew the bar.
+                        if (uiState is CatalogUiState.GrimmorySuccess) {
                             IconButton(onClick = { viewModel.toggleEditMode() }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit catalog")
                             }
@@ -203,6 +207,7 @@ fun CatalogScreen(
                 OpdsCatalogContent(
                     feed = state.feed,
                     entryIcon = if (viewModel.isAuthorsView) Icons.Default.Person else null,
+                    showSearch = searchAvailable,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
@@ -300,6 +305,7 @@ private fun OpdsCatalogContent(
     feed: OpdsFeed,
     /** The icon for every row, when the list is all one kind of thing; null picks by title. */
     entryIcon: ImageVector?,
+    showSearch: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -315,7 +321,7 @@ private fun OpdsCatalogContent(
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            run {
+            if (showSearch) {
                 CatalogSearchField(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,

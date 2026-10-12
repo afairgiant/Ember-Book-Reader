@@ -10,6 +10,7 @@ import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.CatalogEntryType
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.CatalogLayoutPreferencesRepository
 import com.ember.reader.core.repository.CatalogPreferencesRepository
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -198,5 +200,37 @@ class CatalogViewModelShelfPreviewTest {
                 .associate { it.title to it.subtitle }
             assertEquals(mapOf("Fiction" to "1 book", "Comics" to null), subtitles)
             collecting.cancel()
+        }
+
+    @Test
+    fun `search is offered on a signed-in Grimmory server and not on a plain OPDS one`() =
+        runTest(testDispatcher) {
+            stubShortcuts(Result.success(emptyList()), Result.success(emptyList()))
+            coEvery {
+                bookRepository.upsertGrimmorySummaries(server, emptyList())
+            } returns emptyList()
+            val grimmory = rootCatalogue()
+            advanceUntilIdle()
+            assertTrue(grimmory.searchAvailable.value)
+
+            val opdsServer = server.copy(id = 8L, isGrimmory = false)
+            coEvery { serverRepository.getById(8L) } returns opdsServer
+            every { catalogPreferencesRepository.observePreferences(8L) } returns emptyFlow()
+            coEvery {
+                opdsClient.fetchCatalog(any(), any(), any(), any())
+            } returns Result.success(OpdsFeed(title = "Feed", entries = emptyList()))
+            val opds = CatalogViewModel(
+                savedStateHandle = SavedStateHandle(mapOf("serverId" to 8L, "path" to "")),
+                serverRepository = serverRepository,
+                opdsClient = opdsClient,
+                grimmoryAppClient = grimmoryAppClient,
+                grimmoryClient = grimmoryClient,
+                bookRepository = bookRepository,
+                grimmoryTokenManager = grimmoryTokenManager,
+                catalogPreferencesRepository = catalogPreferencesRepository,
+                catalogLayoutPreferencesRepository = catalogLayoutPreferencesRepository
+            )
+            advanceUntilIdle()
+            assertFalse(opds.searchAvailable.value)
         }
 }

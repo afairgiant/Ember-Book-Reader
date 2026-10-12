@@ -73,6 +73,10 @@ class CatalogViewModel @Inject constructor(
     private val _editMode = MutableStateFlow(false)
     val editMode: StateFlow<Boolean> = _editMode.asStateFlow()
 
+    /** Whether this server's catalogue can be searched; false hides the search field. */
+    private val _searchAvailable = MutableStateFlow(false)
+    val searchAvailable: StateFlow<Boolean> = _searchAvailable.asStateFlow()
+
     /**
      * The first few books behind each reading shortcut on a Grimmory catalogue's first page.
      * A type with no entry is still loading; an empty list means there is nothing to show.
@@ -222,6 +226,13 @@ class CatalogViewModel @Inject constructor(
         }
         server = loadedServer
         fetchFeed()
+        updateSearchAvailable()
+    }
+
+    /** Search goes through Grimmory's own API, so it needs a Grimmory server that is signed in. */
+    private fun updateSearchAvailable() {
+        val current = server ?: return
+        _searchAvailable.value = current.isGrimmory && grimmoryTokenManager.isLoggedIn(current.id)
     }
 
     fun refresh() {
@@ -234,6 +245,7 @@ class CatalogViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 fetchFeed()
+                updateSearchAvailable()
             } finally {
                 _isRefreshing.value = false
             }
