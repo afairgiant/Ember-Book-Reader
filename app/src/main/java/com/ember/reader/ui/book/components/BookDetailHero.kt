@@ -1,11 +1,10 @@
 package com.ember.reader.ui.book.components
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,8 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +63,7 @@ fun BookDetailHero(
                 book = book,
                 modifier = Modifier
                     .fillMaxSize()
+                    .shadow(12.dp, RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp)),
                 onClick = if (book.coverUrl != null) onCoverClick else null,
             )
@@ -83,6 +88,7 @@ fun BookDetailHero(
         Text(
             text = book.title,
             style = MaterialTheme.typography.headlineSmall,
+            fontFamily = FontFamily.Serif,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 3,
@@ -127,44 +133,56 @@ fun BookDetailHero(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = book.format.name,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-            val pct = progress?.percentage
-            if (pct != null && pct > 0f) {
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "${(pct * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
         val pct = progress?.percentage
         if (pct != null && pct > 0f) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             LinearProgressIndicator(
                 progress = { pct },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
                 trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "${(pct * 100).roundToInt()}% read",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+    }
+}
+
+/**
+ * A blurred, dimmed copy of the cover, drawn behind the top of the book page. It fades into
+ * the page background at both ends so there is no edge under the status bar. Blur needs Android 12; older versions and books with no cover get
+ * the plain background.
+ */
+@Composable
+fun BookCoverBackdrop(book: Book, modifier: Modifier = Modifier) {
+    if (book.coverUrl == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val background = MaterialTheme.colorScheme.background
+    Box(modifier = modifier) {
+        BookCoverImage(
+            book = book,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(48.dp)
+                .alpha(0.6f),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to background,
+                        0.3f to background.copy(alpha = 0.4f),
+                        0.7f to background.copy(alpha = 0.8f),
+                        1f to background,
+                    ),
+                ),
+        )
     }
 }
 

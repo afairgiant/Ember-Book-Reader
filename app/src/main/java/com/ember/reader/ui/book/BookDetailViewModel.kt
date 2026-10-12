@@ -18,6 +18,8 @@ import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.BookmarkRepository
+import com.ember.reader.core.repository.HighlightRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.core.repository.ServerAppearanceResolver
@@ -43,6 +45,8 @@ class BookDetailViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
     private val readingProgressRepository: ReadingProgressRepository,
+    bookmarkRepository: BookmarkRepository,
+    highlightRepository: HighlightRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryAppClient: GrimmoryAppClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
@@ -95,6 +99,12 @@ class BookDetailViewModel @Inject constructor(
     val progress: StateFlow<ReadingProgress?> = readingProgressRepository
         .observeByBookId(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val marks: StateFlow<List<BookMarkItem>> = combine(
+        bookmarkRepository.observeByBookId(bookId),
+        highlightRepository.observeByBookId(bookId),
+        ::bookMarkItemsOf
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sourceAppearance: StateFlow<ServerAppearance?> =
         combine(_book, serverAppearanceResolver.appearances) { book, appearances ->

@@ -3,16 +3,12 @@ package com.ember.reader.ui.book.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -23,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ember.reader.ui.settings.components.SettingsGroup
 
 @Composable
 fun BookRatingsCard(
@@ -35,22 +32,8 @@ fun BookRatingsCard(
     hardcoverReviewCount: Int?,
     onRatingChange: (Int?) -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "Ratings",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+    SettingsGroup(title = "Ratings") {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             goodreadsRating?.let { rating ->
                 val reviews = goodreadsReviewCount?.let { " ($it)" } ?: ""
                 InfoRow("Goodreads", "%.1f$reviews".format(rating))
