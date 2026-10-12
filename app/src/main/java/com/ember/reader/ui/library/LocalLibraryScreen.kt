@@ -1,6 +1,7 @@
 package com.ember.reader.ui.library
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,20 +20,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -42,8 +43,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,15 +62,19 @@ import com.ember.reader.R
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.repository.LibraryDensity
 import com.ember.reader.core.repository.LibraryFormat
+import com.ember.reader.core.repository.LibraryGroupBy
 import com.ember.reader.core.repository.LibrarySourceFilter
 import com.ember.reader.core.repository.LibraryStatus
 import com.ember.reader.core.repository.LibraryViewMode
-import com.ember.reader.ui.library.components.ActiveFilterChip
 import com.ember.reader.ui.library.components.CardInfoToggles
 import com.ember.reader.ui.library.components.ContinueReadingCarousel
 import com.ember.reader.ui.library.components.LibraryFilterSheet
+import com.ember.reader.ui.library.components.LibraryGroupRow
+import com.ember.reader.ui.library.components.LibraryHeader
+import com.ember.reader.ui.library.components.LibraryHeaderActions
+import com.ember.reader.ui.library.components.LibraryHeaderState
 import com.ember.reader.ui.library.components.LibraryLayoutSheet
-import com.ember.reader.ui.library.components.LibraryToolbar
+import com.ember.reader.ui.library.components.LibrarySearchRow
 import com.ember.reader.ui.library.components.UnifiedBookCard
 import com.ember.reader.ui.library.components.UnifiedBookListRow
 import com.ember.reader.ui.theme.LocalAccentColor
@@ -94,6 +97,8 @@ fun LocalLibraryScreen(
     val appearances by viewModel.appearances.collectAsStateWithLifecycle()
     val operationResult by viewModel.operationResult.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
+    val tab by viewModel.tab.collectAsStateWithLifecycle()
+    val openGroup by viewModel.openGroup.collectAsStateWithLifecycle()
 
     var searchActive by rememberSaveable { mutableStateOf(false) }
     var filterSheetVisible by remember { mutableStateOf(false) }
@@ -112,37 +117,12 @@ fun LocalLibraryScreen(
 
     val isSelecting = selectedIds.isNotEmpty()
 
-    val activeChips: List<ActiveFilterChip> = buildList {
-        val sourceFilter = prefs.sourceFilter
-        if (sourceFilter != LibrarySourceFilter.All) {
-            val sourceName = when (sourceFilter) {
-                LibrarySourceFilter.All -> ""
-                LibrarySourceFilter.Local -> stringResource(R.string.filter_local)
-                is LibrarySourceFilter.Server -> appearances[sourceFilter.serverId]?.name ?: ""
-            }
-            val label = stringResource(R.string.chip_source, sourceName)
-            add(ActiveFilterChip("source", label) { viewModel.setSource(LibrarySourceFilter.All) })
-        }
-        if (prefs.formatFilter != LibraryFormat.ALL) {
-            val label = when (prefs.formatFilter) {
-                LibraryFormat.BOOKS -> stringResource(R.string.filter_books)
-                LibraryFormat.AUDIOBOOKS -> stringResource(R.string.filter_audiobooks)
-                LibraryFormat.ALL -> ""
-            }
-            add(ActiveFilterChip("format", label) { viewModel.setFormat(LibraryFormat.ALL) })
-        }
-        if (prefs.statusFilter != LibraryStatus.ALL) {
-            val label = when (prefs.statusFilter) {
-                LibraryStatus.READING -> stringResource(R.string.status_reading)
-                LibraryStatus.UNREAD -> stringResource(R.string.status_unread)
-                LibraryStatus.FINISHED -> stringResource(R.string.status_finished)
-                LibraryStatus.ALL -> ""
-            }
-            add(ActiveFilterChip("status", label) { viewModel.setStatus(LibraryStatus.ALL) })
-        }
-    }
+    val hasActiveFilters = prefs.sourceFilter != LibrarySourceFilter.All ||
+        prefs.formatFilter != LibraryFormat.ALL ||
+        prefs.statusFilter != LibraryStatus.ALL ||
+        searchQuery.isNotBlank()
 
-    val hasActiveFilters = activeChips.isNotEmpty() || searchQuery.isNotBlank()
+    BackHandler(enabled = openGroup != null) { viewModel.closeGroup() }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -161,32 +141,53 @@ fun LocalLibraryScreen(
         LibraryDensity.LARGE -> 160.dp
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.library_title), fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
+    val sourceOptions: List<LibrarySourceFilter> = remember(servers) {
+        buildList {
+            add(LibrarySourceFilter.All)
+            add(LibrarySourceFilter.Local)
+            servers.forEach { add(LibrarySourceFilter.Server(it.id)) }
+        }
+    }
+    val headerState = LibraryHeaderState(
+        libraryCount = viewState.libraryCount,
+        resultCount = viewState.totalCount,
+        viewMode = prefs.viewMode,
+        importing = importing,
+        sourceFilter = prefs.sourceFilter,
+        sourceOptions = sourceOptions,
+        sourceCounts = viewState.sourceCounts,
+        appearances = appearances,
+        statusFilter = prefs.statusFilter,
+        shelfCounts = viewState.shelfCounts,
+        tab = tab,
+        openGroup = openGroup,
+        sheetFiltersActive = prefs.formatFilter != LibraryFormat.ALL ||
+            prefs.groupBy != LibraryGroupBy.NONE,
+    )
+    val headerActions = LibraryHeaderActions(
+        onLayoutClick = { layoutSheetVisible = true },
+        onImportClick = {
+            filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
         },
+        onSourceChange = viewModel::setSource,
+        onStatusChange = viewModel::setStatus,
+        onTabChange = viewModel::selectTab,
+        onCloseGroup = viewModel::closeGroup,
+        onFilterClick = { filterSheetVisible = true },
+    )
+
+    Scaffold(
+        // The app's outer scaffold has already made room for the system bars.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!isSelecting) {
+            if (!isSelecting && !searchActive) {
                 FloatingActionButton(
-                    onClick = {
-                        filePickerLauncher.launch(arrayOf("application/epub+zip", "application/pdf"))
-                    }
+                    onClick = { searchActive = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    if (importing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    } else {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.import_book))
-                    }
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                 }
             }
         },
@@ -239,83 +240,64 @@ fun LocalLibraryScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            LibraryToolbar(
-                resultCount = viewState.totalCount,
-                activeChips = activeChips,
-                searchActive = searchActive,
-                searchQuery = searchQuery,
-                onSearchQueryChange = viewModel::updateSearch,
-                onSearchToggle = {
-                    if (searchActive) viewModel.clearSearch()
-                    searchActive = !searchActive
-                },
-                onFilterClick = { filterSheetVisible = true },
-                onLayoutClick = { layoutSheetVisible = true },
-                viewMode = prefs.viewMode
-            )
-
-            if (viewState.items.isEmpty()) {
-                EmptyState(
-                    hasActiveFilters = hasActiveFilters,
-                    onClearFilters = {
-                        viewModel.clearAllFilters()
-                        if (searchActive) {
-                            viewModel.clearSearch()
-                            searchActive = false
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                LibraryContent(
-                    viewState = viewState,
-                    viewMode = prefs.viewMode,
-                    gridMinSize = gridMinSize,
-                    showContinueReading = prefs.showContinueReading,
-                    progressMap = progressMap,
-                    cardInfo = cardInfo,
-                    appearances = appearances,
-                    selectedIds = selectedIds,
-                    isSelecting = isSelecting,
-                    onBookClick = { book ->
-                        if (isSelecting) {
-                            viewModel.toggleSelection(book.id)
-                        } else {
-                            onOpenBookDetail(book.id)
-                        }
-                    },
-                    onBookLongClick = { book -> viewModel.toggleSelection(book.id) },
-                    onBookDelete = { book -> deleteBookId = book.id },
-                    onBookRelink = { book ->
-                        if (book.serverId == null && servers.isNotEmpty()) relinkBookId = book.id
-                    },
-                    canRelink = { book -> book.serverId == null && servers.isNotEmpty() },
-                    onPullProgress = { book -> viewModel.pullBookProgress(book) },
-                    onPushProgress = { book -> viewModel.pushBookProgress(book) },
-                    modifier = Modifier.weight(1f)
+            if (searchActive) {
+                LibrarySearchRow(
+                    query = searchQuery,
+                    onQueryChange = viewModel::updateSearch,
+                    onClose = {
+                        viewModel.clearSearch()
+                        searchActive = false
+                    }
                 )
             }
+
+            LibraryContent(
+                viewState = viewState,
+                viewMode = prefs.viewMode,
+                gridMinSize = gridMinSize,
+                showContinueReading = prefs.showContinueReading && tab == LibraryTab.BOOKS,
+                progressMap = progressMap,
+                cardInfo = cardInfo,
+                selectedIds = selectedIds,
+                isSelecting = isSelecting,
+                header = { LibraryHeader(state = headerState, actions = headerActions) },
+                emptyState = {
+                    EmptyState(
+                        hasActiveFilters = hasActiveFilters,
+                        noSeries = tab == LibraryTab.SERIES && openGroup == null,
+                        onClearFilters = {
+                            viewModel.clearAllFilters()
+                            searchActive = false
+                        }
+                    )
+                },
+                onGroupClick = viewModel::openGroup,
+                onBookClick = { book ->
+                    if (isSelecting) {
+                        viewModel.toggleSelection(book.id)
+                    } else {
+                        onOpenBookDetail(book.id)
+                    }
+                },
+                onBookLongClick = { book -> viewModel.toggleSelection(book.id) },
+                onBookDelete = { book -> deleteBookId = book.id },
+                onBookRelink = { book ->
+                    if (book.serverId == null && servers.isNotEmpty()) relinkBookId = book.id
+                },
+                canRelink = { book -> book.serverId == null && servers.isNotEmpty() },
+                onPullProgress = { book -> viewModel.pullBookProgress(book) },
+                onPushProgress = { book -> viewModel.pushBookProgress(book) },
+                modifier = Modifier.weight(1f)
+            )
         }
 
         if (filterSheetVisible) {
-            val sourceOptions: List<LibrarySourceFilter> = remember(servers) {
-                buildList {
-                    add(LibrarySourceFilter.All)
-                    add(LibrarySourceFilter.Local)
-                    servers.forEach { add(LibrarySourceFilter.Server(it.id)) }
-                }
-            }
             LibraryFilterSheet(
                 prefs = prefs,
-                sourceOptions = sourceOptions,
-                appearances = appearances,
                 onDismiss = { filterSheetVisible = false },
                 onSortSelected = viewModel::setSort,
                 onGroupSelected = viewModel::setGroupBy,
-                onSourceChange = viewModel::setSource,
                 onFormatChange = viewModel::setFormat,
-                onStatusChange = viewModel::setStatus,
-                onApplyPreset = viewModel::applyPreset,
                 onClearAll = viewModel::clearAllFilters
             )
         }
@@ -399,6 +381,10 @@ fun LocalLibraryScreen(
     }
 }
 
+/**
+ * The scrolling body: [header] first, then the books, the series or authors, or [emptyState].
+ * Only a non-empty list of books in grid mode uses the grid; everything else is a column.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LibraryContent(
@@ -408,9 +394,11 @@ private fun LibraryContent(
     showContinueReading: Boolean,
     progressMap: Map<String, Float>,
     cardInfo: CardInfoToggles,
-    appearances: Map<Long, com.ember.reader.core.repository.ServerAppearance>,
     selectedIds: Set<String>,
     isSelecting: Boolean,
+    header: @Composable () -> Unit,
+    emptyState: @Composable () -> Unit,
+    onGroupClick: (String) -> Unit,
     onBookClick: (com.ember.reader.core.model.Book) -> Unit,
     onBookLongClick: (com.ember.reader.core.model.Book) -> Unit,
     onBookDelete: (com.ember.reader.core.model.Book) -> Unit,
@@ -420,79 +408,87 @@ private fun LibraryContent(
     onPushProgress: (com.ember.reader.core.model.Book) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    when (viewMode) {
-        LibraryViewMode.GRID -> {
-            val gridState = rememberLazyGridState()
-            LazyVerticalGrid(
-                state = gridState,
-                columns = GridCells.Adaptive(gridMinSize),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = modifier
-            ) {
-                if (showContinueReading && viewState.inProgress.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "continue-reading") {
-                        ContinueReadingCarousel(
-                            books = viewState.inProgress,
-                            progressMap = progressMap,
-                            onBookClick = onBookClick
-                        )
-                    }
+    val continueReading = showContinueReading && viewState.inProgress.isNotEmpty()
+    // Room for the search button, so it never covers the last row.
+    val contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp)
+
+    if (viewMode == LibraryViewMode.GRID && viewState.items.isNotEmpty()) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(gridMinSize),
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = modifier
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "library-header") { header() }
+            if (continueReading) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "continue-reading") {
+                    ContinueReadingCarousel(
+                        books = viewState.inProgress,
+                        progressMap = progressMap,
+                        onBookClick = onBookClick
+                    )
                 }
-                viewState.items.forEach { item ->
-                    when (item) {
-                        is LibraryListItem.Header -> {
-                            item(span = { GridItemSpan(maxLineSpan) }, key = "header-${item.key}") {
-                                GroupHeader(
-                                    label = item.label,
-                                    count = item.count,
-                                    dotColor = item.sourceDotColor()
-                                )
-                            }
+            }
+            viewState.items.forEach { item ->
+                when (item) {
+                    is LibraryListItem.Header -> {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "header-${item.key}") {
+                            GroupHeader(
+                                label = item.label,
+                                count = item.count,
+                                dotColor = item.sourceDotColor()
+                            )
                         }
-                        is LibraryListItem.BookEntry -> {
-                            item(key = item.book.id) {
-                                val book = item.book
-                                UnifiedBookCard(
-                                    book = book,
-                                    progress = progressMap[book.id],
-                                    isSelected = book.id in selectedIds,
-                                    isSelecting = isSelecting,
-                                    info = cardInfo,
-                                    onClick = { onBookClick(book) },
-                                    onLongClick = { onBookLongClick(book) },
-                                    onDelete = { onBookDelete(book) },
-                                    onRelink = if (canRelink(book)) {
-                                        { onBookRelink(book) }
-                                    } else {
-                                        null
-                                    },
-                                    onPullProgress = if (book.serverId != null) {
-                                        { onPullProgress(book) }
-                                    } else {
-                                        null
-                                    },
-                                    onPushProgress = if (book.serverId != null) {
-                                        { onPushProgress(book) }
-                                    } else {
-                                        null
-                                    }
-                                )
-                            }
+                    }
+                    is LibraryListItem.BookEntry -> {
+                        item(key = item.book.id) {
+                            val book = item.book
+                            UnifiedBookCard(
+                                book = book,
+                                progress = progressMap[book.id],
+                                isSelected = book.id in selectedIds,
+                                isSelecting = isSelecting,
+                                info = cardInfo,
+                                onClick = { onBookClick(book) },
+                                onLongClick = { onBookLongClick(book) },
+                                onDelete = { onBookDelete(book) },
+                                onRelink = if (canRelink(book)) {
+                                    { onBookRelink(book) }
+                                } else {
+                                    null
+                                },
+                                onPullProgress = if (book.serverId != null) {
+                                    { onPullProgress(book) }
+                                } else {
+                                    null
+                                },
+                                onPushProgress = if (book.serverId != null) {
+                                    { onPushProgress(book) }
+                                } else {
+                                    null
+                                }
+                            )
                         }
                     }
                 }
             }
         }
-        LibraryViewMode.LIST, LibraryViewMode.COMPACT_LIST -> {
-            val compact = viewMode == LibraryViewMode.COMPACT_LIST
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
-                modifier = modifier
-            ) {
-                if (showContinueReading && viewState.inProgress.isNotEmpty()) {
+        return
+    }
+
+    val compact = viewMode == LibraryViewMode.COMPACT_LIST
+    LazyColumn(
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
+        modifier = modifier
+    ) {
+        item(key = "library-header") { header() }
+        when {
+            viewState.groups.isNotEmpty() -> groupRows(viewState.groups, onGroupClick)
+            viewState.items.isEmpty() -> item(key = "empty") { emptyState() }
+            else -> {
+                if (continueReading) {
                     item(key = "continue-reading") {
                         ContinueReadingCarousel(
                             books = viewState.inProgress,
@@ -550,6 +546,14 @@ private fun LibraryContent(
     }
 }
 
+private fun LazyListScope.groupRows(groups: List<LibraryGroup>, onGroupClick: (String) -> Unit) {
+    groups.forEach { group ->
+        item(key = "group-${group.name}") {
+            LibraryGroupRow(group = group, onClick = { onGroupClick(group.name) })
+        }
+    }
+}
+
 @Composable
 private fun GroupHeader(
     label: String,
@@ -595,12 +599,18 @@ private fun LibraryListItem.Header.sourceDotColor(): androidx.compose.ui.graphic
 @Composable
 private fun EmptyState(
     hasActiveFilters: Boolean,
+    noSeries: Boolean,
     onClearFilters: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (hasActiveFilters) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when {
+            hasActiveFilters -> {
                 Text(
                     text = stringResource(R.string.no_matches),
                     style = MaterialTheme.typography.bodyLarge,
@@ -610,7 +620,13 @@ private fun EmptyState(
                 TextButton(onClick = onClearFilters) {
                     Text(stringResource(R.string.clear_filters))
                 }
-            } else {
+            }
+            noSeries -> Text(
+                text = stringResource(R.string.library_no_series),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            else -> {
                 Text(
                     text = stringResource(R.string.no_books_yet),
                     style = MaterialTheme.typography.bodyLarge,

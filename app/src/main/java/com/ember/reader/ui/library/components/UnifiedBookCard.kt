@@ -2,6 +2,7 @@ package com.ember.reader.ui.library.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,7 +51,6 @@ import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
 import com.ember.reader.ui.theme.LocalAccentColor
 import com.ember.reader.ui.theme.serverAccentColor
-import kotlin.math.roundToInt
 
 data class CardInfoToggles(
     val showProgress: Boolean = true,
@@ -185,6 +186,7 @@ private fun LabelledBadge(
     }
 }
 
+/** Grid cell: the cover with its progress along the bottom edge, the title and author beneath. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UnifiedBookCard(
@@ -201,163 +203,155 @@ fun UnifiedBookCard(
     onPushProgress: (() -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val coverShape = RoundedCornerShape(14.dp)
 
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        ),
-        shape = RoundedCornerShape(14.dp)
+            .clip(coverShape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.67f)
-            ) {
-                BookCoverImage(
-                    book = book,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.67f)
+                .clip(coverShape)
+                .then(
+                    if (isSelected) {
+                        Modifier.border(3.dp, MaterialTheme.colorScheme.primary, coverShape)
+                    } else {
+                        Modifier
+                    }
                 )
+        ) {
+            BookCoverImage(book = book, modifier = Modifier.fillMaxSize())
 
-                if (isSelecting) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = { onClick() },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(2.dp)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(2.dp)
+            if (isSelecting) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onClick() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                ) {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.size(28.dp)
                     ) {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.more_options),
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            if (onRelink != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.relink_to_server)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onRelink()
-                                    }
-                                )
-                            }
-                            if (onPullProgress != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.pull_progress)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onPullProgress()
-                                    }
-                                )
-                            }
-                            if (onPushProgress != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.push_progress)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onPushProgress()
-                                    }
-                                )
-                            }
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.more_options),
+                            tint = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        if (onRelink != null) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
+                                text = { Text(stringResource(R.string.relink_to_server)) },
                                 onClick = {
                                     showMenu = false
-                                    onDelete()
+                                    onRelink()
                                 }
                             )
                         }
-                    }
-                }
-
-                if (info.showFormatBadge) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                    ) {
-                        Text(
-                            text = book.format.name,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                        if (onPullProgress != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.pull_progress)) },
+                                onClick = {
+                                    showMenu = false
+                                    onPullProgress()
+                                }
+                            )
+                        }
+                        if (onPushProgress != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.push_progress)) },
+                                onClick = {
+                                    showMenu = false
+                                    onPushProgress()
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
                         )
                     }
                 }
             }
 
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (info.showAuthor) {
-                    book.author?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                if (info.showMetadata) {
-                    metadataLine(book)?.let { line ->
-                        Text(
-                            text = line,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                if (info.showProgress && progress != null && progress > 0f) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
+            if (info.showFormatBadge) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                ) {
                     Text(
-                        text = "${(progress * 100).roundToInt()}%",
+                        text = book.format.name,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
+            }
+
+            if (info.showProgress && progress != null && progress > 0f) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    trackColor = Color.Black.copy(alpha = 0.45f)
+                )
+            }
+        }
+
+        Column(modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 8.dp, bottom = 4.dp)) {
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (info.showAuthor) {
+                book.author?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (info.showMetadata) {
+                metadataLine(book)?.let { line ->
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
