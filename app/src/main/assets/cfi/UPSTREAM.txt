@@ -5,4 +5,5 @@ License: MIT (foliate-LICENSE.txt)
 
 Copied unmodified. Do not edit it: Grimmory's web reader uses the same file, and Ember's
 CFIs only match Grimmory's while both run the same algorithm. To update, replace the file
-with the upstream version and change the commit above.
+with the upstream version and change the commit above and the one in
+config/aboutlibraries/libraries/foliate-js.json (the Open Source Licenses screen).
