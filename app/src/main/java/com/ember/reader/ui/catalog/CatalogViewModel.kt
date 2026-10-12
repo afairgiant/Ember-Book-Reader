@@ -15,6 +15,7 @@ import com.ember.reader.core.model.GrimmoryCatalogMagicShelf
 import com.ember.reader.core.model.GrimmoryCatalogMeta
 import com.ember.reader.core.model.GrimmoryCatalogShelf
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.model.bookCountLabel
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
@@ -26,6 +27,8 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,6 +81,13 @@ class CatalogViewModel @Inject constructor(
     val shelfPreviews: StateFlow<Map<CatalogEntryType, List<CatalogShelfBook>>> = _shelfPreviews.asStateFlow()
 
     val isSeriesView: Boolean get() = path == "grimmory:series"
+    val isAuthorsView: Boolean get() = path == "grimmory:authors"
+
+    /**
+     * Book counts per library id. The library list has none, so each is asked for separately
+     * after the catalogue is up; kept here so a refresh does not blank them again.
+     */
+    private val libraryBookCounts = mutableMapOf<Long, Int>()
     val isGrimmoryCatalogRoot: Boolean get() = path.isEmpty() && server?.isGrimmory == true
 
     private var server: Server? = null
@@ -286,8 +296,37 @@ class CatalogViewModel @Inject constructor(
         try {
             fetchGrimmoryCatalogInner(server)
             loadShelfPreviews(server)
+            loadLibraryBookCounts(server)
         } catch (e: Exception) {
             _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
+        }
+    }
+
+    /**
+     * Fills in each library's book count. Asking for a one-book page is the cheapest request
+     * that reports the library's total.
+     */
+    private fun loadLibraryBookCounts(server: Server) {
+        val libraryIds = _rawGrimmoryEntries.value.filterIsInstance<GrimmoryCatalogLibrary>().map { it.libraryId }
+        if (libraryIds.isEmpty()) return
+        viewModelScope.launch {
+            val counts = libraryIds.map { libraryId ->
+                async {
+                    grimmoryAppClient.getBooks(server.url, server.id, size = 1, libraryId = libraryId)
+                        .getOrNull()
+                        ?.let { libraryId to it.totalElements.toInt() }
+                }
+            }.awaitAll().filterNotNull()
+            libraryBookCounts.putAll(counts)
+            _rawGrimmoryEntries.update { entries ->
+                entries.map { entry ->
+                    if (entry is GrimmoryCatalogLibrary) {
+                        entry.copy(bookCount = libraryBookCounts[entry.libraryId] ?: entry.bookCount)
+                    } else {
+                        entry
+                    }
+                }
+            }
         }
     }
 
@@ -371,7 +410,7 @@ class CatalogViewModel @Inject constructor(
                         GrimmoryCatalogLibrary(
                             libraryId = lib.id,
                             title = lib.name,
-                            bookCount = null,
+                            bookCount = libraryBookCounts[lib.id],
                             serverIcon = lib.icon
                         )
                     )
@@ -491,7 +530,7 @@ class CatalogViewModel @Inject constructor(
                             id = "grimmory:author:${author.id}",
                             title = author.name,
                             href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
-                            content = "${author.bookCount} books"
+                            content = bookCountLabel(author.bookCount)
                         )
                     )
                 }

@@ -202,6 +202,7 @@ fun CatalogScreen(
             is CatalogUiState.OpdsSuccess -> {
                 OpdsCatalogContent(
                     feed = state.feed,
+                    entryIcon = if (viewModel.isAuthorsView) Icons.Default.Person else null,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
                     onSearchSubmit = {
@@ -297,6 +298,8 @@ fun CatalogScreen(
 @Composable
 private fun OpdsCatalogContent(
     feed: OpdsFeed,
+    /** The icon for every row, when the list is all one kind of thing; null picks by title. */
+    entryIcon: ImageVector?,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -326,6 +329,7 @@ private fun OpdsCatalogContent(
                 itemsIndexed(feed.entries, key = { _, entry -> entry.id }) { index, entry ->
                     OpdsCatalogEntryCard(
                         entry = entry,
+                        icon = entryIcon ?: iconForOpdsFeedEntry(entry.title),
                         first = index == 0,
                         last = index == feed.entries.lastIndex,
                         onClick = {
@@ -368,9 +372,15 @@ private fun iconForOpdsFeedEntry(title: String): ImageVector = when {
 }
 
 @Composable
-private fun OpdsCatalogEntryCard(entry: OpdsFeedEntry, first: Boolean, last: Boolean, onClick: () -> Unit) {
+private fun OpdsCatalogEntryCard(
+    entry: OpdsFeedEntry,
+    icon: ImageVector,
+    first: Boolean,
+    last: Boolean,
+    onClick: () -> Unit
+) {
     CatalogRow(
-        icon = iconForOpdsFeedEntry(entry.title),
+        icon = icon,
         iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
         iconTint = MaterialTheme.colorScheme.primary,
         title = entry.title,
