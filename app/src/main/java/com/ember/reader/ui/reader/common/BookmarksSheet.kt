@@ -36,7 +36,10 @@ fun BookmarksSheet(
     bookmarks: List<Bookmark>,
     onNavigate: (Bookmark) -> Unit,
     onDelete: (Long) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    repairState: CfiRepairState = CfiRepairState.Idle,
+    /** Null when bookmarks in this book cannot be repaired (not a reflowable EPUB). */
+    onRepair: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -50,6 +53,14 @@ fun BookmarksSheet(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
+            if (onRepair != null) {
+                CfiRepairRow(
+                    lackingCfi = bookmarks.count { it.cfi == null },
+                    state = repairState,
+                    text = CfiRepairText.Bookmarks,
+                    onRepair = onRepair,
+                )
+            }
             if (bookmarks.isEmpty()) {
                 Text(
                     text = stringResource(R.string.no_bookmarks),

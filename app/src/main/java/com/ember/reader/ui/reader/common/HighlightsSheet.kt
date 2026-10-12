@@ -26,14 +26,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,7 +47,7 @@ fun HighlightsSheet(
     onEdit: (Highlight) -> Unit = {},
     onDelete: (Long) -> Unit,
     onDismiss: () -> Unit,
-    repairState: HighlightRepairState = HighlightRepairState.Idle,
+    repairState: CfiRepairState = CfiRepairState.Idle,
     /** Null when highlights in this book cannot be repaired (not a reflowable EPUB). */
     onRepair: (() -> Unit)? = null,
 ) {
@@ -66,9 +64,10 @@ fun HighlightsSheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             if (onRepair != null) {
-                HighlightRepairRow(
+                CfiRepairRow(
                     lackingCfi = highlights.count { it.cfi == null },
                     state = repairState,
+                    text = CfiRepairText.Highlights,
                     onRepair = onRepair,
                 )
             }
@@ -90,54 +89,6 @@ fun HighlightsSheet(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-/**
- * Offers the repair when some highlights have no real CFI, and reports how it went.
- * Those highlights are the ones Grimmory's web reader cannot draw.
- */
-@Composable
-private fun HighlightRepairRow(lackingCfi: Int, state: HighlightRepairState, onRepair: () -> Unit) {
-    val message = when (state) {
-        HighlightRepairState.Running -> stringResource(R.string.highlight_repair_running)
-        HighlightRepairState.Failed -> stringResource(R.string.highlight_repair_failed)
-        is HighlightRepairState.Done -> {
-            val done = pluralStringResource(R.plurals.highlight_repair_done, state.repaired, state.repaired)
-            if (state.unresolved == 0) {
-                done
-            } else {
-                done + " " + pluralStringResource(
-                    R.plurals.highlight_repair_unmatched,
-                    state.unresolved,
-                    state.unresolved,
-                )
-            }
-        }
-        HighlightRepairState.Idle ->
-            if (lackingCfi == 0) {
-                return
-            } else {
-                pluralStringResource(R.plurals.highlight_repair_offer, lackingCfi, lackingCfi)
-            }
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        if (state == HighlightRepairState.Idle || state == HighlightRepairState.Failed) {
-            TextButton(onClick = onRepair) {
-                Text(stringResource(R.string.highlight_repair_action))
             }
         }
     }

@@ -921,6 +921,8 @@ Update request (all optional): `title` (max 255), `cfi` (max 500), `color` (hex)
 
 An EPUB bookmark is pushed with the real CFI of the first text on its page and is held on the device when it has none. Ember does not send `pageNumber`, so PDF bookmarks are not synced.
 
+Bookmarks an older Ember pushed with a number in `cfi` are fixed by the repair action in the bookmarks sheet: it sends a `PUT` with only `cfi` set. The server leaves fields that are null or absent in an update as they are (checked against v3.5.0), so the title, colour and notes are kept.
+
 ---
 
 ## Book Notes (V2 - CFI-based)

@@ -263,6 +263,7 @@ data class CreateBookmarkRequest(
 @Serializable
 data class UpdateBookmarkRequest(
     val title: String? = null,
+    val cfi: String? = null,
     val color: String? = null,
     val notes: String? = null
 )

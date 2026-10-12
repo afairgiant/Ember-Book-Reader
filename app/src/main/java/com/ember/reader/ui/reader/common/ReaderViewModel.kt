@@ -11,13 +11,16 @@ import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Bookmark
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
+import com.ember.reader.core.sync.BookmarkRepairer
 import com.ember.reader.core.sync.HighlightRepairer
+import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.readium.loadEpubSpine
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -73,6 +76,7 @@ class ReaderViewModel @Inject constructor(
     private val appPreferencesRepository: AppPreferencesRepository,
     private val progressSyncManager: ProgressSyncManager,
     private val highlightRepairer: HighlightRepairer,
+    private val bookmarkRepairer: BookmarkRepairer,
     customFontRepository: CustomFontRepository,
     val dictionaryRepository: com.ember.reader.core.dictionary.DictionaryRepository,
     @ApplicationScope private val applicationScope: CoroutineScope
@@ -361,8 +365,11 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private val _highlightRepair = MutableStateFlow<HighlightRepairState>(HighlightRepairState.Idle)
-    val highlightRepair: StateFlow<HighlightRepairState> = _highlightRepair.asStateFlow()
+    private val _highlightRepair = MutableStateFlow<CfiRepairState>(CfiRepairState.Idle)
+    val highlightRepair: StateFlow<CfiRepairState> = _highlightRepair.asStateFlow()
+
+    private val _bookmarkRepair = MutableStateFlow<CfiRepairState>(CfiRepairState.Idle)
+    val bookmarkRepair: StateFlow<CfiRepairState> = _bookmarkRepair.asStateFlow()
 
     /**
      * Gives real CFIs to this book's highlights that lack one, replacing on the server
@@ -371,19 +378,39 @@ class ReaderViewModel @Inject constructor(
      * @param computeCfis places highlights in the book by their text; see `OffscreenCfiResolver`.
      */
     fun repairHighlights(computeCfis: suspend (List<Highlight>) -> Map<Long, String>) {
-        if (_highlightRepair.value == HighlightRepairState.Running) return
-        _highlightRepair.value = HighlightRepairState.Running
+        runRepair(_highlightRepair, syncEnabled = { appPreferencesRepository.getSyncHighlights() }) { server ->
+            highlightRepairer.repair(server, bookId, book?.grimmoryBookId, computeCfis)
+        }
+    }
+
+    /**
+     * Gives real CFIs to this book's bookmarks that lack one, updating on the server those
+     * that were pushed without one. Started by the user: it rewrites server data.
+     *
+     * @param computeCfis places bookmarks in the book by how far into their chapter they
+     * are; see `OffscreenCfiResolver`.
+     */
+    fun repairBookmarks(computeCfis: suspend (List<Bookmark>) -> Map<Long, String>) {
+        runRepair(_bookmarkRepair, syncEnabled = { appPreferencesRepository.getSyncBookmarks() }) { server ->
+            bookmarkRepairer.repair(server, bookId, book?.grimmoryBookId, computeCfis)
+        }
+    }
+
+    /** @param repair is given the book's server, or null when the server is to be left alone. */
+    private fun runRepair(
+        state: MutableStateFlow<CfiRepairState>,
+        syncEnabled: suspend () -> Boolean,
+        repair: suspend (server: Server?) -> Result<RepairSummary>,
+    ) {
+        if (state.value == CfiRepairState.Running) return
+        state.value = CfiRepairState.Running
         viewModelScope.launch {
-            // With highlight sync off, the server is left alone and CFIs are only stored.
-            val server = book?.serverId
-                ?.takeIf { appPreferencesRepository.getSyncHighlights() }
-                ?.let { serverRepository.getById(it) }
-            _highlightRepair.value = highlightRepairer
-                .repair(server, bookId, book?.grimmoryBookId, computeCfis)
-                .fold(
-                    onSuccess = { HighlightRepairState.Done(it.repaired, it.unresolved) },
-                    onFailure = { HighlightRepairState.Failed },
-                )
+            // With that kind of sync off, the server is left alone and CFIs are only stored.
+            val server = book?.serverId?.takeIf { syncEnabled() }?.let { serverRepository.getById(it) }
+            state.value = repair(server).fold(
+                onSuccess = { CfiRepairState.Done(it.repaired, it.unresolved) },
+                onFailure = { CfiRepairState.Failed },
+            )
         }
     }
 
@@ -661,13 +688,6 @@ class ReaderViewModel @Inject constructor(
         // that follows submitPreferences.
         private const val PREF_REFLOW_SUPPRESS_MS = 1500L
     }
-}
-
-sealed interface HighlightRepairState {
-    data object Idle : HighlightRepairState
-    data object Running : HighlightRepairState
-    data class Done(val repaired: Int, val unresolved: Int) : HighlightRepairState
-    data object Failed : HighlightRepairState
 }
 
 sealed interface ReaderUiState {

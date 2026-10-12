@@ -64,7 +64,7 @@ class HighlightRepairerTest {
 
         val summary = repair()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 1, unresolved = 0), summary)
+        assertEquals(RepairSummary(repaired = 1, unresolved = 0), summary)
         val request = slot<CreateAnnotationRequest>()
         coVerifyOrder {
             grimmoryClient.createAnnotation(any(), any(), capture(request))
@@ -123,7 +123,7 @@ class HighlightRepairerTest {
 
         val summary = repair()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 1, unresolved = 0), summary)
+        assertEquals(RepairSummary(repaired = 1, unresolved = 0), summary)
         assertEquals(OTHER_REAL_CFI, dao.all.single().cfi)
         assertTrue(asked.isEmpty())
         coVerify(exactly = 0) { grimmoryClient.createAnnotation(any(), any(), any()) }
@@ -137,7 +137,7 @@ class HighlightRepairerTest {
 
         val summary = repair()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 1, unresolved = 0), summary)
+        assertEquals(RepairSummary(repaired = 1, unresolved = 0), summary)
         assertEquals(REAL_CFI, dao.all.single().cfi)
         assertNull(dao.all.single().remoteId)
         coVerify(exactly = 0) { grimmoryClient.createAnnotation(any(), any(), any()) }
@@ -152,7 +152,7 @@ class HighlightRepairerTest {
 
         val summary = repair { emptyMap() }
 
-        assertEquals(HighlightRepairer.Summary(repaired = 0, unresolved = 1), summary)
+        assertEquals(RepairSummary(repaired = 0, unresolved = 1), summary)
         assertNull(dao.all.single().cfi)
         assertEquals(10L, dao.all.single().remoteId)
         coVerify(exactly = 0) { grimmoryClient.createAnnotation(any(), any(), any()) }
@@ -169,7 +169,7 @@ class HighlightRepairerTest {
 
         val summary = repair()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 0, unresolved = 1), summary)
+        assertEquals(RepairSummary(repaired = 0, unresolved = 1), summary)
         assertEquals(10L, dao.all.single().remoteId)
         assertNull(dao.all.single().cfi)
         coVerify(exactly = 0) { grimmoryClient.deleteAnnotation(any(), any(), any()) }
@@ -211,7 +211,7 @@ class HighlightRepairerTest {
 
         val summary = repair()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 0, unresolved = 0), summary)
+        assertEquals(RepairSummary(repaired = 0, unresolved = 0), summary)
         coVerify(exactly = 0) { grimmoryClient.getAnnotations(any(), any(), any()) }
     }
 
@@ -221,7 +221,7 @@ class HighlightRepairerTest {
 
         val summary = repairer.repair(server = null, bookId = bookId, grimmoryBookId = null, placeAll).getOrThrow()
 
-        assertEquals(HighlightRepairer.Summary(repaired = 1, unresolved = 0), summary)
+        assertEquals(RepairSummary(repaired = 1, unresolved = 0), summary)
         assertEquals(REAL_CFI, dao.all.single().cfi)
         coVerify(exactly = 0) { grimmoryClient.getAnnotations(any(), any(), any()) }
     }

@@ -228,6 +228,20 @@
     <string name="bookmarks_title">Bookmarks</string>
     <string name="no_bookmarks">No bookmarks yet</string>
     <string name="untitled">Untitled</string>
+    <plurals name="bookmark_repair_offer">
+        <item quantity="one">%1$d bookmark can\'t be opened in Grimmory\'s web reader. Repairing gives it a position there, close to its page but not always exactly on it.</item>
+        <item quantity="other">%1$d bookmarks can\'t be opened in Grimmory\'s web reader. Repairing gives them a position there, close to their page but not always exactly on it.</item>
+    </plurals>
+    <string name="bookmark_repair_running">Repairing bookmarks…</string>
+    <plurals name="bookmark_repair_done">
+        <item quantity="one">Repaired %1$d bookmark.</item>
+        <item quantity="other">Repaired %1$d bookmarks.</item>
+    </plurals>
+    <plurals name="bookmark_repair_unplaced">
+        <item quantity="one">%1$d could not be placed in the book and was left as it is.</item>
+        <item quantity="other">%1$d could not be placed in the book and were left as they are.</item>
+    </plurals>
+    <string name="bookmark_repair_failed">Couldn\'t reach the server to repair bookmarks.</string>
 
     <!-- Reader: Highlights -->
     <string name="highlights_title">Highlights</string>

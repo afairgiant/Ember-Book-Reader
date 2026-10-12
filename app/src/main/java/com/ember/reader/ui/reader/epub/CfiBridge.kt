@@ -124,6 +124,25 @@ class CfiBridge(
         }
     }
 
+    /**
+     * CFIs of the first text at each of [progressions] (0 to 1) through the page's chapter.
+     * The answer has one entry per progression, null where the chapter gave none. See
+     * `forProgressions` in `ember-cfi.js` for how exact they are.
+     */
+    suspend fun progressionCfis(progressions: List<Double>): List<String?> {
+        val none = List<String?>(progressions.size) { null }
+        if (progressions.isEmpty()) return none
+        val reply = call("forProgressions", JsonArray(progressions.map { JsonPrimitive(it) }).toString())
+            ?: return none
+        val base = spine.baseCfiFor(reply.href) ?: return none
+        val answers = reply.value as? JsonArray ?: return none
+        return progressions.indices.map { index ->
+            (answers.getOrNull(index) as? JsonPrimitive)?.contentOrNull
+                ?.let { EpubCfi.join(base, EpubCfi.unwrap(it)) }
+                ?.takeIf { EpubCfi.isRealCfi(it) }
+        }
+    }
+
     private suspend fun cfiFrom(function: String): String? {
         val reply = call(function) ?: return null
         val content = (reply.value as? JsonPrimitive)?.contentOrNull ?: return null

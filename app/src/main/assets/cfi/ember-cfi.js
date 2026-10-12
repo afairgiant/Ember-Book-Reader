@@ -171,6 +171,46 @@ const progressionOf = range => {
     }
 }
 
+// The first book text at or after a point `progression` (0 to 1) of the way through the
+// chapter, in the direction it scrolls: the reverse of progressionOf. The answer is the
+// start of a line, since every character before it ends short of that point. A point past
+// the last text gives the last text. Null when the chapter has no text or no layout.
+const rangeAtProgression = progression => {
+    const root = document.scrollingElement
+    if (!root || !Number.isFinite(progression)) return null
+    const paginated = root.scrollWidth > root.clientWidth && root.scrollHeight <= root.clientHeight
+    const target = paginated
+        ? progression * root.scrollWidth - root.scrollLeft
+        : progression * root.scrollHeight - root.scrollTop
+    const endOf = rect => (paginated ? rect.right : rect.bottom)
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, node =>
+        node.nodeValue.trim() && !node.parentElement.closest(READIUM_NODES + ', script, style')
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT)
+    const probe = document.createRange()
+    const at = (node, offset) => {
+        probe.setStart(node, offset)
+        probe.collapse(true)
+        return probe
+    }
+    let last = null
+    for (let node; (node = walker.nextNode());) {
+        probe.selectNodeContents(node)
+        const whole = probe.getBoundingClientRect()
+        if (whole.width === 0 && whole.height === 0) continue
+        last = node
+        if (endOf(whole) <= target) continue
+        for (let offset = 0; offset < node.length; offset++) {
+            if (WHITESPACE.test(node.nodeValue[offset])) continue
+            probe.setStart(node, offset)
+            probe.setEnd(node, offset + 1)
+            if (endOf(probe.getBoundingClientRect()) > target) return at(node, offset)
+        }
+    }
+    return last && at(last, last.nodeValue.search(/\S/))
+}
+
 window.emberCfi = {
     // Content CFI of the current text selection, or null when nothing is selected.
     forSelection() {
@@ -203,6 +243,17 @@ window.emberCfi = {
             } catch {
                 return null
             }
+        })
+    },
+
+    // Content CFIs for positions known only by how far into the chapter they are: a JSON
+    // array of progressions. Answers in the same order, null where no text was found. How
+    // close an answer is to the page the progression came from depends on this page being
+    // laid out like that one.
+    forProgressions(progressionsJson) {
+        return JSON.parse(progressionsJson).map(progression => {
+            const range = rangeAtProgression(progression)
+            return range && fromRange(range, skipReadiumNodes)
         })
     },
 
