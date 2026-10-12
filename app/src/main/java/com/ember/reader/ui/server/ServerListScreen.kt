@@ -114,7 +114,9 @@ fun ServerListScreen(
                 val alsoReading = recentlyReading.drop(1)
                 if (alsoReading.isNotEmpty()) {
                     item { ShelfLabel("Also reading") }
-                    item {
+                    // Keyed on its first book so the row starts from the left again when a
+                    // different book takes the hero, instead of staying scrolled part-way.
+                    item(key = "also-${alsoReading.first().book.id}") {
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = ScreenEdge),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)

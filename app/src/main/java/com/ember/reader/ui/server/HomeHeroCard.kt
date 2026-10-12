@@ -122,7 +122,7 @@ fun HomeHeroCard(recent: RecentBook, onContinue: () -> Unit, modifier: Modifier 
                         trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                     )
                     Text(
-                        text = "${(recent.percentage * 100).roundToInt()}% read",
+                        text = "${(recent.percentage * 100).roundToInt()}% ${if (isAudiobook) "listened" else "read"}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
