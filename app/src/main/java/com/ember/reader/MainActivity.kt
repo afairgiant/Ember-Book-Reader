@@ -4,17 +4,22 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.ember.reader.core.repository.AppAccent
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.ThemeMode
 import com.ember.reader.navigation.EmberNavHost
@@ -38,13 +43,32 @@ class MainActivity : FragmentActivity() {
         setContent {
             val themeMode by appPreferencesRepository.themeModeFlow
                 .collectAsState(initial = ThemeMode.SYSTEM)
+            val oledBlack by appPreferencesRepository.oledBlackFlow
+                .collectAsState(initial = false)
+            val accent by appPreferencesRepository.accentFlow
+                .collectAsState(initial = AppAccent.EMBER)
+
+            val darkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            // The system bar icons must follow the app's theme, not the device's: with the
+            // device dark and the app light they would be white on a light background.
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { darkTheme },
+                    navigationBarStyle = SystemBarStyle.auto(LIGHT_NAVIGATION_SCRIM, DARK_NAVIGATION_SCRIM) {
+                        darkTheme
+                    }
+                )
+                onDispose {}
+            }
 
             EmberTheme(
-                darkTheme = when (themeMode) {
-                    ThemeMode.LIGHT -> false
-                    ThemeMode.DARK -> true
-                    ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-                }
+                darkTheme = darkTheme,
+                oledBlack = oledBlack,
+                accent = accent
             ) {
                 EmberNavHost(initialRoute = pendingNavRoute.value)
             }
@@ -102,6 +126,10 @@ class MainActivity : FragmentActivity() {
          * Set to null when leaving the reader to restore normal volume behavior.
          */
         var volumeKeyHandler: ((forward: Boolean) -> Unit)? = null
+
+        // The scrims enableEdgeToEdge() uses by default behind three-button navigation.
+        private val LIGHT_NAVIGATION_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        private val DARK_NAVIGATION_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 
     private fun requestNotificationPermission() {

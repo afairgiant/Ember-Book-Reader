@@ -23,6 +23,17 @@ enum class ThemeMode(val displayName: String) {
     DARK("Dark")
 }
 
+/** The colour buttons, icons and selections are drawn in. EMBER is the app's own orange. */
+enum class AppAccent(val displayName: String) {
+    EMBER("Ember"),
+    RED("Red"),
+    AMBER("Amber"),
+    BLUE("Blue"),
+    TEAL("Teal"),
+    GREEN("Green"),
+    PURPLE("Purple")
+}
+
 @Singleton
 class AppPreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context
@@ -30,6 +41,8 @@ class AppPreferencesRepository @Inject constructor(
 
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val OLED_BLACK = booleanPreferencesKey("oled_black")
+        val ACCENT = stringPreferencesKey("accent")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
@@ -45,6 +58,16 @@ class AppPreferencesRepository @Inject constructor(
             prefs[Keys.THEME_MODE]?.let {
                 runCatching { ThemeMode.valueOf(it) }.getOrNull()
             } ?: ThemeMode.SYSTEM
+        }
+
+    val oledBlackFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.OLED_BLACK] ?: false }
+
+    val accentFlow: Flow<AppAccent> = context.appPreferencesDataStore.data
+        .map { prefs ->
+            prefs[Keys.ACCENT]?.let {
+                runCatching { AppAccent.valueOf(it) }.getOrNull()
+            } ?: AppAccent.EMBER
         }
 
     val keepScreenOnFlow: Flow<Boolean> = context.appPreferencesDataStore.data
@@ -63,6 +86,18 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateThemeMode(mode: ThemeMode) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.THEME_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateOledBlack(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.OLED_BLACK] = enabled
+        }
+    }
+
+    suspend fun updateAccent(accent: AppAccent) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.ACCENT] = accent.name
         }
     }
 
