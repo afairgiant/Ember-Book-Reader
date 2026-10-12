@@ -1,5 +1,6 @@
 package com.ember.reader.navigation
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -134,9 +135,10 @@ fun EmberNavHost(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute in bottomNavRoutes ||
-        currentRoute?.startsWith("catalog/") == true ||
+    // A server's catalogue and book lists belong to the Browse tab.
+    val inServerCatalog = currentRoute?.startsWith("catalog/") == true ||
         currentRoute?.startsWith("library/") == true
+    val showBottomBar = currentRoute in bottomNavRoutes || inServerCatalog
 
     Scaffold(
         bottomBar = {
@@ -147,7 +149,7 @@ fun EmberNavHost(
                     BottomNavTab.entries.forEach { tab ->
                         val selected = navBackStackEntry?.destination?.hierarchy?.any {
                             it.route == tab.route
-                        } == true
+                        } == true || (tab == BottomNavTab.BROWSE && inServerCatalog)
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
@@ -168,10 +170,14 @@ fun EmberNavHost(
         },
         modifier = modifier
     ) { padding ->
+        // The padding is consumed as well as applied. Without that, each screen's own
+        // Scaffold or top bar pads for the status and navigation bars a second time.
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding)
         ) {
             // Top-level: Home
             composable(Routes.HOME) {
