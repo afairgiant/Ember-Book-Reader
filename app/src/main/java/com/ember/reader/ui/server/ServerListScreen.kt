@@ -12,11 +12,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,24 +25,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,9 +49,22 @@ import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.ui.common.CoverImage
+import com.ember.reader.ui.settings.components.SettingsGroup
+import com.ember.reader.ui.settings.components.SettingsLabel
+import java.time.LocalTime
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val ShelfCoverShape = RoundedCornerShape(12.dp)
+private val ShelfCardWidth = 116.dp
+private val ScreenEdge = 16.dp
+
+/** "Good morning", "Good afternoon" or "Good evening" for an hour of the day (0-23). */
+internal fun greetingFor(hour: Int): String = when (hour) {
+    in 5..11 -> "Good morning"
+    in 12..17 -> "Good afternoon"
+    else -> "Good evening"
+}
+
 @Composable
 fun ServerListScreen(
     onOpenSettings: () -> Unit,
@@ -69,35 +80,8 @@ fun ServerListScreen(
     val quickStats by viewModel.quickStats.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(R.mipmap.ic_launcher_foreground),
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            stringResource(R.string.home_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { padding ->
+    // The nav host already pads for the system bars.
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -107,22 +91,37 @@ fun ServerListScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                // Continue Reading section
-                if (recentlyReading.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.continue_reading),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                item { HomeHeader(onOpenSettings = onOpenSettings) }
+
+                // The book last read gets the hero; the rest of what is in progress follows below.
+                val current = recentlyReading.firstOrNull()
+                if (current != null) {
+                    item(key = "hero") {
+                        HomeHeroCard(
+                            recent = current,
+                            onContinue = { onOpenReader(current.book.id, current.book.format) },
+                            modifier = Modifier.padding(horizontal = ScreenEdge)
                         )
                     }
-                    item {
+                }
+
+                quickStats?.let { stats ->
+                    item(key = "stats") { QuickStatsCard(stats = stats, onClick = onOpenStats) }
+                }
+
+                val alsoReading = recentlyReading.drop(1)
+                if (alsoReading.isNotEmpty()) {
+                    item { ShelfLabel("Also reading") }
+                    // Keyed on its first book so the row starts from the left again when a
+                    // different book takes the hero, instead of staying scrolled part-way.
+                    item(key = "also-${alsoReading.first().book.id}") {
                         LazyRow(
+                            contentPadding = PaddingValues(horizontal = ScreenEdge),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(recentlyReading, key = { it.book.id }) { recent ->
+                            items(alsoReading, key = { it.book.id }) { recent ->
                                 ContinueReadingCard(
                                     book = recent.book,
                                     percentage = recent.percentage,
@@ -131,20 +130,14 @@ fun ServerListScreen(
                             }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(4.dp)) }
                 }
 
                 // Recently Added from Grimmory
                 if (recentlyAdded.isNotEmpty() || (hasGrimmoryServer && recentlyAddedLoading)) {
-                    item {
-                        Text(
-                            text = "Recently Added",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    item { ShelfLabel("Recently added") }
                     item {
                         LazyRow(
+                            contentPadding = PaddingValues(horizontal = ScreenEdge),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             if (recentlyAdded.isNotEmpty()) {
@@ -165,67 +158,94 @@ fun ServerListScreen(
                             }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(4.dp)) }
-                }
-
-                // Quick Stats
-                if (quickStats != null) {
-                    item {
-                        QuickStatsCard(stats = quickStats!!, onClick = onOpenStats)
-                    }
                 }
             }
         }
     }
 }
 
+/** A greeting over the app's name, with the way into Settings. It scrolls with the page. */
+@Composable
+private fun HomeHeader(onOpenSettings: () -> Unit) {
+    val greeting = remember { greetingFor(LocalTime.now().hour) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = ScreenEdge, end = 4.dp, top = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            SettingsLabel(greeting)
+            Text(
+                text = stringResource(R.string.home_title),
+                style = MaterialTheme.typography.displaySmall,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        IconButton(onClick = onOpenSettings) {
+            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+        }
+    }
+}
+
+@Composable
+private fun ShelfLabel(text: String) {
+    SettingsLabel(text, modifier = Modifier.padding(start = ScreenEdge + 4.dp, top = 8.dp))
+}
+
+/** A cover with its title under it, as the shelves on Home show a book. */
+@Composable
+private fun ShelfCard(
+    title: String,
+    coverUrl: String?,
+    onClick: () -> Unit,
+    belowTitle: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(ShelfCardWidth)
+            .clip(ShelfCoverShape)
+            .clickable(onClick = onClick)
+    ) {
+        CoverImage(
+            coverUrl = coverUrl,
+            title = title,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.67f)
+                .clip(ShelfCoverShape)
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp)
+        )
+        belowTitle()
+    }
+}
+
 @Composable
 private fun ContinueReadingCard(book: Book, percentage: Float, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .width(130.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column {
-            CoverImage(
-                coverUrl = book.coverUrl,
-                title = book.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-            )
-
-            // Title + progress
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                LinearProgressIndicator(
-                    progress = { percentage },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                )
-                Text(
-                    text = "${(percentage * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
+    ShelfCard(title = book.title, coverUrl = book.coverUrl, onClick = onClick) {
+        LinearProgressIndicator(
+            progress = { percentage },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 2.dp, end = 2.dp, top = 6.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
+        Text(
+            text = "${(percentage * 100).roundToInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)
+        )
     }
 }
 
@@ -236,43 +256,16 @@ private fun RecentlyAddedCard(
     coverUrl: String,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .width(130.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column {
-            CoverImage(
-                coverUrl = coverUrl,
-                title = title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+    ShelfCard(title = title, coverUrl = coverUrl, onClick = onClick) {
+        if (authors.isNotBlank()) {
+            Text(
+                text = authors,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
-
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (authors.isNotBlank()) {
-                    Text(
-                        text = authors,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
         }
     }
 }
@@ -291,86 +284,77 @@ private fun RecentlyAddedPlaceholderCard() {
     )
     val shimmerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
 
-    Card(
-        modifier = Modifier.width(130.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    .background(shimmerColor)
+    Column(modifier = Modifier.width(ShelfCardWidth)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.67f)
+                .clip(ShelfCoverShape)
+                .background(shimmerColor)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(12.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(shimmerColor)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .height(10.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(shimmerColor)
+        )
+    }
+}
+
+/** Reading time this week and the current streak; tapping it opens the statistics screen. */
+@Composable
+private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
+    SettingsGroup {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val hours = stats.weekSeconds / 3600
+            val minutes = (stats.weekSeconds % 3600) / 60
+            QuickStat(
+                value = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
+                label = "This week",
+                modifier = Modifier.weight(1f)
             )
-            Column(modifier = Modifier.padding(10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(shimmerColor)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(shimmerColor)
-                )
-            }
+            VerticalDivider(
+                modifier = Modifier.height(36.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+            )
+            QuickStat(
+                value = "${stats.currentStreak}",
+                label = "Day streak",
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-private fun QuickStatsCard(stats: QuickStats, onClick: () -> Unit = {}) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val hours = stats.weekSeconds / 3600
-                val minutes = (stats.weekSeconds % 3600) / 60
-                Text(
-                    text = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "This week",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "${stats.currentStreak}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = if (stats.currentStreak == 1) "Day streak" else "Day streak",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+private fun QuickStat(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

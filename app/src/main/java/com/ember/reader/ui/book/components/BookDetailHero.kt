@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.ember.reader.core.hardcover.HardcoverStatus
 import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.repository.ServerAppearance
 import com.ember.reader.ui.common.BookCoverImage
@@ -146,7 +147,7 @@ fun BookDetailHero(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${(pct * 100).roundToInt()}% read",
+                text = "${(pct * 100).roundToInt()}% ${if (book.format == BookFormat.AUDIOBOOK) "listened" else "read"}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
