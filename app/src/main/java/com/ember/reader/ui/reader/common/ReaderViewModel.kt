@@ -146,6 +146,7 @@ class ReaderViewModel @Inject constructor(
     private var sessionPauseJob: Job? = null
     private var sessionStartTime: java.time.Instant? = null
     private var sessionStartProgress: Float = 0f
+    private var sessionStartLocation: String? = null
     private var sessionPausedAt: java.time.Instant? = null
 
     // A pref edit triggers a Readium reflow, which emits a new locator whose
@@ -211,6 +212,7 @@ class ReaderViewModel @Inject constructor(
 
         sessionStartTime = java.time.Instant.now()
         sessionStartProgress = localProgress?.percentage ?: 0f
+        sessionStartLocation = null
 
         _uiState.value = ReaderUiState.Ready(
             publication = pub,
@@ -308,11 +310,23 @@ class ReaderViewModel @Inject constructor(
     /** Reported by the EPUB reader once a page has settled; null when it has no CFI. */
     fun onPositionCfi(locator: Locator, cfi: String?) {
         positionCfi = cfi?.let { locator to it }
+        noteSessionStartLocation()
     }
 
     fun onLocatorChanged(locator: Locator) {
         _currentLocator.value = locator
+        noteSessionStartLocation()
         scheduleSaveProgress(locator)
+    }
+
+    private fun currentSessionLocation(): String? =
+        sessionLocation(book?.format, _currentLocator.value, positionCfi?.second)
+
+    /** The first location known after a session starts is where it started. */
+    private fun noteSessionStartLocation() {
+        if (sessionStartTime != null && sessionStartLocation == null) {
+            sessionStartLocation = currentSessionLocation()
+        }
     }
 
     fun toggleChrome() {
@@ -516,6 +530,7 @@ class ReaderViewModel @Inject constructor(
             sessionStartTime = java.time.Instant.now()
             sessionStartProgress = _currentLocator.value
                 ?.locations?.totalProgression?.toFloat() ?: 0f
+            sessionStartLocation = currentSessionLocation()
         }
     }
 
@@ -671,7 +686,9 @@ class ReaderViewModel @Inject constructor(
                     durationSeconds = durationSeconds,
                     startProgress = startPct,
                     endProgress = endPct,
-                    progressDelta = endPct - startPct
+                    progressDelta = endPct - startPct,
+                    startLocation = sessionStartLocation,
+                    endLocation = currentSessionLocation()
                 )
             ).getOrThrow()
         }.onFailure {
@@ -689,6 +706,23 @@ class ReaderViewModel @Inject constructor(
         private const val PREF_REFLOW_SUPPRESS_MS = 1500L
     }
 }
+
+/**
+ * A position in the form Grimmory's own readers record on a reading session: the page number
+ * for a PDF, the real CFI for an EPUB. Null when there is neither, or when the CFI is longer
+ * than the server's column, which would make it reject the whole session.
+ */
+internal fun sessionLocation(
+    format: com.ember.reader.core.model.BookFormat?,
+    locator: Locator?,
+    cfi: String?
+): String? = if (format == com.ember.reader.core.model.BookFormat.PDF) {
+    locator?.locations?.position?.toString()
+} else {
+    cfi?.takeIf { it.length <= SESSION_LOCATION_MAX_LENGTH }
+}
+
+private const val SESSION_LOCATION_MAX_LENGTH = 500
 
 sealed interface ReaderUiState {
     data object Loading : ReaderUiState

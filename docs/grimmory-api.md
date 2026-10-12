@@ -795,6 +795,8 @@ Request `ReadingSessionRequest`:
 
 Response: `202 Accepted`.
 
+`startLocation` and `endLocation` follow Grimmory's own readers: a CFI for an EPUB and the 1-based page number for a PDF. Ember leaves either one out when it has no real CFI or page. The web UI shows them only when they are page numbers ("Page 3 → 10").
+
 ```
 GET /api/v1/reading-sessions/book/{bookId}?page=0&size=5
 ```

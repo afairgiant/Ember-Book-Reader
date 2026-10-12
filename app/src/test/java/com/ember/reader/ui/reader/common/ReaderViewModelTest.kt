@@ -271,4 +271,34 @@ class ReaderViewModelTest {
             )
         }
     }
+
+    @Test
+    fun `sessionLocation is the page number for a PDF and the CFI for an EPUB`() {
+        val locator = mockk<Locator>(relaxed = true)
+        every { locator.locations } returns mockk(relaxed = true) {
+            every { position } returns 12
+        }
+
+        assertEquals("12", sessionLocation(com.ember.reader.core.model.BookFormat.PDF, locator, null))
+        assertEquals(
+            "epubcfi(/6/4!/4/2/1:0)",
+            sessionLocation(com.ember.reader.core.model.BookFormat.EPUB, locator, "epubcfi(/6/4!/4/2/1:0)")
+        )
+    }
+
+    @Test
+    fun `sessionLocation is null without a page or a CFI`() {
+        val locator = mockk<Locator>(relaxed = true)
+        every { locator.locations } returns mockk(relaxed = true) {
+            every { position } returns null
+        }
+
+        assertEquals(null, sessionLocation(com.ember.reader.core.model.BookFormat.PDF, locator, "epubcfi(/6/4)"))
+        assertEquals(null, sessionLocation(com.ember.reader.core.model.BookFormat.PDF, null, null))
+        assertEquals(null, sessionLocation(com.ember.reader.core.model.BookFormat.EPUB, locator, null))
+        assertEquals(
+            null,
+            sessionLocation(com.ember.reader.core.model.BookFormat.EPUB, locator, "epubcfi(" + "/2".repeat(250) + ")")
+        )
+    }
 }
