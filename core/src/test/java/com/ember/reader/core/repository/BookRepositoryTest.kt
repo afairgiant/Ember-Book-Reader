@@ -3,7 +3,9 @@ package com.ember.reader.core.repository
 import android.content.Context
 import com.ember.reader.core.database.dao.BookDao
 import com.ember.reader.core.database.entity.BookEntity
+import com.ember.reader.core.grimmory.GrimmoryAppBook
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
@@ -15,6 +17,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.slot
 import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
@@ -212,5 +215,75 @@ class BookRepositoryTest {
         repository.addLocalBook(book)
 
         coVerify { bookDao.insert(any()) }
+    }
+
+    @Test
+    fun `upsertGrimmorySummaries stores a new book with a download link and its real format`() = runTest {
+        val inserted = slot<BookEntity>()
+        coEvery { bookDao.getByOpdsEntryId("urn:booklore:book:7", 1L) } returns null
+        coEvery { bookDao.insert(capture(inserted)) } returns Unit
+        every { grimmoryAppClient.audiobookCoverUrl(any(), 7L, any()) } returns "audio-cover"
+
+        val ids = repository.upsertGrimmorySummaries(
+            testServer,
+            listOf(GrimmoryBookSummary(id = 7, title = "Listened", primaryFileType = "AUDIOBOOK"))
+        )
+
+        assertEquals(listOf(inserted.captured.id), ids)
+        assertEquals("/api/v1/opds/7/download", inserted.captured.downloadUrl)
+        assertEquals(BookFormat.AUDIOBOOK, inserted.captured.format)
+        assertEquals("audio-cover", inserted.captured.coverUrl)
+    }
+
+    @Test
+    fun `upsertGrimmorySummaries gives an existing book the download link it lacked`() = runTest {
+        val existing = BookEntity(
+            id = "existing-book-1",
+            serverId = 1L,
+            opdsEntryId = "urn:booklore:book:7",
+            title = "Read",
+            format = BookFormat.EPUB,
+            localPath = "/books/read.epub",
+            addedAt = Instant.EPOCH
+        )
+        val updated = slot<BookEntity>()
+        coEvery { bookDao.getByOpdsEntryId("urn:booklore:book:7", 1L) } returns existing
+        coEvery { bookDao.update(capture(updated)) } returns Unit
+        every { grimmoryAppClient.coverUrl(any(), 7L, any()) } returns "cover"
+
+        val ids = repository.upsertGrimmorySummaries(
+            testServer,
+            listOf(GrimmoryBookSummary(id = 7, title = "Read"))
+        )
+
+        assertEquals(listOf("existing-book-1"), ids)
+        assertEquals("/api/v1/opds/7/download", updated.captured.downloadUrl)
+        assertEquals("/books/read.epub", updated.captured.localPath)
+        coVerify(exactly = 0) { bookDao.insert(any()) }
+    }
+
+    @Test
+    fun `upsertGrimmoryBooks stores series books with a download link, in order`() = runTest {
+        val inserted = mutableListOf<BookEntity>()
+        coEvery { bookDao.getByOpdsEntryId(any(), 1L) } returns null
+        coEvery { bookDao.insert(capture(inserted)) } returns Unit
+        every { grimmoryAppClient.coverUrl(any(), any(), any()) } returns "cover"
+
+        val ids = repository.upsertGrimmoryBooks(
+            testServer,
+            listOf(
+                GrimmoryAppBook(id = 3, title = "First", primaryFileType = "PDF", seriesName = "Saga"),
+                GrimmoryAppBook(id = 4, title = "Second", seriesName = "Saga")
+            )
+        )
+
+        assertEquals(inserted.map { it.id }, ids)
+        assertEquals(listOf("First", "Second"), inserted.map { it.title })
+        assertEquals(
+            listOf("/api/v1/opds/3/download", "/api/v1/opds/4/download"),
+            inserted.map { it.downloadUrl }
+        )
+        assertEquals(listOf(BookFormat.PDF, BookFormat.EPUB), inserted.map { it.format })
+        assertEquals(listOf("Saga", "Saga"), inserted.map { it.series })
     }
 }

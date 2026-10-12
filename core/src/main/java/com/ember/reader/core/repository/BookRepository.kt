@@ -174,28 +174,27 @@ class BookRepository @Inject constructor(
     suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): Book? =
         bookDao.getByOpdsEntryId(opdsEntryId, serverId)?.toDomain()
 
-    /** Ensures a book metadata entry exists in the local DB. Returns the book's local ID. */
-    suspend fun ensureBookExists(
-        serverId: Long,
-        opdsEntryId: String,
-        title: String,
-        author: String?,
-        coverUrl: String?,
-        format: BookFormat
-    ): String {
-        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
-        if (existing != null) return existing.id
-        val book = Book(
-            id = java.util.UUID.randomUUID().toString(),
-            serverId = serverId,
-            opdsEntryId = opdsEntryId,
-            title = title,
-            author = author,
-            coverUrl = coverUrl,
-            format = format
-        )
-        bookDao.insert(book.toEntity())
-        return book.id
+    /**
+     * Stores books the app API returned outside a library listing (a series row on the book
+     * detail screen), so they open with the same actions as when reached through Browse.
+     * Returns the local book IDs, in the order given.
+     */
+    suspend fun upsertGrimmoryBooks(server: Server, books: List<GrimmoryAppBook>): List<String> {
+        val origin = serverOrigin(server.url)
+        return books.map { appBook ->
+            upsertGrimmoryBook(server.id, origin, grimmoryOpdsEntryId(appBook.id), appBook)
+        }
+    }
+
+    /** As [upsertGrimmoryBooks], for the summaries Home's Recently Added row is built from. */
+    suspend fun upsertGrimmorySummaries(
+        server: Server,
+        summaries: List<GrimmoryBookSummary>
+    ): List<String> {
+        val origin = serverOrigin(server.url)
+        return summaries.map { summary ->
+            upsertGrimmorySummary(server.id, origin, grimmoryOpdsEntryId(summary.id), summary)
+        }
     }
 
     suspend fun refreshFromServer(
@@ -580,15 +579,7 @@ class BookRepository @Inject constructor(
             return Result.failure(it)
         }
         Timber.d("GrimmoryRefresh: /recently-added returned ${summaries.size} books")
-        val origin = serverOrigin(server.url)
-        val resolvedIds = summaries.map { summary ->
-            upsertGrimmorySummary(
-                serverId = server.id,
-                origin = origin,
-                opdsEntryId = grimmoryOpdsEntryId(summary.id),
-                summary = summary
-            )
-        }
+        val resolvedIds = upsertGrimmorySummaries(server, summaries)
         return Result.success(
             OpdsBookPage(
                 books = emptyList(),
