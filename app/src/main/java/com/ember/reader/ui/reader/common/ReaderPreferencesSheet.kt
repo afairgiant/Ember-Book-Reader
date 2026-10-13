@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,26 +22,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -65,9 +67,12 @@ import androidx.compose.ui.unit.sp
 import com.ember.reader.R
 import com.ember.reader.core.fonts.CustomFont
 import com.ember.reader.core.model.FontFamily
+import com.ember.reader.core.model.OrientationLock
+import com.ember.reader.core.model.PdfFitMode
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReaderTheme
-import com.ember.reader.ui.common.SectionLabel
+import com.ember.reader.core.model.TapZoneBehavior
+import com.ember.reader.core.model.TextAlign
 
 enum class ActiveMarginSlider { Side, Top, Bottom }
 
@@ -120,8 +125,9 @@ fun ReaderPreferencesSheet(
         ) {
             Text(
                 text = stringResource(R.string.reader_settings),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                fontWeight = FontWeight.Bold
             )
 
             // Override status header — tells the user whether tweaks here apply
@@ -129,7 +135,7 @@ fun ReaderPreferencesSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .heightIn(min = 40.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -139,7 +145,7 @@ fun ReaderPreferencesSheet(
                     } else {
                         "Using global defaults"
                     },
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (hasOverride && onResetToDefaults != null) {
@@ -277,171 +283,142 @@ fun ReaderPreferencesContent(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // PDF-specific controls
         if (isPdf) {
-            SectionLabel("Page Fit")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                com.ember.reader.core.model.PdfFitMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = preferences.pdfFitMode == mode,
-                        onClick = { onPreferencesChanged(preferences.copy(pdfFitMode = mode)) },
-                        label = { Text(mode.displayName) }
-                    )
-                }
+            ReaderSettingsSection("Page") {
+                ReaderChoicePills(
+                    options = PdfFitMode.entries,
+                    isSelected = { preferences.pdfFitMode == it },
+                    onSelect = { onPreferencesChanged(preferences.copy(pdfFitMode = it)) },
+                    labelOf = { it.displayName }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ReaderValueSlider(
+                    label = "Page spacing",
+                    valueText = "${preferences.pdfPageSpacing.toInt()} pt",
+                    value = preferences.pdfPageSpacing,
+                    onValueChange = { onPreferencesChanged(preferences.copy(pdfPageSpacing = it)) },
+                    valueRange = 0f..30f,
+                    steps = 5
+                )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel("Page Spacing")
-            Slider(
-                value = preferences.pdfPageSpacing,
-                onValueChange = {
-                    onPreferencesChanged(preferences.copy(pdfPageSpacing = it))
-                },
-                valueRange = 0f..30f,
-                steps = 5,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "${preferences.pdfPageSpacing.toInt()} pt",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // EPUB-specific controls
         if (!isPdf) {
-            SectionLabel(stringResource(R.string.font_section))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            ReaderSettingsSection(stringResource(R.string.font_section)) {
                 // A selected custom font that has since been removed selects nothing here;
                 // the reader falls back to the built-in family.
                 val activeCustomFont = preferences.customFont?.takeIf { name -> customFonts.any { it.name == name } }
-                FontFamily.entries.forEach { font ->
-                    FilterChip(
-                        selected = activeCustomFont == null && preferences.fontFamily == font,
-                        onClick = { onPreferencesChanged(preferences.copy(fontFamily = font, customFont = null)) },
-                        label = { Text(font.displayName) }
-                    )
-                }
-                customFonts.forEach { font ->
-                    FilterChip(
-                        selected = activeCustomFont == font.name,
-                        onClick = { onPreferencesChanged(preferences.copy(customFont = font.name)) },
-                        label = { Text(font.name) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.font_size_section))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                IconButton(
-                    onClick = {
-                        val newSize = (preferences.fontSize - 1f).coerceAtLeast(12f)
-                        onPreferencesChanged(preferences.copy(fontSize = newSize))
-                    }
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                }
-                Text(
-                    text = "${preferences.fontSize.toInt()}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                ReaderChoicePills(
+                    options = FontFamily.entries.map { FontChoice.BuiltIn(it) } +
+                        customFonts.map { FontChoice.Custom(it.name) },
+                    isSelected = { choice ->
+                        when (choice) {
+                            is FontChoice.BuiltIn -> activeCustomFont == null && preferences.fontFamily == choice.family
+                            is FontChoice.Custom -> activeCustomFont == choice.name
+                        }
+                    },
+                    onSelect = { choice ->
+                        onPreferencesChanged(
+                            when (choice) {
+                                is FontChoice.BuiltIn -> preferences.copy(fontFamily = choice.family, customFont = null)
+                                is FontChoice.Custom -> preferences.copy(customFont = choice.name)
+                            }
+                        )
+                    },
+                    labelOf = { it.label }
                 )
-                IconButton(
-                    onClick = {
-                        val newSize = (preferences.fontSize + 1f).coerceAtMost(32f)
-                        onPreferencesChanged(preferences.copy(fontSize = newSize))
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.font_size_section),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = {
+                            val newSize = (preferences.fontSize - 1f).coerceAtLeast(12f)
+                            onPreferencesChanged(preferences.copy(fontSize = newSize))
+                        }
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                     }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                    Text(
+                        text = "${preferences.fontSize.toInt()}",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = ComposeTextAlign.Center,
+                        modifier = Modifier.width(36.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            val newSize = (preferences.fontSize + 1f).coerceAtMost(32f)
+                            onPreferencesChanged(preferences.copy(fontSize = newSize))
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                    }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        ReaderSettingsSection(stringResource(R.string.theme_section)) {
+            ThemeSwatches(
+                selected = preferences.theme,
+                onSelect = { onPreferencesChanged(preferences.copy(theme = it)) }
+            )
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(R.string.publisher_styles), style = MaterialTheme.typography.bodyMedium)
-                Switch(
+        if (!isPdf) {
+            ReaderSettingsSection("Text layout") {
+                ReaderToggleRow(
+                    label = stringResource(R.string.publisher_styles),
                     checked = preferences.publisherStyles,
-                    onCheckedChange = {
-                        onPreferencesChanged(preferences.copy(publisherStyles = it))
-                    }
+                    onCheckedChange = { onPreferencesChanged(preferences.copy(publisherStyles = it)) }
                 )
+
+                // Readium applies everything in here only while the book's own styles are off.
+                AnimatedVisibility(
+                    visible = !preferences.publisherStyles,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column {
+                        ReaderToggleRow(
+                            label = stringResource(R.string.hyphenation),
+                            checked = preferences.hyphenate,
+                            onCheckedChange = { onPreferencesChanged(preferences.copy(hyphenate = it)) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.text_align_section),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        ReaderChoicePills(
+                            options = TextAlign.entries,
+                            isSelected = { preferences.textAlign == it },
+                            onSelect = { onPreferencesChanged(preferences.copy(textAlign = it)) },
+                            labelOf = { it.displayName }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ReaderValueSlider(
+                            label = stringResource(R.string.line_height_section),
+                            valueText = "%.1f".format(preferences.lineHeight),
+                            value = preferences.lineHeight,
+                            onValueChange = { onPreferencesChanged(preferences.copy(lineHeight = it)) },
+                            valueRange = 1.0f..2.5f,
+                            steps = 14
+                        )
+                    }
+                }
             }
 
             AnimatedVisibility(
                 visible = !preferences.publisherStyles,
                 enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
+                exit = fadeOut() + shrinkVertically()
             ) {
-                Column {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    SectionLabel(stringResource(R.string.line_height_section))
-                    Slider(
-                        value = preferences.lineHeight,
-                        onValueChange = {
-                            onPreferencesChanged(preferences.copy(lineHeight = it))
-                        },
-                        valueRange = 1.0f..2.5f,
-                        steps = 14,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = "%.1f".format(preferences.lineHeight),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    SectionLabel(stringResource(R.string.text_align_section))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        com.ember.reader.core.model.TextAlign.entries.forEach { align ->
-                            FilterChip(
-                                selected = preferences.textAlign == align,
-                                onClick = { onPreferencesChanged(preferences.copy(textAlign = align)) },
-                                label = { Text(align.displayName) }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(stringResource(R.string.hyphenation), style = MaterialTheme.typography.bodyMedium)
-                        Switch(
-                            checked = preferences.hyphenate,
-                            onCheckedChange = {
-                                onPreferencesChanged(preferences.copy(hyphenate = it))
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    SectionLabel("Spacing")
+                ReaderSettingsSection("Spacing") {
                     ReaderSpacingControls(
                         preferences = preferences,
                         onPreferencesChanged = onPreferencesChanged
@@ -449,258 +426,212 @@ fun ReaderPreferencesContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SectionLabel(stringResource(R.string.margins_section))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(R.string.side_margin_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(56.dp),
+            ReaderSettingsSection(stringResource(R.string.margins_section)) {
+                MarginSlider(
+                    label = stringResource(R.string.side_margin_label),
+                    value = preferences.pageMargins,
+                    valueRange = 0.5f..2.5f,
+                    onTouchChanged = { sideTouched = it },
+                    onValueChange = { onPreferencesChanged(preferences.copy(pageMargins = it)) }
                 )
-                Box(modifier = Modifier
-                    .weight(1f)
-                    .observeTouchPresence { sideTouched = it }
-                ) {
-                    Slider(
-                        value = preferences.pageMargins,
-                        onValueChange = {
-                            onPreferencesChanged(preferences.copy(pageMargins = it))
-                        },
-                        valueRange = 0.5f..2.5f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(R.string.top_margin_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(56.dp),
+                MarginSlider(
+                    label = stringResource(R.string.top_margin_label),
+                    value = preferences.marginTop.toFloat(),
+                    valueRange = 0f..48f,
+                    onTouchChanged = { topTouched = it },
+                    onValueChange = { onPreferencesChanged(preferences.copy(marginTop = it.toInt())) }
                 )
-                Box(modifier = Modifier
-                    .weight(1f)
-                    .observeTouchPresence { topTouched = it }
-                ) {
-                    Slider(
-                        value = preferences.marginTop.toFloat(),
-                        onValueChange = {
-                            onPreferencesChanged(preferences.copy(marginTop = it.toInt()))
-                        },
-                        valueRange = 0f..48f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(R.string.bottom_margin_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(56.dp),
+                MarginSlider(
+                    label = stringResource(R.string.bottom_margin_label),
+                    value = preferences.marginBottom.toFloat(),
+                    valueRange = 0f..48f,
+                    onTouchChanged = { bottomTouched = it },
+                    onValueChange = { onPreferencesChanged(preferences.copy(marginBottom = it.toInt())) }
                 )
-                Box(modifier = Modifier
-                    .weight(1f)
-                    .observeTouchPresence { bottomTouched = it }
-                ) {
-                    Slider(
-                        value = preferences.marginBottom.toFloat(),
-                        onValueChange = {
-                            onPreferencesChanged(preferences.copy(marginBottom = it.toInt()))
-                        },
-                        valueRange = 0f..48f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        SectionLabel(stringResource(R.string.theme_section))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            ReaderTheme.entries.forEach { theme ->
-                val bgColor = if (theme == ReaderTheme.SYSTEM) {
-                    MaterialTheme.colorScheme.surface
-                } else {
-                    Color(theme.backgroundColor)
-                }
-                val fgColor = if (theme == ReaderTheme.SYSTEM) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    Color(theme.foregroundColor)
-                }
-                val isSelected = preferences.theme == theme
-                val borderColor = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    Color.Gray.copy(alpha = 0.3f)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(bgColor)
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = borderColor,
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                onPreferencesChanged(preferences.copy(theme = theme))
-                            }
-                    ) {
-                        Text(
-                            text = "Aa",
-                            color = fgColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = ComposeTextAlign.Center
-                        )
-                    }
-                    Text(
-                        text = theme.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(stringResource(R.string.paginated_mode), style = MaterialTheme.typography.bodyMedium)
-            Switch(
+        ReaderSettingsSection("Reading") {
+            ReaderToggleRow(
+                label = stringResource(R.string.paginated_mode),
                 checked = preferences.isPaginated,
-                onCheckedChange = {
-                    onPreferencesChanged(preferences.copy(isPaginated = it))
-                }
+                onCheckedChange = { onPreferencesChanged(preferences.copy(isPaginated = it)) }
             )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Volume buttons turn pages", style = MaterialTheme.typography.bodyMedium)
-            Switch(
+            ReaderToggleRow(
+                label = "Volume buttons turn pages",
                 checked = preferences.volumePageTurn,
-                onCheckedChange = {
-                    onPreferencesChanged(preferences.copy(volumePageTurn = it))
-                }
+                onCheckedChange = { onPreferencesChanged(preferences.copy(volumePageTurn = it)) }
             )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Show progress percentage", style = MaterialTheme.typography.bodyMedium)
-            Switch(
+            ReaderToggleRow(
+                label = "Show progress percentage",
                 checked = preferences.showProgressIndicator,
-                onCheckedChange = {
-                    onPreferencesChanged(preferences.copy(showProgressIndicator = it))
-                }
+                onCheckedChange = { onPreferencesChanged(preferences.copy(showProgressIndicator = it)) }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.orientation_section),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            ReaderChoicePills(
+                options = OrientationLock.entries,
+                isSelected = { preferences.orientationLock == it },
+                onSelect = { onPreferencesChanged(preferences.copy(orientationLock = it)) },
+                labelOf = { it.displayName }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            ReaderValueSlider(
+                label = stringResource(R.string.brightness_section),
+                valueText = if (preferences.brightness < 0) "System" else "${(preferences.brightness * 100).toInt()}%",
+                value = if (preferences.brightness < 0) 0.5f else preferences.brightness,
+                onValueChange = { onPreferencesChanged(preferences.copy(brightness = it)) },
+                valueRange = 0.01f..1.0f
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        ReaderSettingsSection(stringResource(R.string.tap_zones_section)) {
+            TapZoneSelector("Top tap", preferences.topTapZone) {
+                onPreferencesChanged(preferences.copy(topTapZone = it))
+            }
+            TapZoneSelector("Left tap", preferences.leftTapZone) {
+                onPreferencesChanged(preferences.copy(leftTapZone = it))
+            }
+            TapZoneSelector("Center tap", preferences.centerTapZone) {
+                onPreferencesChanged(preferences.copy(centerTapZone = it))
+            }
+            TapZoneSelector("Right tap", preferences.rightTapZone) {
+                onPreferencesChanged(preferences.copy(rightTapZone = it))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            ReaderValueSlider(
+                label = "Top zone height",
+                valueText = "${(preferences.topZoneHeight * 100).toInt()}%",
+                value = preferences.topZoneHeight,
+                onValueChange = { onPreferencesChanged(preferences.copy(topZoneHeight = it)) },
+                valueRange = 0.05f..0.30f
+            )
+            ReaderValueSlider(
+                label = "Left and right zone width",
+                valueText = "${(preferences.leftZoneWidth * 100).toInt()}%",
+                value = preferences.leftZoneWidth,
+                onValueChange = {
+                    onPreferencesChanged(preferences.copy(leftZoneWidth = it, rightZoneWidth = it))
+                },
+                valueRange = 0.15f..0.45f
+            )
+        }
+    }
+}
 
-        SectionLabel(stringResource(R.string.orientation_section))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+/** A font the reader can be set to: one of the built-in families, or one the user added. */
+private sealed interface FontChoice {
+    val label: String
+
+    data class BuiltIn(val family: FontFamily) : FontChoice {
+        override val label: String get() = family.displayName
+    }
+
+    data class Custom(val name: String) : FontChoice {
+        override val label: String get() = name
+    }
+}
+
+/** A margin's slider. Touching it tells the sheet to fade out so the page shows through. */
+@Composable
+private fun MarginSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onTouchChanged: (Boolean) -> Unit,
+    onValueChange: (Float) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.width(72.dp)
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .observeTouchPresence(onTouchChanged)
         ) {
-            com.ember.reader.core.model.OrientationLock.entries.forEach { lock ->
-                FilterChip(
-                    selected = preferences.orientationLock == lock,
-                    onClick = { onPreferencesChanged(preferences.copy(orientationLock = lock)) },
-                    label = { Text(lock.displayName) }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/** The page colour themes as "Aa" swatches; the chosen one has a ring in the accent colour. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ThemeSwatches(selected: ReaderTheme, onSelect: (ReaderTheme) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ReaderTheme.entries.forEach { theme ->
+            val bgColor = if (theme == ReaderTheme.SYSTEM) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color(theme.backgroundColor)
+            }
+            val fgColor = if (theme == ReaderTheme.SYSTEM) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                Color(theme.foregroundColor)
+            }
+            val isSelected = selected == theme
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(bgColor)
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            },
+                            shape = CircleShape
+                        )
+                        .clickable { onSelect(theme) }
+                ) {
+                    Text(
+                        text = "Aa",
+                        color = fgColor,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = ComposeTextAlign.Center
+                    )
+                }
+                Text(
+                    text = theme.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SectionLabel(stringResource(R.string.tap_zones_section))
-        TapZoneSelector("Top tap", preferences.topTapZone) {
-            onPreferencesChanged(preferences.copy(topTapZone = it))
-        }
-        TapZoneSelector("Left tap", preferences.leftTapZone) {
-            onPreferencesChanged(preferences.copy(leftTapZone = it))
-        }
-        TapZoneSelector("Center tap", preferences.centerTapZone) {
-            onPreferencesChanged(preferences.copy(centerTapZone = it))
-        }
-        TapZoneSelector("Right tap", preferences.rightTapZone) {
-            onPreferencesChanged(preferences.copy(rightTapZone = it))
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Top zone height: ${(preferences.topZoneHeight * 100).toInt()}%",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Slider(
-            value = preferences.topZoneHeight,
-            onValueChange = { onPreferencesChanged(preferences.copy(topZoneHeight = it)) },
-            valueRange = 0.05f..0.30f,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            "Left/Right zone width: ${(preferences.leftZoneWidth * 100).toInt()}%",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Slider(
-            value = preferences.leftZoneWidth,
-            onValueChange = {
-                onPreferencesChanged(preferences.copy(leftZoneWidth = it, rightZoneWidth = it))
-            },
-            valueRange = 0.15f..0.45f,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SectionLabel(stringResource(R.string.brightness_section))
-        Slider(
-            value = if (preferences.brightness < 0) 0.5f else preferences.brightness,
-            onValueChange = {
-                onPreferencesChanged(preferences.copy(brightness = it))
-            },
-            valueRange = 0.01f..1.0f,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
 @Composable
 private fun TapZoneSelector(
     label: String,
-    selected: com.ember.reader.core.model.TapZoneBehavior,
-    onChanged: (com.ember.reader.core.model.TapZoneBehavior) -> Unit
+    selected: TapZoneBehavior,
+    onChanged: (TapZoneBehavior) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Row(
@@ -710,15 +641,24 @@ private fun TapZoneSelector(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.bodyLarge)
         Box {
-            FilterChip(
-                selected = true,
+            Surface(
                 onClick = { expanded = true },
-                label = { Text(selected.displayName) }
-            )
+                shape = CircleShape,
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(selected.displayName, style = MaterialTheme.typography.labelLarge)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                }
+            }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                com.ember.reader.core.model.TapZoneBehavior.entries.forEach { behavior ->
+                TapZoneBehavior.entries.forEach { behavior ->
                     DropdownMenuItem(
                         text = { Text(behavior.displayName) },
                         onClick = {
