@@ -487,6 +487,17 @@ fun ReaderPreferencesContent(
                 onValueChange = { onPreferencesChanged(preferences.copy(brightness = it)) },
                 valueRange = 0.01f..1.0f
             )
+            // Offered only once a level is held, as the way back to the device's own.
+            if (preferences.brightness >= 0) {
+                TextButton(onClick = { onPreferencesChanged(preferences.copy(brightness = -1f)) }) {
+                    Text(stringResource(R.string.brightness_use_system))
+                }
+            }
+            ReaderToggleRow(
+                label = stringResource(R.string.brightness_edge_swipe),
+                checked = preferences.edgeBrightnessSwipe,
+                onCheckedChange = { onPreferencesChanged(preferences.copy(edgeBrightnessSwipe = it)) }
+            )
         }
 
         ReaderSettingsSection(stringResource(R.string.tap_zones_section)) {

@@ -246,6 +246,8 @@
     <string name="orientation_section">Orientation</string>
     <string name="tap_zones_section">Tap Zones</string>
     <string name="brightness_section">Brightness</string>
+    <string name="brightness_use_system">Use system brightness</string>
+    <string name="brightness_edge_swipe">Left-edge brightness swipe</string>
     <string name="decrease">Decrease</string>
     <string name="increase">Increase</string>
 

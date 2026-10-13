@@ -208,6 +208,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 onOpenPreferences = { showPreferences = true },
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
+                edgeBrightnessSwipe = preferences.edgeBrightnessSwipe,
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
             ) {
