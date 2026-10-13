@@ -3,6 +3,8 @@ package com.ember.reader.ui.reader.audiobook
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,7 +21,9 @@ import com.ember.reader.core.grimmory.AudiobookTrack
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.DEFAULT_AUDIOBOOK_SKIP_SECONDS
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.google.common.util.concurrent.MoreExecutors
@@ -30,8 +34,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -54,6 +61,7 @@ class AudiobookViewModel @Inject constructor(
     private val readingProgressRepository: ReadingProgressRepository,
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
+    private val appPreferencesRepository: AppPreferencesRepository,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -73,6 +81,22 @@ class AudiobookViewModel @Inject constructor(
 
     private val _playbackSpeed = MutableStateFlow(1.0f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
+    /** How far the skip buttons jump, in seconds. Kept for every book. */
+    val skipBackSeconds: StateFlow<Int> = appPreferencesRepository.audiobookSkipBackSecondsFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_AUDIOBOOK_SKIP_SECONDS)
+    val skipForwardSeconds: StateFlow<Int> = appPreferencesRepository.audiobookSkipForwardSecondsFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_AUDIOBOOK_SKIP_SECONDS)
+
+    private val _sleepTimer = MutableStateFlow<SleepTimer>(SleepTimer.Off)
+
+    /** The sleep timer as the playback service holds it. */
+    val sleepTimer: StateFlow<SleepTimer> = _sleepTimer.asStateFlow()
+
+    private val _sleepTimeLeftMs = MutableStateFlow<Long?>(null)
+
+    /** How long a timed sleep timer has left; null when there is none. */
+    val sleepTimeLeftMs: StateFlow<Long?> = _sleepTimeLeftMs.asStateFlow()
 
     private val _chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
     val chapters: StateFlow<List<AudiobookChapter>> = _chapters.asStateFlow()
@@ -146,11 +170,19 @@ class AudiobookViewModel @Inject constructor(
     ) {
         val sessionToken =
             SessionToken(context, ComponentName(context, AudiobookPlaybackService::class.java))
-        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        val controllerFuture = MediaController.Builder(context, sessionToken)
+            .setListener(object : MediaController.Listener {
+                override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+                    onSleepTimerChanged(SleepTimer.fromBundle(extras))
+                }
+            })
+            .buildAsync()
 
         controllerFuture.addListener({
             val ctrl = controllerFuture.get()
             controller = ctrl
+            // The service may already be running a timer set before this screen was opened.
+            onSleepTimerChanged(SleepTimer.fromBundle(ctrl.sessionExtras))
 
             // Set up player listener
             ctrl.addListener(object : Player.Listener {
@@ -179,6 +211,9 @@ class AudiobookViewModel @Inject constructor(
                     ctrl.setMediaItems(mediaItems)
                     ctrl.prepare()
                     restorePosition(ctrl)
+                    val speed = appPreferencesRepository.audiobookSpeedFlow.first()
+                    _playbackSpeed.value = speed
+                    ctrl.setPlaybackSpeed(speed)
                 } else {
                     Timber.e("Audiobook: no media items could be built")
                 }
@@ -321,6 +356,7 @@ class AudiobookViewModel @Inject constructor(
                     _currentPositionMs.value = ctrl.currentPosition.coerceAtLeast(0)
                     _durationMs.value = ctrl.duration.coerceAtLeast(0)
                 }
+                updateSleepTimeLeft()
                 // Save progress every 30 seconds
                 saveCounter++
                 if (saveCounter >= 30) {
@@ -344,12 +380,51 @@ class AudiobookViewModel @Inject constructor(
 
     fun skipForward() {
         val ctrl = controller ?: return
-        ctrl.seekTo((ctrl.currentPosition + 30_000).coerceAtMost(ctrl.duration))
+        ctrl.seekTo((ctrl.currentPosition + skipForwardSeconds.value * 1000L).coerceAtMost(ctrl.duration))
     }
 
     fun skipBackward() {
         val ctrl = controller ?: return
-        ctrl.seekTo((ctrl.currentPosition - 30_000).coerceAtLeast(0))
+        ctrl.seekTo((ctrl.currentPosition - skipBackSeconds.value * 1000L).coerceAtLeast(0))
+    }
+
+    fun setSkipBackSeconds(seconds: Int) {
+        viewModelScope.launch { appPreferencesRepository.updateAudiobookSkipBackSeconds(seconds) }
+    }
+
+    fun setSkipForwardSeconds(seconds: Int) {
+        viewModelScope.launch { appPreferencesRepository.updateAudiobookSkipForwardSeconds(seconds) }
+    }
+
+    /** Stops playback after [minutes], fading out at the end. */
+    fun setSleepTimerMinutes(minutes: Int) {
+        sendSleepTimer(SleepTimer.Timed(SystemClock.elapsedRealtime() + minutes * 60_000L))
+    }
+
+    /**
+     * Stops playback at the end of the chapter now playing. Without chapters, or in the
+     * last one, that is the end of the track now playing.
+     */
+    fun setSleepTimerEndOfChapter() {
+        val ctrl = controller ?: return
+        val nextChapterStart = _chapters.value.firstOrNull { it.startTimeMs > ctrl.currentPosition }?.startTimeMs
+        sendSleepTimer(SleepTimer.EndOfChapter(ctrl.currentMediaItemIndex, nextChapterStart))
+    }
+
+    fun cancelSleepTimer() = sendSleepTimer(SleepTimer.Off)
+
+    private fun sendSleepTimer(timer: SleepTimer) {
+        controller?.sendCustomCommand(SleepTimer.SET_COMMAND, timer.toBundle())
+    }
+
+    private fun onSleepTimerChanged(timer: SleepTimer) {
+        _sleepTimer.value = timer
+        updateSleepTimeLeft()
+    }
+
+    private fun updateSleepTimeLeft() {
+        val timed = _sleepTimer.value as? SleepTimer.Timed
+        _sleepTimeLeftMs.value = timed?.let { (it.endsAtElapsedMs - SystemClock.elapsedRealtime()).coerceAtLeast(0) }
     }
 
     fun seekToChapter(chapter: AudiobookChapter) {
@@ -394,9 +469,11 @@ class AudiobookViewModel @Inject constructor(
         }
     }
 
+    /** Sets the speed, and keeps it for the next audiobook too. */
     fun setSpeed(speed: Float) {
         _playbackSpeed.value = speed
         controller?.setPlaybackSpeed(speed)
+        viewModelScope.launch { appPreferencesRepository.updateAudiobookSpeed(speed) }
     }
 
     private suspend fun saveProgress() {
