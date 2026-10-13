@@ -249,7 +249,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 val pending = pendingNavigation ?: return@LaunchedEffect
                 val nav = navigator ?: return@LaunchedEffect
                 val target = pending.pdfPage?.let { state.publication.locatorOpeningPdfPage(it) }
-                    ?: state.publication.locatorOpeningPdfPercentage(pending.percentage)
+                    ?: pending.percentage?.let { state.publication.locatorOpeningPdfPercentage(it) }
                 target?.let { nav.go(it) }
                 viewModel.onNavigationHandled()
             }

@@ -8,6 +8,7 @@ import com.ember.reader.core.repository.GrimmoryNotebook
 import com.ember.reader.core.repository.parseServerTimestampOrNull
 import com.ember.reader.ui.book.BookMarkItem
 import com.ember.reader.ui.book.BookMarkKind
+import com.ember.reader.ui.book.RemoteMark
 import com.ember.reader.ui.book.bookMarkItemsOf
 import java.time.Instant
 
@@ -41,12 +42,14 @@ fun notesGroupsOf(
             val heldHighlights = ownHighlights.mapNotNullTo(mutableSetOf()) { it.remoteId }
             val fromServer = entriesByBook[book.id].orEmpty().mapNotNull { entry ->
                 when (entry.type) {
-                    ENTRY_BOOKMARK -> entry.takeIf { it.id !in heldBookmarks }?.toMark(BookMarkKind.BOOKMARK)
+                    ENTRY_BOOKMARK -> entry.takeIf { it.id !in heldBookmarks }
+                        ?.toMark(BookMarkKind.BOOKMARK, RemoteMark.Kind.BOOKMARK)
                     ENTRY_HIGHLIGHT -> entry.takeIf { it.id !in heldHighlights }?.toMark(
-                        if (entry.note.isNullOrBlank()) BookMarkKind.HIGHLIGHT else BookMarkKind.NOTE
+                        if (entry.note.isNullOrBlank()) BookMarkKind.HIGHLIGHT else BookMarkKind.NOTE,
+                        RemoteMark.Kind.ANNOTATION
                     )
                     // Grimmory's free-standing book notes; Ember keeps no copy of these.
-                    ENTRY_NOTE -> entry.toMark(BookMarkKind.NOTE)
+                    ENTRY_NOTE -> entry.toMark(BookMarkKind.NOTE, RemoteMark.Kind.BOOK_NOTE)
                     else -> null
                 }
             }
@@ -59,14 +62,14 @@ fun notesGroupsOf(
         .sortedByDescending { it.marks.first().createdAt }
 }
 
-private fun GrimmoryNotebookEntry.toMark(kind: BookMarkKind) = BookMarkItem(
+private fun GrimmoryNotebookEntry.toMark(kind: BookMarkKind, remoteKind: RemoteMark.Kind) = BookMarkItem(
     key = "grimmory-$type-$id",
     kind = kind,
     text = text?.takeIf { it.isNotBlank() },
     note = note?.takeIf { it.isNotBlank() },
     createdAt = parseServerTimestampOrNull(createdAt) ?: Instant.EPOCH,
     chapter = chapterTitle?.takeIf { it.isNotBlank() },
-    remoteOnly = true
+    remote = RemoteMark(remoteKind, id)
 )
 
 private const val ENTRY_BOOKMARK = "BOOKMARK"

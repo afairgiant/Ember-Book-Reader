@@ -1,5 +1,6 @@
 package com.ember.reader.ui.book.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,9 +39,13 @@ import java.time.format.FormatStyle
 
 private const val COLLAPSED_COUNT = 5
 
-/** The book's bookmarks, highlights and notes, read-only. Nothing is shown for a book with none. */
+/**
+ * The book's bookmarks, highlights and notes. Nothing is shown for a book with none.
+ *
+ * @param onOpen opens the book at one of them; null when the book cannot be opened.
+ */
 @Composable
-fun BookMarksSection(marks: List<BookMarkItem>) {
+fun BookMarksSection(marks: List<BookMarkItem>, onOpen: ((BookMarkItem) -> Unit)? = null) {
     if (marks.isEmpty()) return
     var filter by rememberSaveable { mutableStateOf<BookMarkKind?>(null) }
     var showAll by rememberSaveable { mutableStateOf(false) }
@@ -74,7 +79,7 @@ fun BookMarksSection(marks: List<BookMarkItem>) {
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
-            BookMarkRow(mark)
+            BookMarkRow(mark, onClick = onOpen?.let { open -> { open(mark) } })
         }
         if (matching.size > COLLAPSED_COUNT) {
             TextButton(
@@ -87,12 +92,17 @@ fun BookMarksSection(marks: List<BookMarkItem>) {
     }
 }
 
-/** One bookmark, highlight or note: what it says, its note, and where and when it was made. */
+/**
+ * One bookmark, highlight or note: what it says, its note, and where and when it was made.
+ *
+ * @param onClick what tapping it does; null leaves it as plain text.
+ */
 @Composable
-internal fun BookMarkRow(mark: BookMarkItem) {
+internal fun BookMarkRow(mark: BookMarkItem, onClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Icon(
