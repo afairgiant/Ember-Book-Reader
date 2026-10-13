@@ -16,12 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,8 +36,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.core.grimmory.GrimmoryLibraryFull
+import com.ember.reader.ui.settings.components.SettingsCard
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 
 private val uploadMimeTypes = arrayOf(
     "application/epub+zip",
@@ -100,23 +97,10 @@ fun UploadBookScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    val title = if (state.serverName.isNotBlank()) {
-                        "Upload to ${state.serverName}"
-                    } else {
-                        "Upload book"
-                    }
-                    Text(title, fontWeight = FontWeight.Bold)
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            SettingsScreenHeader(
+                overline = if (state.serverName.isNotBlank()) "To ${state.serverName}" else "Server tools",
+                title = "Upload",
+                onNavigateBack = onNavigateBack,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -293,11 +277,7 @@ private fun <T> DropdownField(
 
 @Composable
 private fun BookDropSection() {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-    ) {
+    SettingsCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "The file will land in Book Drop. Review it there to finalize the import.",
             style = MaterialTheme.typography.bodyMedium,
@@ -314,12 +294,8 @@ private fun FilePickerCard(
     onChoose: () -> Unit,
 ) {
     val context = LocalContext.current
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    SettingsCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = "File",
                 style = MaterialTheme.typography.titleSmall,
