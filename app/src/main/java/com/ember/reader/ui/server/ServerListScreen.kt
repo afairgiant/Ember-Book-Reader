@@ -71,9 +71,13 @@ fun ServerListScreen(
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
     onOpenStats: () -> Unit = {},
+    onAddServer: () -> Unit = {},
+    onOpenBrowse: () -> Unit = {},
+    onOpenLibrary: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
     val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
+    val empty by viewModel.empty.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
     val hasGrimmoryServer by viewModel.hasGrimmoryServer.collectAsStateWithLifecycle()
     val recentlyAddedLoading by viewModel.recentlyAddedLoading.collectAsStateWithLifecycle()
@@ -107,7 +111,20 @@ fun ServerListScreen(
                     }
                 }
 
-                quickStats?.let { stats ->
+                empty?.takeIf { current == null }?.let { reason ->
+                    item(key = "empty") {
+                        HomeEmptyCard(
+                            empty = reason,
+                            onAddServer = onAddServer,
+                            onOpenBrowse = onOpenBrowse,
+                            onOpenLibrary = onOpenLibrary,
+                            modifier = Modifier.padding(horizontal = ScreenEdge)
+                        )
+                    }
+                }
+
+                // No reading this week and no streak says nothing, so it is left out.
+                quickStats?.takeIf { it.weekSeconds > 0 || it.currentStreak > 0 }?.let { stats ->
                     item(key = "stats") { QuickStatsCard(stats = stats, onClick = onOpenStats) }
                 }
 

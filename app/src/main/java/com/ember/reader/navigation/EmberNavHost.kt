@@ -169,13 +169,7 @@ fun EmberNavHost(
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                if (!selected) {
-                                    navController.navigate(tab.route) {
-                                        popUpTo(Routes.HOME) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
+                                if (!selected) navController.navigateToTab(tab.route)
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
                             label = { Text(tab.label) }
@@ -198,13 +192,7 @@ fun EmberNavHost(
             // Top-level: Home
             composable(Routes.HOME) {
                 ServerListScreen(
-                    onOpenSettings = {
-                        navController.navigate(Routes.APP_SETTINGS) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onOpenSettings = { navController.navigateToTab(Routes.APP_SETTINGS) },
                     onOpenReader = { bookId, format ->
                         navigateToReader(navController, bookId, format)
                     },
@@ -213,7 +201,10 @@ fun EmberNavHost(
                     },
                     onOpenStats = {
                         navController.navigate(Routes.STATS)
-                    }
+                    },
+                    onAddServer = { navController.navigate(Routes.serverForm()) },
+                    onOpenBrowse = { navController.navigateToTab(Routes.BROWSE) },
+                    onOpenLibrary = { navController.navigateToTab(Routes.LOCAL_LIBRARY) }
                 )
             }
 
@@ -484,6 +475,15 @@ fun EmberNavHost(
                 )
             }
         }
+    }
+}
+
+/** Goes to a bottom-bar tab the way tapping it does, keeping each tab's own history. */
+private fun NavHostController.navigateToTab(route: String) {
+    navigate(route) {
+        popUpTo(Routes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 
