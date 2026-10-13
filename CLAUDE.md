@@ -103,8 +103,8 @@ Ember computes real EPUB CFIs by injecting foliate-js's `epubcfi.js` (the librar
 
 - **No CFI, no push.** A highlight or bookmark without a real CFI stays on the device: fixed-layout EPUBs, PDFs (PDF bookmarks are not synced at all), and any page where the script fails. Progress falls back to the placeholder `epubcfi(/6/2)` and the percentage.
 - **Older highlights and bookmarks.** Items pushed before Ember had real CFIs sit on the server with a fake one and do not show in the web reader. The "repair" action in the highlights sheet replaces such highlights (create new, delete old; the server cannot change an annotation's CFI). The one in the bookmarks sheet updates such bookmarks in place. A bookmark has no text to find it by, so its repaired CFI is worked out from how far into the chapter it was and can be off by some lines. Only the device that made a bookmark can repair it; other devices pick the real CFI up on their next sync.
-- **Placement is lazy.** A synced highlight or bookmark is placed the first time its chapter is opened in the reader, not at sync time.
-- **Verified in paginated mode only.** Scroll mode and fixed-layout books have not been checked on a device.
+- **Placement is lazy.** A synced highlight or bookmark is placed the first time its chapter is opened in the reader, not at sync time. Tapping one in the bookmarks or highlights sheet before then opens it by its CFI, so it still lands on the right text.
+- **Fixed-layout books carry nothing to the server.** Checked on a device: text cannot be selected in one, so it has no highlights; a bookmark is kept but has no CFI and stays on the device; progress goes by percentage. Reflowable books are checked in both paginated and scroll mode.
 - **The CFI depends on the book file.** If the server's copy of the EPUB changes, existing CFIs may no longer resolve; Ember then leaves the item where it was, or opens progress by percentage.
 
 ### EPUB Scroll Mode Infinite Scroll
