@@ -153,7 +153,8 @@ class NotesViewModel @Inject constructor(
         openingJob = viewModelScope.launch {
             // The listed book can be out of date about having been downloaded since.
             val current = bookRepository.getById(book.id) ?: return@launch
-            if (current.isDownloaded) {
+            // An audiobook plays from the server, so it needs no download to be opened.
+            if (current.isDownloaded || current.format == BookFormat.AUDIOBOOK) {
                 openDownloaded(current, mark)
             } else if (current.serverId != null) {
                 _opening.value = NotesOpening.ConfirmDownload(current, mark)

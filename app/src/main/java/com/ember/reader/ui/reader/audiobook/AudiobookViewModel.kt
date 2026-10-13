@@ -20,12 +20,16 @@ import com.ember.reader.core.grimmory.AudiobookInfo
 import com.ember.reader.core.grimmory.AudiobookTrack
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.model.AudioPosition
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
+import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.DEFAULT_AUDIOBOOK_SKIP_SECONDS
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.BookmarkSyncManager
+import com.ember.reader.ui.reader.common.ReaderTarget
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +42,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -54,7 +59,7 @@ sealed interface AudiobookUiState {
 
 @HiltViewModel
 class AudiobookViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
@@ -62,6 +67,8 @@ class AudiobookViewModel @Inject constructor(
     private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val appPreferencesRepository: AppPreferencesRepository,
+    private val bookmarkRepository: BookmarkRepository,
+    private val bookmarkSyncManager: BookmarkSyncManager,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -98,6 +105,11 @@ class AudiobookViewModel @Inject constructor(
     /** How long a timed sleep timer has left; null when there is none. */
     val sleepTimeLeftMs: StateFlow<Long?> = _sleepTimeLeftMs.asStateFlow()
 
+    /** The book's bookmarks, in the order they come in the book. */
+    val bookmarks: StateFlow<List<AudioBookmark>> = bookmarkRepository.observeByBookId(bookId)
+        .map(::audioBookmarksOf)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     private val _chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
     val chapters: StateFlow<List<AudiobookChapter>> = _chapters.asStateFlow()
 
@@ -124,6 +136,7 @@ class AudiobookViewModel @Inject constructor(
             return
         }
         book = loadedBook
+        syncBookmarks()
 
         val serverId = loadedBook.serverId
         val server = serverId?.let { serverRepository.getById(it) }
@@ -211,6 +224,7 @@ class AudiobookViewModel @Inject constructor(
                     ctrl.setMediaItems(mediaItems)
                     ctrl.prepare()
                     restorePosition(ctrl)
+                    seekToRequestedBookmark(ctrl)
                     val speed = appPreferencesRepository.audiobookSpeedFlow.first()
                     _playbackSpeed.value = speed
                     ctrl.setPlaybackSpeed(speed)
@@ -431,6 +445,79 @@ class AudiobookViewModel @Inject constructor(
         controller?.seekTo(chapter.startTimeMs)
     }
 
+    /** Bookmarks where playback is now, named after the track or chapter and the time. */
+    fun addBookmark() {
+        val ctrl = controller ?: return
+        val position = AudioPosition(
+            positionMs = ctrl.currentPosition.coerceAtLeast(0),
+            // A book that is one file has no track to name.
+            trackIndex = ctrl.currentMediaItemIndex.takeIf { ctrl.mediaItemCount > 1 }
+        )
+        val trackIndex = position.trackIndex
+        val place = if (trackIndex != null) {
+            _tracks.value.getOrNull(trackIndex)?.title
+        } else {
+            _chapters.value.lastOrNull { it.startTimeMs <= position.positionMs }?.title
+        }
+        val title = audioBookmarkTitle(place, position.positionMs)
+        viewModelScope.launch {
+            // Grimmory keeps one bookmark every few seconds; nor is a second one here any use.
+            if (bookmarks.value.none { it.position.isNear(position) }) {
+                bookmarkRepository.addBookmark(bookId, position.toLocatorJson(), title)
+                syncBookmarks()
+            }
+        }
+    }
+
+    fun seekToBookmark(bookmark: AudioBookmark) {
+        val ctrl = controller ?: return
+        seekTo(ctrl, bookmark.position)
+    }
+
+    fun deleteBookmark(bookmark: AudioBookmark) {
+        viewModelScope.launch {
+            bookmarkRepository.deleteBookmark(bookmark.id)
+            syncBookmarks()
+        }
+    }
+
+    private fun seekTo(ctrl: MediaController, position: AudioPosition) {
+        val trackIndex = position.trackIndex
+        if (trackIndex != null && trackIndex in 0 until ctrl.mediaItemCount) {
+            ctrl.seekTo(trackIndex, position.positionMs)
+        } else {
+            ctrl.seekTo(position.positionMs)
+        }
+    }
+
+    /** Opens at the bookmark the player was asked for, such as one tapped in Notes; once only. */
+    private suspend fun seekToRequestedBookmark(ctrl: MediaController) {
+        if (savedStateHandle.get<Boolean>(KEY_TARGET_OPENED) == true) return
+        savedStateHandle[KEY_TARGET_OPENED] = true
+        val target = ReaderTarget.fromArguments(mark = savedStateHandle.get<String>("mark"), cfi = null)
+            as? ReaderTarget.Bookmark ?: return
+        val bookmark = bookmarkRepository.observeByBookId(bookId).first().find { it.id == target.id } ?: return
+        AudioPosition.fromLocatorJson(bookmark.locatorJson)?.let { seekTo(ctrl, it) }
+    }
+
+    /**
+     * Sends and fetches this book's bookmarks when the user syncs bookmarks. The background
+     * sync only covers downloaded books, and an audiobook is often streamed.
+     */
+    private fun syncBookmarks() {
+        val loadedBook = book ?: return
+        val serverId = loadedBook.serverId ?: return
+        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+        applicationScope.launch {
+            runCatching {
+                if (!appPreferencesRepository.getSyncBookmarks()) return@launch
+                val server = serverRepository.getById(serverId)?.takeIf { it.isGrimmory } ?: return@launch
+                if (!grimmoryTokenManager.isLoggedIn(server.id)) return@launch
+                bookmarkSyncManager.syncBookmarksForBook(server, loadedBook.id, grimmoryBookId)
+            }.onFailure { Timber.w(it, "Audiobook: bookmark sync failed") }
+        }
+    }
+
     fun seekToTrack(trackIndex: Int) {
         val ctrl = controller ?: return
         if (trackIndex in 0 until ctrl.mediaItemCount) {
@@ -516,6 +603,10 @@ class AudiobookViewModel @Inject constructor(
             percentage = percentage,
             locatorJson = locatorJson
         )
+    }
+
+    private companion object {
+        const val KEY_TARGET_OPENED = "target_opened"
     }
 
     override fun onCleared() {

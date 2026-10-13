@@ -4,8 +4,10 @@ import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.entity.BookmarkEntity
 import com.ember.reader.core.epub.EpubCfi
 import com.ember.reader.core.grimmory.CreateBookmarkRequest
+import com.ember.reader.core.grimmory.GrimmoryBookmark
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateBookmarkRequest
+import com.ember.reader.core.model.AudioPosition
 import com.ember.reader.core.model.Server
 import java.time.Instant
 import javax.inject.Inject
@@ -76,19 +78,26 @@ class BookmarkSyncManager @Inject constructor(
                     }
                 }
             } else {
-                // Not matched locally → new from server
-                val cfi = serverBookmark.cfi ?: continue
-                val locatorJson = CfiLocatorConverter.buildLocatorJson(
-                    cfi = cfi,
-                    chapterTitle = serverBookmark.title
-                )
+                // Not matched locally. It may still be one made here at the same place and
+                // not yet pushed; that one is linked below, so it is not made a second time.
+                if (localBookmarks.any { it.remoteId == null && it.deletedAt == null && it.isAt(serverBookmark) }) {
+                    continue
+                }
+                // New from server
+                val audioPosition = serverBookmark.audioPosition()
+                val cfi = serverBookmark.cfi
+                val locatorJson = when {
+                    audioPosition != null -> audioPosition.toLocatorJson()
+                    cfi != null -> CfiLocatorConverter.buildLocatorJson(cfi = cfi, chapterTitle = serverBookmark.title)
+                    else -> continue
+                }
                 val now = Instant.now()
                 bookmarkDao.insert(
                     BookmarkEntity(
                         bookId = bookId,
                         locatorJson = locatorJson,
                         title = serverBookmark.title,
-                        cfi = cfi.takeIf { EpubCfi.isRealCfi(it) },
+                        cfi = cfi?.takeIf { audioPosition == null && EpubCfi.isRealCfi(it) },
                         createdAt = parseTimestamp(serverBookmark.createdAt) ?: now,
                         remoteId = serverBookmark.id,
                         updatedAt = parseTimestamp(serverBookmark.updatedAt) ?: now
@@ -101,16 +110,27 @@ class BookmarkSyncManager @Inject constructor(
         // Process local bookmarks
         for (local in localBookmarks) {
             if (local.remoteId == null && local.deletedAt == null) {
-                // New local → push to server. Grimmory's web reader can only open a
-                // bookmark from a real CFI, so one without it stays on this device.
-                val cfi = local.cfi?.takeIf { EpubCfi.isRealCfi(it) }
-                if (cfi == null) {
+                // New local → push to server. An audiobook's bookmark goes by its position.
+                // Otherwise Grimmory's web reader can only open a bookmark from a real CFI,
+                // so one without it stays on this device.
+                val audioPosition = AudioPosition.fromLocatorJson(local.locatorJson)
+                val cfi = local.cfi?.takeIf { audioPosition == null && EpubCfi.isRealCfi(it) }
+                if (audioPosition == null && cfi == null) {
                     Timber.d("BookmarkSync: holding local bookmark %d, no real CFI", local.id)
                     continue
                 }
+                // The server's own test for "already there": the same CFI, or an audio
+                // position within a few seconds of it.
+                val samePlace = { remote: GrimmoryBookmark ->
+                    if (audioPosition != null) {
+                        remote.audioPosition()?.isNear(audioPosition) == true
+                    } else {
+                        remote.cfi == cfi
+                    }
+                }
 
-                // Check if server already has this CFI (match by position)
-                val existingOnServer = serverBookmarks.find { it.cfi == cfi }
+                // Check if server already has this place
+                val existingOnServer = serverBookmarks.find(samePlace)
                 if (existingOnServer != null) {
                     // Link to existing server bookmark instead of creating duplicate
                     bookmarkDao.update(local.copy(remoteId = existingOnServer.id))
@@ -123,6 +143,8 @@ class BookmarkSyncManager @Inject constructor(
                     CreateBookmarkRequest(
                         bookId = grimmoryBookId,
                         cfi = cfi,
+                        positionMs = audioPosition?.positionMs,
+                        trackIndex = audioPosition?.trackIndex,
                         title = local.title
                     )
                 ).onSuccess { created ->
@@ -132,7 +154,7 @@ class BookmarkSyncManager @Inject constructor(
                     // 409 = already exists on server, try to link by refetching
                     if (it.message?.contains("409") == true) {
                         val refreshed = grimmoryClient.getBookmarks(server.url, server.id, grimmoryBookId).getOrNull()
-                        val match = refreshed?.find { b -> b.cfi == cfi }
+                        val match = refreshed?.find(samePlace)
                         if (match != null) {
                             bookmarkDao.update(local.copy(remoteId = match.id))
                             Timber.d("BookmarkSync: linked local bookmark %d → remote %d after 409", local.id, match.id)
@@ -161,4 +183,20 @@ class BookmarkSyncManager @Inject constructor(
         if (timestamp == null) return null
         Instant.parse(timestamp)
     }.getOrNull()
+}
+
+/** Where an audiobook bookmark from the server is; null for a bookmark in a book. */
+private fun GrimmoryBookmark.audioPosition(): AudioPosition? = positionMs?.let { AudioPosition(it, trackIndex) }
+
+/**
+ * Whether this bookmark is at the place [remote] is: the same real CFI, or an audio position
+ * within a few seconds of it, which is as close as Grimmory lets two be.
+ */
+private fun BookmarkEntity.isAt(remote: GrimmoryBookmark): Boolean {
+    val audioPosition = AudioPosition.fromLocatorJson(locatorJson)
+    return if (audioPosition != null) {
+        remote.audioPosition()?.isNear(audioPosition) == true
+    } else {
+        cfi != null && EpubCfi.isRealCfi(cfi) && cfi == remote.cfi
+    }
 }

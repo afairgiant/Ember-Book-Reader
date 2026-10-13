@@ -253,6 +253,10 @@ data class UpdateAnnotationRequest(
 data class GrimmoryBookmark(
     val id: Long,
     val cfi: String? = null,
+    /** An audiobook bookmark's place: this far into the track at [trackIndex]. */
+    val positionMs: Long? = null,
+    /** The track, for an audiobook made of several files. */
+    val trackIndex: Int? = null,
     val title: String? = null,
     val color: String? = null,
     val notes: String? = null,
@@ -263,7 +267,10 @@ data class GrimmoryBookmark(
 @Serializable
 data class CreateBookmarkRequest(
     val bookId: Long,
-    val cfi: String,
+    /** An EPUB bookmark's place. An audiobook's has [positionMs] instead. */
+    val cfi: String? = null,
+    val positionMs: Long? = null,
+    val trackIndex: Int? = null,
     val title: String? = null
 )
 

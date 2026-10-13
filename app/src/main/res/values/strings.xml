@@ -407,6 +407,10 @@
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
     </plurals>
+    <string name="audiobook_bookmarks">Bookmarks</string>
+    <string name="audiobook_bookmark_add">Add bookmark at %1$s</string>
+    <string name="audiobook_bookmarks_empty">No bookmarks yet</string>
+    <string name="audiobook_bookmark_delete_cd">Delete bookmark</string>
     <string name="audiobook_skip_lengths">Skip lengths</string>
     <string name="audiobook_skip_back">Skip back</string>
     <string name="audiobook_skip_forward">Skip forward</string>
