@@ -547,7 +547,7 @@ class ProgressSyncManagerTest {
 
             syncManager.pushProgress(testServer, testBook)
 
-            assertEquals("12", request.captured.fileProgress?.positionData)
+            assertEquals("11", request.captured.fileProgress?.positionData)
         }
 
         @Test
@@ -565,7 +565,7 @@ class ProgressSyncManagerTest {
             syncManager.pushProgress(testServer, pdfBook)
 
             assertNull(requests.single().fileProgress)
-            assertEquals(GrimmoryPdfProgress(page = 12, percentage = 50f), requests.single().pdfProgress)
+            assertEquals(GrimmoryPdfProgress(page = 11, percentage = 50f), requests.single().pdfProgress)
 
             requests.clear()
             coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
@@ -580,7 +580,7 @@ class ProgressSyncManagerTest {
 
             assertTrue(result.grimmory is SourceOutcome.Ok)
             assertEquals(2, requests.size)
-            assertEquals(GrimmoryPdfProgress(page = 12, percentage = 50f), requests[1].pdfProgress)
+            assertEquals(GrimmoryPdfProgress(page = 11, percentage = 50f), requests[1].pdfProgress)
             assertNull(requests[1].fileProgress)
         }
 

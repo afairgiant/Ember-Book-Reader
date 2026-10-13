@@ -54,9 +54,14 @@ object CfiLocatorConverter {
         }.toString()
     }
 
-    /** The page a PDF locator is on, counted from 1. Null when the locator does not say. */
+    /**
+     * The page a PDF locator from the reader is on, counted from 1. Null when the locator
+     * does not say. Readium 3.1.2's Pdfium navigator reports the position after the page
+     * it is showing, so the page is one less than the locator's position.
+     */
     fun pdfPage(locatorJson: String): Int? = runCatching {
         JSONObject(locatorJson).optJSONObject("locations")?.optInt("position", 0)?.takeIf { it > 0 }
+            ?.let { (it - 1).coerceAtLeast(1) }
     }.getOrNull()
 
     /**
