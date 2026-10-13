@@ -10,17 +10,15 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryReadingSessionRequest
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Bookmark
-import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
+import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.toGrimmoryPercentage
 import com.ember.reader.core.readium.BookOpener
-import com.ember.reader.core.sync.BookmarkRepairer
-import com.ember.reader.core.sync.HighlightRepairer
-import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.readium.loadEpubSpine
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
@@ -34,8 +32,12 @@ import com.ember.reader.core.repository.ReaderPreferencesRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
+import com.ember.reader.core.sync.BookmarkRepairer
+import com.ember.reader.core.sync.HighlightRepairer
 import com.ember.reader.core.sync.ProgressSyncManager
+import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.sync.SourceOutcome
+import com.ember.reader.ui.reader.pdf.locatorOpeningPdfPercentage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -196,7 +198,13 @@ class ReaderViewModel @Inject constructor(
         // (happens when progress was pulled from server without locator data)
         var initialLocator = localProgress?.locatorJson?.toLocator()
         if (initialLocator == null && localProgress != null && localProgress.percentage > 0f) {
-            initialLocator = pub.locateProgression(localProgress.percentage.toDouble())
+            // A PDF's percentage counts pages its own way, and its navigator opens the page
+            // before the position it is given; locateProgression would land a page early.
+            initialLocator = if (loadedBook.format == BookFormat.PDF) {
+                pub.locatorOpeningPdfPercentage(localProgress.percentage)
+            } else {
+                pub.locateProgression(localProgress.percentage.toDouble())
+            }
         }
 
         // Wait for the real (DataStore-backed) preferences before handing the
