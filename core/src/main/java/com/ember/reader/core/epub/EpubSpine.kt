@@ -69,6 +69,9 @@ data class EpubSpine(
     }
 
     companion object {
+        /** Some EPUBs start their XML with one, which the parser rejects. Written as an escape so the source has none. */
+        private const val BYTE_ORDER_MARK = "\uFEFF"
+
 
         private val parserFactory: XmlPullParserFactory by lazy {
             XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }
@@ -154,7 +157,7 @@ data class EpubSpine(
         }
 
         private fun createParser(xml: String): XmlPullParser =
-            parserFactory.newPullParser().apply { setInput(StringReader(xml.removePrefix("﻿"))) }
+            parserFactory.newPullParser().apply { setInput(StringReader(xml.removePrefix(BYTE_ORDER_MARK))) }
 
         private val SCHEME = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:")
     }
