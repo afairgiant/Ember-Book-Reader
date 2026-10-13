@@ -6,8 +6,10 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
+import com.ember.reader.core.grimmory.GrimmoryPdfProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingProgressRepository.KosyncProgressResult
@@ -305,6 +307,21 @@ class ProgressSyncManagerTest {
         }
 
         @Test
+        fun `grimmory pull takes pdf progress when it is the furthest along`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.21f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.21f, device = "Ember")
+            ).copy(pdfProgress = GrimmoryPdfProgress(page = 80, percentage = 34.2f))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.342f, result!!.progress.percentage, 0.0001f)
+        }
+
+        @Test
         fun `grimmory readProgress of 0 is treated as no progress`() = runTest {
             coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
                 Result.success(null)
@@ -490,6 +507,81 @@ class ProgressSyncManagerTest {
             assertNotNull(requests[0].fileProgress)
             assertNull(requests[1].fileProgress)
             assertEquals(50f, requests[1].epubProgress?.percentage)
+        }
+
+        @Test
+        fun `push for a PDF sends the page number and no CFI`() = runTest {
+            // Page 80 of 232 is saved as 79 / 231.
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 79f / 231f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "PDF", isPrimary = true)))
+                    .copy(pageCount = 232)
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            val result = syncManager.pushProgress(testServer, testBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertEquals(42L, request.captured.fileProgress?.bookFileId)
+            assertEquals("80", request.captured.fileProgress?.positionData)
+            assertEquals(34.2f, request.captured.fileProgress?.progressPercent)
+            assertNull(request.captured.epubProgress)
+            assertNull(request.captured.pdfProgress)
+        }
+
+        @Test
+        fun `push for a PDF takes the page from the locator when the server has no page count`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, locatorJson = """{"href":"book.pdf","locations":{"position":12}}""")
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "PDF", isPrimary = true)))
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            assertEquals("11", request.captured.fileProgress?.positionData)
+        }
+
+        @Test
+        fun `push for a PDF with no known file sends pdfProgress, and again after a 404`() = runTest {
+            val pdfBook = book(format = BookFormat.PDF)
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, locatorJson = """{"href":"book.pdf","locations":{"position":12}}""")
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns
+                Result.failure(RuntimeException("offline"))
+            val requests = mutableListOf<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(requests)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, pdfBook)
+
+            assertNull(requests.single().fileProgress)
+            assertEquals(GrimmoryPdfProgress(page = 11, percentage = 50f), requests.single().pdfProgress)
+
+            requests.clear()
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "PDF", isPrimary = true)))
+            )
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(requests)) } returnsMany listOf(
+                Result.failure(GrimmoryHttpException(404, "Book file not found")),
+                Result.success(Unit)
+            )
+
+            val result = syncManager.pushProgress(testServer, pdfBook)
+
+            assertTrue(result.grimmory is SourceOutcome.Ok)
+            assertEquals(2, requests.size)
+            assertEquals(GrimmoryPdfProgress(page = 11, percentage = 50f), requests[1].pdfProgress)
+            assertNull(requests[1].fileProgress)
         }
 
         @Test
