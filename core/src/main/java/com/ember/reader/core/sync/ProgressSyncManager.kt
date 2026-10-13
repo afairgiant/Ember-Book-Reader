@@ -7,9 +7,11 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryFileProgress
 import com.ember.reader.core.grimmory.GrimmoryHttpException
-import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
+import com.ember.reader.core.grimmory.GrimmoryPdfProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
+import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
 import com.ember.reader.core.model.Book
+import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.model.toGrimmoryPercentage
@@ -18,6 +20,7 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import timber.log.Timber
@@ -340,6 +343,12 @@ class ProgressSyncManager @Inject constructor(
             val pct = progress.percentage.toGrimmoryPercentage()
             val detail = grimmoryClient.getBookDetail(server.url, server.id, grimmoryBookId).getOrNull()
             val fileId = detail?.primaryFileId
+            val isPdf = detail?.primaryFileBookType?.equals("PDF", ignoreCase = true)
+                ?: (book.format == BookFormat.PDF)
+            if (isPdf) {
+                pushGrimmoryPdf(server, book, grimmoryBookId, fileId, pct, pdfPage(progress, detail?.pageCount))
+                return@runCatchingCancellable
+            }
             // The real position when the reader computed one, so Grimmory's web reader
             // opens on the same text; otherwise the placeholder that keeps the percentage readable.
             val realCfi = progress.cfi?.takeIf { EpubCfi.isRealCfi(it) }
@@ -400,12 +409,73 @@ class ProgressSyncManager @Inject constructor(
     }
 
     /**
+     * A PDF's position is its page number. Grimmory reads `positionData` as a number for a
+     * PDF file and rejects the whole request when it is anything else, a CFI included.
+     */
+    private suspend fun pushGrimmoryPdf(
+        server: Server,
+        book: Book,
+        grimmoryBookId: Long,
+        fileId: Long?,
+        pct: Float,
+        page: Int?
+    ) {
+        // The per-format form needs a page; the first is the least wrong guess without one.
+        val pdfProgress = GrimmoryPdfProgress(page = page ?: 1, percentage = pct)
+        Timber.d(
+            "Sync push: Grimmory PDF request for '${book.title}' bookId=$grimmoryBookId fileId=$fileId pct=$pct page=$page"
+        )
+        val pushed = grimmoryClient.putAppBookProgress(
+            baseUrl = server.url,
+            serverId = server.id,
+            grimmoryBookId = grimmoryBookId,
+            request = if (fileId != null) {
+                GrimmoryUpdateProgressRequest(
+                    fileProgress = GrimmoryFileProgress(
+                        bookFileId = fileId,
+                        positionData = page?.toString(),
+                        progressPercent = pct
+                    )
+                )
+            } else {
+                GrimmoryUpdateProgressRequest(pdfProgress = pdfProgress)
+            }
+        )
+        val staleFileId = fileId != null &&
+            (pushed.exceptionOrNull() as? GrimmoryHttpException)?.statusCode == 404
+        if (staleFileId) {
+            Timber.w("Sync push: Grimmory rejected fileId=$fileId for '${book.title}', retrying without it")
+            grimmoryClient.putAppBookProgress(
+                baseUrl = server.url,
+                serverId = server.id,
+                grimmoryBookId = grimmoryBookId,
+                request = GrimmoryUpdateProgressRequest(pdfProgress = pdfProgress)
+            ).getOrThrow()
+        } else {
+            pushed.getOrThrow()
+        }
+        Timber.d("Sync push: Grimmory OK for '${book.title}' pct=$pct%")
+    }
+
+    /**
+     * The page a PDF position is on, counted from 1. The reader saves a PDF's percentage
+     * as (page - 1) / (pages - 1), so with the page count the page comes back out of it;
+     * otherwise the page the locator names.
+     */
+    private fun pdfPage(progress: ReadingProgress, pageCount: Int?): Int? {
+        if (pageCount != null && pageCount > 1) {
+            return (progress.percentage * (pageCount - 1)).roundToInt().coerceIn(0, pageCount - 1) + 1
+        }
+        return progress.locatorJson?.let(CfiLocatorConverter::pdfPage)
+    }
+
+    /**
      * Converts Grimmory's mixed-scale progress fields to Ember's 0-1 scale.
      *
-     * 1. The further along of `koreaderProgress.percentage` (always 0-1, KOReader
-     *    protocol) and `epubProgress.percentage` (always 0-100, what Ember/web reader
-     *    push — divide). Either can be the stale one: a kosync push does not update
-     *    the EPUB value, and the KOReader value only follows native pushes when the
+     * 1. The furthest along of `koreaderProgress.percentage` (always 0-1, KOReader
+     *    protocol) and `epubProgress.percentage` or `pdfProgress.percentage` (always
+     *    0-100, what Ember/web reader push — divide). Any can be the stale one: a kosync push does not update
+     *    the per-format value, and the KOReader value only follows native pushes when the
      *    user has KOReader sync enabled on the server.
      * 2. `readProgress` (ambiguous: falls through to whichever source last wrote, so
      *    scale depends on that source. Heuristic: values > 1 are 0-100.)
@@ -415,7 +485,8 @@ class ProgressSyncManager @Inject constructor(
     ): Float? {
         val koreader = progress.koreaderProgress?.percentage?.takeIf { it > 0f }?.coerceIn(0f, 1f)
         val epub = progress.epubProgress?.percentage?.takeIf { it > 0f }?.let { (it / 100f).coerceIn(0f, 1f) }
-        listOfNotNull(koreader, epub).maxOrNull()?.let { return it }
+        val pdf = progress.pdfProgress?.percentage?.takeIf { it > 0f }?.let { (it / 100f).coerceIn(0f, 1f) }
+        listOfNotNull(koreader, epub, pdf).maxOrNull()?.let { return it }
         val raw = progress.readProgress ?: return null
         if (raw <= 0f) return null
         return if (raw > 1f) {

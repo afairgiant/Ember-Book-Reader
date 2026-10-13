@@ -125,6 +125,10 @@ data class GrimmoryBookDetail(
     /** ID of the book's primary file, needed for file-level progress pushes. */
     val primaryFileId: Long?
         get() = files?.firstOrNull { it.isPrimary }?.id
+
+    /** The primary file's type as Grimmory names it ("EPUB", "PDF", ...), when it is known. */
+    val primaryFileBookType: String?
+        get() = files?.firstOrNull { it.isPrimary }?.bookType
 }
 
 @Serializable
@@ -153,6 +157,7 @@ data class GrimmoryShelfSummary(
 data class GrimmoryUpdateProgressRequest(
     val fileProgress: GrimmoryFileProgress? = null,
     val epubProgress: GrimmoryEpubProgress? = null,
+    val pdfProgress: GrimmoryPdfProgress? = null,
     val dateFinished: String? = null
 )
 

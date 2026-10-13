@@ -54,6 +54,11 @@ object CfiLocatorConverter {
         }.toString()
     }
 
+    /** The page a PDF locator is on, counted from 1. Null when the locator does not say. */
+    fun pdfPage(locatorJson: String): Int? = runCatching {
+        JSONObject(locatorJson).optJSONObject("locations")?.optInt("position", 0)?.takeIf { it > 0 }
+    }.getOrNull()
+
     /**
      * The chapter a locator is in and how far into it, 0-1 (null when the locator does
      * not say). Null for a locator with no chapter.

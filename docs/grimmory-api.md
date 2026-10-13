@@ -393,6 +393,8 @@ Request `UpdateProgressRequest`:
 
 Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobookProgress`) are still accepted but marked `@Deprecated`. Response `200 OK`.
 
+For a PDF or comic file, `positionData` is the page number as a string. Anything that is not a whole number fails the request with `400`; null is accepted but leaves `pdfProgress` out of later reads. The legacy `pdfProgress` is `{ page, percentage }`, both required.
+
 - `bookFileId` and `progressPercent` (0–100) are required in `fileProgress`.
 - When `fileProgress` is present the server stores `positionData` as the EPUB CFI and ignores `epubProgress`.
 - A `bookFileId` that does not exist fails the whole request with `404 Book file not found`, even if `epubProgress` is also present.
@@ -402,7 +404,7 @@ Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobo
 
 #### How Ember pushes
 
-Ember sends the real CFI of the first text on the open page, computed with the same foliate-js code the web reader uses, so the web reader opens on the same text. When it has no CFI (a PDF, a fixed-layout book, a page with no text) it sends the placeholder `epubcfi(/6/2)`, which only keeps `epubProgress` readable. The CFI goes in both `fileProgress.positionData` and `epubProgress.cfi`. Ember sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`.
+Ember sends the real CFI of the first text on the open page, computed with the same foliate-js code the web reader uses, so the web reader opens on the same text. When it has no CFI (a fixed-layout book, a page with no text) it sends the placeholder `epubcfi(/6/2)`, which only keeps `epubProgress` readable. The CFI goes in both `fileProgress.positionData` and `epubProgress.cfi`. Ember sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`. For a PDF it sends the page number in `fileProgress.positionData` and no `epubProgress`; when no primary file is known, or on a `404`, it sends `pdfProgress` instead.
 
 With a real CFI, Ember sends neither `positionHref` nor `contentSourceProgressPercent` and leaves the server to work them out from the CFI. With the placeholder it sends the chapter's href and the position within it from Readium's locator, when the locator has them. (The web reader sends a table-of-contents href in the first and never sends the second.)
 
@@ -410,7 +412,7 @@ Ember never sends `dateFinished`. The server sets it when a push completes the b
 
 #### How Ember pulls
 
-Which side is further along is decided by percentage. When the user accepts a remote position whose `epubProgress.cfi` is real, Ember opens the CFI's chapter and goes to the text it points at; otherwise, or if the CFI does not resolve in the local file, it goes to the percentage. The CFI is used only when `epubProgress` is the position the chosen percentage came from (within 0.2%), so a KOReader position that is further along is opened by percentage.
+Which side is further along is decided by percentage, taking the furthest of `koreaderProgress`, `epubProgress` and `pdfProgress`. When the user accepts a remote position whose `epubProgress.cfi` is real, Ember opens the CFI's chapter and goes to the text it points at; otherwise, or if the CFI does not resolve in the local file, it goes to the percentage. The CFI is used only when `epubProgress` is the position the chosen percentage came from (within 0.2%), so a KOReader position that is further along is opened by percentage.
 
 #### KOReader mirroring
 
