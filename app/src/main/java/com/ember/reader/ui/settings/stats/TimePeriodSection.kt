@@ -1,12 +1,8 @@
 package com.ember.reader.ui.settings.stats
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,25 +15,19 @@ import com.ember.reader.R
 
 @Composable
 fun TimePeriodSection(stats: StatsData, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        TimeCard(stringResource(R.string.today), stats.todaySeconds, Modifier.weight(1f))
-        TimeCard(stringResource(R.string.this_week), stats.weekSeconds, Modifier.weight(1f))
-        TimeCard(stringResource(R.string.this_month), stats.monthSeconds, Modifier.weight(1f))
-    }
+    StatFigureRow(
+        figures = listOf(
+            StatFigure(stringResource(R.string.today), stats.todaySeconds.formatDuration()),
+            StatFigure(stringResource(R.string.this_week), stats.weekSeconds.formatDuration()),
+            StatFigure(stringResource(R.string.this_month), stats.monthSeconds.formatDuration())
+        ),
+        modifier = modifier
+    )
 }
 
 @Composable
 fun EstimatedCompletionCard(minutes: Long, modifier: Modifier = Modifier) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,13 +65,7 @@ private fun GrimmoryStreakCalendar(weeks: List<GrimmoryStreakDay>) {
     val activeColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
     val inactiveColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp)) {
             // Day-of-week labels on the left
             Column(
@@ -132,13 +124,7 @@ private fun StreakCalendar(readingDays: Set<Long>) {
     val activeColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
     val inactiveColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp)) {
             // Day-of-week labels on the left
             Column(
@@ -228,13 +214,7 @@ private fun SessionHeatmap(scatter: List<GrimmorySessionScatter>) {
     val emptyColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
     val fullColor = MaterialTheme.colorScheme.primary
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.stats_session_patterns),
