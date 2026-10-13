@@ -384,7 +384,8 @@ Request `UpdateProgressRequest`:
     "positionData": "epubcfi(/6/4...)",
     "positionHref": "chapter1.xhtml",
     "progressPercent": 42.0,
-    "ttsPositionCfi": null
+    "ttsPositionCfi": null,
+    "contentSourceProgressPercent": 25.4
   },
   "dateFinished": null
 }
@@ -396,12 +397,16 @@ Legacy per-format fields (`epubProgress`, `pdfProgress`, `cbxProgress`, `audiobo
 - When `fileProgress` is present the server stores `positionData` as the EPUB CFI and ignores `epubProgress`.
 - A `bookFileId` that does not exist fails the whole request with `404 Book file not found`, even if `epubProgress` is also present.
 - If no CFI is stored (null `positionData`, or legacy `epubProgress` with a null `cfi`), later reads omit `epubProgress` entirely.
+- `contentSourceProgressPercent` (0–100) is how far into the chapter at `positionHref` the position is. The server uses the pair to place the bookmark on a Kobo, for libraries with KEPUB conversion on. When they are missing it works both out from the CFI, and failing that from `progressPercent`.
+- A push that reaches 99.5% marks the book `READ` and sets the finish date if it has none. `dateFinished` in the request always replaces the stored date.
 
 #### How Ember pushes
 
 Ember sends the real CFI of the first text on the open page, computed with the same foliate-js code the web reader uses, so the web reader opens on the same text. When it has no CFI (a PDF, a fixed-layout book, a page with no text) it sends the placeholder `epubcfi(/6/2)`, which only keeps `epubProgress` readable. The CFI goes in both `fileProgress.positionData` and `epubProgress.cfi`. Ember sends `fileProgress` for the primary file together with `epubProgress` as the fallback for when no primary file is known, and retries once with `epubProgress` alone on a `404`.
 
-Ember does not send `positionHref` or `contentSourceProgressPercent`. The web reader sends a table-of-contents href in the first and never sends the second.
+With a real CFI, Ember sends neither `positionHref` nor `contentSourceProgressPercent` and leaves the server to work them out from the CFI. With the placeholder it sends the chapter's href and the position within it from Readium's locator, when the locator has them. (The web reader sends a table-of-contents href in the first and never sends the second.)
+
+Ember never sends `dateFinished`. The server sets it when a push completes the book, and sending it with every push would move the date each time a finished book is opened.
 
 #### How Ember pulls
 

@@ -342,7 +342,15 @@ class ProgressSyncManager @Inject constructor(
             val fileId = detail?.primaryFileId
             // The real position when the reader computed one, so Grimmory's web reader
             // opens on the same text; otherwise the placeholder that keeps the percentage readable.
-            val cfi = progress.cfi?.takeIf { EpubCfi.isRealCfi(it) } ?: PLACEHOLDER_CFI
+            val realCfi = progress.cfi?.takeIf { EpubCfi.isRealCfi(it) }
+            val cfi = realCfi ?: PLACEHOLDER_CFI
+            // Grimmory works the chapter and the place in it out from a real CFI. Without
+            // one it has only the percentage, so it is told both (it uses them for Kobo sync).
+            val chapter = if (realCfi == null) {
+                progress.locatorJson?.let(CfiLocatorConverter::chapterPosition)
+            } else {
+                null
+            }
             val epubProgress = GrimmoryEpubProgress(cfi = cfi, percentage = pct)
 
             Timber.d(
@@ -356,7 +364,13 @@ class ProgressSyncManager @Inject constructor(
                     // The CFI has to go in positionData too: with fileProgress present the
                     // server stores positionData as the EPUB position and ignores epubProgress.
                     fileProgress = fileId?.let {
-                        GrimmoryFileProgress(bookFileId = it, positionData = cfi, progressPercent = pct)
+                        GrimmoryFileProgress(
+                            bookFileId = it,
+                            positionData = cfi,
+                            positionHref = chapter?.href,
+                            progressPercent = pct,
+                            contentSourceProgressPercent = chapter?.progression?.toGrimmoryPercentage()
+                        )
                     },
                     epubProgress = epubProgress
                 )

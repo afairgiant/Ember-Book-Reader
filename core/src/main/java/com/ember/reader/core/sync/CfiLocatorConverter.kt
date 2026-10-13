@@ -55,6 +55,19 @@ object CfiLocatorConverter {
     }
 
     /**
+     * The chapter a locator is in and how far into it, 0-1 (null when the locator does
+     * not say). Null for a locator with no chapter.
+     */
+    fun chapterPosition(locatorJson: String): ChapterPosition? = runCatching {
+        val json = JSONObject(locatorJson)
+        val href = json.optString("href").ifEmpty { return@runCatching null }
+        val progression = json.optJSONObject("locations")?.optDouble("progression")?.takeIf { !it.isNaN() }
+        ChapterPosition(href, progression?.toFloat()?.coerceIn(0f, 1f))
+    }.getOrNull()
+
+    data class ChapterPosition(val href: String, val progression: Float?)
+
+    /**
      * The CFI of a locator from [buildLocatorJson] that has not been placed in the book
      * yet: no chapter, and a real CFI to find one with. Null for any other locator.
      */

@@ -73,7 +73,9 @@ data class GrimmoryFileProgress(
     val bookFileId: Long? = null,
     val positionData: String? = null,
     val positionHref: String? = null,
-    val progressPercent: Float? = null
+    val progressPercent: Float? = null,
+    /** How far into the chapter at [positionHref] the position is, 0-100. */
+    val contentSourceProgressPercent: Float? = null
 )
 
 /**

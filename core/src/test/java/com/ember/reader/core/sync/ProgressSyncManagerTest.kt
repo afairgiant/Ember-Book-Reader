@@ -373,6 +373,45 @@ class ProgressSyncManagerTest {
         }
 
         @Test
+        fun `push without a real CFI sends the chapter and the place in it`() = runTest {
+            val locator = """{"href":"OEBPS/ch3.xhtml","locations":{"progression":0.254,"totalProgression":0.5}}"""
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, locatorJson = locator)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "EPUB", isPrimary = true)))
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            assertEquals(ProgressSyncManager.PLACEHOLDER_CFI, request.captured.fileProgress?.positionData)
+            assertEquals("OEBPS/ch3.xhtml", request.captured.fileProgress?.positionHref)
+            assertEquals(25.4f, request.captured.fileProgress?.contentSourceProgressPercent)
+        }
+
+        @Test
+        fun `push with a real CFI leaves the chapter for the server to work out`() = runTest {
+            val locator = """{"href":"OEBPS/ch3.xhtml","locations":{"progression":0.254}}"""
+            coEvery { readingProgressRepository.getByBookId(any()) } returns
+                readingProgress(percentage = 0.5f, locatorJson = locator, cfi = "epubcfi(/6/14!/4/22/1:152)")
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            coEvery { grimmoryClient.getBookDetail(any(), any(), any()) } returns Result.success(
+                grimmoryBookDetail(files = listOf(GrimmoryAppBookFile(id = 42L, bookType = "EPUB", isPrimary = true)))
+            )
+            val request = slot<GrimmoryUpdateProgressRequest>()
+            coEvery { grimmoryClient.putAppBookProgress(any(), any(), any(), capture(request)) } returns
+                Result.success(Unit)
+
+            syncManager.pushProgress(testServer, testBook)
+
+            assertNull(request.captured.fileProgress?.positionHref)
+            assertNull(request.captured.fileProgress?.contentSourceProgressPercent)
+        }
+
+        @Test
         fun `push falls back to the placeholder for a saved CFI that is not real`() = runTest {
             coEvery { readingProgressRepository.getByBookId(any()) } returns
                 readingProgress(percentage = 0.5f, cfi = "0.4231")
