@@ -20,7 +20,9 @@ data class BookMarkItem(
     val note: String?,
     val createdAt: Instant,
     /** The chapter it is in, when its position says. */
-    val chapter: String? = null
+    val chapter: String? = null,
+    /** True for one that Grimmory holds and this device does not. */
+    val remoteOnly: Boolean = false
 )
 
 /**

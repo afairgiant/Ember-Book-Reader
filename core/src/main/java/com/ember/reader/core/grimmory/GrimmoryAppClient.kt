@@ -81,6 +81,41 @@ class GrimmoryAppClient @Inject constructor(
             result
         }
 
+    /** The books the user has bookmarks, highlights or notes in, a page at a time. */
+    suspend fun getNotebookBooks(
+        baseUrl: String,
+        serverId: Long,
+        page: Int,
+        size: Int
+    ): Result<GrimmoryAppPage<GrimmoryNotebookBook>> =
+        tokenManager.withAuth(baseUrl, serverId) { token ->
+            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/notebook/books") {
+                header("Authorization", "Bearer $token")
+                parameter("page", page)
+                parameter("size", size)
+            }
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get notebook books failed: ${response.status}")
+            response.body<GrimmoryAppPage<GrimmoryNotebookBook>>()
+        }
+
+    /** One book's bookmarks, highlights and notes, newest first, a page at a time. */
+    suspend fun getNotebookEntries(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+        page: Int,
+        size: Int
+    ): Result<GrimmoryAppPage<GrimmoryNotebookEntry>> =
+        tokenManager.withAuth(baseUrl, serverId) { token ->
+            val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/notebook/books/$grimmoryBookId/entries") {
+                header("Authorization", "Bearer $token")
+                parameter("page", page)
+                parameter("size", size)
+            }
+            if (!response.status.isSuccess()) throw GrimmoryHttpException(response.status.value, "Get notebook entries failed: ${response.status}")
+            response.body<GrimmoryAppPage<GrimmoryNotebookEntry>>()
+        }
+
     suspend fun getShelves(baseUrl: String, serverId: Long): Result<List<GrimmoryAppShelf>> =
         tokenManager.withAuth(baseUrl, serverId) { token ->
             val response = httpClient.get("${serverOrigin(baseUrl)}/api/v1/app/shelves") {

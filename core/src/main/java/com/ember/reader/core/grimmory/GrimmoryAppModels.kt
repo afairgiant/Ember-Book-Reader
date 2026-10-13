@@ -109,3 +109,34 @@ data class GrimmoryLanguageItem(
     val label: String? = null,
     val count: Int = 0
 )
+
+/** A book with entries in the user's notebook, from `GET /api/v1/app/notebook/books`. */
+@Serializable
+data class GrimmoryNotebookBook(
+    val bookId: Long,
+    val bookTitle: String = "",
+    val noteCount: Int = 0,
+    val authors: List<String> = emptyList(),
+    val coverUpdatedOn: String? = null
+)
+
+/**
+ * One notebook entry, from `GET /api/v1/app/notebook/books/{bookId}/entries`.
+ *
+ * [type] is `HIGHLIGHT` (an annotation; [text] is the highlighted text and [note] its
+ * note), `NOTE` (a book note; [text] is the text it was made on, [note] the note) or
+ * `BOOKMARK` ([text] is its title). [id] is the id of the annotation, book note or
+ * bookmark, so ids are only unique within a type.
+ */
+@Serializable
+data class GrimmoryNotebookEntry(
+    val id: Long,
+    val type: String,
+    val bookId: Long? = null,
+    val text: String? = null,
+    val note: String? = null,
+    val color: String? = null,
+    val chapterTitle: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
+)

@@ -379,6 +379,10 @@
     <string name="notes_clear_search_cd">Clear search</string>
     <string name="notes_empty">Nothing here yet. Bookmarks, highlights and notes you make while reading show up here.</string>
     <string name="notes_no_match">Nothing matches.</string>
+    <string name="notes_on_grimmory_cd">On Grimmory only</string>
+    <string name="notes_include_grimmory">Include Grimmory</string>
+    <string name="notes_include_grimmory_summary">Also list what the server holds that this phone does not</string>
+    <string name="notes_grimmory_failed">Could not read %1$s</string>
     <string name="notes_export_all_cd">Export what is shown</string>
     <string name="notes_export_book_cd">Export notes from this book</string>
     <string name="notes_export_title">Export notes</string>
