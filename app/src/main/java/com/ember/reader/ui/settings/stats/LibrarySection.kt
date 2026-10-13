@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,16 +73,10 @@ private fun StatusSegmentedBar(
     val unreadFraction = unreadCount.toFloat() / total
 
     val readColor = MaterialTheme.colorScheme.primary
-    val readingColor = MaterialTheme.colorScheme.tertiary
+    val readingColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
     val unreadColor = MaterialTheme.colorScheme.outlineVariant
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Segmented bar
             Row(
@@ -168,13 +160,7 @@ private fun LegendItem(color: androidx.compose.ui.graphics.Color, label: String,
 private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
     val maxDuration = genres.maxOfOrNull { it.totalDurationSeconds } ?: 1L
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    StatCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -194,7 +180,7 @@ private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "${genre.bookCount} books",
+                            text = countOf(genre.bookCount, "book"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -212,7 +198,7 @@ private fun TopGenresChart(genres: List<GrimmoryGenreStat>) {
                                 .height(12.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                                 )
                         )
                     }

@@ -2,7 +2,6 @@ package com.ember.reader.ui.settings.stats
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -48,10 +47,7 @@ private fun PeakHoursChart(hours: List<GrimmoryPeakHour>) {
         }
     }
 
-    HorizontalBarChart(
-        entries = entries,
-        barColor = MaterialTheme.colorScheme.tertiary
-    )
+    HorizontalBarChart(entries = entries)
 }
 
 @Composable
@@ -70,7 +66,6 @@ private fun FavoriteDaysChart(days: List<GrimmoryFavoriteDay>) {
 
     HorizontalBarChart(
         entries = entries,
-        barColor = MaterialTheme.colorScheme.tertiary,
         barHeight = 20.dp,
         labelWidth = 32.dp
     )

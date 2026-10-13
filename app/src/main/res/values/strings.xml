@@ -325,6 +325,8 @@
 
     <!-- Stats -->
     <string name="stats_title">Reading Statistics</string>
+    <string name="stats_overline">Reading</string>
+    <string name="stats_screen_title">Statistics</string>
     <string name="day_streak">Day Streak</string>
     <string name="all_time">All Time</string>
     <string name="today">Today</string>

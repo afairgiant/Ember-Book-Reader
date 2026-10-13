@@ -14,8 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +31,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.GrimmoryTimelineEntry
+import com.ember.reader.ui.settings.components.SettingsLabel
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 
 @Composable
@@ -55,11 +56,11 @@ fun TimelineSection(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            SettingsLabel(
                 text = stringResource(R.string.stats_reading_timeline),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
             )
 
             IconButton(onClick = {
@@ -132,13 +133,7 @@ fun TimelineSection(
 
 @Composable
 private fun TimelineCard(entry: GrimmoryTimelineEntry, modifier: Modifier = Modifier) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        shape = RoundedCornerShape(14.dp),
-        modifier = modifier.width(200.dp)
-    ) {
+    StatCard(modifier = modifier.width(220.dp)) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -151,25 +146,45 @@ private fun TimelineCard(entry: GrimmoryTimelineEntry, modifier: Modifier = Modi
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${entry.startDate} – ${entry.endDate}",
+                text = timelineSpan(entry.startDate, entry.endDate),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${entry.totalSessions} sessions",
+                    text = countOf(entry.totalSessions, "session"),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = entry.totalDurationSeconds.formatDuration(),
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
+    }
+}
+
+private val TIMELINE_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d")
+private val TIMELINE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+/**
+ * When a stretch of reading ran, from the two timestamps Grimmory gives for it: a day and
+ * its hours when both fall on one day, otherwise the two days. The timestamps carry no
+ * zone and are shown as written. Anything unreadable is shown as it came.
+ */
+internal fun timelineSpan(start: String, end: String): String {
+    val from = runCatching { LocalDateTime.parse(start) }.getOrNull()
+    val to = runCatching { LocalDateTime.parse(end) }.getOrNull()
+    if (from == null || to == null) return "$start – $end"
+    return if (from.toLocalDate() == to.toLocalDate()) {
+        "${from.format(TIMELINE_DAY)} · ${from.format(TIMELINE_TIME)}–${to.format(TIMELINE_TIME)}"
+    } else {
+        "${from.format(TIMELINE_DAY)} – ${to.format(TIMELINE_DAY)}"
     }
 }
