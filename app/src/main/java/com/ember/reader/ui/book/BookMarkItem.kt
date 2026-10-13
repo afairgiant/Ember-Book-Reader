@@ -3,6 +3,7 @@ package com.ember.reader.ui.book
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.sync.CfiLocatorConverter
+import com.ember.reader.ui.reader.common.ReaderTarget
 import java.time.Instant
 
 enum class BookMarkKind(val label: String) {
@@ -21,9 +22,18 @@ data class BookMarkItem(
     val createdAt: Instant,
     /** The chapter it is in, when its position says. */
     val chapter: String? = null,
-    /** True for one that Grimmory holds and this device does not. */
-    val remoteOnly: Boolean = false
-)
+    /** Where the reader opens for it; null for one this device does not hold. */
+    val target: ReaderTarget? = null,
+    /** Set for one that Grimmory holds and this device does not. */
+    val remote: RemoteMark? = null
+) {
+    val remoteOnly: Boolean get() = remote != null
+}
+
+/** Something Grimmory holds, by the id the server knows it by; ids are per [kind]. */
+data class RemoteMark(val kind: Kind, val id: Long) {
+    enum class Kind { BOOKMARK, ANNOTATION, BOOK_NOTE }
+}
 
 /**
  * A book's bookmarks and highlights as one list, newest first. A highlight that has a note
@@ -37,7 +47,8 @@ fun bookMarkItemsOf(bookmarks: List<Bookmark>, highlights: List<Highlight>): Lis
             text = bookmark.title?.takeIf { it.isNotBlank() },
             note = null,
             createdAt = bookmark.createdAt,
-            chapter = CfiLocatorConverter.chapterTitle(bookmark.locatorJson)
+            chapter = CfiLocatorConverter.chapterTitle(bookmark.locatorJson),
+            target = ReaderTarget.Bookmark(bookmark.id)
         )
     }
     val fromHighlights = highlights.map { highlight ->
@@ -48,7 +59,8 @@ fun bookMarkItemsOf(bookmarks: List<Bookmark>, highlights: List<Highlight>): Lis
             text = highlight.selectedText?.takeIf { it.isNotBlank() },
             note = note,
             createdAt = highlight.createdAt,
-            chapter = CfiLocatorConverter.chapterTitle(highlight.locatorJson)
+            chapter = CfiLocatorConverter.chapterTitle(highlight.locatorJson),
+            target = ReaderTarget.Highlight(highlight.id)
         )
     }
     return (fromBookmarks + fromHighlights).sortedByDescending { it.createdAt }

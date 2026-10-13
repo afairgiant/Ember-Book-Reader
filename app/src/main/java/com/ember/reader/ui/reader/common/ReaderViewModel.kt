@@ -33,6 +33,7 @@ import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.BookmarkRepairer
+import com.ember.reader.core.sync.CfiLocatorConverter
 import com.ember.reader.core.sync.HighlightRepairer
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.RepairSummary
@@ -64,7 +65,7 @@ import timber.log.Timber
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val bookRepository: BookRepository,
     private val bookOpener: BookOpener,
     private val readingProgressRepository: ReadingProgressRepository,
@@ -237,6 +238,12 @@ class ReaderViewModel @Inject constructor(
             }
         }
 
+        // Asked to open at a bookmark or highlight: that comes before where the book was
+        // left. One synced from Grimmory and not yet placed only knows its chapter; the
+        // reader is sent on to its CFI once the chapter is up.
+        val targetLocatorJson = targetLocatorJson()
+        targetLocatorJson?.toLocator(pub, spine.await())?.let { initialLocator = it }
+
         // Wait for the real (DataStore-backed) preferences before handing the
         // fragment to the screen. If we skipped this, the fragment would be
         // built with defaults, seek to initialLocator, render, and only then
@@ -261,12 +268,38 @@ class ReaderViewModel @Inject constructor(
             spine = spine.await(),
         )
 
+        targetLocatorJson?.let(CfiLocatorConverter::unplacedCfi)?.let {
+            _pendingNavigation.value = PendingNavigation(cfi = it)
+        }
+        savedStateHandle[KEY_TARGET_OPENED] = true
+
         pullRemoteProgressOnOpen(loadedBook, localProgress)
 
         // Show tap zone hint on first open of each book in Ember
         // locatorJson is null when progress came from server sync only (never opened locally)
         if (localProgress == null || localProgress.locatorJson == null) {
             _showTapZoneHint.value = true
+        }
+    }
+
+    /**
+     * The stored locator of the place this reader was asked to open at, if it was asked and
+     * the place still exists. Asked only once: a reader rebuilt later, after the system
+     * closed the app behind it, opens where reading had got to.
+     */
+    private suspend fun targetLocatorJson(): String? {
+        if (savedStateHandle.get<Boolean>(KEY_TARGET_OPENED) == true) return null
+        val target = ReaderTarget.fromArguments(
+            mark = savedStateHandle.get<String>("mark"),
+            cfi = savedStateHandle.get<String>("cfi")
+        )
+        return when (target) {
+            is ReaderTarget.Bookmark ->
+                bookmarkRepository.observeByBookId(bookId).first().find { it.id == target.id }?.locatorJson
+            is ReaderTarget.Highlight ->
+                highlightRepository.observeByBookId(bookId).first().find { it.id == target.id }?.locatorJson
+            is ReaderTarget.Cfi -> CfiLocatorConverter.buildLocatorJson(target.cfi)
+            null -> null
         }
     }
 
@@ -745,6 +778,9 @@ class ReaderViewModel @Inject constructor(
         // Covers Readium's reflow + the post-reflow currentLocator emission
         // that follows submitPreferences.
         private const val PREF_REFLOW_SUPPRESS_MS = 1500L
+
+        /** Set once the reader has opened at the place it was asked to. */
+        private const val KEY_TARGET_OPENED = "targetOpened"
     }
 }
 
@@ -780,14 +816,16 @@ sealed interface ReaderUiState {
 }
 
 /**
- * A position accepted from another device, for the reader to open.
+ * A position for the reader to open: one accepted from another device, or a synced
+ * bookmark or highlight the book was opened at.
  *
- * @param cfi its real EPUB CFI when the remote had one; the reader falls back to
+ * @param percentage how far through the book it is, when that is known.
+ * @param cfi its real EPUB CFI when there is one; the reader falls back to
  * [percentage] when it is null or cannot be opened.
  * @param pdfPage its page, counted from 1, when the remote stored one for a PDF.
  */
 data class PendingNavigation(
-    val percentage: Float,
+    val percentage: Float? = null,
     val cfi: String? = null,
     val pdfPage: Int? = null,
 )

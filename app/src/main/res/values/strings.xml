@@ -383,6 +383,13 @@
     <string name="notes_include_grimmory">Include Grimmory</string>
     <string name="notes_include_grimmory_summary">Also list what the server holds that this phone does not</string>
     <string name="notes_grimmory_failed">Could not read %1$s</string>
+    <string name="notes_download_title">Download this book?</string>
+    <string name="notes_download_message">%1$s isn\'t on your phone. Download it to open this entry?</string>
+    <string name="notes_downloading">Downloading %1$s…</string>
+    <string name="notes_locating">Finding it in the book…</string>
+    <string name="notes_stop_waiting">Don\'t wait</string>
+    <string name="notes_download_failed">Could not download the book</string>
+    <string name="notes_place_missing">Could not find that place in the book. Opened where you left off.</string>
     <string name="notes_export_all_cd">Export what is shown</string>
     <string name="notes_export_book_cd">Export notes from this book</string>
     <string name="notes_export_title">Export notes</string>

@@ -516,7 +516,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 val openedByCfi = pending.cfi != null &&
                     nav.goToCfi(pending.cfi, state.publication, state.spine, cfiBridge)
                 if (!openedByCfi) {
-                    state.publication.locateProgression(pending.percentage.toDouble())?.let {
+                    pending.percentage?.let { state.publication.locateProgression(it.toDouble()) }?.let {
                         nav.go(it)
                     }
                 }

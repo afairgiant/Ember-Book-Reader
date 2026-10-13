@@ -57,6 +57,7 @@ import com.ember.reader.ui.book.components.BookSeriesCarousel
 import com.ember.reader.ui.book.components.BookServerInfoCard
 import com.ember.reader.ui.book.components.FullscreenCoverOverlay
 import com.ember.reader.ui.organize.OrganizeFilesSheet
+import com.ember.reader.ui.reader.common.ReaderTarget
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,7 @@ fun BookDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenReader: (bookId: String, format: BookFormat) -> Unit,
     onOpenStreamingReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
+    onOpenReaderAt: (bookId: String, format: BookFormat, target: ReaderTarget) -> Unit = { _, _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
     onOpenLibrary: (serverId: Long, libraryId: Long) -> Unit = { _, _ -> },
     onEditMetadata: (bookId: String) -> Unit = {},
@@ -209,7 +211,14 @@ fun BookDetailScreen(
                             isbn = gd?.isbn13,
                         )
 
-                        BookMarksSection(marks = marks)
+                        BookMarksSection(
+                            marks = marks,
+                            onOpen = if (currentBook.isDownloaded) {
+                                { mark -> mark.target?.let { onOpenReaderAt(currentBook.id, currentBook.format, it) } }
+                            } else {
+                                null
+                            }
+                        )
 
                         val fullMeta = grimmoryFullBook?.metadata
                         if (gd != null) {
