@@ -16,6 +16,9 @@ class BookmarkRepository @Inject constructor(
     private val appPreferencesRepository: AppPreferencesRepository
 ) {
 
+    fun observeAll(): Flow<List<Bookmark>> =
+        bookmarkDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
     fun observeByBookId(bookId: String): Flow<List<Bookmark>> =
         bookmarkDao.observeByBookId(bookId).map { entities -> entities.map { it.toDomain() } }
 

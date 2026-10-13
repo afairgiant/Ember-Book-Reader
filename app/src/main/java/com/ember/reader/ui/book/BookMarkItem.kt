@@ -2,6 +2,7 @@ package com.ember.reader.ui.book
 
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.Highlight
+import com.ember.reader.core.sync.CfiLocatorConverter
 import java.time.Instant
 
 enum class BookMarkKind(val label: String) {
@@ -17,7 +18,9 @@ data class BookMarkItem(
     /** The bookmark's title or the highlighted text; null when there is neither. */
     val text: String?,
     val note: String?,
-    val createdAt: Instant
+    val createdAt: Instant,
+    /** The chapter it is in, when its position says. */
+    val chapter: String? = null
 )
 
 /**
@@ -31,7 +34,8 @@ fun bookMarkItemsOf(bookmarks: List<Bookmark>, highlights: List<Highlight>): Lis
             kind = BookMarkKind.BOOKMARK,
             text = bookmark.title?.takeIf { it.isNotBlank() },
             note = null,
-            createdAt = bookmark.createdAt
+            createdAt = bookmark.createdAt,
+            chapter = CfiLocatorConverter.chapterTitle(bookmark.locatorJson)
         )
     }
     val fromHighlights = highlights.map { highlight ->
@@ -41,7 +45,8 @@ fun bookMarkItemsOf(bookmarks: List<Bookmark>, highlights: List<Highlight>): Lis
             kind = if (note != null) BookMarkKind.NOTE else BookMarkKind.HIGHLIGHT,
             text = highlight.selectedText?.takeIf { it.isNotBlank() },
             note = note,
-            createdAt = highlight.createdAt
+            createdAt = highlight.createdAt,
+            chapter = CfiLocatorConverter.chapterTitle(highlight.locatorJson)
         )
     }
     return (fromBookmarks + fromHighlights).sortedByDescending { it.createdAt }

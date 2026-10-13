@@ -13,6 +13,10 @@ interface HighlightDao {
     @Query("SELECT * FROM highlights WHERE bookId = :bookId AND deletedAt IS NULL ORDER BY createdAt DESC")
     fun observeByBookId(bookId: String): Flow<List<HighlightEntity>>
 
+    /** Every one in every book, newest first, for the notes screen. */
+    @Query("SELECT * FROM highlights WHERE deletedAt IS NULL ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<HighlightEntity>>
+
     @Query("SELECT * FROM highlights WHERE bookId = :bookId")
     suspend fun getAllByBookId(bookId: String): List<HighlightEntity>
 

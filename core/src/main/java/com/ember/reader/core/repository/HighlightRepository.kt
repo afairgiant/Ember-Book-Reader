@@ -18,6 +18,9 @@ class HighlightRepository @Inject constructor(
     private val appPreferencesRepository: AppPreferencesRepository
 ) {
 
+    fun observeAll(): Flow<List<Highlight>> =
+        highlightDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
     fun observeByBookId(bookId: String): Flow<List<Highlight>> =
         highlightDao.observeByBookId(bookId).map { entities -> entities.map { it.toDomain() } }
 

@@ -77,6 +77,11 @@ object CfiLocatorConverter {
 
     data class ChapterPosition(val href: String, val progression: Float?)
 
+    /** The chapter title a locator carries; null when it has none. */
+    fun chapterTitle(locatorJson: String): String? = runCatching {
+        JSONObject(locatorJson).optString("title").trim().ifEmpty { null }
+    }.getOrNull()
+
     /**
      * The CFI of a locator from [buildLocatorJson] that has not been placed in the book
      * yet: no chapter, and a real CFI to find one with. Null for any other locator.

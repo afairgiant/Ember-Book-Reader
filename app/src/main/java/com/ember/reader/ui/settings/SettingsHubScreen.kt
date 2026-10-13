@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CloudQueue
@@ -80,6 +81,7 @@ fun SettingsHubScreen(
     onOpenSync: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenStats: () -> Unit,
+    onOpenNotes: () -> Unit,
     onOpenHardcover: () -> Unit,
     onOpenBookdrop: () -> Unit,
     onOpenUpload: (Long) -> Unit,
@@ -167,6 +169,13 @@ fun SettingsHubScreen(
                     title = "Reading Statistics",
                     subtitle = "History, streaks, and Grimmory stats",
                     onClick = onOpenStats
+                )
+                SettingsDivider()
+                SettingsNavRow(
+                    icon = Icons.AutoMirrored.Filled.StickyNote2,
+                    title = stringResource(R.string.notes_title),
+                    subtitle = "Bookmarks, highlights and notes from every book",
+                    onClick = onOpenNotes
                 )
                 SettingsDivider()
                 SettingsNavRow(
