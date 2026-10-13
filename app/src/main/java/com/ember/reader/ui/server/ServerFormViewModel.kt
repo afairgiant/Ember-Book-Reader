@@ -193,6 +193,20 @@ class ServerFormViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Removes the server being edited, with its sign-in details. Books downloaded from it stay
+     * in the Library. Does nothing while adding a server, which has nothing to remove yet.
+     */
+    fun delete(onDeleted: () -> Unit) {
+        val id = serverId ?: return
+        _uiState.update { it.copy(isSaving = true) }
+        viewModelScope.launch {
+            serverRepository.delete(id)
+            _uiState.update { it.copy(isSaving = false) }
+            onDeleted()
+        }
+    }
+
     fun save(onSuccess: () -> Unit) {
         val state = _uiState.value
         if (state.name.isBlank() || state.url.isBlank()) {

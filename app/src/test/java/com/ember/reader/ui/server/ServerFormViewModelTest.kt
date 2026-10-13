@@ -217,4 +217,32 @@ class ServerFormViewModelTest {
             assertEquals("gpass", saved.opdsPassword)
             assertTrue(saved.opdsEnabled)
         }
+
+    @Test
+    fun `delete removes the server being edited and then reports back`() = runTest {
+        coEvery { serverRepository.getById(5L) } returns null
+        coEvery { serverRepository.delete(5L) } returns Unit
+        val viewModel = createViewModel(serverId = 5L)
+        advanceUntilIdle()
+
+        var deleted = false
+        viewModel.delete { deleted = true }
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { serverRepository.delete(5L) }
+        assertTrue(deleted)
+    }
+
+    @Test
+    fun `delete does nothing while adding a server`() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        var deleted = false
+        viewModel.delete { deleted = true }
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { serverRepository.delete(any()) }
+        assertTrue(!deleted)
+    }
 }
