@@ -27,7 +27,9 @@ import timber.log.Timber
 
 data class RemoteSyncResult(
     val progress: ReadingProgress,
-    val source: String
+    val source: String,
+    /** The page of a PDF position, counted from 1, when the remote stored one. */
+    val pdfPage: Int? = null
 )
 
 /**
@@ -113,9 +115,11 @@ class ProgressSyncManager @Inject constructor(
         val results = outcomes
             .filterIsInstance<SourceOutcome.Ok<RemoteSyncResult>>()
             .mapNotNull { it.value }
-        val best = results.maxByOrNull { it.progress.percentage }?.withCfiFrom(results)
+        val best = results.maxByOrNull { it.progress.percentage }?.withCfiFrom(results)?.withPdfPageFrom(results)
         Timber.d(
-            "Sync pull: best=${best?.let { "${it.progress.percentage} from ${it.source} cfi=${it.progress.cfi}" } ?: "none"}"
+            "Sync pull: best=${best?.let {
+                "${it.progress.percentage} from ${it.source} cfi=${it.progress.cfi} pdfPage=${it.pdfPage}"
+            } ?: "none"}"
         )
         best
     }
@@ -131,6 +135,15 @@ class ProgressSyncManager @Inject constructor(
             other.progress.cfi?.takeIf { isSamePosition(other.progress.percentage, progress.percentage) }
         } ?: return this
         return copy(progress = progress.copy(cfi = cfi))
+    }
+
+    /** As [withCfiFrom], for the page of a PDF: kosync carries none either. */
+    private fun RemoteSyncResult.withPdfPageFrom(results: List<RemoteSyncResult>): RemoteSyncResult {
+        if (pdfPage != null) return this
+        val page = results.firstNotNullOfOrNull { other ->
+            other.pdfPage?.takeIf { isSamePosition(other.progress.percentage, progress.percentage) }
+        } ?: return this
+        return copy(pdfPage = page)
     }
 
     /**
@@ -248,7 +261,8 @@ class ProgressSyncManager @Inject constructor(
             } else {
                 RemoteSyncResult(
                     progress = ReadingProgress.fromRemote(book.id, server.id, pct, cfi = positionCfi(progress, pct)),
-                    source = progress.koreaderProgress?.device ?: "Grimmory"
+                    source = progress.koreaderProgress?.device ?: "Grimmory",
+                    pdfPage = remotePdfPage(progress, pct)
                 )
             }
         }.fold(
@@ -509,6 +523,21 @@ class ProgressSyncManager @Inject constructor(
         val epubPercentage = epub.percentage?.let { (it / 100f).coerceIn(0f, 1f) } ?: return null
         if (!isSamePosition(epubPercentage, percentage)) return null
         return epub.cfi?.takeIf { EpubCfi.isRealCfi(it) }
+    }
+
+    /**
+     * The page stored with Grimmory's PDF progress, when that progress is the position
+     * [percentage] was taken from. Clients work a PDF's percentage out differently, so the
+     * percentage alone can be a page off; the page number is exact.
+     */
+    private fun remotePdfPage(
+        progress: com.ember.reader.core.grimmory.GrimmoryAppBookProgress,
+        percentage: Float
+    ): Int? {
+        val pdf = progress.pdfProgress ?: return null
+        val pdfPercentage = pdf.percentage?.let { (it / 100f).coerceIn(0f, 1f) } ?: return null
+        if (!isSamePosition(pdfPercentage, percentage)) return null
+        return pdf.page?.takeIf { it > 0 }
     }
 
     private fun isSamePosition(a: Float, b: Float): Boolean = abs(a - b) <= SAME_POSITION_TOLERANCE
