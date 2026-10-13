@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FormatColorFill
+import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
@@ -57,6 +58,7 @@ import com.ember.reader.ui.settings.components.SettingsToggleRow
 fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val syncFrequency by viewModel.syncFrequency.collectAsStateWithLifecycle()
     val syncNotifications by viewModel.syncNotifications.collectAsStateWithLifecycle()
+    val newBookNotifications by viewModel.newBookNotifications.collectAsStateWithLifecycle()
     val syncHighlights by viewModel.syncHighlights.collectAsStateWithLifecycle()
     val syncBookmarks by viewModel.syncBookmarks.collectAsStateWithLifecycle()
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
@@ -105,6 +107,16 @@ fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel 
                     subtitle = stringResource(R.string.sync_notifications_hint),
                     checked = syncNotifications,
                     onCheckedChange = { viewModel.updateSyncNotifications(it) }
+                )
+
+                SettingsDivider()
+
+                SettingsToggleRow(
+                    icon = Icons.Default.NewReleases,
+                    title = stringResource(R.string.new_book_notifications_label),
+                    subtitle = stringResource(R.string.new_book_notifications_hint),
+                    checked = newBookNotifications,
+                    onCheckedChange = { viewModel.updateNewBookNotifications(it) }
                 )
 
                 SettingsDivider()

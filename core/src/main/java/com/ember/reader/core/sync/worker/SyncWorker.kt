@@ -2,6 +2,7 @@ package com.ember.reader.core.sync.worker
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -23,8 +24,10 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.toBookFormat
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.core.sync.HighlightSyncManager
+import com.ember.reader.core.sync.NewBooksChecker
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.SyncStatusRepository
+import com.ember.reader.core.sync.newBooksTitle
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
@@ -45,7 +48,8 @@ class SyncWorker @AssistedInject constructor(
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val bookDao: com.ember.reader.core.database.dao.BookDao,
-    private val syncStatusRepository: SyncStatusRepository
+    private val syncStatusRepository: SyncStatusRepository,
+    private val newBooksChecker: NewBooksChecker
 ) : CoroutineWorker(context, params) {
 
     private var syncPushed = 0
@@ -83,6 +87,14 @@ class SyncWorker @AssistedInject constructor(
                 // Grimmory native push/pull
                 if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
                     syncGrimmoryProgress(server)
+
+                    // Say so when books have been added since the newest were last seen.
+                    // Checked even with the notification off, so that turning it on later
+                    // does not announce everything added in between.
+                    val newBooks = newBooksChecker.check(server)
+                    if (newBooks.isNotEmpty() && appPreferencesRepository.getNewBookNotifications()) {
+                        showNewBooksNotification(server, newBooks.map { it.title })
+                    }
 
                     // Auto-download books marked as Reading.
                     // Skip when the authenticated user lacks download permission —
@@ -150,6 +162,41 @@ class SyncWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(applicationContext).notify("sync".hashCode(), notification)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showNewBooksNotification(server: Server, titles: List<String>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val context = applicationContext
+        val title = newBooksTitle(titles.size, server.name)
+        val builder = NotificationCompat.Builder(context, "ember_activity")
+            .setSmallIcon(android.R.drawable.ic_menu_agenda)
+            .setContentTitle(title)
+            .setContentText(titles.joinToString(", "))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+        // Opens the app, whose home screen lists what was added.
+        context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { launch ->
+            builder.setContentIntent(
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    launch,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+        }
+        if (titles.size > 1) {
+            val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
+            titles.forEach { style.addLine(it) }
+            builder.setStyle(style)
+        }
+        // One notification a server: a later one replaces an unread earlier one.
+        NotificationManagerCompat.from(context).notify("new_books_${server.id}".hashCode(), builder.build())
     }
 
     /**
