@@ -17,9 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -50,6 +52,7 @@ import com.ember.reader.ui.common.LoadingScreen
 import com.ember.reader.ui.settings.components.SettingsChoiceChips
 import com.ember.reader.ui.settings.components.SettingsGroup
 import com.ember.reader.ui.settings.components.SettingsScreenHeader
+import com.ember.reader.ui.settings.components.SettingsToggleRow
 import java.time.Instant
 
 /** Bookmarks, highlights and notes from every book on the device, book by book. */
@@ -72,6 +75,7 @@ fun NotesScreen(
         query = query,
         onKindChange = viewModel::showKind,
         onQueryChange = viewModel::search,
+        onIncludeGrimmory = viewModel::includeGrimmory,
         onNavigateBack = onNavigateBack,
         onOpenBook = onOpenBook,
         onExport = { exporting = it }
@@ -89,6 +93,7 @@ private fun NotesContent(
     query: String,
     onKindChange: (BookMarkKind?) -> Unit,
     onQueryChange: (String) -> Unit,
+    onIncludeGrimmory: (Boolean) -> Unit,
     onNavigateBack: () -> Unit,
     onOpenBook: (bookId: String) -> Unit,
     onExport: (List<NotesBookGroup>) -> Unit
@@ -109,9 +114,11 @@ private fun NotesContent(
         when (uiState) {
             NotesUiState.Loading -> LoadingScreen()
             is NotesUiState.Ready -> if (!uiState.hasAny) {
-                NotesMessage(stringResource(R.string.notes_empty))
+                uiState.grimmory?.let { GrimmoryRow(it, onIncludeGrimmory) }
+                if (uiState.grimmory?.loading != true) NotesMessage(stringResource(R.string.notes_empty))
             } else {
                 NotesSearchField(query = query, onQueryChange = onQueryChange)
+                uiState.grimmory?.let { GrimmoryRow(it, onIncludeGrimmory) }
                 SettingsChoiceChips(
                     options = listOf<BookMarkKind?>(null) + BookMarkKind.entries,
                     selected = kind,
@@ -188,6 +195,31 @@ private fun NotesBookCard(group: NotesBookGroup, onOpenBook: () -> Unit, onExpor
     }
 }
 
+/** The switch that adds what Grimmory holds, with how reading it is going underneath. */
+@Composable
+private fun GrimmoryRow(grimmory: GrimmoryInclusion, onInclude: (Boolean) -> Unit) {
+    Column {
+        SettingsToggleRow(
+            icon = Icons.Outlined.Cloud,
+            title = stringResource(R.string.notes_include_grimmory),
+            subtitle = stringResource(R.string.notes_include_grimmory_summary),
+            checked = grimmory.included,
+            onCheckedChange = onInclude
+        )
+        if (grimmory.loading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        if (grimmory.failedServers.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.notes_grimmory_failed, grimmory.failedServers.joinToString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
+    }
+}
+
 private fun countLabel(count: Int): String = if (count == 1) "1 entry" else "$count entries"
 
 @Composable
@@ -245,6 +277,7 @@ private fun NotesContentPreview() {
             query = "",
             onKindChange = {},
             onQueryChange = {},
+            onIncludeGrimmory = {},
             onNavigateBack = {},
             onOpenBook = {},
             onExport = {}

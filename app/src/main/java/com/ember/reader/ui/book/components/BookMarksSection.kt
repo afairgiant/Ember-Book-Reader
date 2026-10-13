@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BorderColor
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -133,6 +134,16 @@ internal fun BookMarkRow(mark: BookMarkItem) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+        if (mark.remoteOnly) {
+            Icon(
+                imageVector = Icons.Outlined.Cloud,
+                contentDescription = stringResource(R.string.notes_on_grimmory_cd),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(start = 8.dp, top = 2.dp)
+                    .size(16.dp)
             )
         }
     }

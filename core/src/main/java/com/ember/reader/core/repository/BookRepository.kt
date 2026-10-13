@@ -174,6 +174,10 @@ class BookRepository @Inject constructor(
     suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): Book? =
         bookDao.getByOpdsEntryId(opdsEntryId, serverId)?.toDomain()
 
+    /** Ember's record of the book a Grimmory server knows by [grimmoryBookId], if it has one. */
+    suspend fun getByGrimmoryBookId(grimmoryBookId: Long, serverId: Long): Book? =
+        getByOpdsEntryId(grimmoryOpdsEntryId(grimmoryBookId), serverId)
+
     /**
      * Stores books the app API returned outside a library listing (a series row on the book
      * detail screen), so they open with the same actions as when reached through Browse.
@@ -963,7 +967,11 @@ internal fun GrimmoryBookSummary.toBookFormat(): BookFormat = when (primaryFileT
  * the backend's Jackson defaults have varied across versions. Returns `null` for blank/invalid
  * input so callers can fall back to a locally-generated timestamp without crashing.
  */
-private fun parseServerTimestampOrNull(raw: String?): Instant? {
+/**
+ * A timestamp as Grimmory writes it: with a zone, or without one, in which case it is UTC.
+ * Null for anything else.
+ */
+fun parseServerTimestampOrNull(raw: String?): Instant? {
     val trimmed = raw?.trim().orEmpty()
     if (trimmed.isEmpty()) return null
     return runCatching { Instant.parse(trimmed) }.getOrNull()

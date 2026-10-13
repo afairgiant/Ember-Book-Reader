@@ -579,6 +579,10 @@ GET /api/v1/app/notebook/books/{bookId}/entries?page=0&size=20&types=...&search=
 
 Response `200 AppPageResponse<AppNotebookEntry>` — `id`, `type`, `bookId`, `text`, `note`, `color`, `style`, `chapterTitle`, `createdAt`, `updatedAt`.
 
+`type` is `HIGHLIGHT` (an annotation), `NOTE` (a V2 book note; `text` is the passage, `note` the note) or `BOOKMARK` (`text` is its title). `id` is the id of that annotation, book note or bookmark, so ids are unique only within a type. Entries carry no CFI. `createdAt` has no zone and is in the server's local time.
+
+Ember reads both notebook endpoints for the "Include Grimmory" switch on its Notes screen, and hides an entry whose id matches the `remoteId` of a highlight or bookmark it already holds.
+
 ### Notebook — Update / Delete
 
 ```

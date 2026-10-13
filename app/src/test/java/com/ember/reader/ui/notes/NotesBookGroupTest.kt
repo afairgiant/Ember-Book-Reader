@@ -3,7 +3,9 @@ package com.ember.reader.ui.notes
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Bookmark
+import com.ember.reader.core.grimmory.GrimmoryNotebookEntry
 import com.ember.reader.core.model.Highlight
+import com.ember.reader.core.repository.GrimmoryNotebook
 import com.ember.reader.ui.book.BookMarkKind
 import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -87,5 +89,56 @@ class NotesBookGroupTest {
     @Test
     fun `a search with no match leaves nothing`() {
         assertTrue(groups.narrowedTo(null, "zebra").isEmpty())
+    }
+
+    private fun entry(id: Long, type: String, text: String? = null, note: String? = null, createdAt: String? = null) =
+        GrimmoryNotebookEntry(id = id, type = type, text = text, note = note, chapterTitle = "Ch 2", createdAt = createdAt)
+
+    @Test
+    fun `entries the device does not hold are added from Grimmory and marked as such`() {
+        val notebook = GrimmoryNotebook(
+            localBookId = "dune",
+            entries = listOf(
+                entry(50, "HIGHLIGHT", text = "The sleeper must awaken", createdAt = "2026-10-11T17:49:01"),
+                entry(51, "HIGHLIGHT", text = "Bless the Maker", note = "worms", createdAt = "2026-10-11T17:50:00Z"),
+                entry(52, "NOTE", note = "a free-standing note"),
+                entry(53, "BOOKMARK", text = "Sietch"),
+                entry(54, "SOMETHING_NEW", text = "ignored")
+            )
+        )
+
+        val marks = notesGroupsOf(listOf(dune), emptyList(), emptyList(), listOf(notebook)).single().marks
+
+        assertEquals(
+            listOf(BookMarkKind.NOTE, BookMarkKind.HIGHLIGHT, BookMarkKind.NOTE, BookMarkKind.BOOKMARK),
+            marks.map { it.kind }
+        )
+        assertTrue(marks.all { it.remoteOnly })
+        assertEquals("Ch 2", marks.first().chapter)
+        assertEquals(Instant.parse("2026-10-11T17:49:01Z"), marks.single { it.text == "The sleeper must awaken" }.createdAt)
+        assertEquals(4, marks.map { it.key }.toSet().size)
+    }
+
+    @Test
+    fun `an entry the device already holds is listed once, as its own`() {
+        val synced = listOf(Highlight(id = 9, bookId = "dune", locatorJson = "{}", selectedText = "Fear", remoteId = 50, createdAt = at(20)))
+        val syncedBookmarks = listOf(Bookmark(id = 9, bookId = "dune", locatorJson = "{}", title = "Start", remoteId = 50, createdAt = at(10)))
+        val notebook = GrimmoryNotebook(
+            localBookId = "dune",
+            // Ids are per type, so highlight 50 and bookmark 50 are different entries.
+            entries = listOf(entry(50, "HIGHLIGHT", text = "Fear"), entry(50, "BOOKMARK", text = "Start"), entry(51, "BOOKMARK", text = "Other"))
+        )
+
+        val marks = notesGroupsOf(listOf(dune), syncedBookmarks, synced, listOf(notebook)).single().marks
+
+        assertEquals(listOf("Fear", "Start", "Other"), marks.map { it.text })
+        assertEquals(listOf(false, false, true), marks.map { it.remoteOnly })
+    }
+
+    @Test
+    fun `a book with entries only on Grimmory is listed`() {
+        val notebook = GrimmoryNotebook(localBookId = "emma", entries = listOf(entry(1, "BOOKMARK", text = "Start")))
+
+        assertEquals(listOf("emma"), notesGroupsOf(listOf(emma), emptyList(), emptyList(), listOf(notebook)).map { it.book.id })
     }
 }

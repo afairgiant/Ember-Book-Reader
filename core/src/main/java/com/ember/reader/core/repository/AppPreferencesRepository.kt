@@ -46,6 +46,7 @@ class AppPreferencesRepository @Inject constructor(
         val ACCENT = stringPreferencesKey("accent")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
+        val NOTES_INCLUDE_GRIMMORY = booleanPreferencesKey("notes_include_grimmory")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
@@ -78,6 +79,10 @@ class AppPreferencesRepository @Inject constructor(
     /** The reader's auto-scroll speed in CSS pixels a second; null until one has been chosen. */
     val autoScrollSpeedFlow: Flow<Float?> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_SCROLL_SPEED] }
+
+    /** Whether the notes screen also lists what Grimmory holds. */
+    val notesIncludeGrimmoryFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.NOTES_INCLUDE_GRIMMORY] ?: false }
 
     val autoCleanupFlow: Flow<Boolean> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_CLEANUP] ?: false }
@@ -116,6 +121,12 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateAutoScrollSpeed(speed: Float) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.AUTO_SCROLL_SPEED] = speed
+        }
+    }
+
+    suspend fun updateNotesIncludeGrimmory(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.NOTES_INCLUDE_GRIMMORY] = enabled
         }
     }
 
