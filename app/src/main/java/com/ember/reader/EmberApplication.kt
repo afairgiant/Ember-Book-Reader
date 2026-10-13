@@ -80,6 +80,15 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         continueReadingWidgetUpdater.start(applicationScope)
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // The device may have gone light or dark, which the widget's colours follow.
+        applicationScope.launch {
+            runCatching { continueReadingWidgetUpdater.updateAll() }
+                .onFailure { Timber.w(it, "Widget: redraw failed") }
+        }
+    }
+
     override fun newImageLoader(): ImageLoader {
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(coverAuthInterceptor)
