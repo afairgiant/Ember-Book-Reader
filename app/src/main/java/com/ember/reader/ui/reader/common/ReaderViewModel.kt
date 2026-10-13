@@ -100,6 +100,23 @@ class ReaderViewModel @Inject constructor(
     private val _syncConflict = MutableStateFlow<SyncConflict?>(null)
     val syncConflict: StateFlow<SyncConflict?> = _syncConflict.asStateFlow()
 
+    private val _autoScrolling = MutableStateFlow(false)
+
+    /** Whether the page is moving by itself. It only does with the bars hidden. */
+    val autoScrolling: StateFlow<Boolean> = _autoScrolling.asStateFlow()
+
+    fun startAutoScroll() {
+        _chromeVisible.value = false
+        _autoScrolling.value = true
+    }
+
+    /** Stops the page; [showChrome] brings the bars back, where it can be started again. */
+    fun stopAutoScroll(showChrome: Boolean = false) {
+        if (!_autoScrolling.value) return
+        _autoScrolling.value = false
+        if (showChrome) _chromeVisible.value = true
+    }
+
     // Per-book overrides take priority over global defaults. Falls back to the
     // global flow when bookId is unset (defensive — shouldn't happen in practice).
     val preferences: StateFlow<ReaderPreferences> =
@@ -340,6 +357,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun toggleChrome() {
+        _autoScrolling.value = false
         _chromeVisible.update { !it }
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -47,7 +48,9 @@ import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
 import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -67,6 +70,9 @@ import timber.log.Timber
 private const val FRAGMENT_TAG = "epub_navigator"
 private const val CONTAINER_ID = 0x7F_FF_00_01
 
+/** How long the next chapter is given to come up before auto-scroll takes the book as ended. */
+private const val NEXT_CHAPTER_TIMEOUT_MS = 3_000L
+
 @OptIn(ExperimentalReadiumApi::class)
 @Composable
 fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
@@ -82,6 +88,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val customFonts by viewModel.customFonts.collectAsStateWithLifecycle()
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
+    val autoScrolling by viewModel.autoScrolling.collectAsStateWithLifecycle()
+    val autoScrollingNow by rememberUpdatedState(autoScrolling)
 
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
 
@@ -99,6 +107,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                     } else {
                         viewModel.saveCurrentProgress()
                     }
+                    viewModel.stopAutoScroll()
                     viewModel.onSessionPause()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
@@ -113,8 +122,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
     // Keep screen on while reading
     val view = LocalView.current
-    DisposableEffect(keepScreenOn) {
-        if (keepScreenOn) {
+    DisposableEffect(keepScreenOn, autoScrolling) {
+        // A page moving by itself gets no touches to keep the screen awake.
+        if (keepScreenOn || autoScrolling) {
             view.keepScreenOn = true
         }
         onDispose { view.keepScreenOn = false }
@@ -268,6 +278,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         }
                     }
                 },
+                // A page turned at a time has nothing to scroll.
+                onStartAutoScroll = if (preferences.isPaginated) null else viewModel::startAutoScroll,
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
                 streaming = state.streaming,
@@ -382,6 +394,11 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 val tapPrefs = preferences
                 val listener = object : InputListener {
                     override fun onTap(event: TapEvent): Boolean {
+                        // Any tap stops a page that is moving by itself.
+                        if (autoScrollingNow) {
+                            viewModel.stopAutoScroll(showChrome = true)
+                            return true
+                        }
                         val view = nav.requireView()
                         val viewWidth = view.width.toFloat()
                         val viewHeight = view.height.toFloat()
@@ -414,6 +431,35 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 }
                 currentTapListener = listener
                 nav.addInputListener(listener)
+            }
+
+            // Move the page by itself while auto-scroll is on. Leaving scroll mode ends it.
+            LaunchedEffect(autoScrolling, navigator, preferences.isPaginated) {
+                val nav = navigator ?: return@LaunchedEffect
+                if (!autoScrolling) return@LaunchedEffect
+                if (preferences.isPaginated) {
+                    viewModel.stopAutoScroll()
+                    return@LaunchedEffect
+                }
+                AutoScrollController(
+                    evaluate = nav::evaluateJavascript,
+                    goToNextChapter = {
+                        val chapter = nav.currentLocator.value.href
+                        nav.goForward()
+                        withTimeoutOrNull(NEXT_CHAPTER_TIMEOUT_MS) {
+                            nav.currentLocator.first { it.href != chapter }
+                        } != null
+                    },
+                    onCheckpoint = {
+                        // The CFI is asked for here because the usual lookup waits for the
+                        // page to have been still for longer than a checkpoint holds it.
+                        val locator = nav.currentLocator.value
+                        viewModel.onPositionCfi(locator, cfiBridge?.visibleStartCfi())
+                        viewModel.saveProgressLatest(locator)
+                    }
+                ).run(AutoScrollScript.DEFAULT_SPEED)
+                // It only returns at the end of the book.
+                viewModel.stopAutoScroll(showChrome = true)
             }
 
             // Inject CSS margins into the WebView whenever the chapter changes or margin
