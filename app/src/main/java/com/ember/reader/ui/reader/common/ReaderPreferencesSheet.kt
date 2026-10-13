@@ -438,6 +438,14 @@ fun ReaderPreferencesContent(
                             }
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    SectionLabel("Spacing")
+                    ReaderSpacingControls(
+                        preferences = preferences,
+                        onPreferencesChanged = onPreferencesChanged
+                    )
                 }
             }
 
