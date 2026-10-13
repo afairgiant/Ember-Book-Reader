@@ -369,4 +369,8 @@
     <string name="footnote_title">Note</string>
     <string name="footnote_go_to_note">Go to note</string>
     <string name="auto_scroll_start_cd">Start auto-scroll</string>
+    <string name="auto_scroll_slower_cd">Scroll slower</string>
+    <string name="auto_scroll_faster_cd">Scroll faster</string>
+    <string name="auto_scroll_stop_cd">Stop auto-scroll</string>
+    <string name="auto_scroll_speed_label">Speed %1$d</string>
 </resources>

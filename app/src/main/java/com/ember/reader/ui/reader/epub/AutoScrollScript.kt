@@ -8,9 +8,6 @@ internal object AutoScrollScript {
     /** How the chapter on screen answers [STATE]. */
     enum class State { RUNNING, AT_END, GONE }
 
-    /** Default speed, CSS pixels a second: about a line every two seconds at the default size. */
-    const val DEFAULT_SPEED = 12f
-
     /**
      * Starts the chapter moving at [speed] CSS pixels a second, or changes the speed if it
      * already is. The page is moved once a frame to where it should be by then, so slow

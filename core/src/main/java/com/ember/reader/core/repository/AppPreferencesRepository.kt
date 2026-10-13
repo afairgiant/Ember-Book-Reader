@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -44,6 +45,7 @@ class AppPreferencesRepository @Inject constructor(
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val ACCENT = stringPreferencesKey("accent")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
@@ -72,6 +74,10 @@ class AppPreferencesRepository @Inject constructor(
 
     val keepScreenOnFlow: Flow<Boolean> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.KEEP_SCREEN_ON] ?: false }
+
+    /** The reader's auto-scroll speed in CSS pixels a second; null until one has been chosen. */
+    val autoScrollSpeedFlow: Flow<Float?> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUTO_SCROLL_SPEED] }
 
     val autoCleanupFlow: Flow<Boolean> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_CLEANUP] ?: false }
@@ -104,6 +110,12 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateKeepScreenOn(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.KEEP_SCREEN_ON] = enabled
+        }
+    }
+
+    suspend fun updateAutoScrollSpeed(speed: Float) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUTO_SCROLL_SPEED] = speed
         }
     }
 

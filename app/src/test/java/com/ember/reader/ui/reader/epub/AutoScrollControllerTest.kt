@@ -2,6 +2,7 @@ package com.ember.reader.ui.reader.epub
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -34,7 +35,7 @@ class AutoScrollControllerTest {
         }
     }
 
-    private val speed = AutoScrollScript.DEFAULT_SPEED
+    private val speed = MutableStateFlow(AutoScrollSpeed.DEFAULT)
 
     @Test
     fun `it starts the page moving and leaves it still when cancelled`() = runTest {
@@ -106,6 +107,20 @@ class AutoScrollControllerTest {
 
         assertTrue(job.isCompleted)
         assertFalse(page.moving)
+    }
+
+    @Test
+    fun `a change of speed reaches the page at once`() = runTest {
+        val page = FakePage()
+        val controller = AutoScrollController(page::evaluate, { true }, {})
+
+        val job = launch { controller.run(speed) }
+        runCurrent()
+        speed.value = 30f
+        runCurrent()
+
+        assertEquals(AutoScrollScript.start(30f), page.scripts.last())
+        job.cancelAndJoin()
     }
 
     @Test

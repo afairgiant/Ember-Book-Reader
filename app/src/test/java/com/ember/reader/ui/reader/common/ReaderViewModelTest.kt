@@ -98,6 +98,7 @@ class ReaderViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { readerPreferencesRepository.preferencesFlow } returns flowOf(ReaderPreferences())
         every { appPreferencesRepository.keepScreenOnFlow } returns flowOf(false)
+        every { appPreferencesRepository.autoScrollSpeedFlow } returns flowOf(null)
         every { bookmarkRepository.observeByBookId(any()) } returns flowOf(emptyList())
         every { highlightRepository.observeByBookId(any()) } returns flowOf(emptyList())
     }

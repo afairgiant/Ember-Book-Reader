@@ -18,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -44,6 +46,7 @@ import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import com.ember.reader.ui.reader.common.toEpubPreferences
+import com.ember.reader.ui.reader.epub.components.AutoScrollControls
 import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
 import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
@@ -90,6 +93,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
     val autoScrolling by viewModel.autoScrolling.collectAsStateWithLifecycle()
     val autoScrollingNow by rememberUpdatedState(autoScrolling)
+    val autoScrollSpeed by viewModel.autoScrollSpeed.collectAsStateWithLifecycle()
 
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
 
@@ -197,6 +201,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 link: Link,
                 context: HyperlinkNavigator.LinkContext?
             ): Boolean {
+                viewModel.stopAutoScroll()
                 val url = link.url()
                 val fragment = url.fragment ?: return true
                 val resolver = footnoteResolver ?: return true
@@ -219,6 +224,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val selectionCallback = remember {
         object : ActionMode.Callback {
             override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+                // Text cannot be picked out of a page that is moving.
+                viewModel.stopAutoScroll()
                 menu.clear()
                 menu.add(0, R.id.action_highlight, 0, R.string.highlight_action)
                 menu.add(0, R.id.action_add_note, 1, R.string.add_note)
@@ -284,6 +291,17 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
+                overlay = {
+                    if (autoScrolling) {
+                        AutoScrollControls(
+                            speed = autoScrollSpeed,
+                            onSlower = { viewModel.changeAutoScrollSpeed(faster = false) },
+                            onFaster = { viewModel.changeAutoScrollSpeed(faster = true) },
+                            onStop = { viewModel.stopAutoScroll(showChrome = true) },
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
+                    }
+                },
             ) {
                 NavigatorContainer(
                     key = state.publication,
@@ -457,7 +475,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         viewModel.onPositionCfi(locator, cfiBridge?.visibleStartCfi())
                         viewModel.saveProgressLatest(locator)
                     }
-                ).run(AutoScrollScript.DEFAULT_SPEED)
+                ).run(viewModel.autoScrollSpeed)
                 // It only returns at the end of the book.
                 viewModel.stopAutoScroll(showChrome = true)
             }
