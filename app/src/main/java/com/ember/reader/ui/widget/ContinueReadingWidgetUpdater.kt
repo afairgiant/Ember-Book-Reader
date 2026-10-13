@@ -5,8 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import coil.imageLoader
@@ -16,6 +19,7 @@ import com.ember.reader.MainActivity
 import com.ember.reader.R
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.navigation.Routes
@@ -62,7 +66,8 @@ internal fun widgetBookOf(recentlyReading: List<Book>, percentageOf: (bookId: St
 class ContinueReadingWidgetUpdater @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
-    private val readingProgressRepository: ReadingProgressRepository
+    private val readingProgressRepository: ReadingProgressRepository,
+    private val appPreferencesRepository: AppPreferencesRepository
 ) {
 
     private val widgetBook = combine(
@@ -73,19 +78,29 @@ class ContinueReadingWidgetUpdater @Inject constructor(
         widgetBookOf(books, percentages::get)
     }.distinctUntilChanged()
 
-    /** Redraws the widgets whenever the book last read, or how far into it, changes. */
+    private val palette = combine(
+        appPreferencesRepository.themeModeFlow,
+        appPreferencesRepository.oledBlackFlow,
+        appPreferencesRepository.accentFlow,
+        ::widgetPaletteOf
+    ).distinctUntilChanged()
+
+    /**
+     * Redraws the widgets whenever the book last read, how far into it, or the app's theme
+     * changes.
+     */
     fun start(scope: CoroutineScope) {
         scope.launch {
-            widgetBook.collectLatest { book ->
-                runCatching { draw(book) }.onFailure { Timber.w(it, "Widget: redraw failed") }
+            combine(widgetBook, palette, ::Pair).collectLatest { (book, palette) ->
+                runCatching { draw(book, palette) }.onFailure { Timber.w(it, "Widget: redraw failed") }
             }
         }
     }
 
     /** Redraws the widgets from what is stored now. */
-    suspend fun updateAll() = draw(widgetBook.first())
+    suspend fun updateAll() = draw(widgetBook.first(), palette.first())
 
-    private suspend fun draw(book: WidgetBook?) {
+    private suspend fun draw(book: WidgetBook?, palette: WidgetPalette) {
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, ContinueReadingWidget::class.java))
         if (ids.isEmpty()) return
@@ -111,8 +126,48 @@ class ContinueReadingWidgetUpdater @Inject constructor(
                 views.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher)
             }
         }
+        applyColors(views, palette)
         views.setOnClickPendingIntent(R.id.widget_root, openIntent(book))
         manager.updateAppWidget(ids, views)
+    }
+
+    /**
+     * Colours the widget from the app's theme. From Android 12 the launcher is given both the
+     * light and the dark colours and picks as the device changes. Before that it is given
+     * the ones for now, and the progress bar keeps the colours in its drawable, which cannot
+     * be changed from here.
+     */
+    private fun applyColors(views: RemoteViews, palette: WidgetPalette) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val day = palette.day
+            val night = palette.night
+            views.setColorInt(R.id.widget_background_fill, "setColorFilter", day.background, night.background)
+            views.setColorInt(R.id.widget_background_outline, "setColorFilter", day.outline, night.outline)
+            views.setColorInt(R.id.widget_title, "setTextColor", day.text, night.text)
+            SECONDARY_TEXT_IDS.forEach {
+                views.setColorInt(it, "setTextColor", day.textSecondary, night.textSecondary)
+            }
+            views.setColorStateList(
+                R.id.widget_progress,
+                "setProgressTintList",
+                ColorStateList.valueOf(day.accent),
+                ColorStateList.valueOf(night.accent)
+            )
+            views.setColorStateList(
+                R.id.widget_progress,
+                "setProgressBackgroundTintList",
+                ColorStateList.valueOf(day.track),
+                ColorStateList.valueOf(night.track)
+            )
+        } else {
+            val deviceIsDark = context.resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            val colors = palette.forDevice(deviceIsDark)
+            views.setInt(R.id.widget_background_fill, "setColorFilter", colors.background)
+            views.setInt(R.id.widget_background_outline, "setColorFilter", colors.outline)
+            views.setTextColor(R.id.widget_title, colors.text)
+            SECONDARY_TEXT_IDS.forEach { views.setTextColor(it, colors.textSecondary) }
+        }
     }
 
     /** Opens the app at [book]'s reader, or just the app when there is no book. */
@@ -146,5 +201,6 @@ class ContinueReadingWidgetUpdater @Inject constructor(
         const val COVER_WIDTH_PX = 240
         const val COVER_HEIGHT_PX = 360
         const val COVER_CORNER_PX = 20f
+        val SECONDARY_TEXT_IDS = listOf(R.id.widget_label, R.id.widget_author, R.id.widget_percent)
     }
 }
