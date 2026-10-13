@@ -24,17 +24,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Forward30
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay30
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
@@ -52,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +62,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.ember.reader.R
 import com.ember.reader.core.grimmory.AudiobookChapter
 import com.ember.reader.core.grimmory.AudiobookTrack
 import com.ember.reader.ui.common.BookCoverPlaceholderColors
@@ -81,7 +84,13 @@ fun AudiobookPlayerScreen(
     val chapters by viewModel.chapters.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val currentTrackIndex by viewModel.currentTrackIndex.collectAsStateWithLifecycle()
+    val skipBackSeconds by viewModel.skipBackSeconds.collectAsStateWithLifecycle()
+    val skipForwardSeconds by viewModel.skipForwardSeconds.collectAsStateWithLifecycle()
+    val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
+    val sleepTimeLeftMs by viewModel.sleepTimeLeftMs.collectAsStateWithLifecycle()
 
+    var showSleepTimer by remember { mutableStateOf(false) }
+    var showSkipLengths by remember { mutableStateOf(false) }
     var showChapters by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
 
@@ -135,6 +144,31 @@ fun AudiobookPlayerScreen(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
                         )
+                        // A running timer says how long it has left beside its button.
+                        if (sleepTimer != SleepTimer.Off) {
+                            Text(
+                                text = when (sleepTimer) {
+                                    is SleepTimer.EndOfChapter -> stringResource(R.string.sleep_timer_chapter_short)
+                                    else -> formatTimeLeft(sleepTimeLeftMs ?: 0)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(onClick = { showSleepTimer = true }) {
+                            Icon(
+                                Icons.Default.Bedtime,
+                                contentDescription = stringResource(R.string.sleep_timer_title),
+                                tint = if (sleepTimer != SleepTimer.Off) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    LocalContentColor.current
+                                }
+                            )
+                        }
+                        IconButton(onClick = { showSkipLengths = true }) {
+                            Icon(Icons.Default.Tune, contentDescription = stringResource(R.string.audiobook_skip_lengths))
+                        }
                     }
 
                     // Cover art
@@ -289,9 +323,10 @@ fun AudiobookPlayerScreen(
 
                         // Skip back 30s
                         IconButton(onClick = viewModel::skipBackward) {
-                            Icon(
-                                Icons.Default.Replay30,
-                                contentDescription = "Rewind 30s",
+                            SkipIcon(
+                                seconds = skipBackSeconds,
+                                forward = false,
+                                contentDescription = stringResource(R.string.audiobook_skip_back_cd, skipBackSeconds),
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -332,9 +367,13 @@ fun AudiobookPlayerScreen(
 
                         // Skip forward 30s
                         IconButton(onClick = viewModel::skipForward) {
-                            Icon(
-                                Icons.Default.Forward30,
-                                contentDescription = "Forward 30s",
+                            SkipIcon(
+                                seconds = skipForwardSeconds,
+                                forward = true,
+                                contentDescription = stringResource(
+                                    R.string.audiobook_skip_forward_cd,
+                                    skipForwardSeconds
+                                ),
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -355,6 +394,27 @@ fun AudiobookPlayerScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
                 }
+            }
+
+            if (showSleepTimer) {
+                SleepTimerSheet(
+                    timer = sleepTimer,
+                    timeLeftMs = sleepTimeLeftMs,
+                    onSetMinutes = viewModel::setSleepTimerMinutes,
+                    onSetEndOfChapter = viewModel::setSleepTimerEndOfChapter,
+                    onTurnOff = viewModel::cancelSleepTimer,
+                    onDismiss = { showSleepTimer = false }
+                )
+            }
+
+            if (showSkipLengths) {
+                SkipLengthSheet(
+                    skipBackSeconds = skipBackSeconds,
+                    skipForwardSeconds = skipForwardSeconds,
+                    onSkipBackChange = viewModel::setSkipBackSeconds,
+                    onSkipForwardChange = viewModel::setSkipForwardSeconds,
+                    onDismiss = { showSkipLengths = false }
+                )
             }
 
             // Track / chapter list bottom sheet

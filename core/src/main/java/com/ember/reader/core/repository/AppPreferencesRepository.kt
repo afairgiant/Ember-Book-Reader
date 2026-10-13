@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,6 +18,9 @@ import kotlinx.coroutines.flow.map
 
 private val Context.appPreferencesDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "app_preferences")
+
+/** What the audiobook skip buttons jump until another length is chosen. */
+const val DEFAULT_AUDIOBOOK_SKIP_SECONDS = 30
 
 enum class ThemeMode(val displayName: String) {
     SYSTEM("System"),
@@ -46,6 +50,9 @@ class AppPreferencesRepository @Inject constructor(
         val ACCENT = stringPreferencesKey("accent")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
+        val AUDIOBOOK_SPEED = floatPreferencesKey("audiobook_speed")
+        val AUDIOBOOK_SKIP_BACK_SECONDS = intPreferencesKey("audiobook_skip_back_seconds")
+        val AUDIOBOOK_SKIP_FORWARD_SECONDS = intPreferencesKey("audiobook_skip_forward_seconds")
         val NOTES_INCLUDE_GRIMMORY = booleanPreferencesKey("notes_include_grimmory")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
@@ -79,6 +86,18 @@ class AppPreferencesRepository @Inject constructor(
     /** The reader's auto-scroll speed in CSS pixels a second; null until one has been chosen. */
     val autoScrollSpeedFlow: Flow<Float?> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_SCROLL_SPEED] }
+
+    /** The speed audiobooks play at, kept for every book. */
+    val audiobookSpeedFlow: Flow<Float> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUDIOBOOK_SPEED] ?: 1f }
+
+    /** How far the audiobook player's skip-back button jumps, in seconds. */
+    val audiobookSkipBackSecondsFlow: Flow<Int> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUDIOBOOK_SKIP_BACK_SECONDS] ?: DEFAULT_AUDIOBOOK_SKIP_SECONDS }
+
+    /** How far the audiobook player's skip-forward button jumps, in seconds. */
+    val audiobookSkipForwardSecondsFlow: Flow<Int> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUDIOBOOK_SKIP_FORWARD_SECONDS] ?: DEFAULT_AUDIOBOOK_SKIP_SECONDS }
 
     /** Whether the notes screen also lists what Grimmory holds. */
     val notesIncludeGrimmoryFlow: Flow<Boolean> = context.appPreferencesDataStore.data
@@ -121,6 +140,24 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateAutoScrollSpeed(speed: Float) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.AUTO_SCROLL_SPEED] = speed
+        }
+    }
+
+    suspend fun updateAudiobookSpeed(speed: Float) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUDIOBOOK_SPEED] = speed
+        }
+    }
+
+    suspend fun updateAudiobookSkipBackSeconds(seconds: Int) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUDIOBOOK_SKIP_BACK_SECONDS] = seconds
+        }
+    }
+
+    suspend fun updateAudiobookSkipForwardSeconds(seconds: Int) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUDIOBOOK_SKIP_FORWARD_SECONDS] = seconds
         }
     }
 
