@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.grimmory.GrimmoryAppClient
+import com.ember.reader.core.grimmory.GrimmoryBookSummary
+import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.CatalogEntryType
 import com.ember.reader.core.model.GrimmoryCatalog
@@ -13,9 +15,11 @@ import com.ember.reader.core.model.GrimmoryCatalogMagicShelf
 import com.ember.reader.core.model.GrimmoryCatalogMeta
 import com.ember.reader.core.model.GrimmoryCatalogShelf
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.model.bookCountLabel
 import com.ember.reader.core.opds.OpdsClient
 import com.ember.reader.core.opds.OpdsFeed
 import com.ember.reader.core.opds.OpdsFeedEntry
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.CatalogLayoutPreferencesRepository
 import com.ember.reader.core.repository.CatalogPreferencesRepository
 import com.ember.reader.core.repository.CatalogSeriesViewMode
@@ -23,6 +27,8 @@ import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +37,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -40,6 +47,8 @@ class CatalogViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val opdsClient: OpdsClient,
     private val grimmoryAppClient: GrimmoryAppClient,
+    private val grimmoryClient: GrimmoryClient,
+    private val bookRepository: BookRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val catalogPreferencesRepository: CatalogPreferencesRepository,
     private val catalogLayoutPreferencesRepository: CatalogLayoutPreferencesRepository,
@@ -64,7 +73,25 @@ class CatalogViewModel @Inject constructor(
     private val _editMode = MutableStateFlow(false)
     val editMode: StateFlow<Boolean> = _editMode.asStateFlow()
 
+    /** Whether this server's catalogue can be searched; false hides the search field. */
+    private val _searchAvailable = MutableStateFlow(false)
+    val searchAvailable: StateFlow<Boolean> = _searchAvailable.asStateFlow()
+
+    /**
+     * The first few books behind each reading shortcut on a Grimmory catalogue's first page.
+     * A type with no entry is still loading; an empty list means there is nothing to show.
+     */
+    private val _shelfPreviews = MutableStateFlow<Map<CatalogEntryType, List<CatalogShelfBook>>>(emptyMap())
+    val shelfPreviews: StateFlow<Map<CatalogEntryType, List<CatalogShelfBook>>> = _shelfPreviews.asStateFlow()
+
     val isSeriesView: Boolean get() = path == "grimmory:series"
+    val isAuthorsView: Boolean get() = path == "grimmory:authors"
+
+    /**
+     * Book counts per library id. The library list has none, so each is asked for separately
+     * after the catalogue is up; kept here so a refresh does not blank them again.
+     */
+    private val libraryBookCounts = mutableMapOf<Long, Int>()
     val isGrimmoryCatalogRoot: Boolean get() = path.isEmpty() && server?.isGrimmory == true
 
     private var server: Server? = null
@@ -199,6 +226,13 @@ class CatalogViewModel @Inject constructor(
         }
         server = loadedServer
         fetchFeed()
+        updateSearchAvailable()
+    }
+
+    /** Search goes through Grimmory's own API, so it needs a Grimmory server that is signed in. */
+    private fun updateSearchAvailable() {
+        val current = server ?: return
+        _searchAvailable.value = current.isGrimmory && grimmoryTokenManager.isLoggedIn(current.id)
     }
 
     fun refresh() {
@@ -211,6 +245,7 @@ class CatalogViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 fetchFeed()
+                updateSearchAvailable()
             } finally {
                 _isRefreshing.value = false
             }
@@ -272,9 +307,81 @@ class CatalogViewModel @Inject constructor(
     private suspend fun fetchGrimmoryCatalog(server: Server) {
         try {
             fetchGrimmoryCatalogInner(server)
+            loadShelfPreviews(server)
+            loadLibraryBookCounts(server)
         } catch (e: Exception) {
             _uiState.value = CatalogUiState.Error(friendlyErrorMessage(e))
         }
+    }
+
+    /**
+     * Fills in each library's book count. Asking for a one-book page is the cheapest request
+     * that reports the library's total.
+     */
+    private fun loadLibraryBookCounts(server: Server) {
+        val libraryIds = _rawGrimmoryEntries.value.filterIsInstance<GrimmoryCatalogLibrary>().map { it.libraryId }
+        if (libraryIds.isEmpty()) return
+        viewModelScope.launch {
+            val counts = libraryIds.map { libraryId ->
+                async {
+                    grimmoryAppClient.getBooks(server.url, server.id, size = 1, libraryId = libraryId)
+                        .getOrNull()
+                        ?.let { libraryId to it.totalElements.toInt() }
+                }
+            }.awaitAll().filterNotNull()
+            libraryBookCounts.putAll(counts)
+            _rawGrimmoryEntries.update { entries ->
+                entries.map { entry ->
+                    if (entry is GrimmoryCatalogLibrary) {
+                        entry.copy(bookCount = libraryBookCounts[entry.libraryId] ?: entry.bookCount)
+                    } else {
+                        entry
+                    }
+                }
+            }
+        }
+    }
+
+    /** Loads the shortcut previews without holding up the catalogue itself. */
+    private fun loadShelfPreviews(server: Server) {
+        viewModelScope.launch {
+            launch {
+                loadShelfPreview(server, CatalogEntryType.CONTINUE_READING) {
+                    grimmoryClient.getContinueReading(server.url, server.id, limit = SHELF_PREVIEW_SIZE)
+                }
+            }
+            launch {
+                loadShelfPreview(server, CatalogEntryType.RECENTLY_ADDED) {
+                    grimmoryAppClient.getRecentlyAdded(server.url, server.id, limit = SHELF_PREVIEW_SIZE)
+                }
+            }
+        }
+    }
+
+    private suspend fun loadShelfPreview(
+        server: Server,
+        type: CatalogEntryType,
+        fetch: suspend () -> Result<List<GrimmoryBookSummary>>
+    ) {
+        val books = try {
+            val summaries = fetch().getOrThrow()
+            val localIds = bookRepository.upsertGrimmorySummaries(server, summaries)
+            summaries.zip(localIds) { summary, localId ->
+                CatalogShelfBook(
+                    localBookId = localId,
+                    title = summary.title,
+                    author = summary.authors.firstOrNull(),
+                    coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn)
+                )
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The shortcut falls back to its plain row.
+            Timber.w(e, "Catalog: preview for $type failed for server=${server.id}")
+            emptyList()
+        }
+        _shelfPreviews.update { it + (type to books) }
     }
 
     private suspend fun fetchGrimmoryCatalogInner(server: Server) {
@@ -315,7 +422,7 @@ class CatalogViewModel @Inject constructor(
                         GrimmoryCatalogLibrary(
                             libraryId = lib.id,
                             title = lib.name,
-                            bookCount = null,
+                            bookCount = libraryBookCounts[lib.id],
                             serverIcon = lib.icon
                         )
                     )
@@ -435,7 +542,7 @@ class CatalogViewModel @Inject constructor(
                             id = "grimmory:author:${author.id}",
                             title = author.name,
                             href = "grimmory:search=${java.net.URLEncoder.encode(author.name, "UTF-8")}",
-                            content = "${author.bookCount} books"
+                            content = bookCountLabel(author.bookCount)
                         )
                     )
                 }
@@ -488,3 +595,13 @@ enum class SeriesSortOption(val key: String, val dir: String, val label: String)
     READ_PROGRESS("readprogress", "desc", "Most Read"),
     RECENTLY_ADDED("recentlyAdded", "desc", "Recent")
 }
+
+/** A book in a reading shortcut's preview row on the catalogue. */
+data class CatalogShelfBook(
+    val localBookId: String,
+    val title: String,
+    val author: String?,
+    val coverUrl: String
+)
+
+private const val SHELF_PREVIEW_SIZE = 10

@@ -4,10 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import com.ember.reader.core.grimmory.GrimmoryAppClient
 import com.ember.reader.core.grimmory.GrimmoryAppPage
 import com.ember.reader.core.grimmory.GrimmoryAppSeries
+import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.SeriesCoverBook
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.opds.OpdsClient
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.CatalogLayoutPreferencesRepository
 import com.ember.reader.core.repository.CatalogPreferencesRepository
 import com.ember.reader.core.repository.CatalogSeriesViewMode
@@ -49,6 +51,12 @@ class CatalogViewModelSeriesTest {
 
     @MockK
     private lateinit var grimmoryAppClient: GrimmoryAppClient
+
+    @MockK
+    private lateinit var grimmoryClient: GrimmoryClient
+
+    @MockK
+    private lateinit var bookRepository: BookRepository
 
     @MockK
     private lateinit var grimmoryTokenManager: GrimmoryTokenManager
@@ -97,6 +105,7 @@ class CatalogViewModelSeriesTest {
         )
 
         coEvery { serverRepository.getById(7L) } returns server
+        every { grimmoryTokenManager.isLoggedIn(7L) } returns true
         coEvery {
             grimmoryAppClient.getSeries(
                 baseUrl = server.url,
@@ -115,6 +124,8 @@ class CatalogViewModelSeriesTest {
             serverRepository = serverRepository,
             opdsClient = opdsClient,
             grimmoryAppClient = grimmoryAppClient,
+            grimmoryClient = grimmoryClient,
+            bookRepository = bookRepository,
             grimmoryTokenManager = grimmoryTokenManager,
             catalogPreferencesRepository = catalogPreferencesRepository,
             catalogLayoutPreferencesRepository = catalogLayoutPreferencesRepository,

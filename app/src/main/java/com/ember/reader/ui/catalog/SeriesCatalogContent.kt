@@ -22,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,8 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.ember.reader.core.model.bookCountLabel
 import com.ember.reader.core.repository.CatalogSeriesViewMode
 import com.ember.reader.ui.catalog.components.FanCoverStack
+import com.ember.reader.ui.settings.components.SettingsChoiceChips
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,21 +57,12 @@ fun SeriesCatalogContent(
         modifier = modifier,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(SeriesSortOption.entries, key = { it.name }) { option ->
-                    FilterChip(
-                        selected = seriesSort == option,
-                        onClick = { onSeriesSortChange(option) },
-                        label = { Text(option.label, style = MaterialTheme.typography.labelMedium) },
-                        modifier = Modifier.height(32.dp),
-                    )
-                }
-            }
+            SettingsChoiceChips(
+                options = SeriesSortOption.entries,
+                selected = seriesSort,
+                onSelect = onSeriesSortChange,
+                labelOf = { it.label },
+            )
 
             when (viewMode) {
                 CatalogSeriesViewMode.GRID -> {
@@ -227,6 +219,6 @@ private fun SeriesRowCard(
 }
 
 private fun seriesSubtitle(entry: CatalogSeriesEntry): String = buildString {
-    append("${entry.bookCount} books")
+    append(bookCountLabel(entry.bookCount))
     if (entry.booksRead > 0) append(" · ${entry.booksRead} read")
 }

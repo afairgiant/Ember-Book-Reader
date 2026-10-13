@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -83,11 +85,15 @@ import com.ember.reader.ui.common.BookCoverImage
 import com.ember.reader.ui.organize.OrganizeFilesSheet
 import kotlinx.coroutines.launch
 
+private val GridCoverShape = RoundedCornerShape(12.dp)
+private val ListRowShape = RoundedCornerShape(16.dp)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     serverId: Long,
     onNavigateBack: () -> Unit,
+    title: String? = null,
     onNavigateToServerEdit: (serverId: Long) -> Unit = {},
     onOpenReader: (bookId: String, format: BookFormat) -> Unit = { _, _ -> },
     onOpenBookDetail: (bookId: String) -> Unit = {},
@@ -148,9 +154,11 @@ fun LibraryScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            stringResource(R.string.library_title),
+                            title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.library_title),
                             fontFamily = FontFamily.Serif,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     },
                     navigationIcon = {
@@ -417,94 +425,100 @@ private fun BookGridItem(
     onDownload: () -> Unit
 ) {
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderColor, RoundedCornerShape(14.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(14.dp)
+            .clip(GridCoverShape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
-        Column {
-            Box(
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.67f)
+                .border(2.dp, borderColor, GridCoverShape)
+        ) {
+            BookCoverImage(
+                book = book,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.67f)
-            ) {
-                BookCoverImage(
-                    book = book,
+                    .fillMaxSize()
+                    .clip(GridCoverShape)
+            )
+
+            if (!book.isDownloaded && !isSelecting) {
+                // A dark disc behind the icon keeps it readable on any cover. It is a plain
+                // clickable box: an IconButton would grow the disc to its 48dp touch target.
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                )
-
-                if (!book.isDownloaded && !isSelecting) {
-                    IconButton(
-                        onClick = onDownload,
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        if (isDownloading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.CloudDownload,
-                                contentDescription = stringResource(R.string.download),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-
-                if (isSelecting) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(28.dp)
-                            .background(
-                                if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    Color.Black.copy(alpha = 0.35f)
-                                },
-                                shape = RoundedCornerShape(14.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(onClick = onDownload),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isDownloading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.CloudDownload,
+                            contentDescription = stringResource(R.string.download),
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
 
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                book.author?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            if (isSelecting) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(28.dp)
+                        .background(
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.Black.copy(alpha = 0.35f)
+                            },
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
+        }
+
+        Text(
+            text = book.title,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp)
+        )
+        book.author?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 2.dp)
+            )
         }
     }
 }
@@ -572,8 +586,10 @@ private fun BookListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderColor, MaterialTheme.shapes.medium)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .border(2.dp, borderColor, ListRowShape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = ListRowShape
     ) {
         Row(
             modifier = Modifier

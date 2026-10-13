@@ -28,7 +28,7 @@ data class GrimmoryCatalogLibrary(
     override val serverIcon: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:library:$libraryId"
-    override val subtitle: String? = bookCount?.let { "$it books" }
+    override val subtitle: String? = bookCount?.let(::bookCountLabel)
     override val href: String = "grimmory:libraryId=$libraryId"
     override val type: CatalogEntryType = CatalogEntryType.LIBRARY
 }
@@ -41,7 +41,7 @@ data class GrimmoryCatalogShelf(
     override val serverIcon: String?
 ) : GrimmoryCatalogEntry {
     override val id: String = "grimmory:shelf:$shelfId"
-    override val subtitle: String = "$bookCount books"
+    override val subtitle: String = bookCountLabel(bookCount)
     override val href: String = "grimmory:shelfId=$shelfId"
     override val type: CatalogEntryType = CatalogEntryType.SHELF
 }
@@ -73,3 +73,6 @@ data class GrimmoryCatalog(
     val serverName: String,
     val entries: List<GrimmoryCatalogEntry>
 )
+
+/** "1 book", "7 books": how the catalogue words a number of books. */
+fun bookCountLabel(count: Int): String = if (count == 1) "1 book" else "$count books"
