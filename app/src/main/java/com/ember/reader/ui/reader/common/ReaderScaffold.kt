@@ -42,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +81,8 @@ fun ReaderScaffold(
     onStartAutoScroll: (() -> Unit)? = null,
     brightness: Float = -1f,
     onBrightnessChange: (Float) -> Unit = {},
+    /** Whether dragging along the left edge changes the brightness. */
+    edgeBrightnessSwipe: Boolean = true,
     streaming: Boolean = false,
     showProgressIndicator: Boolean = true,
     /** Drawn over the page and under the bars, such as the auto-scroll controls. */
@@ -95,8 +98,17 @@ fun ReaderScaffold(
         overlay()
 
         // Left-edge brightness gesture strip
-        if (!chromeVisible) {
+        if (!chromeVisible && edgeBrightnessSwipe) {
             val view = LocalView.current
+            // The strip keeps the system's back swipe off the left edge; give it back when
+            // the strip goes, or turning the gesture off would not free the edge.
+            DisposableEffect(view) {
+                onDispose {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        view.systemGestureExclusionRects = emptyList()
+                    }
+                }
+            }
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)

@@ -14,7 +14,10 @@ data class ReaderPreferences(
     val marginBottom: Int = 0,
     val theme: ReaderTheme = ReaderTheme.SYSTEM,
     val isPaginated: Boolean = true,
+    /** The screen brightness while reading, 0 to 1; negative leaves it to the device. */
     val brightness: Float = -1f,
+    /** Whether dragging up and down the left edge of the page changes [brightness]. */
+    val edgeBrightnessSwipe: Boolean = true,
     val orientationLock: OrientationLock = OrientationLock.AUTO,
     val textAlign: TextAlign = TextAlign.START,
     val publisherStyles: Boolean = false,

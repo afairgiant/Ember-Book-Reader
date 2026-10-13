@@ -100,6 +100,7 @@ class ReaderPreferencesRepository @Inject constructor(
         val LEFT_ZONE_WIDTH = floatPreferencesKey("left_zone_width")
         val RIGHT_ZONE_WIDTH = floatPreferencesKey("right_zone_width")
         val VOLUME_PAGE_TURN = booleanPreferencesKey("volume_page_turn")
+        val EDGE_BRIGHTNESS_SWIPE = booleanPreferencesKey("edge_brightness_swipe")
         val PDF_FIT_MODE = stringPreferencesKey("pdf_fit_mode")
         val PDF_PAGE_SPACING = floatPreferencesKey("pdf_page_spacing")
         val SHOW_PROGRESS_INDICATOR = booleanPreferencesKey("show_progress_indicator")
@@ -150,6 +151,7 @@ class ReaderPreferencesRepository @Inject constructor(
                 leftZoneWidth = prefs[Keys.LEFT_ZONE_WIDTH] ?: 0.33f,
                 rightZoneWidth = prefs[Keys.RIGHT_ZONE_WIDTH] ?: 0.33f,
                 volumePageTurn = prefs[Keys.VOLUME_PAGE_TURN] ?: false,
+                edgeBrightnessSwipe = prefs[Keys.EDGE_BRIGHTNESS_SWIPE] ?: true,
                 pdfFitMode = prefs[Keys.PDF_FIT_MODE]?.let {
                     runCatching { com.ember.reader.core.model.PdfFitMode.valueOf(it) }.getOrNull()
                 } ?: com.ember.reader.core.model.PdfFitMode.WIDTH,
@@ -189,6 +191,7 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.LEFT_ZONE_WIDTH] = preferences.leftZoneWidth
             prefs[Keys.RIGHT_ZONE_WIDTH] = preferences.rightZoneWidth
             prefs[Keys.VOLUME_PAGE_TURN] = preferences.volumePageTurn
+            prefs[Keys.EDGE_BRIGHTNESS_SWIPE] = preferences.edgeBrightnessSwipe
             prefs[Keys.PDF_FIT_MODE] = preferences.pdfFitMode.name
             prefs[Keys.PDF_PAGE_SPACING] = preferences.pdfPageSpacing
             prefs[Keys.SHOW_PROGRESS_INDICATOR] = preferences.showProgressIndicator

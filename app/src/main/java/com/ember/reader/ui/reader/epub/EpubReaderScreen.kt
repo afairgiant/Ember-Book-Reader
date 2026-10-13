@@ -289,6 +289,7 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 onStartAutoScroll = if (preferences.isPaginated) null else viewModel::startAutoScroll,
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
+                edgeBrightnessSwipe = preferences.edgeBrightnessSwipe,
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
                 overlay = {
