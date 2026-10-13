@@ -213,7 +213,8 @@ fun BookDetailScreen(
 
                         BookMarksSection(
                             marks = marks,
-                            onOpen = if (currentBook.isDownloaded) {
+                            // An audiobook plays from the server; the others need the file.
+                            onOpen = if (currentBook.isDownloaded || currentBook.format == BookFormat.AUDIOBOOK) {
                                 { mark -> mark.target?.let { onOpenReaderAt(currentBook.id, currentBook.format, it) } }
                             } else {
                                 null

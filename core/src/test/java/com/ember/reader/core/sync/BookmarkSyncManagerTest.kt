@@ -1,6 +1,7 @@
 package com.ember.reader.core.sync
 
 import com.ember.reader.core.grimmory.CreateBookmarkRequest
+import com.ember.reader.core.model.AudioPosition
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateBookmarkRequest
 import com.ember.reader.core.testutil.FakeBookmarkDao
@@ -460,6 +461,66 @@ class BookmarkSyncManagerTest {
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
             assertTrue(syncStatusRepository.get(testServer.id) is SyncStatus.NetworkError)
+        }
+    }
+
+    @Nested
+    inner class Audiobook {
+
+        private fun serverAudioBookmark(id: Long, positionMs: Long, trackIndex: Int?) =
+            grimmoryBookmark(id = id, cfi = null, title = "Chapter 3").copy(positionMs = positionMs, trackIndex = trackIndex)
+
+        @Test
+        fun `an audiobook bookmark from the server is kept with its position`() = runTest {
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns
+                Result.success(listOf(serverAudioBookmark(id = 20, positionMs = 754_000, trackIndex = 2)))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            val local = dao.all.single()
+            assertEquals(20L, local.remoteId)
+            assertEquals(AudioPosition(754_000, 2), AudioPosition.fromLocatorJson(local.locatorJson))
+            assertEquals(null, local.cfi)
+        }
+
+        @Test
+        fun `a new audiobook bookmark is pushed by its position`() = runTest {
+            dao.insert(
+                bookmarkEntity(bookId = bookId, locatorJson = AudioPosition(61_500, null).toLocatorJson(), remoteId = null)
+            )
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
+            coEvery { grimmoryClient.createBookmark(any(), any(), any()) } returns
+                Result.success(serverAudioBookmark(id = 31, positionMs = 61_500, trackIndex = null))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            val requestSlot = slot<CreateBookmarkRequest>()
+            coVerify { grimmoryClient.createBookmark(any(), any(), capture(requestSlot)) }
+            assertEquals(61_500L, requestSlot.captured.positionMs)
+            assertEquals(null, requestSlot.captured.trackIndex)
+            assertEquals(null, requestSlot.captured.cfi)
+            assertEquals(31L, dao.all.single().remoteId)
+        }
+
+        @Test
+        fun `one the server already has within a few seconds is linked, not sent again`() = runTest {
+            dao.insert(
+                bookmarkEntity(bookId = bookId, locatorJson = AudioPosition(61_500, 1).toLocatorJson(), remoteId = null)
+            )
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns
+                Result.success(listOf(serverAudioBookmark(id = 40, positionMs = 63_000, trackIndex = 1)))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createBookmark(any(), any(), any()) }
+            assertEquals(listOf(40L), dao.all.map { it.remoteId })
+        }
+
+        @Test
+        fun `the same time in another track is a different bookmark`() {
+            assertTrue(AudioPosition(10_000, 1).isNear(AudioPosition(12_000, 1)))
+            assertTrue(!AudioPosition(10_000, 1).isNear(AudioPosition(10_000, 2)))
+            assertTrue(!AudioPosition(10_000, null).isNear(AudioPosition(15_000, null)))
         }
     }
 

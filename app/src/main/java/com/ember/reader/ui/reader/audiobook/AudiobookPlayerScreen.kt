@@ -25,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -88,6 +90,9 @@ fun AudiobookPlayerScreen(
     val skipForwardSeconds by viewModel.skipForwardSeconds.collectAsStateWithLifecycle()
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val sleepTimeLeftMs by viewModel.sleepTimeLeftMs.collectAsStateWithLifecycle()
+    val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+
+    var showBookmarks by remember { mutableStateOf(false) }
 
     var showSleepTimer by remember { mutableStateOf(false) }
     var showSkipLengths by remember { mutableStateOf(false) }
@@ -164,6 +169,12 @@ fun AudiobookPlayerScreen(
                                 } else {
                                     LocalContentColor.current
                                 }
+                            )
+                        }
+                        IconButton(onClick = { showBookmarks = true }) {
+                            Icon(
+                                if (bookmarks.isEmpty()) Icons.Default.BookmarkBorder else Icons.Default.Bookmark,
+                                contentDescription = stringResource(R.string.audiobook_bookmarks)
                             )
                         }
                         IconButton(onClick = { showSkipLengths = true }) {
@@ -404,6 +415,21 @@ fun AudiobookPlayerScreen(
                     onSetEndOfChapter = viewModel::setSleepTimerEndOfChapter,
                     onTurnOff = viewModel::cancelSleepTimer,
                     onDismiss = { showSleepTimer = false }
+                )
+            }
+
+            if (showBookmarks) {
+                AudiobookBookmarksSheet(
+                    bookmarks = bookmarks,
+                    currentPositionMs = currentPositionMs,
+                    trackTitleOf = { index -> tracks.getOrNull(index)?.title },
+                    onAdd = viewModel::addBookmark,
+                    onOpen = { bookmark ->
+                        viewModel.seekToBookmark(bookmark)
+                        showBookmarks = false
+                    },
+                    onDelete = viewModel::deleteBookmark,
+                    onDismiss = { showBookmarks = false }
                 )
             }
 
