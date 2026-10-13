@@ -379,4 +379,11 @@
     <string name="notes_clear_search_cd">Clear search</string>
     <string name="notes_empty">Nothing here yet. Bookmarks, highlights and notes you make while reading show up here.</string>
     <string name="notes_no_match">Nothing matches.</string>
+    <string name="notes_export_all_cd">Export what is shown</string>
+    <string name="notes_export_book_cd">Export notes from this book</string>
+    <string name="notes_export_title">Export notes</string>
+    <string name="notes_export_share">Share</string>
+    <string name="notes_export_save">Save to file</string>
+    <string name="notes_export_saved">Notes saved</string>
+    <string name="notes_export_failed">Could not save the notes</string>
 </resources>

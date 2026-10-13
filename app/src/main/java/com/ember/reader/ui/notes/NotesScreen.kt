@@ -14,9 +14,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +26,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +63,9 @@ fun NotesScreen(
     val kind by viewModel.kind.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
+    // What is being exported, while the export dialog is up: everything shown, or one book.
+    var exporting by remember { mutableStateOf<List<NotesBookGroup>?>(null) }
+
     NotesContent(
         uiState = uiState,
         kind = kind,
@@ -67,8 +73,13 @@ fun NotesScreen(
         onKindChange = viewModel::showKind,
         onQueryChange = viewModel::search,
         onNavigateBack = onNavigateBack,
-        onOpenBook = onOpenBook
+        onOpenBook = onOpenBook,
+        onExport = { exporting = it }
     )
+
+    exporting?.let { groups ->
+        NotesExportDialog(groups = groups, onDismiss = { exporting = null })
+    }
 }
 
 @Composable
@@ -79,13 +90,21 @@ private fun NotesContent(
     onKindChange: (BookMarkKind?) -> Unit,
     onQueryChange: (String) -> Unit,
     onNavigateBack: () -> Unit,
-    onOpenBook: (bookId: String) -> Unit
+    onOpenBook: (bookId: String) -> Unit,
+    onExport: (List<NotesBookGroup>) -> Unit
 ) {
+    val shown = (uiState as? NotesUiState.Ready)?.groups.orEmpty()
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsScreenHeader(
             overline = stringResource(R.string.settings),
             title = stringResource(R.string.notes_screen_title),
-            onNavigateBack = onNavigateBack
+            onNavigateBack = onNavigateBack,
+            actions = {
+                // Exports what the filter and search leave on screen.
+                IconButton(onClick = { onExport(shown) }, enabled = shown.isNotEmpty()) {
+                    Icon(Icons.Default.Share, contentDescription = stringResource(R.string.notes_export_all_cd))
+                }
+            }
         )
         when (uiState) {
             NotesUiState.Loading -> LoadingScreen()
@@ -104,7 +123,11 @@ private fun NotesContent(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(uiState.groups, key = { it.book.id }) { group ->
-                            NotesBookCard(group = group, onOpenBook = { onOpenBook(group.book.id) })
+                            NotesBookCard(
+                                group = group,
+                                onOpenBook = { onOpenBook(group.book.id) },
+                                onExport = { onExport(listOf(group)) }
+                            )
                         }
                         item { Spacer(modifier = Modifier.height(24.dp)) }
                     }
@@ -115,13 +138,13 @@ private fun NotesContent(
 }
 
 @Composable
-private fun NotesBookCard(group: NotesBookGroup, onOpenBook: () -> Unit) {
+private fun NotesBookCard(group: NotesBookGroup, onOpenBook: () -> Unit, onExport: () -> Unit) {
     SettingsGroup {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onOpenBook)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BookCoverImage(
@@ -147,11 +170,13 @@ private fun NotesBookCard(group: NotesBookGroup, onOpenBook: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            IconButton(onClick = onExport) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = stringResource(R.string.notes_export_book_cd),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         group.marks.forEach { mark ->
             HorizontalDivider(
@@ -221,7 +246,8 @@ private fun NotesContentPreview() {
             onKindChange = {},
             onQueryChange = {},
             onNavigateBack = {},
-            onOpenBook = {}
+            onOpenBook = {},
+            onExport = {}
         )
     }
 }

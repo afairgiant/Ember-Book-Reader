@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -59,7 +60,9 @@ fun SettingsScreenHeader(
     overline: String,
     title: String,
     modifier: Modifier = Modifier,
-    onNavigateBack: (() -> Unit)? = null
+    onNavigateBack: (() -> Unit)? = null,
+    /** Buttons at the end of the header, such as an export action. */
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -73,7 +76,7 @@ fun SettingsScreenHeader(
             }
             Spacer(modifier = Modifier.width(4.dp))
         }
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             SettingsLabel(overline)
             Text(
                 text = title,
@@ -82,6 +85,7 @@ fun SettingsScreenHeader(
                 fontWeight = FontWeight.Bold
             )
         }
+        actions()
     }
 }
 
