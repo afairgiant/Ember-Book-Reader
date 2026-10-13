@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.ember.reader.core.repository.AppAccent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class EmberColorSchemeTest {
@@ -33,6 +34,27 @@ class EmberColorSchemeTest {
         assertEquals(AppAccent.BLUE.seed, blue.primary)
         assertNotEquals(ember.primary, blue.primary)
         assertEquals(ember.background, blue.background)
+    }
+
+    @Test
+    fun `an accent tints the secondary colours that selected tabs and chips are drawn in`() {
+        for (dark in listOf(true, false)) {
+            val ember = emberColorScheme(darkTheme = dark, oledBlack = false, accent = AppAccent.EMBER)
+            val blue = emberColorScheme(darkTheme = dark, oledBlack = false, accent = AppAccent.BLUE)
+
+            assertNotEquals(ember.secondaryContainer, blue.secondaryContainer)
+            assertNotEquals(ember.secondary, blue.secondary)
+            // Tinted towards blue: more blue than red, where ember's is the reverse.
+            assertTrue(blue.secondaryContainer.blue > blue.secondaryContainer.red)
+            assertTrue(ember.secondaryContainer.red > ember.secondaryContainer.blue)
+        }
+    }
+
+    @Test
+    fun `the default accent keeps the built-in secondary colours`() {
+        val scheme = emberColorScheme(darkTheme = true, oledBlack = false, accent = AppAccent.EMBER)
+
+        assertEquals(Color(0xFF5D3F36), scheme.secondaryContainer)
     }
 
     @Test
