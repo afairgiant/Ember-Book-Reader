@@ -129,11 +129,18 @@ fun emberColorScheme(darkTheme: Boolean, oledBlack: Boolean, accent: AppAccent):
     if (accent != AppAccent.EMBER) {
         // Darkened on a light background so text and icons in the accent stay readable.
         val primary = if (darkTheme) accent.seed else lerp(accent.seed, Color.Black, 0.25f)
+        // The secondary colours follow too. Material draws the selected tab's pill,
+        // selected chips and segments, and tonal buttons in them, and left as they were
+        // those stayed ember-brown under every accent.
         scheme = scheme.copy(
             primary = primary,
             onPrimary = if (primary.luminance() > 0.4f) Color(0xFF1A1210) else Color.White,
             primaryContainer = lerp(scheme.surface, primary, 0.3f),
-            onPrimaryContainer = scheme.onSurface
+            onPrimaryContainer = scheme.onSurface,
+            secondary = lerp(scheme.onSurfaceVariant, primary, 0.5f),
+            onSecondary = scheme.surface,
+            secondaryContainer = lerp(scheme.surface, primary, 0.22f),
+            onSecondaryContainer = scheme.onSurface
         )
     }
     return scheme
