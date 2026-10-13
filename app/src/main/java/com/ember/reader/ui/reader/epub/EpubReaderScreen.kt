@@ -25,7 +25,6 @@ import com.ember.reader.R
 import com.ember.reader.core.fonts.CustomFont
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.ReaderPreferences
-import com.ember.reader.core.model.ReaderTheme
 import com.ember.reader.core.readium.toJsonString
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.ui.common.ErrorScreen
@@ -43,6 +42,7 @@ import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SearchSheet
 import com.ember.reader.ui.reader.common.SyncConflictDialog
 import com.ember.reader.ui.reader.common.TableOfContentsSheet
+import com.ember.reader.ui.reader.common.toEpubPreferences
 import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
 import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
@@ -55,9 +55,7 @@ import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
-import org.readium.r2.navigator.preferences.Color as ReadiumColor
 import org.readium.r2.navigator.preferences.FontFamily as ReadiumFontFamily
-import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Link
@@ -695,41 +693,6 @@ private fun EpubNavigatorFragment.Configuration.declareCustomFonts(fonts: List<C
 
 /** Where Readium's navigator serves a publication's resources to its WebViews. */
 private const val PUBLICATION_BASE_URL = "https://readium/publication/"
-
-/** @param customFonts the fonts declared to the reader; a selected one that is gone is ignored. */
-private fun ReaderPreferences.toEpubPreferences(customFonts: List<CustomFont> = emptyList()): EpubPreferences {
-    // Built-in themes use Readium's Theme enum; custom themes pass colors directly
-    val readiumTheme = when (theme) {
-        ReaderTheme.LIGHT -> Theme.LIGHT
-        ReaderTheme.DARK -> Theme.DARK
-        ReaderTheme.SEPIA -> Theme.SEPIA
-        ReaderTheme.SYSTEM -> null
-        else -> null // Custom themes don't use the Theme enum
-    }
-    val bgColor = if (!theme.isBuiltIn) ReadiumColor(theme.backgroundColor.toInt()) else null
-    val fgColor = if (!theme.isBuiltIn) ReadiumColor(theme.foregroundColor.toInt()) else null
-
-    return EpubPreferences(
-        fontFamily = (customFont?.takeIf { name -> customFonts.any { it.name == name } } ?: fontFamily.cssValue)
-            ?.let { ReadiumFontFamily(it) },
-        fontSize = fontSize.toDouble() / 16.0,
-        lineHeight = lineHeight.toDouble(),
-        scroll = !isPaginated,
-        theme = readiumTheme,
-        backgroundColor = bgColor,
-        textColor = fgColor,
-        hyphens = hyphenate,
-        textAlign = when (textAlign) {
-            com.ember.reader.core.model.TextAlign.START -> org.readium.r2.navigator.preferences.TextAlign.START
-            com.ember.reader.core.model.TextAlign.JUSTIFY -> org.readium.r2.navigator.preferences.TextAlign.JUSTIFY
-            com.ember.reader.core.model.TextAlign.CENTER -> org.readium.r2.navigator.preferences.TextAlign.CENTER
-        },
-        publisherStyles = publisherStyles,
-        pageMargins = pageMargins.toDouble(),
-        wordSpacing = wordSpacing.toDouble(),
-        letterSpacing = letterSpacing.toDouble()
-    )
-}
 
 /**
  * Builds a JS snippet that applies top/bottom margins to the EPUB reading area.

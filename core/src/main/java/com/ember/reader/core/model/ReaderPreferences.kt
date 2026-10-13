@@ -21,6 +21,10 @@ data class ReaderPreferences(
     val pageMargins: Float = 1.0f,
     val wordSpacing: Float = 0f,
     val letterSpacing: Float = 0f,
+    /** Space between paragraphs, in rem. Null leaves the book's own spacing alone. */
+    val paragraphSpacing: Float? = null,
+    /** First-line indent of a paragraph, in rem. Null leaves the book's own indent alone. */
+    val paragraphIndent: Float? = null,
     val hyphenate: Boolean = true,
     val topTapZone: TapZoneBehavior = TapZoneBehavior.TOGGLE_CHROME,
     val leftTapZone: TapZoneBehavior = TapZoneBehavior.PREVIOUS_PAGE,
