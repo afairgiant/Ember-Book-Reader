@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen widget cannot read the app's Compose theme, so its colours live here.
+     They match the light scheme in EmberTheme; values-night holds the dark ones. -->
+<resources>
+    <color name="widget_background">#FFFFF1EA</color>
+    <color name="widget_outline">#FFE3CFC7</color>
+    <color name="widget_text">#FF201A18</color>
+    <color name="widget_text_secondary">#FF534340</color>
+    <color name="widget_accent">#FFE65100</color>
+    <color name="widget_track">#33D4A898</color>
+</resources>

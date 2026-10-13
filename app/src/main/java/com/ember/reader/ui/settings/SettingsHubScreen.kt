@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,6 +73,7 @@ import com.ember.reader.ui.settings.components.SettingsIconTile
 import com.ember.reader.ui.settings.components.SettingsNavRow
 import com.ember.reader.ui.settings.components.SettingsRowTextInset
 import com.ember.reader.ui.settings.components.SettingsScreenHeader
+import com.ember.reader.ui.widget.ContinueReadingWidget
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -178,6 +181,16 @@ fun SettingsHubScreen(
                     onClick = onOpenNotes
                 )
                 SettingsDivider()
+                val widgetContext = LocalContext.current
+                if (ContinueReadingWidget.canPin(widgetContext)) {
+                    SettingsNavRow(
+                        icon = Icons.Default.Widgets,
+                        title = stringResource(R.string.widget_add_title),
+                        subtitle = stringResource(R.string.widget_add_summary),
+                        onClick = { ContinueReadingWidget.requestPin(widgetContext) }
+                    )
+                    SettingsDivider()
+                }
                 SettingsNavRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = "Hardcover",

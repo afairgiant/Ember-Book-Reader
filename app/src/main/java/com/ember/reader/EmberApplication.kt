@@ -9,13 +9,14 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.ember.reader.core.network.CoverAuthInterceptor
 import com.ember.reader.core.repository.AppPreferencesRepository
-import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookReaderPreferencesPublisherStylesMigration
+import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.worker.SyncScheduler
 import com.ember.reader.ui.common.DevLog
 import com.ember.reader.ui.common.NotificationHelper
+import com.ember.reader.ui.widget.ContinueReadingWidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +54,9 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
     @Inject
     lateinit var bookReaderPreferencesPublisherStylesMigration: BookReaderPreferencesPublisherStylesMigration
 
+    @Inject
+    lateinit var continueReadingWidgetUpdater: ContinueReadingWidgetUpdater
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration by lazy {
@@ -73,6 +77,7 @@ class EmberApplication : Application(), Configuration.Provider, ImageLoaderFacto
         observeServersForCoverAuth()
         refreshGrimmoryPermissions()
         runPublisherStylesMigration()
+        continueReadingWidgetUpdater.start(applicationScope)
     }
 
     override fun newImageLoader(): ImageLoader {
