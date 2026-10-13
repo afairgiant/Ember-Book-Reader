@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,15 +42,12 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +69,8 @@ import com.ember.reader.core.grimmory.GrimmoryLibraryFull
 import com.ember.reader.core.grimmory.GrimmoryLibraryPath
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
+import com.ember.reader.ui.settings.components.SettingsCard
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 import com.ember.reader.ui.theme.EmberTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,13 +103,10 @@ fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hi
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Book Drop", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            SettingsScreenHeader(
+                overline = "Server tools",
+                title = "Book Drop",
+                onNavigateBack = onNavigateBack,
                 actions = {
                     if (isRefreshing) {
                         CircularProgressIndicator(
@@ -123,10 +119,7 @@ fun BookdropScreen(onNavigateBack: () -> Unit, viewModel: BookdropViewModel = hi
                     IconButton(onClick = viewModel::rescan) {
                         Icon(Icons.Default.Refresh, contentDescription = "Rescan")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -259,7 +252,7 @@ private fun BookdropContent(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.files, key = { it.file.id }) { fileState ->
@@ -295,13 +288,7 @@ private fun BookdropFileCard(
     val authors = metadata.authors?.joinToString(", ") ?: ""
     val format = file.fileName?.substringAfterLast(".")?.uppercase() ?: ""
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    SettingsCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             // Collapsed header
             Row(

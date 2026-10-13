@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
@@ -33,8 +32,6 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,8 +43,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +62,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.grimmory.GrimmoryUserPermissions
 import com.ember.reader.ui.settings.components.PermissionChip
+import com.ember.reader.ui.settings.components.SettingsCard
+import com.ember.reader.ui.settings.components.SettingsLabel
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 import com.ember.reader.ui.theme.ServerAccentPalette
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,27 +100,23 @@ fun ServerFormScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when {
-                            uiState.isEditing -> stringResource(R.string.edit_server)
-                            !serverTypeChosen -> stringResource(R.string.add_server)
-                            isGrimmoryType -> stringResource(R.string.add_grimmory_server)
-                            else -> stringResource(R.string.add_opds_server)
-                        },
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (serverTypeChosen && !uiState.isEditing) {
-                            serverTypeChosen = false
-                        } else {
-                            onNavigateBack()
-                        }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            // The long titles ("Add Grimmory Server") do not fit the large header, so the
+            // overline carries what is being done and the title what it is done to.
+            val adding = stringResource(R.string.add_server)
+            val (overline, title) = when {
+                uiState.isEditing -> stringResource(R.string.servers_overline) to stringResource(R.string.edit_server)
+                !serverTypeChosen -> stringResource(R.string.servers_overline) to adding
+                isGrimmoryType -> adding to stringResource(R.string.grimmory)
+                else -> adding to stringResource(R.string.opds_short)
+            }
+            SettingsScreenHeader(
+                overline = overline,
+                title = title,
+                onNavigateBack = {
+                    if (serverTypeChosen && !uiState.isEditing) {
+                        serverTypeChosen = false
+                    } else {
+                        onNavigateBack()
                     }
                 },
                 actions = {
@@ -131,10 +125,7 @@ fun ServerFormScreen(
                             Icon(Icons.Default.Delete, contentDescription = "Delete server")
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { padding ->
@@ -236,26 +227,23 @@ private fun ServerTypePicker(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
+        SettingsLabel(
             text = stringResource(R.string.what_type_of_server),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Card(
-            onClick = onGrimmory,
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
+        SettingsCard(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onGrimmory)
+                    .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -274,7 +262,7 @@ private fun ServerTypePicker(
                     Text(
                         stringResource(R.string.grimmory_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -282,22 +270,18 @@ private fun ServerTypePicker(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(
-            onClick = onOpds,
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
+        SettingsCard(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpds)
+                    .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.CloudQueue,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))

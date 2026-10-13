@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
@@ -31,7 +30,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +50,8 @@ import com.ember.reader.ui.editmetadata.components.CoverOverlay
 import com.ember.reader.ui.editmetadata.components.EditableMetadataRow
 import com.ember.reader.ui.editmetadata.components.EditableTagRow
 import com.ember.reader.ui.editmetadata.components.SearchMetadataSection
+import com.ember.reader.ui.settings.components.SettingsLabel
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,13 +75,10 @@ fun EditMetadataScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Edit metadata") },
-                navigationIcon = {
-                    IconButton(onClick = { onNavigateBack(saved) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            SettingsScreenHeader(
+                overline = "Edit",
+                title = "Metadata",
+                onNavigateBack = { onNavigateBack(saved) },
                 actions = {
                     val s = (state as? EditMetadataUiState.Success)?.state
                     if (s != null) {
@@ -370,12 +367,7 @@ private fun EditMetadataContent(
 
         val candidateEditable = candidate?.let { EditableMetadata.from(it) }
         sections.forEach { section ->
-            Text(
-                section.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(section.title, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
             section.fields.forEach { spec ->
                 val locked = isLocked(state.original, spec.key)
                 val fetched = candidateEditable?.get(spec.key).orEmpty()

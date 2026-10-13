@@ -45,6 +45,7 @@ import com.ember.reader.core.grimmory.GrimmoryBookMetadata
 import com.ember.reader.core.grimmory.MetadataProvider
 import com.ember.reader.ui.editmetadata.SearchForm
 import com.ember.reader.ui.editmetadata.SearchPhase
+import com.ember.reader.ui.settings.components.SettingsCard
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -64,8 +65,8 @@ fun SearchMetadataSection(
     onApplyCover: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Card {
-        Column(Modifier.padding(12.dp)) {
+    SettingsCard(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier

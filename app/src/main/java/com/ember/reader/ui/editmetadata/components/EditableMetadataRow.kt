@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.ember.reader.ui.settings.components.SettingsCard
 
 @Composable
 fun EditableMetadataRow(
@@ -36,13 +37,8 @@ fun EditableMetadataRow(
     onValueChange: (String) -> Unit,
     onApplyFetched: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        shape = RoundedCornerShape(8.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+    SettingsCard(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     label,
