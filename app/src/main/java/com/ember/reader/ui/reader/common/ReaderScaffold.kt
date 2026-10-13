@@ -9,6 +9,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -81,6 +82,8 @@ fun ReaderScaffold(
     onBrightnessChange: (Float) -> Unit = {},
     streaming: Boolean = false,
     showProgressIndicator: Boolean = true,
+    /** Drawn over the page and under the bars, such as the auto-scroll controls. */
+    overlay: @Composable BoxScope.() -> Unit = {},
     content: @Composable () -> Unit
 ) {
     var showBrightnessIndicator by remember { mutableStateOf(false) }
@@ -89,6 +92,7 @@ fun ReaderScaffold(
     Box(modifier = Modifier.fillMaxSize()) {
         // Content fills the entire screen — bars overlay on top
         content()
+        overlay()
 
         // Left-edge brightness gesture strip
         if (!chromeVisible) {

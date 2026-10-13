@@ -108,7 +108,7 @@ Ember computes real EPUB CFIs by injecting foliate-js's `epubcfi.js` (the librar
 - **The CFI depends on the book file.** If the server's copy of the EPUB changes, existing CFIs may no longer resolve; Ember then leaves the item where it was, or opens progress by percentage.
 
 ### EPUB Scroll Mode Infinite Scroll
-Horizontal swipe is the only way to change chapters in scroll mode. True continuous/infinite vertical scrolling across chapters is not yet implemented. Requires deeper integration with Readium's CSS `overflow: scrolled-continuous` or loading multiple chapters into a single scrollable WebView.
+Horizontal swipe is the only way to change chapters in scroll mode. (Auto-scroll, the play button in the reader's bottom bar, does move on to the next chapter by itself.) True continuous/infinite vertical scrolling across chapters is not yet implemented. Requires deeper integration with Readium's CSS `overflow: scrolled-continuous` or loading multiple chapters into a single scrollable WebView.
 
 ### Grimmory Audiobook Covers in OPDS (fixed upstream in v3.5)
 Grimmory before v3.5 doesn't include cover links for audiobooks in its OPDS feed (it checked `coverUpdatedOn` but audiobooks use `audiobookCoverUpdatedOn`). Grimmory v3.5 emits them. Ember still uses `/api/v1/audiobooks/{id}/cover` directly so covers work on older servers.

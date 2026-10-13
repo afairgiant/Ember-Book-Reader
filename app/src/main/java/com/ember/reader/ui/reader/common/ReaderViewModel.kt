@@ -37,6 +37,7 @@ import com.ember.reader.core.sync.HighlightRepairer
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.sync.SourceOutcome
+import com.ember.reader.ui.reader.epub.AutoScrollSpeed
 import com.ember.reader.ui.reader.pdf.locatorOpeningPdfPercentage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -104,6 +106,17 @@ class ReaderViewModel @Inject constructor(
 
     /** Whether the page is moving by itself. It only does with the bars hidden. */
     val autoScrolling: StateFlow<Boolean> = _autoScrolling.asStateFlow()
+
+    /** How fast it moves, in CSS pixels a second. Kept for every book, not per book. */
+    val autoScrollSpeed: StateFlow<Float> = appPreferencesRepository.autoScrollSpeedFlow
+        .map { it ?: AutoScrollSpeed.DEFAULT }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AutoScrollSpeed.DEFAULT)
+
+    /** Steps the speed up or down; nothing happens at either end of the range. */
+    fun changeAutoScrollSpeed(faster: Boolean) {
+        val speed = AutoScrollSpeed.step(autoScrollSpeed.value, faster)
+        viewModelScope.launch { appPreferencesRepository.updateAutoScrollSpeed(speed) }
+    }
 
     fun startAutoScroll() {
         _chromeVisible.value = false
