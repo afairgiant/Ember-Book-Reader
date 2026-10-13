@@ -1,4 +1,5 @@
 package com.ember.reader.ui.reader.common
+import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,6 +40,7 @@ import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.sync.SourceOutcome
 import com.ember.reader.ui.reader.epub.AutoScrollSpeed
+import com.ember.reader.ui.reader.epub.ReadAloud
 import com.ember.reader.ui.reader.pdf.locatorOpeningPdfPercentage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -120,8 +122,20 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun startAutoScroll() {
+        readAloud.stop()
         _chromeVisible.value = false
         _autoScrolling.value = true
+    }
+
+    /** Reads the book out with the device's speech engine. Kept here so a rotation does not stop it. */
+    internal val readAloud = ReadAloud(viewModelScope)
+
+    /** Starts reading aloud from [from], the first thing on screen; the bars go and the page stops moving. */
+    fun startReadAloud(application: Application, from: Locator?) {
+        val publication = publication ?: return
+        stopAutoScroll()
+        _chromeVisible.value = false
+        readAloud.start(application, publication, from)
     }
 
     /** Stops the page; [showChrome] brings the bars back, where it can be started again. */
@@ -686,6 +700,7 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        readAloud.stop()
         // Cancel any pending grace timer — we'll record immediately below
         sessionPauseJob?.cancel()
 

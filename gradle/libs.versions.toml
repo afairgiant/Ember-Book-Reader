@@ -101,6 +101,7 @@ readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
 readium-navigator-media = { module = "org.readium.kotlin-toolkit:readium-navigator-media", version.ref = "readium" }
+readium-navigator-media-tts = { module = "org.readium.kotlin-toolkit:readium-navigator-media-tts", version.ref = "readium" }
 readium-opds = { module = "org.readium.kotlin-toolkit:readium-opds", version.ref = "readium" }
 readium-adapter-pdfium = { module = "org.readium.kotlin-toolkit:readium-adapter-pdfium", version.ref = "readium" }
 
