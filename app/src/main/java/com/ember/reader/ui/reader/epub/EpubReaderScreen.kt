@@ -658,8 +658,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 BookmarksSheet(
                     bookmarks = bookmarks,
                     onNavigate = { bookmark ->
-                        bookmark.locatorJson.toLocator(state.publication, state.spine)?.let { locator ->
-                            scope.launch { navigator?.go(locator) }
+                        scope.launch {
+                            navigator?.goToStored(bookmark.locatorJson, state.publication, state.spine, cfiBridge)
                         }
                         showBookmarks = false
                     },
@@ -727,8 +727,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         }
                     },
                     onNavigate = { highlight ->
-                        highlight.locatorJson.toLocator(state.publication, state.spine)?.let { locator ->
-                            scope.launch { navigator?.go(locator) }
+                        scope.launch {
+                            navigator?.goToStored(highlight.locatorJson, state.publication, state.spine, cfiBridge)
                         }
                         showHighlights = false
                     },

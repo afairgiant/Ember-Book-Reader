@@ -53,3 +53,21 @@ suspend fun EpubNavigatorFragment.goToCfi(
     Timber.d("CFI navigation: %s did not resolve", cfi)
     return false
 }
+
+/**
+ * Opens the place a stored bookmark or highlight is at.
+ *
+ * One synced from the server has only its CFI until its chapter has been opened once, and a
+ * bookmark has no text to find it by either, so it is opened by that CFI. Without this the
+ * first visit would stop at the start of its chapter.
+ */
+suspend fun EpubNavigatorFragment.goToStored(
+    locatorJson: String,
+    publication: Publication,
+    spine: EpubSpine?,
+    bridge: CfiBridge?,
+) {
+    val unplacedCfi = CfiLocatorConverter.unplacedCfi(locatorJson)
+    if (unplacedCfi != null && goToCfi(unplacedCfi, publication, spine, bridge)) return
+    locatorJson.toLocator(publication, spine)?.let { go(it) }
+}
