@@ -289,6 +289,26 @@ class CfiLocatorConverterTest {
         }
 
         @Test
+        fun `chapterPosition reads the chapter and the place in it`() {
+            val locator = """{"href":"OEBPS/ch3.xhtml","locations":{"progression":0.25,"totalProgression":0.5}}"""
+
+            assertEquals(
+                CfiLocatorConverter.ChapterPosition("OEBPS/ch3.xhtml", 0.25f),
+                CfiLocatorConverter.chapterPosition(locator),
+            )
+        }
+
+        @Test
+        fun `chapterPosition has no place for a locator without a progression, and is null without a chapter`() {
+            assertEquals(
+                CfiLocatorConverter.ChapterPosition("OEBPS/ch3.xhtml", null),
+                CfiLocatorConverter.chapterPosition("""{"href":"OEBPS/ch3.xhtml","locations":{}}"""),
+            )
+            assertEquals(null, CfiLocatorConverter.chapterPosition(CfiLocatorConverter.buildLocatorJson("epubcfi(/6/4!/4/2/1:40)")))
+            assertEquals(null, CfiLocatorConverter.chapterPosition("not json"))
+        }
+
+        @Test
         fun `placedLocatorJson for a position leaves out empty text and an unknown progression`() {
             val bookmark = CfiLocatorConverter.buildLocatorJson("epubcfi(/6/4!/4/2/1:40)")
 
