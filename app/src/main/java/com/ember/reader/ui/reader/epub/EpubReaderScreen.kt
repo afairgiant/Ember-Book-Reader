@@ -1,5 +1,6 @@
 package com.ember.reader.ui.reader.epub
 
+import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,6 +10,7 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +22,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,12 +51,16 @@ import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import com.ember.reader.ui.reader.common.toEpubPreferences
 import com.ember.reader.ui.reader.epub.components.AutoScrollControls
 import com.ember.reader.ui.reader.epub.components.BookmarkNameDialog
+import com.ember.reader.ui.reader.epub.components.ReadAloudControls
+import com.ember.reader.ui.reader.epub.components.ReadAloudFailedDialog
 import com.ember.reader.ui.reader.epub.components.SelectionColorPickerDialog
 import com.ember.reader.ui.reader.epub.components.TapZoneHintOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.readium.navigator.media.tts.android.AndroidTtsEngine
+import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -75,6 +82,7 @@ private const val CONTAINER_ID = 0x7F_FF_00_01
 
 /** How long the next chapter is given to come up before auto-scroll takes the book as ended. */
 private const val NEXT_CHAPTER_TIMEOUT_MS = 3_000L
+private const val READ_ALOUD_DECORATION = "read-aloud"
 
 @OptIn(ExperimentalReadiumApi::class)
 @Composable
@@ -92,6 +100,9 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
     val keepScreenOn by viewModel.keepScreenOn.collectAsStateWithLifecycle()
     val showTapZoneHint by viewModel.showTapZoneHint.collectAsStateWithLifecycle()
     val autoScrolling by viewModel.autoScrolling.collectAsStateWithLifecycle()
+    val readAloudState by viewModel.readAloud.state.collectAsStateWithLifecycle()
+    val readAloudSpeed by viewModel.readAloud.speed.collectAsStateWithLifecycle()
+    val readAloudSpoken by viewModel.readAloud.spoken.collectAsStateWithLifecycle()
     val autoScrollingNow by rememberUpdatedState(autoScrolling)
     val autoScrollSpeed by viewModel.autoScrollSpeed.collectAsStateWithLifecycle()
 
@@ -112,6 +123,8 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         viewModel.saveCurrentProgress()
                     }
                     viewModel.stopAutoScroll()
+                    // Nothing keeps the speech going once the reader is off the screen.
+                    viewModel.readAloud.pause()
                     viewModel.onSessionPause()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
@@ -126,9 +139,10 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
 
     // Keep screen on while reading
     val view = LocalView.current
-    DisposableEffect(keepScreenOn, autoScrolling) {
-        // A page moving by itself gets no touches to keep the screen awake.
-        if (keepScreenOn || autoScrolling) {
+    val speakingAloud = (readAloudState as? ReadAloudState.Reading)?.playing == true
+    DisposableEffect(keepScreenOn, autoScrolling, speakingAloud) {
+        // A page moving by itself, or being read out, gets no touches to keep the screen awake.
+        if (keepScreenOn || autoScrolling || speakingAloud) {
             view.keepScreenOn = true
         }
         onDispose { view.keepScreenOn = false }
@@ -287,12 +301,32 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 },
                 // A page turned at a time has nothing to scroll.
                 onStartAutoScroll = if (preferences.isPaginated) null else viewModel::startAutoScroll,
+                onStartReadAloud = {
+                    scope.launch {
+                        // From the first thing on screen, not the start of the chapter.
+                        val from = navigator?.firstVisibleElementLocator() ?: navigator?.currentLocator?.value
+                        viewModel.startReadAloud(context.applicationContext as Application, from)
+                    }
+                },
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
                 edgeBrightnessSwipe = preferences.edgeBrightnessSwipe,
                 streaming = state.streaming,
                 showProgressIndicator = preferences.showProgressIndicator,
                 overlay = {
+                    (readAloudState as? ReadAloudState.Reading)?.let { reading ->
+                        ReadAloudControls(
+                            playing = reading.playing,
+                            speed = readAloudSpeed,
+                            onPrevious = viewModel.readAloud::previousSentence,
+                            onTogglePlaying = viewModel.readAloud::togglePlaying,
+                            onNext = viewModel.readAloud::nextSentence,
+                            onSlower = { viewModel.readAloud.changeSpeed(faster = false) },
+                            onFaster = { viewModel.readAloud.changeSpeed(faster = true) },
+                            onStop = { viewModel.readAloud.stop() },
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
+                    }
                     if (autoScrolling) {
                         AutoScrollControls(
                             speed = autoScrollSpeed,
@@ -481,11 +515,42 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 viewModel.stopAutoScroll(showChrome = true)
             }
 
+            // Mark the sentence being read aloud and keep it on screen.
+            val readAloudTint = MaterialTheme.colorScheme.primary.toArgb()
+            LaunchedEffect(readAloudSpoken, navigator) {
+                val nav = navigator ?: return@LaunchedEffect
+                val spoken = readAloudSpoken
+                val decorations = listOfNotNull(
+                    spoken?.let {
+                        Decoration(
+                            id = READ_ALOUD_DECORATION,
+                            locator = it,
+                            style = Decoration.Style.Underline(tint = readAloudTint)
+                        )
+                    }
+                )
+                nav.applyDecorations(decorations, READ_ALOUD_DECORATION)
+                spoken?.let { nav.go(it, animated = false) }
+            }
+
+            (readAloudState as? ReadAloudState.Failed)?.let { failed ->
+                ReadAloudFailedDialog(
+                    reason = failed.reason,
+                    onInstallVoice = {
+                        AndroidTtsEngine.requestInstallVoice(context)
+                        viewModel.readAloud.stop()
+                    },
+                    onDismiss = { viewModel.readAloud.stop() }
+                )
+            }
+
             // In scroll mode, a swipe on past the end of a chapter opens the next, and one
             // back past its start opens the one before at its end.
-            LaunchedEffect(navigator, preferences.isPaginated, autoScrolling) {
+            LaunchedEffect(navigator, preferences.isPaginated, autoScrolling, readAloudState is ReadAloudState.Reading) {
                 val nav = navigator ?: return@LaunchedEffect
                 if (preferences.isPaginated || autoScrolling) return@LaunchedEffect
+                // The page is being moved to each sentence as it is spoken.
+                if (readAloudState is ReadAloudState.Reading) return@LaunchedEffect
                 ChapterPullController(
                     evaluate = nav::evaluateJavascript,
                     goToNextChapter = { nav.goForward() },

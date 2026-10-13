@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -82,6 +83,8 @@ fun ReaderScaffold(
     onSeekToProgression: (Float) -> Unit = {},
     /** Starts the page moving by itself; null where that is not offered. */
     onStartAutoScroll: (() -> Unit)? = null,
+    /** Starts reading the book aloud; null where that is not offered. */
+    onStartReadAloud: (() -> Unit)? = null,
     brightness: Float = -1f,
     onBrightnessChange: (Float) -> Unit = {},
     /** Whether dragging along the left edge changes the brightness. */
@@ -261,7 +264,8 @@ fun ReaderScaffold(
             ReaderBottomBar(
                 currentLocator = currentLocator,
                 onSeekToProgression = onSeekToProgression,
-                onStartAutoScroll = onStartAutoScroll
+                onStartAutoScroll = onStartAutoScroll,
+                onStartReadAloud = onStartReadAloud
             )
         }
 
@@ -374,7 +378,8 @@ private fun ReaderTopBar(
 private fun ReaderBottomBar(
     currentLocator: Locator?,
     onSeekToProgression: (Float) -> Unit = {},
-    onStartAutoScroll: (() -> Unit)? = null
+    onStartAutoScroll: (() -> Unit)? = null,
+    onStartReadAloud: (() -> Unit)? = null
 ) {
     val progression = currentLocator?.locations?.totalProgression?.toFloat() ?: 0f
     val chapterTitle = currentLocator?.title
@@ -401,6 +406,14 @@ private fun ReaderBottomBar(
             if (onStartAutoScroll != null) {
                 IconButton(onClick = onStartAutoScroll) {
                     Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.auto_scroll_start_cd))
+                }
+            }
+            if (onStartReadAloud != null) {
+                IconButton(onClick = onStartReadAloud) {
+                    Icon(
+                        Icons.Default.RecordVoiceOver,
+                        contentDescription = stringResource(R.string.read_aloud_start_cd)
+                    )
                 }
             }
             Slider(

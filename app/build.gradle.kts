@@ -155,6 +155,7 @@ dependencies {
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
     implementation(libs.readium.navigator)
+    implementation(libs.readium.navigator.media.tts)
     implementation(libs.readium.adapter.pdfium)
     // Already on the classpath through Readium, at this version; used to read footnotes.
     implementation(libs.jsoup)
