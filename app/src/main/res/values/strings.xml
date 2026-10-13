@@ -331,6 +331,8 @@
     <string name="auto_cleanup_hint">Remove server downloads older than 90 days</string>
     <string name="auto_download_reading">Auto-download reading books</string>
     <string name="auto_download_reading_hint">Download books marked as Reading on Grimmory during sync</string>
+    <string name="auto_download_next_in_series">Auto-download next in series</string>
+    <string name="auto_download_next_in_series_hint">Halfway through a downloaded book, download the one that follows it in its series</string>
     <string name="synchronization">Synchronization</string>
     <string name="notifications_section">Notifications</string>
     <string name="sync_notifications_label">Sync notifications</string>
