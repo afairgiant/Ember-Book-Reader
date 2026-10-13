@@ -26,4 +26,21 @@ class PdfPageNavigationTest {
         assertEquals(232, positionOpeningPdfPage(page = 500, pageCount = 232))
         assertNull(positionOpeningPdfPage(page = 3, pageCount = 0))
     }
+
+    @Test
+    fun `the page shown comes from the progression, and the last page from its start on`() {
+        assertEquals(1, pdfPageShown(0.0, pageCount = 232))
+        assertEquals(200, pdfPageShown(200.0 / 232, pageCount = 232))
+        assertEquals(232, pdfPageShown(231.0 / 232, pageCount = 232))
+        assertEquals(1, pdfPageShown(0.4, pageCount = 1))
+    }
+
+    @Test
+    fun `a contents entry gives its page from the page fragment`() {
+        assertEquals(12, pdfPageOfFragments(listOf("page=12")))
+        assertEquals(7, pdfPageOfFragments(listOf("zoom=100", "page=7&view=Fit")))
+        assertNull(pdfPageOfFragments(listOf("chapter-2")))
+        assertNull(pdfPageOfFragments(listOf("page=0")))
+        assertNull(pdfPageOfFragments(emptyList()))
+    }
 }

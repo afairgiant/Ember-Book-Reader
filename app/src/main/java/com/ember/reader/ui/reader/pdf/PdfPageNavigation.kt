@@ -1,5 +1,6 @@
 package com.ember.reader.ui.reader.pdf
 
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -38,3 +39,26 @@ internal fun pdfPageAt(percentage: Float, pageCount: Int): Int {
  */
 internal fun positionOpeningPdfPage(page: Int, pageCount: Int): Int? =
     if (pageCount < 1) null else (page.coerceAtLeast(1) + 1).coerceAtMost(pageCount)
+
+/**
+ * The page (counted from 1) the navigator is showing, from the progression it reports.
+ * The last page never reports 1.0, so anything from the start of it on counts as the last.
+ */
+internal fun pdfPageShown(totalProgression: Double, pageCount: Int): Int {
+    if (pageCount <= 1) return 1
+    val lastPageStart = (pageCount - 1).toDouble() / pageCount
+    return if (totalProgression >= lastPageStart - 0.01) {
+        pageCount
+    } else {
+        ceil(totalProgression * pageCount).toInt().coerceIn(1, pageCount)
+    }
+}
+
+/**
+ * The page (counted from 1) an entry in a PDF's contents points at. Readium gives such an
+ * entry as the file with a "page=N" fragment.
+ */
+internal fun pdfPageOfFragments(fragments: List<String>): Int? =
+    fragments.firstNotNullOfOrNull { fragment ->
+        fragment.substringAfter("page=", missingDelimiterValue = "").takeWhile(Char::isDigit).toIntOrNull()
+    }?.takeIf { it >= 1 }

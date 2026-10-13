@@ -71,10 +71,13 @@ fun ReaderScaffold(
     hasBookmarkAtCurrentPosition: Boolean,
     onNavigateBack: () -> Unit,
     onToggleBookmark: () -> Unit,
-    onOpenTableOfContents: () -> Unit,
+    /** Opens the contents; null where the book has none, which leaves the button out. */
+    onOpenTableOfContents: (() -> Unit)?,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit = {},
-    onOpenHighlights: () -> Unit = {},
+    /** Null where the reader cannot search, which leaves the button out. */
+    onOpenSearch: (() -> Unit)? = null,
+    /** Null where the reader has no highlights, which leaves the button out. */
+    onOpenHighlights: (() -> Unit)? = null,
     onOpenBookmarks: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
     /** Starts the page moving by itself; null where that is not offered. */
@@ -288,11 +291,11 @@ private fun ReaderTopBar(
     hasBookmark: Boolean,
     onNavigateBack: () -> Unit,
     onToggleBookmark: () -> Unit,
-    onOpenTableOfContents: () -> Unit,
-    onOpenHighlights: () -> Unit,
+    onOpenTableOfContents: (() -> Unit)?,
+    onOpenHighlights: (() -> Unit)?,
     onOpenBookmarks: () -> Unit,
     onOpenPreferences: () -> Unit,
-    onOpenSearch: () -> Unit,
+    onOpenSearch: (() -> Unit)?,
     streaming: Boolean = false
 ) {
     Row(
@@ -332,11 +335,18 @@ private fun ReaderTopBar(
                 }
             }
         }
-        IconButton(onClick = onOpenSearch) {
-            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_cd))
+        if (onOpenSearch != null) {
+            IconButton(onClick = onOpenSearch) {
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_cd))
+            }
         }
-        IconButton(onClick = onOpenTableOfContents) {
-            Icon(Icons.Default.FormatListBulleted, contentDescription = stringResource(R.string.table_of_contents_cd))
+        if (onOpenTableOfContents != null) {
+            IconButton(onClick = onOpenTableOfContents) {
+                Icon(
+                    Icons.Default.FormatListBulleted,
+                    contentDescription = stringResource(R.string.table_of_contents_cd)
+                )
+            }
         }
         Icon(
             if (hasBookmark) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -349,8 +359,10 @@ private fun ReaderTopBar(
                 .padding(12.dp)
                 .size(24.dp)
         )
-        IconButton(onClick = onOpenHighlights) {
-            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.highlights_cd))
+        if (onOpenHighlights != null) {
+            IconButton(onClick = onOpenHighlights) {
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.highlights_cd))
+            }
         }
         IconButton(onClick = onOpenPreferences) {
             Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.reader_settings_cd))

@@ -29,6 +29,7 @@ import com.ember.reader.ui.reader.common.ReaderScaffold
 import com.ember.reader.ui.reader.common.ReaderUiState
 import com.ember.reader.ui.reader.common.ReaderViewModel
 import com.ember.reader.ui.reader.common.SyncConflictDialog
+import com.ember.reader.ui.reader.common.TableOfContentsSheet
 import kotlinx.coroutines.launch
 import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.adapter.pdfium.navigator.PdfiumPreferences
@@ -126,6 +127,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
     }
 
     var showBookmarks by remember { mutableStateOf(false) }
+    var showToc by remember { mutableStateOf(false) }
     var showPreferences by remember { mutableStateOf(false) }
     var showBookmarkDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -167,17 +169,13 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
             // Adjust the locator's totalProgression for page-based display
             val totalPages = state.publication.metadata.numberOfPages ?: 0
             val loc = currentLocator
-            val displayLocator = if (loc != null && totalPages > 0) {
-                // Derive current page from totalProgression (more reliable than position)
-                val totalProg = loc.locations.totalProgression ?: 0.0
-                // ceil works for most pages, but the last page never reaches 1.0
-                // so check if we're past the start of the last page
-                val lastPageStart = (totalPages - 1).toDouble() / totalPages
-                val currentPage = if (totalProg >= lastPageStart - 0.01) {
-                    totalPages
-                } else {
-                    kotlin.math.ceil(totalProg * totalPages).toInt().coerceIn(1, totalPages)
-                }
+            // Derive current page from totalProgression (more reliable than position)
+            val currentPage = if (loc != null && totalPages > 0) {
+                pdfPageShown(loc.locations.totalProgression ?: 0.0, totalPages)
+            } else {
+                null
+            }
+            val displayLocator = if (loc != null && currentPage != null) {
                 val pageBasedProgression = if (totalPages <= 1) {
                     1.0
                 } else {
@@ -204,8 +202,17 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     if (!removed) showBookmarkDialog = true
                 },
                 onOpenBookmarks = { showBookmarks = true },
-                onOpenTableOfContents = {},
+                onOpenTableOfContents = if (state.publication.tableOfContents.isEmpty()) {
+                    null
+                } else {
+                    { showToc = true }
+                },
                 onOpenPreferences = { showPreferences = true },
+                onSeekToProgression = { progression ->
+                    scope.launch {
+                        state.publication.locatorOpeningPdfPercentage(progression)?.let { navigator?.go(it) }
+                    }
+                },
                 brightness = preferences.brightness,
                 onBrightnessChange = { newBrightness -> viewModel.updatePreferences(preferences.copy(brightness = newBrightness)) },
                 edgeBrightnessSwipe = preferences.edgeBrightnessSwipe,
@@ -270,7 +277,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
 
             if (showBookmarkDialog) {
                 var bookmarkName by remember { mutableStateOf("") }
-                val pageTitle = currentLocator?.title ?: ""
+                val pageTitle = currentPage?.let { "Page $it" } ?: ""
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = { showBookmarkDialog = false },
                     title = { androidx.compose.material3.Text("Add Bookmark") },
@@ -316,6 +323,25 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     },
                     onDelete = viewModel::deleteBookmark,
                     onDismiss = { showBookmarks = false }
+                )
+            }
+
+            if (showToc) {
+                TableOfContentsSheet(
+                    publication = state.publication,
+                    currentLocator = currentLocator,
+                    onNavigate = { locator ->
+                        scope.launch {
+                            // An entry names its page; the navigator has to be asked for it
+                            // the same roundabout way as any other page number.
+                            val target = pdfPageOfFragments(locator.locations.fragments)
+                                ?.let { state.publication.locatorOpeningPdfPage(it) }
+                                ?: locator
+                            navigator?.go(target)
+                        }
+                        showToc = false
+                    },
+                    onDismiss = { showToc = false }
                 )
             }
 
