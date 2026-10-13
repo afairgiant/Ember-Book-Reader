@@ -177,6 +177,18 @@ class ServerListViewModel @Inject constructor(
     private val _recentlyAdded = MutableStateFlow<List<RecentlyAddedBook>>(emptyList())
     val recentlyAdded: StateFlow<List<RecentlyAddedBook>> = _recentlyAdded.asStateFlow()
 
+    /**
+     * What Home offers when no book is in progress; null while there is one, and until the
+     * library has been read, so a returning reader never sees it flash by.
+     */
+    val empty: StateFlow<HomeEmpty?> = combine(
+        bookRepository.observeRecentlyReading(),
+        serverRepository.observeAll(),
+        bookRepository.observeDownloadedBooks()
+    ) { reading, servers, downloaded ->
+        homeEmptyOf(reading = reading.size, servers = servers.size, downloaded = downloaded.size)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val recentlyReading: StateFlow<List<RecentBook>> = bookRepository.observeRecentlyReading()
         .combine(readingProgressRepository.observeAll()) { books, progressList ->
             val progressMap = progressList.associateBy { it.bookId }

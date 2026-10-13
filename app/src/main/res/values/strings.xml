@@ -20,6 +20,13 @@
 
     <!-- Home / Server List -->
     <string name="home_title">Ember</string>
+    <string name="home_welcome_title">Welcome to Ember</string>
+    <string name="home_welcome_body">Connect a book server, or open a book file from this phone, and the book you\'re reading will wait for you here.</string>
+    <string name="home_idle_title">Nothing in progress</string>
+    <string name="home_idle_body">Start a book and it will wait for you here.</string>
+    <string name="home_import_book">Import a book</string>
+    <string name="home_browse">Browse</string>
+    <string name="home_open_library">Library</string>
     <string name="continue_reading">Continue Reading</string>
     <string name="add_server">Add Server</string>
     <string name="settings">Settings</string>
