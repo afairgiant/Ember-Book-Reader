@@ -25,6 +25,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.services.cover
@@ -54,7 +56,20 @@ class ServerRepository @Inject constructor(
 
     suspend fun getById(id: Long): Server? = serverDao.getById(id)?.withPasswords()
 
+    private val connectionChanges = MutableSharedFlow<Long>(extraBufferCapacity = 16)
+
+    /**
+     * Emits when the server's address or sign-in details have been edited, and when it has
+     * been deleted. A screen showing the server's content collects this to reload, since it
+     * would otherwise keep using the details it opened with.
+     *
+     * [save] sends this itself once everything is written. Watching the database row would
+     * fire too early: the row is written before the passwords and the Grimmory sign-in.
+     */
+    fun observeConnectionChanges(id: Long): Flow<Unit> = connectionChanges.filter { it == id }.map { }
+
     suspend fun save(server: Server): Long {
+        val detailsBefore = if (server.id > 0) getById(server.id)?.connectionDetails else null
         val id = if (server.id > 0) {
             serverDao.update(server.toEntity())
             server.id
@@ -84,6 +99,9 @@ class ServerRepository @Inject constructor(
                 .onFailure { Timber.w(it, "Grimmory auto-login failed for server $id") }
         }
 
+        if (detailsBefore != null && detailsBefore != server.connectionDetails) {
+            connectionChanges.tryEmit(id)
+        }
         return id
     }
 
@@ -149,6 +167,7 @@ class ServerRepository @Inject constructor(
         credentialEncryption.removePassword(grimmoryPasswordKey(serverId))
         grimmoryTokenManager.logout(serverId)
         syncStatusRepository.clear(serverId)
+        connectionChanges.tryEmit(serverId)
     }
 
     private suspend fun extractLocalCoversForServer(serverId: Long) {

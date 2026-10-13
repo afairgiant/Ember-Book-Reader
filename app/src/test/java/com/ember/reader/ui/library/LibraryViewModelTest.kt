@@ -30,6 +30,7 @@ import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -97,6 +98,7 @@ class LibraryViewModelTest {
         every { android.util.Base64.encodeToString(any(), any()) } returns "dXNlcjpwYXNz"
         every { bookRepository.observeByServer(1L) } returns flowOf(emptyList())
         coEvery { serverRepository.getById(1L) } returns testServer
+        every { serverRepository.observeConnectionChanges(any()) } returns emptyFlow()
         coEvery { bookRepository.refreshFromServer(any(), any(), any()) } returns Result.success(
             OpdsBookPage(books = emptyList())
         )

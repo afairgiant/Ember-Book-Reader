@@ -105,6 +105,7 @@ class CatalogViewModelSeriesTest {
         )
 
         coEvery { serverRepository.getById(7L) } returns server
+        every { serverRepository.observeConnectionChanges(any()) } returns emptyFlow()
         every { grimmoryTokenManager.isLoggedIn(7L) } returns true
         coEvery {
             grimmoryAppClient.getSeries(

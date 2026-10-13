@@ -17,11 +17,13 @@ import com.ember.reader.core.repository.CatalogPreferencesRepository
 import com.ember.reader.core.repository.CatalogSeriesViewMode
 import com.ember.reader.core.repository.ServerRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -84,6 +86,7 @@ class CatalogViewModelShelfPreviewTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         coEvery { serverRepository.getById(7L) } returns server
+        every { serverRepository.observeConnectionChanges(any()) } returns emptyFlow()
         every { grimmoryTokenManager.isLoggedIn(7L) } returns true
         val url = server.url
         coEvery { grimmoryAppClient.getFullLibraries(url, 7L) } returns Result.success(emptyList())
@@ -232,5 +235,34 @@ class CatalogViewModelShelfPreviewTest {
             )
             advanceUntilIdle()
             assertFalse(opds.searchAvailable.value)
+        }
+
+    @Test
+    fun `an open catalogue loads again from the new address when its server is edited`() =
+        runTest(testDispatcher) {
+            stubShortcuts(Result.success(emptyList()), Result.success(emptyList()))
+            coEvery {
+                bookRepository.upsertGrimmorySummaries(any(), emptyList())
+            } returns emptyList()
+            val edits = MutableSharedFlow<Unit>()
+            every { serverRepository.observeConnectionChanges(7L) } returns edits
+            val moved = server.copy(url = "http://moved:8080")
+            for (url in listOf(server.url, moved.url)) {
+                coEvery { grimmoryAppClient.getFullLibraries(url, 7L) } returns Result.success(emptyList())
+                coEvery { grimmoryAppClient.getShelves(url, 7L) } returns Result.success(emptyList())
+                coEvery { grimmoryAppClient.getMagicShelves(url, 7L) } returns Result.success(emptyList())
+                coEvery { grimmoryClient.getContinueReading(url, 7L, any()) } returns Result.success(emptyList())
+                coEvery { grimmoryAppClient.getRecentlyAdded(url, 7L, any()) } returns Result.success(emptyList())
+            }
+
+            rootCatalogue()
+            advanceUntilIdle()
+            coVerify(exactly = 0) { grimmoryAppClient.getFullLibraries(moved.url, 7L) }
+
+            coEvery { serverRepository.getById(7L) } returns moved
+            edits.emit(Unit)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { grimmoryAppClient.getFullLibraries(moved.url, 7L) }
         }
 }

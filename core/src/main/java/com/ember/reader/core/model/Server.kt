@@ -24,6 +24,17 @@ data class Server(
     val permissionsFetchedAt: Instant? = null,
     val accentColorSlot: Int? = null
 ) {
+    /**
+     * Everything that decides where the server is and how to sign in to it. Two copies of a
+     * server with equal details reach the same content; name, colour, permissions and
+     * timestamps are left out because changing them does not.
+     */
+    val connectionDetails: List<Any>
+        get() = listOf(
+            url, opdsUsername, opdsPassword, kosyncUsername, kosyncPassword,
+            grimmoryUsername, grimmoryPassword, isGrimmory, opdsEnabled, kosyncEnabled
+        )
+
     /** Returns the OPDS feed URL — appends the known OPDS path for Grimmory servers. */
     val opdsUrl: String
         get() = if (isGrimmory && "/opds" !in url) {

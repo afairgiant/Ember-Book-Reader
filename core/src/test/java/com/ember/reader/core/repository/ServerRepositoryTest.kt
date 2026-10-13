@@ -19,6 +19,10 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MockKExtension::class)
 class ServerRepositoryTest {
 
@@ -211,5 +216,79 @@ class ServerRepositoryTest {
         assertNotNull(loaded)
         assertTrue(loaded!!.opdsEnabled)
         assertFalse(loaded.kosyncEnabled)
+    }
+
+    private fun stubExistingServer(id: Long, url: String, opdsPassword: String) {
+        coEvery { serverDao.getById(id) } returns ServerEntity(
+            id = id,
+            name = "Server",
+            url = url,
+            opdsUsername = "user",
+            kosyncUsername = ""
+        )
+        // The catch-all for the other passwords is stubbed by the test, before this: a later
+        // catch-all would win over this specific answer.
+        every {
+            credentialEncryption.getPassword(CredentialEncryption.opdsPasswordKey(id))
+        } returns opdsPassword
+        every { credentialEncryption.storePassword(any(), any()) } returns Unit
+        coEvery { serverDao.update(any()) } returns Unit
+    }
+
+    private fun editedServer(id: Long, name: String = "Server", url: String, opdsPassword: String) = Server(
+        id = id,
+        name = name,
+        url = url,
+        opdsUsername = "user",
+        opdsPassword = opdsPassword,
+        kosyncUsername = "",
+        kosyncPassword = ""
+    )
+
+    @Test
+    fun `saving a server with a new address reports a connection change`() = runTest {
+        every { credentialEncryption.getPassword(any()) } returns ""
+        stubExistingServer(3L, url = "http://old", opdsPassword = "pw")
+        val changes = mutableListOf<Unit>()
+        val collecting = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            repository.observeConnectionChanges(3L).toList(changes)
+        }
+
+        repository.save(editedServer(3L, url = "http://new", opdsPassword = "pw"))
+
+        assertEquals(1, changes.size)
+        collecting.cancel()
+    }
+
+    @Test
+    fun `saving a server with only a new password reports a connection change`() = runTest {
+        every { credentialEncryption.getPassword(any()) } returns ""
+        stubExistingServer(3L, url = "http://old", opdsPassword = "pw")
+        val changes = mutableListOf<Unit>()
+        val collecting = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            repository.observeConnectionChanges(3L).toList(changes)
+        }
+
+        repository.save(editedServer(3L, url = "http://old", opdsPassword = "different"))
+
+        assertEquals(1, changes.size)
+        collecting.cancel()
+    }
+
+    @Test
+    fun `renaming a server reports nothing, and neither does another server's edit`() = runTest {
+        every { credentialEncryption.getPassword(any()) } returns ""
+        stubExistingServer(3L, url = "http://old", opdsPassword = "pw")
+        stubExistingServer(4L, url = "http://other", opdsPassword = "pw")
+        val changes = mutableListOf<Unit>()
+        val collecting = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            repository.observeConnectionChanges(3L).toList(changes)
+        }
+
+        repository.save(editedServer(3L, name = "Renamed", url = "http://old", opdsPassword = "pw"))
+        repository.save(editedServer(4L, url = "http://moved", opdsPassword = "pw"))
+
+        assertTrue(changes.isEmpty())
+        collecting.cancel()
     }
 }
