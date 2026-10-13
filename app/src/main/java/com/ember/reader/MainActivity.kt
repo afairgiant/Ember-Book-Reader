@@ -70,7 +70,11 @@ class MainActivity : FragmentActivity() {
                 oledBlack = oledBlack,
                 accent = accent
             ) {
-                EmberNavHost(initialRoute = pendingNavRoute.value)
+                EmberNavHost(
+                    initialRoute = pendingNavRoute.value,
+                    // Cleared once used, so asking for the same place again works.
+                    onInitialRouteHandled = { pendingNavRoute.value = null }
+                )
             }
         }
     }
@@ -81,10 +85,10 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val route = intent?.getStringExtra("navigate_to")
+        val route = intent?.getStringExtra(EXTRA_NAVIGATE_TO)
         if (route != null) {
             pendingNavRoute.value = route
-            intent.removeExtra("navigate_to")
+            intent.removeExtra(EXTRA_NAVIGATE_TO)
         }
     }
 
@@ -120,6 +124,9 @@ class MainActivity : FragmentActivity() {
     }
 
     companion object {
+        /** An intent extra naming the route to open, as a notification or the widget asks. */
+        const val EXTRA_NAVIGATE_TO = "navigate_to"
+
         /**
          * Set by reader screens when volume page turn is enabled.
          * Callback receives true for next page, false for previous page.

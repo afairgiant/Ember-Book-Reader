@@ -20,6 +20,14 @@
 
     <!-- Home / Server List -->
     <string name="home_title">Ember</string>
+    <string name="widget_name">Continue reading</string>
+    <string name="widget_description">The book you are reading, with your progress. Tap to carry on.</string>
+    <string name="widget_label">Continue reading</string>
+    <string name="widget_empty_title">Nothing in progress</string>
+    <string name="widget_empty_body">Open Ember to pick a book</string>
+    <string name="widget_percent">%1$d%%</string>
+    <string name="widget_add_title">Home-screen widget</string>
+    <string name="widget_add_summary">Add the book you are reading to your home screen</string>
     <string name="home_welcome_title">Welcome to Ember</string>
     <string name="home_welcome_body">Connect a book server, or open a book file from this phone, and the book you\'re reading will wait for you here.</string>
     <string name="home_idle_title">Nothing in progress</string>

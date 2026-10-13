@@ -71,7 +71,7 @@ object NotificationHelper {
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("navigate_to", "book_detail/$bookId")
+            putExtra(MainActivity.EXTRA_NAVIGATE_TO, "book_detail/$bookId")
         }
         val pendingIntent = PendingIntent.getActivity(
             context,

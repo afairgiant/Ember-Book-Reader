@@ -140,12 +140,16 @@ private val bottomNavRoutes =
 fun EmberNavHost(
     modifier: Modifier = Modifier,
     initialRoute: String? = null,
+    /** Called once [initialRoute] has been opened, for the caller to forget it. */
+    onInitialRouteHandled: () -> Unit = {},
     navController: NavHostController = rememberNavController()
 ) {
-    // Navigate to deep link route from notification
+    // Navigate to the route a notification or the home-screen widget asked for. Single-top,
+    // so asking for the book that is already open does not open it a second time.
     androidx.compose.runtime.LaunchedEffect(initialRoute) {
         if (initialRoute != null) {
-            navController.navigate(initialRoute)
+            navController.navigate(initialRoute) { launchSingleTop = true }
+            onInitialRouteHandled()
         }
     }
 
