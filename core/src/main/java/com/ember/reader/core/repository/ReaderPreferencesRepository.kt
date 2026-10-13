@@ -89,6 +89,8 @@ class ReaderPreferencesRepository @Inject constructor(
         val PAGE_MARGINS = floatPreferencesKey("page_margins")
         val WORD_SPACING = floatPreferencesKey("word_spacing")
         val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val PARAGRAPH_SPACING = floatPreferencesKey("paragraph_spacing")
+        val PARAGRAPH_INDENT = floatPreferencesKey("paragraph_indent")
         val HYPHENATE = booleanPreferencesKey("hyphenate")
         val TOP_TAP_ZONE = stringPreferencesKey("top_tap_zone")
         val LEFT_TAP_ZONE = stringPreferencesKey("left_tap_zone")
@@ -128,6 +130,9 @@ class ReaderPreferencesRepository @Inject constructor(
                 pageMargins = prefs[Keys.PAGE_MARGINS] ?: 1.0f,
                 wordSpacing = prefs[Keys.WORD_SPACING] ?: 0f,
                 letterSpacing = prefs[Keys.LETTER_SPACING] ?: 0f,
+                // No stored value means "leave it to the book", so there is no fallback here.
+                paragraphSpacing = prefs[Keys.PARAGRAPH_SPACING],
+                paragraphIndent = prefs[Keys.PARAGRAPH_INDENT],
                 hyphenate = prefs[Keys.HYPHENATE] ?: true,
                 topTapZone = prefs[Keys.TOP_TAP_ZONE]?.let {
                     runCatching { TapZoneBehavior.valueOf(it) }.getOrNull()
@@ -171,6 +176,10 @@ class ReaderPreferencesRepository @Inject constructor(
             prefs[Keys.PAGE_MARGINS] = preferences.pageMargins
             prefs[Keys.WORD_SPACING] = preferences.wordSpacing
             prefs[Keys.LETTER_SPACING] = preferences.letterSpacing
+            preferences.paragraphSpacing?.let { prefs[Keys.PARAGRAPH_SPACING] = it }
+                ?: prefs.remove(Keys.PARAGRAPH_SPACING)
+            preferences.paragraphIndent?.let { prefs[Keys.PARAGRAPH_INDENT] = it }
+                ?: prefs.remove(Keys.PARAGRAPH_INDENT)
             prefs[Keys.HYPHENATE] = preferences.hyphenate
             prefs[Keys.TOP_TAP_ZONE] = preferences.topTapZone.name
             prefs[Keys.LEFT_TAP_ZONE] = preferences.leftTapZone.name
