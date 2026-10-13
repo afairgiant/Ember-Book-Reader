@@ -481,6 +481,21 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                 viewModel.stopAutoScroll(showChrome = true)
             }
 
+            // In scroll mode, a swipe on past the end of a chapter opens the next, and one
+            // back past its start opens the one before at its end.
+            LaunchedEffect(navigator, preferences.isPaginated, autoScrolling) {
+                val nav = navigator ?: return@LaunchedEffect
+                if (preferences.isPaginated || autoScrolling) return@LaunchedEffect
+                ChapterPullController(
+                    evaluate = nav::evaluateJavascript,
+                    goToNextChapter = { nav.goForward() },
+                    goToPreviousChapter = {
+                        state.publication.locatorAtEndOfChapterBefore(nav.currentLocator.value.href)
+                            ?.let { nav.go(it) }
+                    }
+                ).run()
+            }
+
             // Inject CSS margins into the WebView whenever the chapter changes or margin
             // preferences change. evaluateJavascript() awaits the page load automatically,
             // so this is safe to call immediately after a chapter navigation.
