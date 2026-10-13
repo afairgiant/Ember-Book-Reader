@@ -12,6 +12,7 @@ import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ReadingSessionRepository
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.core.sync.NewBooksChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -36,7 +37,8 @@ class ServerListViewModel @Inject constructor(
     private val readingSessionRepository: ReadingSessionRepository,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val grimmoryAppClient: GrimmoryAppClient,
-    private val grimmoryClient: GrimmoryClient
+    private val grimmoryClient: GrimmoryClient,
+    private val newBooksChecker: NewBooksChecker
 ) : ViewModel() {
 
     private val _quickStats = MutableStateFlow<QuickStats?>(null)
@@ -144,6 +146,8 @@ class ServerListViewModel @Inject constructor(
                     )
                 }
                 _recentlyAdded.value = result
+                // They have now been shown, so a later sync need not announce them.
+                newBooksChecker.markSeen(server, books)
                 // Cache the book IDs for instant display on next launch
                 val ids = result.mapNotNull { it.localBookId }
                 bookRepository.cacheRecentlyAddedIds(ids)

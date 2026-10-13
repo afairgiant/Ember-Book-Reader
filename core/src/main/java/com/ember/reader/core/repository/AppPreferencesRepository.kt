@@ -58,6 +58,10 @@ class AppPreferencesRepository @Inject constructor(
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
         val SYNC_NOTIFICATIONS = booleanPreferencesKey("sync_notifications")
+        val NEW_BOOK_NOTIFICATIONS = booleanPreferencesKey("new_book_notifications")
+
+        /** The newest books last seen on a server; see `SeenBooks`. */
+        fun seenNewBooks(serverId: Long) = stringPreferencesKey("seen_new_books_$serverId")
         val SYNC_HIGHLIGHTS = booleanPreferencesKey("sync_highlights")
         val SYNC_BOOKMARKS = booleanPreferencesKey("sync_bookmarks")
         val BOOK_PUBLISHER_STYLES_RESET = booleanPreferencesKey("book_publisher_styles_reset_v1")
@@ -188,6 +192,27 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateSyncNotifications(enabled: Boolean) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.SYNC_NOTIFICATIONS] = enabled
+        }
+    }
+
+    /** Whether a background sync says so when books have been added to a server. */
+    val newBookNotificationsFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.NEW_BOOK_NOTIFICATIONS] ?: true }
+
+    suspend fun getNewBookNotifications(): Boolean = newBookNotificationsFlow.first()
+
+    suspend fun updateNewBookNotifications(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.NEW_BOOK_NOTIFICATIONS] = enabled
+        }
+    }
+
+    suspend fun getSeenNewBooks(serverId: Long): String? =
+        context.appPreferencesDataStore.data.map { it[Keys.seenNewBooks(serverId)] }.first()
+
+    suspend fun updateSeenNewBooks(serverId: Long, encoded: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.seenNewBooks(serverId)] = encoded
         }
     }
 

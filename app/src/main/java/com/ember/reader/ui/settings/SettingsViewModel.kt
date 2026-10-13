@@ -151,6 +151,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { appPreferencesRepository.updateSyncNotifications(enabled) }
     }
 
+    val newBookNotifications: StateFlow<Boolean> = appPreferencesRepository.newBookNotificationsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun updateNewBookNotifications(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateNewBookNotifications(enabled) }
+    }
+
     fun updateSyncHighlights(enabled: Boolean) {
         viewModelScope.launch { appPreferencesRepository.updateSyncHighlights(enabled) }
     }

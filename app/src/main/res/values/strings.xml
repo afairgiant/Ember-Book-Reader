@@ -334,6 +334,8 @@
     <string name="synchronization">Synchronization</string>
     <string name="notifications_section">Notifications</string>
     <string name="sync_notifications_label">Sync notifications</string>
+    <string name="new_book_notifications_label">New book notifications</string>
+    <string name="new_book_notifications_hint">Show a notification when books are added to a Grimmory server</string>
     <string name="sync_notifications_hint">Show a notification when reading progress is synced</string>
     <string name="sync_now">Sync Now</string>
     <string name="manage_downloads">Manage Downloads</string>
