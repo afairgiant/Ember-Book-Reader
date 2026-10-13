@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -74,6 +75,8 @@ fun ReaderScaffold(
     onOpenHighlights: () -> Unit = {},
     onOpenBookmarks: () -> Unit = {},
     onSeekToProgression: (Float) -> Unit = {},
+    /** Starts the page moving by itself; null where that is not offered. */
+    onStartAutoScroll: (() -> Unit)? = null,
     brightness: Float = -1f,
     onBrightnessChange: (Float) -> Unit = {},
     streaming: Boolean = false,
@@ -238,7 +241,8 @@ fun ReaderScaffold(
         ) {
             ReaderBottomBar(
                 currentLocator = currentLocator,
-                onSeekToProgression = onSeekToProgression
+                onSeekToProgression = onSeekToProgression,
+                onStartAutoScroll = onStartAutoScroll
             )
         }
 
@@ -339,7 +343,11 @@ private fun ReaderTopBar(
 }
 
 @Composable
-private fun ReaderBottomBar(currentLocator: Locator?, onSeekToProgression: (Float) -> Unit = {}) {
+private fun ReaderBottomBar(
+    currentLocator: Locator?,
+    onSeekToProgression: (Float) -> Unit = {},
+    onStartAutoScroll: (() -> Unit)? = null
+) {
     val progression = currentLocator?.locations?.totalProgression?.toFloat() ?: 0f
     val chapterTitle = currentLocator?.title
     var dragging by remember { mutableStateOf(false) }
@@ -362,6 +370,11 @@ private fun ReaderBottomBar(currentLocator: Locator?, onSeekToProgression: (Floa
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (onStartAutoScroll != null) {
+                IconButton(onClick = onStartAutoScroll) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.auto_scroll_start_cd))
+                }
+            }
             Slider(
                 value = if (dragging) dragValue else progression,
                 onValueChange = { value ->
