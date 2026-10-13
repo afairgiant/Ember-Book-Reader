@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -110,6 +111,17 @@ class CatalogViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { loadCatalog() }
+
+        // The server was edited while this catalogue was open: start again with its new details.
+        viewModelScope.launch {
+            serverRepository.observeConnectionChanges(serverId).collectLatest {
+                _rawGrimmoryEntries.value = emptyList()
+                _shelfPreviews.value = emptyMap()
+                libraryBookCounts.clear()
+                _uiState.value = CatalogUiState.Loading
+                loadCatalog()
+            }
+        }
 
         // Combine raw entries with preferences for the Grimmory catalog root
         combine(

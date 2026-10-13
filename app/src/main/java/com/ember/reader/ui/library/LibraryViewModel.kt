@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
@@ -174,6 +175,16 @@ class LibraryViewModel @Inject constructor(
             // indicator — the user didn't ask for a refresh.
             syncCatalog(userInitiated = false)
             loadGrimmoryFilterOptions()
+        }
+        // The server was edited while this list was open: load it again with its new details.
+        viewModelScope.launch {
+            serverRepository.observeConnectionChanges(serverId).collectLatest {
+                server = serverRepository.getById(serverId)
+                _currentServer.value = server
+                _refreshTicker.update { it + 1 }
+                syncCatalog(userInitiated = false)
+                loadGrimmoryFilterOptions()
+            }
         }
     }
 
