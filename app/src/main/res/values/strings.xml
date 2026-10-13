@@ -359,6 +359,14 @@
 
     <!-- Storage -->
     <string name="manage_storage">Manage Storage</string>
+    <string name="storage_screen_title">Storage</string>
+    <string name="storage_downloads">Downloads</string>
+    <string name="storage_recover">Recover orphaned books</string>
+    <string name="storage_recover_summary">Find downloaded files the library has lost track of</string>
+    <string name="storage_clear_dictionary">Clear dictionary cache</string>
+    <string name="dev_logs_screen_title">Logs</string>
+    <string name="licenses_overline">Open source</string>
+    <string name="licenses_screen_title">Licenses</string>
 
     <!-- Dev Log -->
     <string name="dev_logs_title">Developer Logs</string>

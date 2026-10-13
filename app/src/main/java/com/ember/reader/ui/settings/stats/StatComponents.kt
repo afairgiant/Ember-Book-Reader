@@ -1,6 +1,5 @@
 package com.ember.reader.ui.settings.stats
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ember.reader.ui.settings.components.SettingsCard
 import com.ember.reader.ui.settings.components.SettingsLabel
 
 /** The name above a section, in the small capitals the settings screens use. */
@@ -56,14 +55,7 @@ fun SectionHeader(
 /** The bordered card every block of statistics sits in; it matches the settings groups. */
 @Composable
 fun StatCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        modifier = modifier
-    ) {
-        Column(content = content)
-    }
+    SettingsCard(modifier = modifier, content = content)
 }
 
 /** One figure in a [StatFigureRow]: what it is called and what it says. */

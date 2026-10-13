@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -119,16 +120,31 @@ fun SettingsGroup(
                 modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
             )
         }
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = GroupShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        SettingsCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(vertical = 6.dp)) {
                 content()
             }
         }
+    }
+}
+
+/**
+ * The bordered, rounded card a [SettingsGroup] is drawn in, for content that is not a list
+ * of rows. [color] is for a card that has to stand out, such as a selected one.
+ */
+@Composable
+fun SettingsCard(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        color = color,
+        shape = GroupShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = modifier
+    ) {
+        Column(content = content)
     }
 }
 

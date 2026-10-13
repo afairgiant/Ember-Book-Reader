@@ -2,6 +2,7 @@ package com.ember.reader.ui.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,12 +37,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +58,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ember.reader.R
 import com.ember.reader.core.model.BookFormat
+import com.ember.reader.ui.settings.components.SettingsCard
+import com.ember.reader.ui.settings.components.SettingsDetailRow
+import com.ember.reader.ui.settings.components.SettingsDivider
+import com.ember.reader.ui.settings.components.SettingsLabel
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -79,16 +84,10 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.manage_storage), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+            SettingsScreenHeader(
+                overline = stringResource(R.string.settings),
+                title = stringResource(R.string.storage_screen_title),
+                onNavigateBack = onNavigateBack
             )
         },
         bottomBar = {
@@ -136,19 +135,13 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Storage usage card
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                SettingsCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -158,6 +151,7 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                                 Text(
                                     text = uiState.totalSize.toReadableSize(),
                                     style = MaterialTheme.typography.headlineSmall,
+                                    fontFamily = FontFamily.Serif,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -218,42 +212,32 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
                 }
             }
 
-            // Recover orphaned files
+            // Recover orphaned files, and clear the dictionary cache (temporary debug action)
             item {
-                OutlinedButton(
-                    onClick = viewModel::recoverOrphanedBooks,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Recover Orphaned Books")
-                }
-            }
-
-            // Clear dictionary cache (temporary debug button)
-            item {
-                OutlinedButton(
-                    onClick = viewModel::clearDictionaryCache,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Clear Dictionary Cache")
+                SettingsCard(modifier = Modifier.fillMaxWidth()) {
+                    SettingsDetailRow(
+                        icon = Icons.Default.Restore,
+                        title = stringResource(R.string.storage_recover),
+                        subtitle = stringResource(R.string.storage_recover_summary),
+                        modifier = Modifier.clickable(onClick = viewModel::recoverOrphanedBooks)
+                    )
+                    SettingsDivider()
+                    SettingsDetailRow(
+                        icon = Icons.Default.CleaningServices,
+                        title = stringResource(R.string.storage_clear_dictionary),
+                        modifier = Modifier.clickable(onClick = viewModel::clearDictionaryCache)
+                    )
                 }
             }
 
             // Recovery result message
             if (recoveryResult != null) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                    SettingsCard(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -275,19 +259,10 @@ fun StorageScreen(onNavigateBack: () -> Unit, viewModel: StorageViewModel = hilt
 
             // Sort chips + Downloaded Books header
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Downloads",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                SettingsLabel(
+                    text = stringResource(R.string.storage_downloads),
+                    modifier = Modifier.padding(start = 4.dp, top = 12.dp)
+                )
             }
 
             item {
@@ -399,26 +374,22 @@ private fun DownloadedBookCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        ),
-        shape = RoundedCornerShape(14.dp)
+    SettingsCard(
+        modifier = Modifier.fillMaxWidth(),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                )
+                .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelecting) {

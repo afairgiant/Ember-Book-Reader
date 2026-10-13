@@ -21,19 +21,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.VerticalAlignBottom
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,11 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ember.reader.R
 import com.ember.reader.ui.common.DevLog
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+private val consoleShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
 private val bgColor = Color(0xFF0D1117)
 private val dividerColor = Color(0xFF21262D)
 private val timeColor = Color(0xFF8B949E)
@@ -89,7 +86,6 @@ private val levelBgColors = mapOf(
 
 private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevLogScreen(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
@@ -104,59 +100,41 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.dev_logs_title), fontWeight = FontWeight.Bold)
-                        Text(
-                            "${entries.size} entries",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        scope.launch {
-                            if (entries.isNotEmpty()) {
-                                listState.animateScrollToItem(entries.size - 1)
-                            }
+    Column(modifier = Modifier.fillMaxSize()) {
+        SettingsScreenHeader(
+            overline = if (entries.size == 1) "1 entry" else "${entries.size} entries",
+            title = stringResource(R.string.dev_logs_screen_title),
+            onNavigateBack = onNavigateBack,
+            actions = {
+                IconButton(onClick = {
+                    scope.launch {
+                        if (entries.isNotEmpty()) {
+                            listState.animateScrollToItem(entries.size - 1)
                         }
-                    }) {
-                        Icon(Icons.Default.VerticalAlignBottom, contentDescription = stringResource(R.string.scroll_to_bottom))
                     }
-                    IconButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Ember Logs", DevLog.allText()))
-                        Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy_all))
-                    }
-                    IconButton(onClick = {
-                        DevLog.clear()
-                        refreshKey++
-                    }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.clear_logs))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = bgColor
-                )
-            )
-        }
-    ) { padding ->
+                }) {
+                    Icon(Icons.Default.VerticalAlignBottom, contentDescription = stringResource(R.string.scroll_to_bottom))
+                }
+                IconButton(onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Ember Logs", DevLog.allText()))
+                    Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
+                }) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.copy_all))
+                }
+                IconButton(onClick = {
+                    DevLog.clear()
+                    refreshKey++
+                }) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.clear_logs))
+                }
+            }
+        )
         if (entries.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .clip(consoleShape)
                     .background(bgColor),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -177,7 +155,7 @@ fun DevLogScreen(onNavigateBack: () -> Unit) {
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .clip(consoleShape)
                     .background(bgColor)
             ) {
                 items(entries) { entry ->
