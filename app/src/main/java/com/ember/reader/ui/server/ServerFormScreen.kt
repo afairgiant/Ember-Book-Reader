@@ -26,10 +26,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -78,6 +80,7 @@ fun ServerFormScreen(
 
     // Server type picker state — skip if editing
     var serverTypeChosen by rememberSaveable { mutableStateOf(uiState.isEditing) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var isGrimmoryType by rememberSaveable { mutableStateOf(uiState.isGrimmory) }
 
     // For Grimmory: use Grimmory login for OPDS/Kosync? Default ON for convenience
@@ -122,12 +125,46 @@ fun ServerFormScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
+                actions = {
+                    if (uiState.isEditing) {
+                        IconButton(onClick = { showDeleteDialog = true }, enabled = !uiState.isSaving) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete server")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
     ) { padding ->
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete server?") },
+                text = {
+                    Text(
+                        "\"${uiState.name}\" and its sign-in details will be removed from Ember. " +
+                            "Books you downloaded from it stay in your Library."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            viewModel.delete(onNavigateBack)
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
         if (!serverTypeChosen) {
             // Step 1: Choose server type
             ServerTypePicker(
