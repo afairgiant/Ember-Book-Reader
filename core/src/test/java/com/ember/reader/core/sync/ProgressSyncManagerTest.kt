@@ -6,6 +6,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryEpubProgress
 import com.ember.reader.core.grimmory.GrimmoryHttpException
 import com.ember.reader.core.grimmory.GrimmoryKoreaderProgress
+import com.ember.reader.core.grimmory.GrimmoryPdfProgress
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.grimmory.GrimmoryUpdateProgressRequest
 import com.ember.reader.core.repository.BookRepository
@@ -286,6 +287,37 @@ class ProgressSyncManagerTest {
             val result = syncManager.pullBestProgress(testServer, testBook)
 
             assertNull(result!!.progress.cfi)
+        }
+
+        @Test
+        fun `pull carries the page of a PDF position, also when kosync is the source`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(KosyncProgressResult(readingProgress(percentage = 0.039f), "Grimmory"))
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.039f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.039f, device = "Grimmory")
+            ).copy(pdfProgress = GrimmoryPdfProgress(page = 9, percentage = 3.9f))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(9, result!!.pdfPage)
+        }
+
+        @Test
+        fun `pull carries no PDF page when the koreader record is further along`() = runTest {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(null)
+            val progress = grimmoryAppBookProgress(
+                readProgress = 0.5f,
+                koreaderProgress = GrimmoryKoreaderProgress(percentage = 0.5f, device = "KOReader")
+            ).copy(pdfProgress = GrimmoryPdfProgress(page = 9, percentage = 3.9f))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns Result.success(progress)
+
+            val result = syncManager.pullBestProgress(testServer, testBook)
+
+            assertEquals(0.5f, result!!.progress.percentage, 0.0001f)
+            assertNull(result.pdfPage)
         }
 
         @Test

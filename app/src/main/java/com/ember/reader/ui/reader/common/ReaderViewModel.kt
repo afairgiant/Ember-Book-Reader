@@ -279,7 +279,8 @@ class ReaderViewModel @Inject constructor(
                 remotePercentage = remote.progress.percentage,
                 localPercentage = localPercentage,
                 remoteSource = remote.source,
-                remoteProgress = remote.progress
+                remoteProgress = remote.progress,
+                remotePdfPage = remote.pdfPage
             )
         } else {
             Timber.d("Sync: remote not ahead enough to show conflict")
@@ -297,6 +298,7 @@ class ReaderViewModel @Inject constructor(
         _pendingNavigation.value = PendingNavigation(
             percentage = conflict.remotePercentage,
             cfi = conflict.remoteProgress.cfi,
+            pdfPage = conflict.remotePdfPage,
         )
     }
 
@@ -743,15 +745,18 @@ sealed interface ReaderUiState {
  *
  * @param cfi its real EPUB CFI when the remote had one; the reader falls back to
  * [percentage] when it is null or cannot be opened.
+ * @param pdfPage its page, counted from 1, when the remote stored one for a PDF.
  */
 data class PendingNavigation(
     val percentage: Float,
     val cfi: String? = null,
+    val pdfPage: Int? = null,
 )
 
 data class SyncConflict(
     val remotePercentage: Float,
     val localPercentage: Float,
     val remoteSource: String?,
-    val remoteProgress: com.ember.reader.core.model.ReadingProgress
+    val remoteProgress: com.ember.reader.core.model.ReadingProgress,
+    val remotePdfPage: Int? = null
 )
