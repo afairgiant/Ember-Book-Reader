@@ -73,7 +73,7 @@ fun BookMarksSection(marks: List<BookMarkItem>) {
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
-            MarkRow(mark)
+            BookMarkRow(mark)
         }
         if (matching.size > COLLAPSED_COUNT) {
             TextButton(
@@ -86,8 +86,9 @@ fun BookMarksSection(marks: List<BookMarkItem>) {
     }
 }
 
+/** One bookmark, highlight or note: what it says, its note, and where and when it was made. */
 @Composable
-private fun MarkRow(mark: BookMarkItem) {
+internal fun BookMarkRow(mark: BookMarkItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,7 +126,10 @@ private fun MarkRow(mark: BookMarkItem) {
                 )
             }
             Text(
-                text = MARK_DATE.format(mark.createdAt.atZone(ZoneId.systemDefault())),
+                text = listOfNotNull(
+                    mark.chapter,
+                    MARK_DATE.format(mark.createdAt.atZone(ZoneId.systemDefault()))
+                ).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)

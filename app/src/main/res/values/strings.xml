@@ -373,4 +373,10 @@
     <string name="auto_scroll_faster_cd">Scroll faster</string>
     <string name="auto_scroll_stop_cd">Stop auto-scroll</string>
     <string name="auto_scroll_speed_label">Speed %1$d</string>
+    <string name="notes_title">Notes &amp; Highlights</string>
+    <string name="notes_screen_title">Notes</string>
+    <string name="notes_search_hint">Search notes and highlights</string>
+    <string name="notes_clear_search_cd">Clear search</string>
+    <string name="notes_empty">Nothing here yet. Bookmarks, highlights and notes you make while reading show up here.</string>
+    <string name="notes_no_match">Nothing matches.</string>
 </resources>

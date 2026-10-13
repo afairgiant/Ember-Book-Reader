@@ -20,6 +20,9 @@ class FakeBookmarkDao : BookmarkDao {
     /** Returns a snapshot of all stored entities (including tombstoned). */
     val all: List<BookmarkEntity> get() = bookmarks.toList()
 
+    override fun observeAll(): Flow<List<BookmarkEntity>> =
+        flow.map { all -> all.filter { it.deletedAt == null }.sortedByDescending { it.createdAt } }
+
     override fun observeByBookId(bookId: String): Flow<List<BookmarkEntity>> =
         flow.map { it.filter { b -> b.bookId == bookId && b.deletedAt == null } }
 

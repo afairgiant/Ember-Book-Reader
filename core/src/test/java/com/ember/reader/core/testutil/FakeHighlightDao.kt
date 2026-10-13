@@ -20,6 +20,9 @@ class FakeHighlightDao : HighlightDao {
     /** Returns a snapshot of all stored entities (including tombstoned). */
     val all: List<HighlightEntity> get() = highlights.toList()
 
+    override fun observeAll(): Flow<List<HighlightEntity>> =
+        flow.map { all -> all.filter { it.deletedAt == null }.sortedByDescending { it.createdAt } }
+
     override fun observeByBookId(bookId: String): Flow<List<HighlightEntity>> =
         flow.map { it.filter { h -> h.bookId == bookId && h.deletedAt == null } }
 

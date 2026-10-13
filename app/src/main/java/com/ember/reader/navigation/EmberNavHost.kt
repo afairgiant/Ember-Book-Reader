@@ -71,6 +71,7 @@ object Routes {
     const val EDIT_METADATA = "edit_metadata/{$ARG_BOOK_ID}"
     const val STORAGE = "storage"
     const val STATS = "stats"
+    const val NOTES = "notes"
     const val DEV_LOG = "dev_log"
     const val LICENSES = "licenses"
 
@@ -244,6 +245,7 @@ fun EmberNavHost(
                     onOpenSync = { navController.navigate(Routes.SETTINGS_SYNC) },
                     onOpenDownloads = { navController.navigate(Routes.SETTINGS_DOWNLOADS) },
                     onOpenStats = { navController.navigate(Routes.STATS) },
+                    onOpenNotes = { navController.navigate(Routes.NOTES) },
                     onOpenHardcover = { navController.navigate(Routes.HARDCOVER) },
                     onOpenBookdrop = { navController.navigate(Routes.BOOKDROP) },
                     onOpenUpload = { serverId -> navController.navigate(Routes.upload(serverId)) },
@@ -475,6 +477,13 @@ fun EmberNavHost(
             composable(Routes.STATS) {
                 com.ember.reader.ui.settings.stats.StatsScreen(
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.NOTES) {
+                com.ember.reader.ui.notes.NotesScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenBook = { bookId -> navController.navigate(Routes.bookDetail(bookId)) }
                 )
             }
         }

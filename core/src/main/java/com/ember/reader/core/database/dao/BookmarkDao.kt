@@ -13,6 +13,10 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks WHERE bookId = :bookId AND deletedAt IS NULL ORDER BY createdAt DESC")
     fun observeByBookId(bookId: String): Flow<List<BookmarkEntity>>
 
+    /** Every one in every book, newest first, for the notes screen. */
+    @Query("SELECT * FROM bookmarks WHERE deletedAt IS NULL ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<BookmarkEntity>>
+
     @Query("SELECT * FROM bookmarks WHERE bookId = :bookId")
     suspend fun getAllByBookId(bookId: String): List<BookmarkEntity>
 
