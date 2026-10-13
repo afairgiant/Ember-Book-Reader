@@ -361,14 +361,15 @@ fun ReaderPreferencesContent(
             }
         }
 
-        ReaderSettingsSection(stringResource(R.string.theme_section)) {
-            ThemeSwatches(
-                selected = preferences.theme,
-                onSelect = { onPreferencesChanged(preferences.copy(theme = it)) }
-            )
-        }
-
+        // A PDF is drawn as it is: the theme, like the fonts and margins, does not reach it.
         if (!isPdf) {
+            ReaderSettingsSection(stringResource(R.string.theme_section)) {
+                ThemeSwatches(
+                    selected = preferences.theme,
+                    onSelect = { onPreferencesChanged(preferences.copy(theme = it)) }
+                )
+            }
+
             ReaderSettingsSection("Text layout") {
                 ReaderToggleRow(
                     label = stringResource(R.string.publisher_styles),
@@ -452,11 +453,13 @@ fun ReaderPreferencesContent(
         }
 
         ReaderSettingsSection("Reading") {
-            ReaderToggleRow(
-                label = stringResource(R.string.paginated_mode),
-                checked = preferences.isPaginated,
-                onCheckedChange = { onPreferencesChanged(preferences.copy(isPaginated = it)) }
-            )
+            if (!isPdf) {
+                ReaderToggleRow(
+                    label = stringResource(R.string.paginated_mode),
+                    checked = preferences.isPaginated,
+                    onCheckedChange = { onPreferencesChanged(preferences.copy(isPaginated = it)) }
+                )
+            }
             ReaderToggleRow(
                 label = "Volume buttons turn pages",
                 checked = preferences.volumePageTurn,
@@ -500,7 +503,8 @@ fun ReaderPreferencesContent(
             )
         }
 
-        ReaderSettingsSection(stringResource(R.string.tap_zones_section)) {
+        // In a PDF a tap only shows or hides the bars.
+        if (!isPdf) ReaderSettingsSection(stringResource(R.string.tap_zones_section)) {
             TapZoneSelector("Top tap", preferences.topTapZone) {
                 onPreferencesChanged(preferences.copy(topTapZone = it))
             }
