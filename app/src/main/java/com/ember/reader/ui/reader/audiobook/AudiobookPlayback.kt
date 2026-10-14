@@ -10,6 +10,7 @@ import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.network.isPartFile
 import com.ember.reader.core.network.serverOrigin
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
@@ -216,7 +217,7 @@ class AudiobookPlayback @Inject constructor(
         if (book.isDownloaded && localPath != null) {
             val localDir = File(localPath)
             val trackFiles = localDir.takeIf { it.isDirectory }?.listFiles()
-                ?.filter { it.isFile && it.length() > 0 }
+                ?.filter { it.isFile && it.length() > 0 && !isPartFile(it) }
                 ?.sortedBy { it.name }
                 .orEmpty()
             if (trackFiles.isNotEmpty()) {

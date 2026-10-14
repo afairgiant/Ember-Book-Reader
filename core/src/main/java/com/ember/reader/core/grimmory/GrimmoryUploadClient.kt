@@ -2,6 +2,7 @@ package com.ember.reader.core.grimmory
 
 import android.content.Context
 import android.net.Uri
+import com.ember.reader.core.network.fileTransferTimeouts
 import com.ember.reader.core.network.serverOrigin
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
@@ -61,6 +62,7 @@ class GrimmoryUploadClient @Inject constructor(
                 )
             )
             onUpload { sent, total -> onProgress(sent, total ?: -1L) }
+            fileTransferTimeouts()
         }
         if (!response.status.isSuccess()) {
             throw GrimmoryHttpException(response.status.value, "Library upload failed: ${response.status}")
@@ -89,6 +91,7 @@ class GrimmoryUploadClient @Inject constructor(
                 )
             )
             onUpload { sent, total -> onProgress(sent, total ?: -1L) }
+            fileTransferTimeouts()
         }
         if (!response.status.isSuccess()) {
             throw GrimmoryHttpException(response.status.value, "Book Drop upload failed: ${response.status}")
