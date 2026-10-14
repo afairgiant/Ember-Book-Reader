@@ -136,6 +136,32 @@ class BookDaoRelinkTest {
         assertNull(db.bookReaderPreferencesDao().get(LOCAL))
     }
 
+    @Test
+    fun `upsertServerBook updates the book's row instead of adding a second one`() = runBlocking {
+        val first = dao.upsertServerBook(1L, "e1", onNew = { book("a", serverId = 1L).copy(opdsEntryId = "e1") }, onExisting = { it })
+        val second = dao.upsertServerBook(
+            1L,
+            "e1",
+            onNew = { book("b", serverId = 1L).copy(opdsEntryId = "e1") },
+            onExisting = { it.copy(title = "Dune Messiah") },
+        )
+
+        assertEquals("a", first)
+        assertEquals("a", second)
+        assertEquals("Dune Messiah", dao.getByOpdsEntryId("e1", 1L)!!.title)
+        assertNull(dao.getById("b"))
+    }
+
+    @Test(expected = android.database.sqlite.SQLiteConstraintException::class)
+    fun `a second row for the same server book is refused`() = runBlocking {
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO books(id,serverId,opdsEntryId,title,format,addedAt) VALUES('a',1,'e1','T','EPUB',0)"
+        )
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO books(id,serverId,opdsEntryId,title,format,addedAt) VALUES('b',1,'e1','T','EPUB',0)"
+        )
+    }
+
     private companion object {
         const val LOCAL = "local-book"
         const val SERVER = "server-book"

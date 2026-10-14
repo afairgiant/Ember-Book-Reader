@@ -63,6 +63,28 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE opdsEntryId = :opdsEntryId AND serverId = :serverId")
     suspend fun getByOpdsEntryId(opdsEntryId: String, serverId: Long): BookEntity?
 
+    /**
+     * Updates the row for the server book [opdsEntryId] on [serverId] with [onExisting], or
+     * inserts [onNew] when there is none, and returns the row's id. The lookup and the write
+     * are one transaction, so two refreshes of the same book at once cannot both insert it.
+     */
+    @Transaction
+    suspend fun upsertServerBook(
+        serverId: Long,
+        opdsEntryId: String,
+        onNew: () -> BookEntity,
+        onExisting: (BookEntity) -> BookEntity,
+    ): String {
+        val existing = getByOpdsEntryId(opdsEntryId, serverId)
+        if (existing != null) {
+            update(onExisting(existing))
+            return existing.id
+        }
+        val book = onNew()
+        insert(book)
+        return book.id
+    }
+
     @Query("SELECT * FROM books WHERE fileHash = :hash LIMIT 1")
     suspend fun getByFileHash(hash: String): BookEntity?
 

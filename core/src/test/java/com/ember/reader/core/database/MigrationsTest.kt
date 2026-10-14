@@ -171,6 +171,48 @@ class MigrationsTest {
         }
     }
 
+    @Test
+    fun migrate19To20_mergesDuplicateServerBooksAndAddsUniqueIndex() {
+        helper.createDatabase(TEST_DB, 19).use { db ->
+            db.execSQL(
+                "INSERT INTO servers(id,name,url,opdsUsername,kosyncUsername,grimmoryUsername,isGrimmory," +
+                    "opdsEnabled,kosyncEnabled,canMoveOrganizeFiles) VALUES(1,'s','http://x','u','u','u',1,1,1,0)"
+            )
+            // The same server book twice: an older row with progress and a highlight, and a
+            // newer, downloaded one with newer progress. A local book stays out of it.
+            db.execSQL("INSERT INTO books(id,serverId,opdsEntryId,title,format,addedAt) VALUES('old',1,'e1','T','EPUB',0)")
+            db.execSQL(
+                "INSERT INTO books(id,serverId,opdsEntryId,title,format,addedAt,localPath) " +
+                    "VALUES('downloaded',1,'e1','T','EPUB',5,'/books/t.epub')"
+            )
+            db.execSQL("INSERT INTO books(id,title,format,addedAt) VALUES('local','L','EPUB',0)")
+            db.execSQL(
+                "INSERT INTO highlights(bookId,locatorJson,color,createdAt,updatedAt) VALUES('old','{}','YELLOW',0,0)"
+            )
+            db.execSQL("INSERT INTO reading_progress(bookId,percentage,lastReadAt,needsSync) VALUES('old',0.2,100,0)")
+            db.execSQL(
+                "INSERT INTO reading_progress(bookId,percentage,lastReadAt,needsSync) VALUES('downloaded',0.6,200,0)"
+            )
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 20, true, EmberDatabase.MIGRATION_19_20)
+
+        migrated.query("SELECT id FROM books ORDER BY id").use { c ->
+            val ids = buildList { while (c.moveToNext()) add(c.getString(0)) }
+            assertEquals(listOf("downloaded", "local"), ids)
+        }
+        migrated.query("SELECT bookId FROM highlights").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("downloaded", c.getString(0))
+        }
+        migrated.query("SELECT bookId, percentage FROM reading_progress").use { c ->
+            assertEquals(1, c.count)
+            c.moveToFirst()
+            assertEquals("downloaded", c.getString(0))
+            assertEquals(0.6f, c.getFloat(1))
+        }
+    }
+
     private companion object {
         const val TEST_DB = "ember-migrations-test"
     }

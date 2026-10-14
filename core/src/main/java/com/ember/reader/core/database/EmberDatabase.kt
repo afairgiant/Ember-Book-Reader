@@ -40,7 +40,7 @@ import com.ember.reader.core.database.entity.SyncStatusEntity
         CatalogEntryPreferenceEntity::class,
         SyncStatusEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -283,6 +283,68 @@ abstract class EmberDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE reading_progress ADD COLUMN cfi TEXT DEFAULT NULL")
             }
+        }
+
+        /**
+         * Migration 19→20: a unique index on books (serverId, opdsEntryId), so a server book
+         * has one row. Rows made twice for the same server book (two refreshes racing) are
+         * merged first: the downloaded one, else the oldest, is kept, and the others'
+         * highlights, bookmarks, reading sessions, newer progress and reader settings move
+         * to it before they are deleted.
+         */
+        val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                mergeDuplicateServerBooks(db)
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_books_serverId_opdsEntryId` " +
+                        "ON `books` (`serverId`, `opdsEntryId`)"
+                )
+            }
+        }
+
+        private fun mergeDuplicateServerBooks(db: SupportSQLiteDatabase) {
+            // Each duplicate group in turn, the row to keep first.
+            val rows = db.query(
+                """
+                SELECT b.id, b.serverId, b.opdsEntryId FROM books b
+                JOIN (
+                    SELECT serverId, opdsEntryId FROM books
+                    WHERE serverId IS NOT NULL AND opdsEntryId IS NOT NULL
+                    GROUP BY serverId, opdsEntryId HAVING COUNT(*) > 1
+                ) d ON b.serverId = d.serverId AND b.opdsEntryId = d.opdsEntryId
+                ORDER BY b.serverId, b.opdsEntryId, b.localPath IS NULL, b.addedAt, b.id
+                """
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) {
+                        add(Triple(cursor.getString(0), cursor.getLong(1), cursor.getString(2)))
+                    }
+                }
+            }
+            rows.groupBy { (_, serverId, opdsEntryId) -> serverId to opdsEntryId }.values.forEach { group ->
+                val keepId = group.first().first
+                group.drop(1).forEach { (dropId) -> mergeBook(db, fromId = dropId, toId = keepId) }
+            }
+        }
+
+        /** Moves what is kept for the book [fromId] to [toId], as `BookDao.relink` does, and deletes [fromId]. */
+        private fun mergeBook(db: SupportSQLiteDatabase, fromId: String, toId: String) {
+            val ids = arrayOf(toId, fromId)
+            db.execSQL("UPDATE highlights SET bookId = ? WHERE bookId = ?", ids)
+            db.execSQL("UPDATE bookmarks SET bookId = ? WHERE bookId = ?", ids)
+            db.execSQL("UPDATE reading_sessions SET bookId = ? WHERE bookId = ?", ids)
+            db.execSQL(
+                "DELETE FROM reading_progress WHERE bookId = ? " +
+                    "AND lastReadAt < (SELECT lastReadAt FROM reading_progress WHERE bookId = ?)",
+                ids
+            )
+            db.execSQL("UPDATE OR IGNORE reading_progress SET bookId = ? WHERE bookId = ?", ids)
+            db.execSQL("UPDATE OR IGNORE book_reader_preferences SET bookId = ? WHERE bookId = ?", ids)
+            // Foreign keys are off during a migration, so what did not move is deleted here
+            // rather than by the cascade.
+            db.execSQL("DELETE FROM reading_progress WHERE bookId = ?", arrayOf(fromId))
+            db.execSQL("DELETE FROM book_reader_preferences WHERE bookId = ?", arrayOf(fromId))
+            db.execSQL("DELETE FROM books WHERE id = ?", arrayOf(fromId))
         }
 
         /**
