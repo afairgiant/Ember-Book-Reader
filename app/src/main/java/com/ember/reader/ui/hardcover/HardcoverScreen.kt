@@ -22,14 +22,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,14 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +64,10 @@ import com.ember.reader.R
 import com.ember.reader.core.hardcover.HardcoverBook
 import com.ember.reader.core.hardcover.HardcoverBookDetail
 import com.ember.reader.core.hardcover.HardcoverStatus
+import com.ember.reader.ui.settings.components.SettingsCard
+import com.ember.reader.ui.settings.components.SettingsChoiceChips
+import com.ember.reader.ui.settings.components.SettingsLabel
+import com.ember.reader.ui.settings.components.SettingsScreenHeader
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,23 +93,17 @@ fun HardcoverScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Hardcover", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
+            SettingsScreenHeader(
+                overline = "Reading",
+                title = "Hardcover",
+                onNavigateBack = onNavigateBack,
                 actions = {
                     if (uiState is HardcoverUiState.Connected) {
                         TextButton(onClick = viewModel::disconnect) {
                             Text("Disconnect")
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -182,37 +173,39 @@ private fun ConnectView(modifier: Modifier = Modifier, onConnect: (String) -> Un
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = "Connect to Hardcover",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Enter your API token from hardcover.app settings",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        OutlinedTextField(
-            value = token,
-            onValueChange = { token = it },
-            label = { Text("API Token") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = { onConnect(token) },
-            enabled = token.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text("Connect")
+        SettingsLabel("Connect", modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        SettingsCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Connect to Hardcover",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Enter your API token from hardcover.app settings",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text("API Token") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { onConnect(token) },
+                    enabled = token.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect")
+                }
+            }
         }
     }
 }
@@ -228,11 +221,7 @@ private fun ConnectedView(
 
     Column(modifier = modifier.fillMaxSize()) {
         // User info header
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            ),
-            shape = RoundedCornerShape(16.dp),
+        SettingsCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -256,26 +245,18 @@ private fun ConnectedView(
             }
         }
 
-        // Tabs
-        ScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 16.dp
-        ) {
-            state.tabs.forEachIndexed { index, statusId ->
-                val books = state.booksByStatus[statusId]
-                val count = books?.size ?: 0
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = {
-                        Text(
-                            text = if (count > 0) "${tabLabel(statusId)} ($count)" else tabLabel(statusId),
-                            maxLines = 1
-                        )
-                    }
-                )
+        // The reading lists, as the chips the other screens filter with
+        SettingsChoiceChips(
+            options = state.tabs,
+            selected = state.tabs.getOrNull(pagerState.currentPage) ?: state.tabs.firstOrNull() ?: 0,
+            onSelect = { statusId ->
+                scope.launch { pagerState.animateScrollToPage(state.tabs.indexOf(statusId).coerceAtLeast(0)) }
+            },
+            labelOf = { statusId ->
+                val count = state.booksByStatus[statusId]?.size ?: 0
+                if (count > 0) "${tabLabel(statusId)} ($count)" else tabLabel(statusId)
             }
-        }
+        )
 
         // Pager content
         HorizontalPager(
@@ -306,7 +287,7 @@ private fun ConnectedView(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(books, key = { it.id }) { book ->
@@ -323,13 +304,10 @@ private fun ConnectedView(
 
 @Composable
 private fun BookRow(book: HardcoverBook, onClick: () -> Unit = {}) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        shape = RoundedCornerShape(12.dp),
+    SettingsCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
     ) {
         Row(
