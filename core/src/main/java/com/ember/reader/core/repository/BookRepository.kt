@@ -798,20 +798,34 @@ class BookRepository @Inject constructor(
         }
 
     /**
-     * Relinks a local/orphaned book to a specific server book.
-     * Transfers the local file path and hash, then removes the orphan entry.
+     * Relinks a local/orphaned book to a specific server book: the server book takes over
+     * the local file, and the local book's highlights, bookmarks, progress and reading
+     * history, and the local entry is removed. A file the server book had downloaded before
+     * is deleted, as nothing points to it any more.
      */
-    suspend fun relinkToServerBook(localBookId: String, serverBookId: String): String {
-        val localBook = bookDao.getById(localBookId)?.toDomain()
-            ?: return "Book not found"
-        val localPath = localBook.localPath
-            ?: return "Book has no local file"
+    suspend fun relinkToServerBook(localBookId: String, serverBookId: String): Result<Unit> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val localBook = bookDao.getById(localBookId)
+                ?: return@withContext Result.failure(IllegalStateException("Book not found"))
+            val localPath = localBook.localPath
+                ?: return@withContext Result.failure(IllegalStateException("Book has no local file"))
+            val serverBook = bookDao.getById(serverBookId)
+                ?: return@withContext Result.failure(IllegalStateException("Server book not found"))
 
-        bookDao.updateLocalPath(serverBookId, localPath, localBook.downloadedAt)
-        localBook.fileHash?.let { bookDao.updateFileHash(serverBookId, it) }
-        bookDao.deleteById(localBookId)
-        return "Book relinked"
-    }
+            bookDao.relink(
+                fromId = localBookId,
+                toId = serverBookId,
+                localPath = localPath,
+                downloadedAt = localBook.downloadedAt,
+                fileHash = localBook.fileHash,
+            )
+            serverBook.localPath
+                ?.takeIf { it != localPath }
+                ?.let(::File)
+                ?.takeIf { it.canonicalPath.startsWith(booksDir.canonicalPath + File.separator) }
+                ?.delete()
+            Result.success(Unit)
+        }
 
     /**
      * Scans the books directory for files that aren't tracked in the database.
