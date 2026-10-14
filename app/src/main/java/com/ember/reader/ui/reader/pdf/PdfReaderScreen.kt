@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ember.reader.core.model.PdfBookmarkPage
 import com.ember.reader.core.readium.toLocator
 import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.common.LoadingScreen
@@ -153,19 +154,6 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
         ReaderUiState.Loading -> LoadingScreen()
         is ReaderUiState.Error -> ErrorScreen(state.message)
         is ReaderUiState.Ready -> {
-            val hasBookmark = currentLocator?.let { loc ->
-                val href = loc.href.toString()
-                val hrefEscaped = href.replace("/", "\\/")
-                val currentPos = loc.locations.position
-                bookmarks.any { bm ->
-                    val inSameFile = bm.locatorJson.contains(href) || bm.locatorJson.contains(hrefEscaped)
-                    if (!inSameFile) return@any false
-                    // For PDFs, match by page position
-                    val bmLocator = bm.locatorJson.toLocator() ?: return@any false
-                    bmLocator.locations.position == currentPos
-                }
-            } ?: false
-
             // Adjust the locator's totalProgression for page-based display
             val totalPages = state.publication.metadata.numberOfPages ?: 0
             val loc = currentLocator
@@ -175,6 +163,17 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
             } else {
                 null
             }
+            val hasBookmark = currentPage != null && bookmarks.any { PdfBookmarkPage.of(it.locatorJson) == currentPage }
+
+            // Bookmarks from before pages were kept get theirs, so that they can sync too.
+            LaunchedEffect(bookmarks, totalPages) {
+                if (totalPages > 0) {
+                    viewModel.keepPdfBookmarkPages { locatorJson ->
+                        locatorJson.toLocator()?.locations?.totalProgression?.let { pdfPageShown(it, totalPages) }
+                    }
+                }
+            }
+
             val displayLocator = if (loc != null && currentPage != null) {
                 val pageBasedProgression = if (totalPages <= 1) {
                     1.0
@@ -198,7 +197,7 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 hasBookmarkAtCurrentPosition = hasBookmark,
                 onNavigateBack = onNavigateBack,
                 onToggleBookmark = {
-                    val removed = viewModel.toggleBookmark()
+                    val removed = currentPage?.let(viewModel::removePdfBookmark) ?: viewModel.toggleBookmark()
                     if (!removed) showBookmarkDialog = true
                 },
                 onOpenBookmarks = { showBookmarks = true },
@@ -302,7 +301,8 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     },
                     confirmButton = {
                         androidx.compose.material3.TextButton(onClick = {
-                            viewModel.addBookmark(bookmarkName.ifBlank { pageTitle })
+                            val name = bookmarkName.ifBlank { pageTitle }
+                            currentPage?.let { viewModel.addPdfBookmark(name, it) } ?: viewModel.addBookmark(name)
                             showBookmarkDialog = false
                         }) { androidx.compose.material3.Text("Save") }
                     },
@@ -318,7 +318,14 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 BookmarksSheet(
                     bookmarks = bookmarks,
                     onNavigate = { bookmark ->
-                        bookmark.locatorJson.toLocator()?.let { locator -> navigator?.go(locator) }
+                        scope.launch {
+                            // By its page where it has one: a bookmark from the server has
+                            // no locator of the reader's to go to.
+                            val target = PdfBookmarkPage.of(bookmark.locatorJson)
+                                ?.let { state.publication.locatorOpeningPdfPage(it) }
+                                ?: bookmark.locatorJson.toLocator()
+                            target?.let { navigator?.go(it) }
+                        }
                         showBookmarks = false
                     },
                     onDelete = viewModel::deleteBookmark,

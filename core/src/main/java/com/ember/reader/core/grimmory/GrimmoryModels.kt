@@ -257,6 +257,8 @@ data class GrimmoryBookmark(
     val positionMs: Long? = null,
     /** The track, for an audiobook made of several files. */
     val trackIndex: Int? = null,
+    /** A PDF bookmark's page, counted from 1. */
+    val pageNumber: Int? = null,
     val title: String? = null,
     val color: String? = null,
     val notes: String? = null,
@@ -271,6 +273,8 @@ data class CreateBookmarkRequest(
     val cfi: String? = null,
     val positionMs: Long? = null,
     val trackIndex: Int? = null,
+    /** A PDF bookmark's place: its page, counted from 1. */
+    val pageNumber: Int? = null,
     val title: String? = null
 )
 
