@@ -415,6 +415,15 @@
     <string name="audiobook_bookmark_add">Add bookmark at %1$s</string>
     <string name="audiobook_bookmarks_empty">No bookmarks yet</string>
     <string name="audiobook_bookmark_delete_cd">Delete bookmark</string>
+    <string name="up_next_title">Up Next</string>
+    <string name="up_next_add_to">Add to Up Next</string>
+    <string name="up_next_remove_from">Remove from Up Next</string>
+    <string name="up_next_then">Then: %1$s</string>
+    <string name="up_next_then_series">Then: %1$s, next in the series</string>
+    <string name="up_next_nothing">Playback stops when this book ends</string>
+    <string name="up_next_empty">Nothing queued. Add an audiobook from its page\'s menu.</string>
+    <string name="up_next_move_up_cd">Move up</string>
+    <string name="up_next_remove_cd">Remove from Up Next</string>
     <string name="audiobook_skip_lengths">Skip lengths</string>
     <string name="audiobook_skip_back">Skip back</string>
     <string name="audiobook_skip_forward">Skip forward</string>

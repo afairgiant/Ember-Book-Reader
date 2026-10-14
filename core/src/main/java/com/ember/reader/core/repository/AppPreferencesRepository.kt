@@ -52,6 +52,7 @@ class AppPreferencesRepository @Inject constructor(
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
         val AUDIOBOOK_SPEED = floatPreferencesKey("audiobook_speed")
+        val AUDIOBOOK_UP_NEXT = stringPreferencesKey("audiobook_up_next")
         val READ_ALOUD_SPEED = floatPreferencesKey("read_aloud_speed")
         val AUDIOBOOK_SKIP_BACK_SECONDS = intPreferencesKey("audiobook_skip_back_seconds")
         val AUDIOBOOK_SKIP_FORWARD_SECONDS = intPreferencesKey("audiobook_skip_forward_seconds")
@@ -104,6 +105,18 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun updateReadAloudSpeed(speed: Float) {
         context.appPreferencesDataStore.edit { prefs ->
             prefs[Keys.READ_ALOUD_SPEED] = speed
+        }
+    }
+
+    /** The ids of the audiobooks queued to play after the current one, in order. */
+    val audiobookUpNextFlow: Flow<List<String>> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUDIOBOOK_UP_NEXT].orEmpty().split("\n").filter { it.isNotBlank() } }
+
+    /** Changes the Up Next queue by [change], in one step so that two changes cannot cross. */
+    suspend fun updateAudiobookUpNext(change: (List<String>) -> List<String>) {
+        context.appPreferencesDataStore.edit { prefs ->
+            val current = prefs[Keys.AUDIOBOOK_UP_NEXT].orEmpty().split("\n").filter { it.isNotBlank() }
+            prefs[Keys.AUDIOBOOK_UP_NEXT] = change(current).distinct().joinToString("\n")
         }
     }
 

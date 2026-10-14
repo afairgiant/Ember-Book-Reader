@@ -17,6 +17,7 @@ import com.ember.reader.core.hardcover.HardcoverUserBookEntry
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
+import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.HighlightRepository
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -54,10 +56,22 @@ class BookDetailViewModel @Inject constructor(
     private val hardcoverTokenManager: HardcoverTokenManager,
     val organizeFilesViewModelFactory: OrganizeFilesViewModel.Factory,
     serverAppearanceResolver: ServerAppearanceResolver,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val appPreferencesRepository: AppPreferencesRepository
 ) : ViewModel() {
 
     private val bookId: String = savedStateHandle["bookId"] ?: ""
+
+    /** Whether this book is queued in the audiobook player's Up Next. */
+    val inUpNext: StateFlow<Boolean> = appPreferencesRepository.audiobookUpNextFlow
+        .map { bookId in it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleUpNext() {
+        viewModelScope.launch {
+            appPreferencesRepository.updateAudiobookUpNext { if (bookId in it) it - bookId else it + bookId }
+        }
+    }
 
     private val _book = MutableStateFlow<Book?>(null)
     val book: StateFlow<Book?> = _book.asStateFlow()

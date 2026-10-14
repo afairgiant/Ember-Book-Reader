@@ -36,12 +36,15 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -57,6 +60,7 @@ sealed interface AudiobookUiState {
     data class Error(val message: String) : AudiobookUiState
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AudiobookViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
@@ -72,7 +76,9 @@ class AudiobookViewModel @Inject constructor(
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
-    private val bookId: String = savedStateHandle["bookId"] ?: ""
+    // The book can change under the player: when one ends, the next in Up Next takes over.
+    private val bookIdFlow = MutableStateFlow(savedStateHandle.get<String>("bookId") ?: "")
+    private val bookId: String get() = bookIdFlow.value
 
     private val _uiState = MutableStateFlow<AudiobookUiState>(AudiobookUiState.Loading)
     val uiState: StateFlow<AudiobookUiState> = _uiState.asStateFlow()
@@ -106,9 +112,26 @@ class AudiobookViewModel @Inject constructor(
     val sleepTimeLeftMs: StateFlow<Long?> = _sleepTimeLeftMs.asStateFlow()
 
     /** The book's bookmarks, in the order they come in the book. */
-    val bookmarks: StateFlow<List<AudioBookmark>> = bookmarkRepository.observeByBookId(bookId)
+    val bookmarks: StateFlow<List<AudioBookmark>> = bookIdFlow
+        .flatMapLatest { bookmarkRepository.observeByBookId(it) }
         .map(::audioBookmarksOf)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** The audiobooks queued in Up Next, in order. One that is no longer in the library is left out. */
+    val upNext: StateFlow<List<Book>> = appPreferencesRepository.audiobookUpNextFlow
+        .map { ids ->
+            val books = bookRepository.getByIds(ids.toSet()).associateBy { it.id }
+            ids.mapNotNull(books::get)
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _nextAudiobook = MutableStateFlow<NextAudiobook?>(null)
+
+    /** What will play when this book ends; null when playback will simply stop. */
+    val nextAudiobook: StateFlow<NextAudiobook?> = _nextAudiobook.asStateFlow()
+
+    /** Set while one book is being swapped for the next, so the swap is not started twice. */
+    private var advancing = false
 
     private val _chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
     val chapters: StateFlow<List<AudiobookChapter>> = _chapters.asStateFlow()
@@ -127,9 +150,71 @@ class AudiobookViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { loadBook() }
+        // Keep "what plays next" current as the queue or the book changes.
+        viewModelScope.launch {
+            combine(upNext, bookIdFlow, _uiState) { queue, _, _ -> queue }.collect { queue ->
+                _nextAudiobook.value = book?.let { chooseNext(it, queue) }
+            }
+        }
     }
 
-    private suspend fun loadBook() {
+    private suspend fun chooseNext(current: Book, queue: List<Book>): NextAudiobook? {
+        val seriesMates = current.serverId
+            ?.takeIf { current.series != null }
+            ?.let { bookRepository.observeByServer(it).first() }
+            .orEmpty()
+        val progress = seriesMates.associate { it.id to readingProgressRepository.getByBookId(it.id)?.percentage }
+        return nextAudiobook(current, queue, seriesMates, progress::get)
+    }
+
+    fun removeFromUpNext(book: Book) {
+        viewModelScope.launch { appPreferencesRepository.updateAudiobookUpNext { it - book.id } }
+    }
+
+    fun moveUpInUpNext(book: Book) {
+        viewModelScope.launch { appPreferencesRepository.updateAudiobookUpNext { movedUp(it, book.id) } }
+    }
+
+    /** Leaves the current book where it is and starts [book] from Up Next now. */
+    fun playNow(book: Book) {
+        viewModelScope.launch {
+            saveProgress()
+            switchTo(book)
+        }
+    }
+
+    /** The book has played to its end: mark it finished and start what is next, if anything is. */
+    private fun onBookEnded() {
+        if (advancing) return
+        advancing = true
+        viewModelScope.launch {
+            try {
+                readingProgressRepository.updateProgress(
+                    bookId = bookId,
+                    serverId = book?.serverId,
+                    percentage = 1f,
+                    locatorJson = null
+                )
+                val next = book?.let { chooseNext(it, upNext.value) } ?: return@launch
+                Timber.d("Audiobook: '%s' ended, starting '%s'", book?.title, next.book.title)
+                switchTo(next.book)
+            } finally {
+                advancing = false
+            }
+        }
+    }
+
+    private suspend fun switchTo(next: Book) {
+        appPreferencesRepository.updateAudiobookUpNext { it - next.id }
+        savedStateHandle["bookId"] = next.id
+        bookIdFlow.value = next.id
+        _chapters.value = emptyList()
+        _tracks.value = emptyList()
+        _currentTrackIndex.value = 0
+        loadBook(autoPlay = true)
+    }
+
+    private suspend fun loadBook(autoPlay: Boolean = false) {
         val loadedBook = bookRepository.getById(bookId)
         if (loadedBook == null) {
             _uiState.value = AudiobookUiState.Error("Book not found")
@@ -172,8 +257,13 @@ class AudiobookViewModel @Inject constructor(
         val localProgress = readingProgressRepository.getByBookId(bookId)
         sessionStartProgress = localProgress?.percentage ?: 0f
 
-        // Connect to playback service and set media
-        connectToService(loadedBook, server, info)
+        // Connect to the playback service the first time; after that it only needs the new book.
+        val ctrl = controller
+        if (ctrl == null) {
+            connectToService(loadedBook, server, info)
+        } else {
+            startBook(ctrl, loadedBook, server, info, autoPlay)
+        }
     }
 
     private fun connectToService(
@@ -206,6 +296,7 @@ class AudiobookViewModel @Inject constructor(
                     if (playbackState == Player.STATE_READY) {
                         _durationMs.value = ctrl.duration.coerceAtLeast(0)
                     }
+                    if (playbackState == Player.STATE_ENDED) onBookEnded()
                 }
                 override fun onPlayerError(error: PlaybackException) {
                     Timber.e(error, "Audiobook: ExoPlayer error code=%d mediaItem=%d/%d", error.errorCode, ctrl.currentMediaItemIndex, ctrl.mediaItemCount)
@@ -216,26 +307,43 @@ class AudiobookViewModel @Inject constructor(
                 }
             })
 
-            // Build media items
             viewModelScope.launch {
-                val mediaItems = buildMediaItems(book, server, info)
-                if (mediaItems.isNotEmpty()) {
-                    Timber.d("Audiobook: setting %d media items", mediaItems.size)
-                    ctrl.setMediaItems(mediaItems)
-                    ctrl.prepare()
-                    restorePosition(ctrl)
-                    seekToRequestedBookmark(ctrl)
-                    val speed = appPreferencesRepository.audiobookSpeedFlow.first()
-                    _playbackSpeed.value = speed
-                    ctrl.setPlaybackSpeed(speed)
-                } else {
-                    Timber.e("Audiobook: no media items could be built")
-                }
-
+                startBook(ctrl, book, server, info, autoPlay = false)
                 // Start position update loop
                 startPositionUpdates()
             }
         }, MoreExecutors.directExecutor())
+    }
+
+    /**
+     * Hands [book] to the player. With [autoPlay] it starts by itself, as it does when it
+     * follows a book that has just ended; a book already heard to its end then starts over.
+     */
+    private suspend fun startBook(
+        ctrl: MediaController,
+        book: Book,
+        server: com.ember.reader.core.model.Server?,
+        info: AudiobookInfo?,
+        autoPlay: Boolean
+    ) {
+        val mediaItems = buildMediaItems(book, server, info)
+        if (mediaItems.isEmpty()) {
+            Timber.e("Audiobook: no media items could be built")
+            // Leave nothing of the book before in the player: its position would otherwise
+            // be saved as this book's.
+            ctrl.clearMediaItems()
+            return
+        }
+        Timber.d("Audiobook: setting %d media items", mediaItems.size)
+        ctrl.setMediaItems(mediaItems)
+        ctrl.prepare()
+        val heard = readingProgressRepository.getByBookId(book.id)?.percentage ?: 0f
+        if (!(autoPlay && heard >= FINISHED_PROGRESS)) restorePosition(ctrl)
+        seekToRequestedBookmark(ctrl)
+        val speed = appPreferencesRepository.audiobookSpeedFlow.first()
+        _playbackSpeed.value = speed
+        ctrl.setPlaybackSpeed(speed)
+        if (autoPlay) ctrl.play()
     }
 
     private suspend fun buildMediaItems(
