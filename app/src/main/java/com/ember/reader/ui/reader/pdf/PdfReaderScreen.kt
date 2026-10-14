@@ -261,17 +261,24 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                 viewModel.onNavigationHandled()
             }
 
-            // Apply PDF preferences and set up tap-to-toggle-chrome
+            // Apply PDF preferences
             androidx.compose.runtime.LaunchedEffect(preferences, navigator) {
                 val nav = navigator ?: return@LaunchedEffect
                 nav.submitPreferences(preferences.toPdfiumPreferences())
+            }
 
-                nav.addInputListener(object : org.readium.r2.navigator.input.InputListener {
+            // Tap to toggle the bars: one listener a navigator. Added with the preferences,
+            // it was added again on each change, and one tap then toggled the bars as many times.
+            androidx.compose.runtime.DisposableEffect(navigator) {
+                val nav = navigator
+                val listener = object : org.readium.r2.navigator.input.InputListener {
                     override fun onTap(event: org.readium.r2.navigator.input.TapEvent): Boolean {
                         viewModel.toggleChrome()
                         return true
                     }
-                })
+                }
+                nav?.addInputListener(listener)
+                onDispose { nav?.removeInputListener(listener) }
             }
 
             if (showBookmarkDialog) {
