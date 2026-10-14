@@ -20,6 +20,11 @@ internal object SyncStatusClassifier {
             statusCode = error.statusCode,
             detail = error.message
         )
+        is KosyncHttpException -> SyncStatus.ServerError(
+            lastAttemptAt = at,
+            statusCode = error.statusCode,
+            detail = error.message
+        )
         is HttpRequestTimeoutException -> SyncStatus.NetworkError(at, "timeout")
         is IOException -> SyncStatus.NetworkError(at, error.message)
         else -> SyncStatus.ServerError(at, statusCode = null, detail = error.message)

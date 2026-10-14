@@ -1,5 +1,6 @@
 package com.ember.reader.core.repository
 
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.database.dao.ReadingProgressDao
 import com.ember.reader.core.database.toDomain
 import com.ember.reader.core.database.toEntity
@@ -88,15 +89,15 @@ class ReadingProgressRepository @Inject constructor(
         server: Server,
         bookId: String,
         documentHash: String
-    ): Result<KosyncProgressResult?> = runCatching {
+    ): Result<KosyncProgressResult?> = runCatchingCancellable {
         val remote = kosyncClient.pullProgress(
             baseUrl = server.url,
             username = server.kosyncUsername,
             password = server.kosyncPassword,
             documentHash = documentHash
-        ).getOrNull() ?: return@runCatching null
+        ).getOrThrow() ?: return@runCatchingCancellable null
 
-        val remotePercentage = remote.percentage ?: return@runCatching null
+        val remotePercentage = remote.percentage ?: return@runCatchingCancellable null
 
         KosyncProgressResult(
             progress = ReadingProgress(
@@ -123,9 +124,8 @@ class ReadingProgressRepository @Inject constructor(
      */
     suspend fun pullKosyncProgressForAllBooks(server: Server, books: List<Pair<String, String>>) {
         for ((bookId, fileHash) in books) {
-            runCatching {
-                val result = pullKosyncProgress(server, bookId, fileHash)
-                val remote = result.getOrNull() ?: return@runCatching
+            runCatchingCancellable {
+                val remote = pullKosyncProgress(server, bookId, fileHash).getOrThrow() ?: return@runCatchingCancellable
 
                 val local = getByBookId(bookId)
                 val localPercentage = local?.percentage ?: 0f

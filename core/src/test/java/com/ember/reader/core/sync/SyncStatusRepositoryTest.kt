@@ -55,6 +55,14 @@ class SyncStatusRepositoryTest {
         }
 
     @Test
+    fun `reportFailure with KosyncHttpException classifies as ServerError with status code`() =
+        runTest {
+            repo.reportFailure(1L, KosyncHttpException(401, "Pull progress failed: 401"))
+            val status = repo.get(1L)
+            assertEquals(401, (status as SyncStatus.ServerError).statusCode)
+        }
+
+    @Test
     fun `reportFailure with IOException classifies as NetworkError`() = runTest {
         repo.reportFailure(1L, UnknownHostException("grimmory.invalid"))
         val status = repo.get(1L)
