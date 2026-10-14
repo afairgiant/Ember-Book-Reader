@@ -16,6 +16,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -25,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -41,11 +43,16 @@ import timber.log.Timber
  * Other apps (the lock screen, the notification, headsets) get the player through a
  * [SkipPlayer], so that their buttons skip by the lengths chosen in the player rather than
  * by whole tracks.
+ *
+ * It saves progress too, and when a book ends marks it finished and starts the next one in
+ * Up Next ([AudiobookPlayback]), so both go on after the player screen is closed.
  */
 @AndroidEntryPoint
 class AudiobookPlaybackService : MediaSessionService() {
 
     @Inject lateinit var appPreferencesRepository: AppPreferencesRepository
+    @Inject lateinit var audiobookPlayback: AudiobookPlayback
+    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var mediaSession: MediaSession? = null
@@ -85,12 +92,21 @@ class AudiobookPlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true) // pause when headphones disconnected
             .build()
         val skipPlayer = SkipPlayer(player).also { skipPlayer = it }
+        player.addListener(ProgressKeeper(player))
 
         val session = MediaSession.Builder(this, skipPlayer)
             .setCallback(SessionCallback())
             .setMediaButtonPreferences(skipButtons(this, skipPlayer.lengths))
             .build()
         mediaSession = session
+
+        // While playing, save every so often, as a crash or a kill would lose the rest.
+        scope.launch {
+            while (true) {
+                delay(SAVE_INTERVAL_MS)
+                if (player.isPlaying) audiobookPlayback.saveProgress(player)
+            }
+        }
 
         scope.launch {
             combine(
@@ -101,6 +117,34 @@ class AudiobookPlaybackService : MediaSessionService() {
                 skipPlayer.lengths = lengths
                 session.setMediaButtonPreferences(skipButtons(this@AudiobookPlaybackService, lengths))
             }
+        }
+    }
+
+    /** Saves progress when playback stops or jumps, and moves on when a book ends. */
+    private inner class ProgressKeeper(private val player: Player) : Player.Listener {
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (!isPlaying && player.playbackState != Player.STATE_ENDED) save()
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            // A seek while paused is not followed by a pause to save it.
+            if (reason == Player.DISCONTINUITY_REASON_SEEK && !player.isPlaying) save()
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                scope.launch { audiobookPlayback.onEnded(player) }
+            }
+        }
+
+        private fun save() {
+            val snapshot = audiobookPlayback.snapshot(player) ?: return
+            scope.launch { audiobookPlayback.save(snapshot) }
         }
     }
 
@@ -199,6 +243,10 @@ class AudiobookPlaybackService : MediaSessionService() {
         Timber.d("AudiobookPlaybackService: onDestroy")
         handler.removeCallbacks(sleepTimerTick)
         scope.cancel()
+        mediaSession?.player?.let { audiobookPlayback.snapshot(it) }?.let { snapshot ->
+            // The service's own scope is gone; the save must outlive it.
+            applicationScope.launch { audiobookPlayback.save(snapshot) }
+        }
         mediaSession?.run {
             player.release()
             release()
@@ -209,5 +257,6 @@ class AudiobookPlaybackService : MediaSessionService() {
 
     private companion object {
         const val SLEEP_TIMER_TICK_MS = 500L
+        const val SAVE_INTERVAL_MS = 30_000L
     }
 }
