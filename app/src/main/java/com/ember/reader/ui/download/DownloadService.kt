@@ -32,6 +32,10 @@ data class DownloadRequest(
     val serverId: Long
 )
 
+/**
+ * Downloads books one after another in the foreground, with a progress notification that
+ * can cancel the one under way. It stops once its queue is empty.
+ */
 @AndroidEntryPoint
 class DownloadService : Service() {
 
@@ -44,6 +48,12 @@ class DownloadService : Service() {
     private var currentJob: Job? = null
     private var currentBookTitle: String? = null
 
+    /** Requests sent but not yet finished; the service stops when none are left. */
+    private var pending = 0
+
+    /** The newest start, so that stopping never cuts off one that came after it. */
+    private var lastStartId = 0
+
     override fun onCreate() {
         super.onCreate()
         Timber.d("DownloadService: onCreate")
@@ -51,24 +61,42 @@ class DownloadService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_CANCEL -> {
-                Timber.d("DownloadService: cancel requested")
-                currentJob?.cancel()
-                return START_NOT_STICKY
-            }
+        lastStartId = startId
+        if (intent?.action == ACTION_CANCEL) {
+            Timber.d("DownloadService: cancel requested")
+            currentJob?.cancel()
+            // A cancel can come from an old notification after the service has gone,
+            // starting a new one with nothing to do.
+            stopIfIdle()
+            return START_NOT_STICKY
         }
+
+        // Started with startForegroundService, so it must be in the foreground at once,
+        // even for a request it will drop.
+        startForeground(
+            NotificationHelper.NOTIFICATION_ID_DOWNLOAD_PROGRESS,
+            NotificationHelper.buildDownloadProgressNotification(this, currentBookTitle, cancelIntent())
+        )
 
         val bookId = intent?.getStringExtra(EXTRA_BOOK_ID)
         val serverId = intent?.getLongExtra(EXTRA_SERVER_ID, -1L) ?: -1L
-
         if (bookId != null && serverId >= 0) {
             Timber.d("DownloadService: enqueue bookId=%s serverId=%d", bookId, serverId)
             _downloadingBookIds.value = _downloadingBookIds.value + bookId
+            pending++
             requestChannel.trySend(DownloadRequest(bookId, serverId))
+        } else {
+            stopIfIdle()
         }
-
         return START_NOT_STICKY
+    }
+
+    /** Leaves the foreground and stops when no download is under way or waiting. */
+    private fun stopIfIdle() {
+        if (pending > 0) return
+        Timber.d("DownloadService: queue empty, stopping")
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf(lastStartId)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -80,6 +108,8 @@ class DownloadService : Service() {
 
             if (book == null || server == null || book.isDownloaded) {
                 _downloadingBookIds.value = _downloadingBookIds.value - request.bookId
+                pending--
+                stopIfIdle()
                 continue
             }
 
@@ -94,12 +124,12 @@ class DownloadService : Service() {
             }
             currentJob?.join()
             currentJob = null
+            currentBookTitle = null
 
             _downloadingBookIds.value = _downloadingBookIds.value - request.bookId
+            pending--
+            stopIfIdle()
         }
-
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     private suspend fun executeDownload(book: Book, server: Server) {
