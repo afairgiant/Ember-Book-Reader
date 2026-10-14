@@ -601,7 +601,10 @@ class LocalLibraryViewModel @Inject constructor(
             _operationResult.value = "Searching..."
             val match = bookRepository.findRelinkMatches(bookId, serverId)
             if (match != null) {
-                bookRepository.relinkToServerBook(bookId, match.serverBookId)
+                bookRepository.relinkToServerBook(bookId, match.serverBookId).onFailure {
+                    _operationResult.value = "Couldn't link: ${it.message}"
+                    return@launch
+                }
                 val book = bookRepository.getById(match.serverBookId)
                 val server = serverRepository.getById(match.serverId)
                 val progressMsg = if (book != null && server != null) pullProgressForBook(book, server) else ""

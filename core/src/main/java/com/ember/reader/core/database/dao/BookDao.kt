@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RawQuery
+import androidx.room.Transaction
 import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.ember.reader.core.database.entity.BookEntity
@@ -88,6 +89,66 @@ interface BookDao {
 
     @Query("DELETE FROM books WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    /**
+     * Makes the book [toId] the one for the file of the book [fromId], and removes [fromId].
+     *
+     * Everything kept for [fromId] goes with it first, since deleting it would otherwise
+     * delete its highlights, bookmarks, progress and reading history with it. Progress goes
+     * only when it is newer than [toId]'s own; reader settings only when [toId] has none.
+     */
+    @Transaction
+    suspend fun relink(
+        fromId: String,
+        toId: String,
+        localPath: String,
+        downloadedAt: java.time.Instant?,
+        fileHash: String?,
+    ) {
+        moveHighlights(fromId, toId)
+        moveBookmarks(fromId, toId)
+        moveReadingSessions(fromId, toId)
+        deleteOlderProgress(fromId, toId)
+        moveProgress(fromId, toId)
+        moveReaderPreferences(fromId, toId)
+        deleteReaderPreferences(fromId)
+        updateLocalPath(toId, localPath, downloadedAt)
+        fileHash?.let { updateFileHash(toId, it) }
+        deleteById(fromId)
+    }
+
+    @Query("UPDATE highlights SET bookId = :toId WHERE bookId = :fromId")
+    suspend fun moveHighlights(fromId: String, toId: String)
+
+    @Query("UPDATE bookmarks SET bookId = :toId WHERE bookId = :fromId")
+    suspend fun moveBookmarks(fromId: String, toId: String)
+
+    @Query("UPDATE reading_sessions SET bookId = :toId WHERE bookId = :fromId")
+    suspend fun moveReadingSessions(fromId: String, toId: String)
+
+    @Query(
+        """
+        DELETE FROM reading_progress WHERE bookId = :toId
+        AND lastReadAt < (SELECT lastReadAt FROM reading_progress WHERE bookId = :fromId)
+        """
+    )
+    suspend fun deleteOlderProgress(fromId: String, toId: String)
+
+    /** Moves [fromId]'s progress to [toId], unless [toId] still has its own. */
+    @Query(
+        """
+        UPDATE OR IGNORE reading_progress
+        SET bookId = :toId, serverId = (SELECT serverId FROM books WHERE id = :toId)
+        WHERE bookId = :fromId
+        """
+    )
+    suspend fun moveProgress(fromId: String, toId: String)
+
+    @Query("UPDATE OR IGNORE book_reader_preferences SET bookId = :toId WHERE bookId = :fromId")
+    suspend fun moveReaderPreferences(fromId: String, toId: String)
+
+    @Query("DELETE FROM book_reader_preferences WHERE bookId = :bookId")
+    suspend fun deleteReaderPreferences(bookId: String)
 
     @Query("SELECT opdsEntryId FROM books WHERE serverId = :serverId AND opdsEntryId IS NOT NULL")
     suspend fun getOpdsEntryIdsForServer(serverId: Long): List<String>
