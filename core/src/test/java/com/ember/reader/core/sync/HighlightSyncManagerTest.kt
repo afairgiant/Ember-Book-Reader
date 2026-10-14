@@ -17,6 +17,8 @@ import io.mockk.slot
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -41,7 +43,7 @@ class HighlightSyncManagerTest {
     @BeforeEach
     fun setUp() {
         dao = FakeHighlightDao()
-        syncManager = HighlightSyncManager(dao, grimmoryClient, syncStatusRepository)
+        syncManager = HighlightSyncManager(dao, grimmoryClient, syncStatusRepository, BookSyncLocks())
     }
 
     @Nested
@@ -295,6 +297,30 @@ class HighlightSyncManagerTest {
         }
 
         @Test
+        fun `two syncs of the same book at once push a new highlight once`() = runTest {
+            dao.insert(
+                highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, selectedText = "my text", cfi = REAL_CFI, remoteId = null)
+            )
+            val onServer = mutableListOf<com.ember.reader.core.grimmory.GrimmoryAnnotation>()
+            coEvery { grimmoryClient.getAnnotations(any(), any(), any()) } coAnswers {
+                kotlinx.coroutines.delay(10)
+                Result.success(onServer.toList())
+            }
+            coEvery { grimmoryClient.createAnnotation(any(), any(), any()) } coAnswers {
+                kotlinx.coroutines.delay(10)
+                grimmoryAnnotation(id = 88, cfi = REAL_CFI).also { onServer += it }.let { Result.success(it) }
+            }
+
+            listOf(
+                async { syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId) },
+                async { syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId) },
+            ).awaitAll()
+
+            coVerify(exactly = 1) { grimmoryClient.createAnnotation(any(), any(), any()) }
+            assertEquals(1, dao.all.size)
+        }
+
+        @Test
         fun `local highlight without a real CFI is held on the device`() = runTest {
             // Before real CFIs, the locator's progression was sent as the "CFI".
             dao.insert(highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = null, remoteId = null))
@@ -344,6 +370,20 @@ class HighlightSyncManagerTest {
         }
 
         @Test
+        fun `an unlinked local highlight at a server annotation's CFI is linked, not copied`() = runTest {
+            // A lost create response: the server has the annotation, the device has no id for it.
+            dao.insert(highlightEntity(bookId = bookId, locatorJson = READIUM_LOCATOR, cfi = REAL_CFI, remoteId = null))
+            coEvery {
+                grimmoryClient.getAnnotations(any(), any(), any())
+            } returns Result.success(listOf(grimmoryAnnotation(id = 50, cfi = REAL_CFI)))
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(1, dao.all.size)
+            assertEquals(50L, dao.all.single().remoteId)
+        }
+
+        @Test
         fun `local with remoteId missing from server is deleted`() = runTest {
             dao.insert(highlightEntity(bookId = bookId, remoteId = 42))
 
@@ -376,6 +416,30 @@ class HighlightSyncManagerTest {
             syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
 
             coVerify { grimmoryClient.deleteAnnotation(any(), any(), eq(10L)) }
+            assertTrue(dao.all.isEmpty())
+        }
+
+        @Test
+        fun `a tombstone stays when the server delete fails, so the highlight is not brought back`() = runTest {
+            dao.insert(
+                highlightEntity(
+                    bookId = bookId, remoteId = 10,
+                    deletedAt = Instant.parse("2026-01-02T00:00:00Z")
+                )
+            )
+            coEvery {
+                grimmoryClient.getAnnotations(any(), any(), any())
+            } returns Result.success(listOf(grimmoryAnnotation(id = 10)))
+            coEvery {
+                grimmoryClient.deleteAnnotation(any(), any(), any())
+            } returns Result.failure(java.io.IOException("offline"))
+
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+            syncManager.syncHighlightsForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(1, dao.all.size)
+            assertTrue(dao.all.single().deletedAt != null)
+            coVerify(exactly = 2) { grimmoryClient.deleteAnnotation(any(), any(), eq(10L)) }
         }
 
         @Test

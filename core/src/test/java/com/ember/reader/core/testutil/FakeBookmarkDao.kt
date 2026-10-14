@@ -68,11 +68,6 @@ class FakeBookmarkDao : BookmarkDao {
         emitUpdate()
     }
 
-    override suspend fun cleanupTombstones(bookId: String) {
-        bookmarks.removeAll { it.bookId == bookId && it.deletedAt != null }
-        emitUpdate()
-    }
-
     private suspend fun emitUpdate() {
         flow.value = bookmarks.toList()
     }

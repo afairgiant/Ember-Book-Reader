@@ -3,6 +3,7 @@ package com.ember.reader.core.sync.worker
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkInfo
@@ -41,7 +42,8 @@ class SyncScheduler @Inject constructor(
             .setConstraints(networkConstraints)
             .addTag(SYNC_NOW_TAG)
             .build()
-        workManager.enqueue(request)
+        // A tap while a sync is queued or running joins it rather than starting a second.
+        workManager.enqueueUniqueWork(SYNC_NOW_WORK, ExistingWorkPolicy.KEEP, request)
     }
 
     fun isSyncRunning(): Flow<Boolean> =
@@ -51,6 +53,7 @@ class SyncScheduler @Inject constructor(
 
     companion object {
         private const val SYNC_NOW_TAG = "sync_now"
+        private const val SYNC_NOW_WORK = "sync_now"
     }
 
     private fun schedulePeriodicSync(intervalMinutes: Long) {

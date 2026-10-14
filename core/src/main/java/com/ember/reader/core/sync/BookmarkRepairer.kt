@@ -24,6 +24,7 @@ import timber.log.Timber
 class BookmarkRepairer @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     private val grimmoryClient: GrimmoryClient,
+    private val bookSyncLocks: BookSyncLocks,
 ) {
 
     /**
@@ -33,6 +34,13 @@ class BookmarkRepairer @Inject constructor(
      * is, by bookmark id. A bookmark it cannot place is left out.
      */
     suspend fun repair(
+        server: Server?,
+        bookId: String,
+        grimmoryBookId: Long?,
+        computeCfis: suspend (List<Bookmark>) -> Map<Long, String>,
+    ): Result<RepairSummary> = bookSyncLocks.withBookmarksLock(bookId) { repairUnlocked(server, bookId, grimmoryBookId, computeCfis) }
+
+    private suspend fun repairUnlocked(
         server: Server?,
         bookId: String,
         grimmoryBookId: Long?,

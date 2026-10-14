@@ -38,7 +38,4 @@ interface BookmarkDao {
 
     @Query("DELETE FROM bookmarks WHERE id = :id")
     suspend fun deleteById(id: Long)
-
-    @Query("DELETE FROM bookmarks WHERE deletedAt IS NOT NULL AND bookId = :bookId")
-    suspend fun cleanupTombstones(bookId: String)
 }
