@@ -2,6 +2,7 @@ package com.ember.reader.core.sync
 
 import com.ember.reader.core.grimmory.CreateBookmarkRequest
 import com.ember.reader.core.model.AudioPosition
+import com.ember.reader.core.model.PdfBookmarkPage
 import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.UpdateBookmarkRequest
 import com.ember.reader.core.testutil.FakeBookmarkDao
@@ -521,6 +522,82 @@ class BookmarkSyncManagerTest {
             assertTrue(AudioPosition(10_000, 1).isNear(AudioPosition(12_000, 1)))
             assertTrue(!AudioPosition(10_000, 1).isNear(AudioPosition(10_000, 2)))
             assertTrue(!AudioPosition(10_000, null).isNear(AudioPosition(15_000, null)))
+        }
+    }
+
+    @Nested
+    inner class Pdf {
+
+        private fun serverPdfBookmark(id: Long, page: Int) =
+            grimmoryBookmark(id = id, cfi = null, title = "Page $page").copy(pageNumber = page)
+
+        @Test
+        fun `a PDF bookmark from the server is kept with its page`() = runTest {
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns
+                Result.success(listOf(serverPdfBookmark(id = 50, page = 42)))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            val local = dao.all.single()
+            assertEquals(50L, local.remoteId)
+            assertEquals(42, PdfBookmarkPage.of(local.locatorJson))
+            assertEquals(null, local.cfi)
+        }
+
+        @Test
+        fun `a new PDF bookmark is pushed by its page`() = runTest {
+            val readerLocator = """{"href":"book.pdf","type":"application/pdf","locations":{"position":8,"totalProgression":0.03}}"""
+            dao.insert(bookmarkEntity(bookId = bookId, locatorJson = PdfBookmarkPage.with(readerLocator, 7), remoteId = null))
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
+            coEvery { grimmoryClient.createBookmark(any(), any(), any()) } returns
+                Result.success(serverPdfBookmark(id = 61, page = 7))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            val requestSlot = slot<CreateBookmarkRequest>()
+            coVerify { grimmoryClient.createBookmark(any(), any(), capture(requestSlot)) }
+            assertEquals(7, requestSlot.captured.pageNumber)
+            assertEquals(null, requestSlot.captured.cfi)
+            assertEquals(null, requestSlot.captured.positionMs)
+            assertEquals(61L, dao.all.single().remoteId)
+        }
+
+        @Test
+        fun `one the server already has on that page is linked, not sent again`() = runTest {
+            dao.insert(bookmarkEntity(bookId = bookId, locatorJson = PdfBookmarkPage.locatorJson(7, null), remoteId = null))
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns
+                Result.success(listOf(serverPdfBookmark(id = 70, page = 7), serverPdfBookmark(id = 71, page = 8)))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createBookmark(any(), any(), any()) }
+            assertEquals(setOf(70L, 71L), dao.all.map { it.remoteId }.toSet())
+            assertEquals(2, dao.all.size)
+        }
+
+        @Test
+        fun `a PDF bookmark from before pages were kept stays on the device`() = runTest {
+            dao.insert(
+                bookmarkEntity(
+                    bookId = bookId, cfi = null, remoteId = null,
+                    locatorJson = """{"href":"book.pdf","type":"application/pdf","locations":{"position":8}}""",
+                )
+            )
+            coEvery { grimmoryClient.getBookmarks(any(), any(), any()) } returns Result.success(emptyList())
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            coVerify(exactly = 0) { grimmoryClient.createBookmark(any(), any(), any()) }
+        }
+
+        @Test
+        fun `the page survives being added to a reader's locator`() {
+            val readerLocator = """{"href":"book.pdf","type":"application/pdf","locations":{"position":8}}"""
+
+            assertEquals(null, PdfBookmarkPage.of(readerLocator))
+            assertEquals(7, PdfBookmarkPage.of(PdfBookmarkPage.with(readerLocator, 7)))
+            assertTrue(PdfBookmarkPage.with(readerLocator, 7).contains("\"position\":8"))
+            assertEquals(null, PdfBookmarkPage.of(AudioPosition(1_000, null).toLocatorJson()))
         }
     }
 

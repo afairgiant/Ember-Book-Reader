@@ -15,6 +15,7 @@ import com.ember.reader.core.model.BookFormat
 import com.ember.reader.core.model.Bookmark
 import com.ember.reader.core.model.Highlight
 import com.ember.reader.core.model.HighlightColor
+import com.ember.reader.core.model.PdfBookmarkPage
 import com.ember.reader.core.model.ReaderPreferences
 import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
@@ -41,6 +42,7 @@ import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.sync.SourceOutcome
 import com.ember.reader.ui.reader.epub.AutoScrollSpeed
 import com.ember.reader.ui.reader.epub.ReadAloud
+import com.ember.reader.ui.reader.pdf.locatorOpeningPdfPage
 import com.ember.reader.ui.reader.pdf.locatorOpeningPdfPercentage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -257,6 +259,11 @@ class ReaderViewModel @Inject constructor(
         // reader is sent on to its CFI once the chapter is up.
         val targetLocatorJson = targetLocatorJson()
         targetLocatorJson?.toLocator(pub, spine.await())?.let { initialLocator = it }
+        // A PDF bookmark is opened by its page: one from the server has no locator to open,
+        // and the page says where it is more surely than the reader's own locator does.
+        targetLocatorJson?.let(PdfBookmarkPage::of)?.let { page ->
+            pub.locatorOpeningPdfPage(page)?.let { initialLocator = it }
+        }
 
         // Wait for the real (DataStore-backed) preferences before handing the
         // fragment to the screen. If we skipped this, the fragment would be
@@ -456,6 +463,43 @@ class ReaderViewModel @Inject constructor(
 
     fun deleteBookmark(id: Long) {
         viewModelScope.launch { bookmarkRepository.deleteBookmark(id) }
+    }
+
+    /** Bookmarks [page] of a PDF, counted from 1. The page is kept so the bookmark can sync. */
+    fun addPdfBookmark(title: String, page: Int) {
+        val locator = _currentLocator.value ?: return
+        viewModelScope.launch {
+            bookmarkRepository.addBookmark(
+                bookId = bookId,
+                locatorJson = PdfBookmarkPage.with(locator.toJsonString(), page),
+                title = title.ifBlank { "Bookmark" },
+            )
+        }
+    }
+
+    /** Removes the bookmark on [page] of a PDF; false when there is none, and one should be made. */
+    fun removePdfBookmark(page: Int): Boolean {
+        val existing = _bookmarks.value.find { PdfBookmarkPage.of(it.locatorJson) == page } ?: return false
+        viewModelScope.launch { bookmarkRepository.deleteBookmark(existing.id) }
+        return true
+    }
+
+    /**
+     * Gives PDF bookmarks made before pages were kept their page, worked out by [pageOf]
+     * from the locator each was stored with. Without it they could not sync.
+     */
+    fun keepPdfBookmarkPages(pageOf: (locatorJson: String) -> Int?) {
+        val pages = _bookmarks.value
+            .filter { PdfBookmarkPage.of(it.locatorJson) == null }
+            .mapNotNull { bookmark -> pageOf(bookmark.locatorJson)?.let { bookmark.id to it } }
+        if (pages.isEmpty()) return
+        viewModelScope.launch {
+            bookmarkRepository.placeBookmarks(
+                pages.associate { (id, page) ->
+                    id to PdfBookmarkPage.with(_bookmarks.value.first { it.id == id }.locatorJson, page)
+                }
+            )
+        }
     }
 
     /** Stores where synced highlights and bookmarks were found in the book. */
