@@ -173,14 +173,15 @@ object NotificationHelper {
         NotificationManagerCompat.from(context).notify("sync_error_$serverName".hashCode(), notification)
     }
 
+    /** The download notification before any progress; with no [bookTitle] while the book is looked up. */
     fun buildDownloadProgressNotification(
         context: Context,
-        bookTitle: String,
+        bookTitle: String?,
         cancelIntent: PendingIntent
     ): android.app.Notification {
         return NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Downloading \"$bookTitle\"")
+            .setContentTitle(if (bookTitle != null) "Downloading \"$bookTitle\"" else "Preparing download")
             .setContentText("Starting download...")
             .setProgress(100, 0, true)
             .setOngoing(true)
