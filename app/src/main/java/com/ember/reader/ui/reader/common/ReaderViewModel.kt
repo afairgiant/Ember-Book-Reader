@@ -130,7 +130,11 @@ class ReaderViewModel @Inject constructor(
     }
 
     /** Reads the book out with the device's speech engine. Kept here so a rotation does not stop it. */
-    internal val readAloud = ReadAloud(viewModelScope)
+    internal val readAloud = ReadAloud(
+        scope = viewModelScope,
+        loadSpeed = { appPreferencesRepository.readAloudSpeedFlow.first().toDouble() },
+        saveSpeed = { appPreferencesRepository.updateReadAloudSpeed(it.toFloat()) }
+    )
 
     /** Starts reading aloud from [from], the first thing on screen; the bars go and the page stops moving. */
     fun startReadAloud(application: Application, from: Locator?) {

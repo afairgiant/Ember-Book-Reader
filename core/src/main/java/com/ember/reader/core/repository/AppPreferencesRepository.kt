@@ -52,6 +52,7 @@ class AppPreferencesRepository @Inject constructor(
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_SCROLL_SPEED = floatPreferencesKey("auto_scroll_speed")
         val AUDIOBOOK_SPEED = floatPreferencesKey("audiobook_speed")
+        val READ_ALOUD_SPEED = floatPreferencesKey("read_aloud_speed")
         val AUDIOBOOK_SKIP_BACK_SECONDS = intPreferencesKey("audiobook_skip_back_seconds")
         val AUDIOBOOK_SKIP_FORWARD_SECONDS = intPreferencesKey("audiobook_skip_forward_seconds")
         val NOTES_INCLUDE_GRIMMORY = booleanPreferencesKey("notes_include_grimmory")
@@ -95,6 +96,16 @@ class AppPreferencesRepository @Inject constructor(
     /** The reader's auto-scroll speed in CSS pixels a second; null until one has been chosen. */
     val autoScrollSpeedFlow: Flow<Float?> = context.appPreferencesDataStore.data
         .map { prefs -> prefs[Keys.AUTO_SCROLL_SPEED] }
+
+    /** The speed books are read aloud at, as a multiple of the voice's own; kept for every book. */
+    val readAloudSpeedFlow: Flow<Float> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.READ_ALOUD_SPEED] ?: 1f }
+
+    suspend fun updateReadAloudSpeed(speed: Float) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.READ_ALOUD_SPEED] = speed
+        }
+    }
 
     /** The speed audiobooks play at, kept for every book. */
     val audiobookSpeedFlow: Flow<Float> = context.appPreferencesDataStore.data
