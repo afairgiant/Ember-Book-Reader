@@ -17,7 +17,9 @@ import com.ember.reader.core.repository.AppAccent
 
 private val EmberOrange = Color(0xFFE65100)
 private val EmberOrangeLight = Color(0xFFFF833A)
-private val EmberOrangeDark = Color(0xFFAC1900)
+// The dark scheme's container colour: the orange laid over the dark surface, as a chosen
+// accent's is. It was a saturated red, which read as a warning behind badges and chips.
+private val EmberOrangeDark = Color(0xFF5F341D)
 
 // Warm tinted surfaces for the ember aesthetic
 val EmberCardLight = Color(0xFFFFF0E8)
