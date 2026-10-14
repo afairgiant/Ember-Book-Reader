@@ -2,14 +2,12 @@ package com.ember.reader.ui.reader.audiobook
 
 import android.content.ComponentName
 import android.content.Context
-import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -18,7 +16,6 @@ import com.ember.reader.core.coroutine.ApplicationScope
 import com.ember.reader.core.grimmory.AudiobookChapter
 import com.ember.reader.core.grimmory.AudiobookInfo
 import com.ember.reader.core.grimmory.AudiobookTrack
-import com.ember.reader.core.grimmory.GrimmoryClient
 import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.AudioPosition
 import com.ember.reader.core.model.Book
@@ -26,14 +23,12 @@ import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
 import com.ember.reader.core.repository.BookmarkRepository
 import com.ember.reader.core.repository.DEFAULT_AUDIOBOOK_SKIP_SECONDS
-import com.ember.reader.core.repository.ReadingProgressRepository
 import com.ember.reader.core.repository.ServerRepository
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.ui.reader.common.ReaderTarget
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -60,6 +55,11 @@ sealed interface AudiobookUiState {
     data class Error(val message: String) : AudiobookUiState
 }
 
+/**
+ * The player screen. It shows the playback service's player and sends it the user's taps;
+ * saving progress and moving on to the next book in Up Next are the service's
+ * ([AudiobookPlayback]), so they go on with the screen closed.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AudiobookViewModel @Inject constructor(
@@ -67,12 +67,11 @@ class AudiobookViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
-    private val readingProgressRepository: ReadingProgressRepository,
-    private val grimmoryClient: GrimmoryClient,
     private val grimmoryTokenManager: GrimmoryTokenManager,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val bookmarkSyncManager: BookmarkSyncManager,
+    private val audiobookPlayback: AudiobookPlayback,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -92,8 +91,9 @@ class AudiobookViewModel @Inject constructor(
     private val _durationMs = MutableStateFlow(0L)
     val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
 
-    private val _playbackSpeed = MutableStateFlow(1.0f)
-    val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+    /** The playback speed, kept for every audiobook. */
+    val playbackSpeed: StateFlow<Float> = appPreferencesRepository.audiobookSpeedFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 1.0f)
 
     /** How far the skip buttons jump, in seconds. Kept for every book. */
     val skipBackSeconds: StateFlow<Int> = appPreferencesRepository.audiobookSkipBackSecondsFlow
@@ -130,9 +130,6 @@ class AudiobookViewModel @Inject constructor(
     /** What will play when this book ends; null when playback will simply stop. */
     val nextAudiobook: StateFlow<NextAudiobook?> = _nextAudiobook.asStateFlow()
 
-    /** Set while one book is being swapped for the next, so the swap is not started twice. */
-    private var advancing = false
-
     private val _chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
     val chapters: StateFlow<List<AudiobookChapter>> = _chapters.asStateFlow()
 
@@ -144,27 +141,15 @@ class AudiobookViewModel @Inject constructor(
 
     private var controller: MediaController? = null
     private var book: Book? = null
-    private var audiobookInfo: AudiobookInfo? = null
-    private var sessionStartTime: java.time.Instant? = null
-    private var sessionStartProgress: Float = 0f
 
     init {
-        viewModelScope.launch { loadBook() }
+        viewModelScope.launch { openBook() }
         // Keep "what plays next" current as the queue or the book changes.
         viewModelScope.launch {
-            combine(upNext, bookIdFlow, _uiState) { queue, _, _ -> queue }.collect { queue ->
-                _nextAudiobook.value = book?.let { chooseNext(it, queue) }
+            combine(upNext, bookIdFlow, _uiState) { _, _, _ -> }.collect {
+                _nextAudiobook.value = book?.let { audiobookPlayback.chooseNext(it) }
             }
         }
-    }
-
-    private suspend fun chooseNext(current: Book, queue: List<Book>): NextAudiobook? {
-        val seriesMates = current.serverId
-            ?.takeIf { current.series != null }
-            ?.let { bookRepository.observeByServer(it).first() }
-            .orEmpty()
-        val progress = seriesMates.associate { it.id to readingProgressRepository.getByBookId(it.id)?.percentage }
-        return nextAudiobook(current, queue, seriesMates, progress::get)
     }
 
     fun removeFromUpNext(book: Book) {
@@ -177,100 +162,70 @@ class AudiobookViewModel @Inject constructor(
 
     /** Leaves the current book where it is and starts [book] from Up Next now. */
     fun playNow(book: Book) {
-        viewModelScope.launch {
-            saveProgress()
-            switchTo(book)
-        }
+        val ctrl = controller ?: return
+        // The screen follows the player to the new book (see followPlayer).
+        viewModelScope.launch { audiobookPlayback.switchTo(ctrl, book) }
     }
 
-    /** The book has played to its end: mark it finished and start what is next, if anything is. */
-    private fun onBookEnded() {
-        if (advancing) return
-        advancing = true
-        viewModelScope.launch {
-            try {
-                readingProgressRepository.updateProgress(
-                    bookId = bookId,
-                    serverId = book?.serverId,
-                    percentage = 1f,
-                    locatorJson = null
-                )
-                val next = book?.let { chooseNext(it, upNext.value) } ?: return@launch
-                Timber.d("Audiobook: '%s' ended, starting '%s'", book?.title, next.book.title)
-                switchTo(next.book)
-            } finally {
-                advancing = false
-            }
-        }
-    }
-
-    private suspend fun switchTo(next: Book) {
-        appPreferencesRepository.updateAudiobookUpNext { it - next.id }
-        savedStateHandle["bookId"] = next.id
-        bookIdFlow.value = next.id
-        _chapters.value = emptyList()
-        _tracks.value = emptyList()
-        _currentTrackIndex.value = 0
-        loadBook(autoPlay = true)
-    }
-
-    private suspend fun loadBook(autoPlay: Boolean = false) {
-        val loadedBook = bookRepository.getById(bookId)
-        if (loadedBook == null) {
-            _uiState.value = AudiobookUiState.Error("Book not found")
-            return
-        }
-        book = loadedBook
-        syncBookmarks()
-
-        val serverId = loadedBook.serverId
-        val server = serverId?.let { serverRepository.getById(it) }
-        val grimmoryBookId = loadedBook.grimmoryBookId
-        Timber.d("Audiobook: loading book=%s grimmoryId=%s serverId=%s isDownloaded=%s", loadedBook.id, grimmoryBookId, serverId, loadedBook.isDownloaded)
-
-        // Fetch audiobook info from Grimmory
-        var info: AudiobookInfo? = null
-        if (server != null && server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id) && grimmoryBookId != null) {
-            val result = grimmoryClient.getAudiobookInfo(server.url, server.id, grimmoryBookId)
-            result.onSuccess { fetchedInfo ->
-                info = fetchedInfo
-                Timber.d("Audiobook: info fetched folderBased=%s tracks=%d chapters=%d", fetchedInfo.folderBased, fetchedInfo.tracks?.size ?: 0, fetchedInfo.chapters?.size ?: 0)
-                fetchedInfo.chapters?.let { _chapters.value = it }
-                fetchedInfo.tracks?.let { _tracks.value = it }
-            }.onFailure { error ->
-                Timber.e(error, "Audiobook: failed to fetch audiobook info")
-            }
-        } else {
-            Timber.w(
-                "Audiobook: skipping info fetch server=%s isGrimmory=%s loggedIn=%s grimmoryBookId=%s", server?.id, server?.isGrimmory,
-                server?.let {
-                    grimmoryTokenManager.isLoggedIn(it.id)
-                },
-                grimmoryBookId
-            )
-        }
-
-        audiobookInfo = info
-        _uiState.value = AudiobookUiState.Ready(book = loadedBook, info = info)
-
-        sessionStartTime = java.time.Instant.now()
-        val localProgress = readingProgressRepository.getByBookId(bookId)
-        sessionStartProgress = localProgress?.percentage ?: 0f
-
-        // Connect to the playback service the first time; after that it only needs the new book.
+    /** Opens the book the screen was opened for, and puts it in the player unless it is there already. */
+    private suspend fun openBook() {
+        val loaded = show(bookId) ?: return
         val ctrl = controller
         if (ctrl == null) {
-            connectToService(loadedBook, server, info)
+            connectToService(loaded)
         } else {
-            startBook(ctrl, loadedBook, server, info, autoPlay)
+            putInPlayer(ctrl, loaded)
         }
     }
 
-    private fun connectToService(
-        book: Book,
-        server: com.ember.reader.core.model.Server?,
-        info: AudiobookInfo?
-    ) {
+    /**
+     * Shows [id]: its title, tracks and chapters. Leaves the player alone.
+     *
+     * @return the book, or null when it is not in the library.
+     */
+    private suspend fun show(id: String): LoadedAudiobook? {
+        savedStateHandle["bookId"] = id
+        bookIdFlow.value = id
+        _chapters.value = emptyList()
+        _tracks.value = emptyList()
+        _currentTrackIndex.value = controller?.currentMediaItemIndex ?: 0
+        val loaded = audiobookPlayback.load(id)
+        if (loaded == null) {
+            _uiState.value = AudiobookUiState.Error("Book not found")
+            return null
+        }
+        book = loaded.book
+        loaded.info?.chapters?.let { _chapters.value = it }
+        loaded.info?.tracks?.let { _tracks.value = it }
+        _uiState.value = AudiobookUiState.Ready(book = loaded.book, info = loaded.info)
+        syncBookmarks()
+        return loaded
+    }
+
+    /**
+     * Puts [loaded] into the player, unless the player has it already: reopening the screen
+     * while the book plays leaves it playing where it is. Another book in the player is
+     * saved first, as replacing it would lose where it was.
+     */
+    private suspend fun putInPlayer(ctrl: MediaController, loaded: LoadedAudiobook) {
+        when (audiobookPlayback.playingBookId(ctrl)) {
+            loaded.book.id -> if (ctrl.playbackState == Player.STATE_IDLE) ctrl.prepare()
+            null -> audiobookPlayback.start(ctrl, loaded, autoPlay = false)
+            else -> {
+                audiobookPlayback.saveProgress(ctrl)
+                audiobookPlayback.start(ctrl, loaded, autoPlay = false)
+            }
+        }
+        seekToRequestedBookmark(ctrl)
+    }
+
+    /** When the service moves the player on to another book, as Up Next does, the screen follows. */
+    private fun followPlayer(ctrl: MediaController) {
+        val playing = audiobookPlayback.playingBookId(ctrl) ?: return
+        if (playing != bookId) viewModelScope.launch { show(playing) }
+    }
+
+    private fun connectToService(loaded: LoadedAudiobook) {
         val sessionToken =
             SessionToken(context, ComponentName(context, AudiobookPlaybackService::class.java))
         val controllerFuture = MediaController.Builder(context, sessionToken)
@@ -282,12 +237,15 @@ class AudiobookViewModel @Inject constructor(
             .buildAsync()
 
         controllerFuture.addListener({
-            val ctrl = controllerFuture.get()
+            val ctrl = runCatching { controllerFuture.get() }.getOrElse {
+                Timber.e(it, "Audiobook: could not connect to the playback service")
+                _uiState.value = AudiobookUiState.Error("Could not start playback")
+                return@addListener
+            }
             controller = ctrl
             // The service may already be running a timer set before this screen was opened.
             onSleepTimerChanged(SleepTimer.fromBundle(ctrl.sessionExtras))
 
-            // Set up player listener
             ctrl.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     _isPlaying.value = playing
@@ -296,7 +254,6 @@ class AudiobookViewModel @Inject constructor(
                     if (playbackState == Player.STATE_READY) {
                         _durationMs.value = ctrl.duration.coerceAtLeast(0)
                     }
-                    if (playbackState == Player.STATE_ENDED) onBookEnded()
                 }
                 override fun onPlayerError(error: PlaybackException) {
                     Timber.e(error, "Audiobook: ExoPlayer error code=%d mediaItem=%d/%d", error.errorCode, ctrl.currentMediaItemIndex, ctrl.mediaItemCount)
@@ -304,174 +261,20 @@ class AudiobookViewModel @Inject constructor(
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     _currentTrackIndex.value = ctrl.currentMediaItemIndex
                     Timber.d("Audiobook: track transition to %d/%d reason=%d title=%s", ctrl.currentMediaItemIndex, ctrl.mediaItemCount, reason, mediaItem?.mediaMetadata?.title)
+                    followPlayer(ctrl)
                 }
             })
+            _isPlaying.value = ctrl.isPlaying
 
             viewModelScope.launch {
-                startBook(ctrl, book, server, info, autoPlay = false)
-                // Start position update loop
+                putInPlayer(ctrl, loaded)
                 startPositionUpdates()
             }
         }, MoreExecutors.directExecutor())
     }
 
-    /**
-     * Hands [book] to the player. With [autoPlay] it starts by itself, as it does when it
-     * follows a book that has just ended; a book already heard to its end then starts over.
-     */
-    private suspend fun startBook(
-        ctrl: MediaController,
-        book: Book,
-        server: com.ember.reader.core.model.Server?,
-        info: AudiobookInfo?,
-        autoPlay: Boolean
-    ) {
-        val mediaItems = buildMediaItems(book, server, info)
-        if (mediaItems.isEmpty()) {
-            Timber.e("Audiobook: no media items could be built")
-            // Leave nothing of the book before in the player: its position would otherwise
-            // be saved as this book's.
-            ctrl.clearMediaItems()
-            return
-        }
-        Timber.d("Audiobook: setting %d media items", mediaItems.size)
-        ctrl.setMediaItems(mediaItems)
-        ctrl.prepare()
-        val heard = readingProgressRepository.getByBookId(book.id)?.percentage ?: 0f
-        if (!(autoPlay && heard >= FINISHED_PROGRESS)) restorePosition(ctrl)
-        seekToRequestedBookmark(ctrl)
-        val speed = appPreferencesRepository.audiobookSpeedFlow.first()
-        _playbackSpeed.value = speed
-        ctrl.setPlaybackSpeed(speed)
-        if (autoPlay) ctrl.play()
-    }
-
-    private suspend fun buildMediaItems(
-        book: Book,
-        server: com.ember.reader.core.model.Server?,
-        info: AudiobookInfo?
-    ): List<MediaItem> {
-        // Build authenticated artwork URI for media notification
-        val artworkUri = book.coverUrl?.let { rawUrl ->
-            if (server != null && server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-                val token = grimmoryTokenManager.getAccessToken(server.id)
-                if (token != null) Uri.parse("$rawUrl?token=$token") else Uri.parse(rawUrl)
-            } else {
-                Uri.parse(rawUrl)
-            }
-        }
-        // Downloaded folder-based audiobook: play from local track files
-        val localPath = book.localPath
-        if (book.isDownloaded && localPath != null) {
-            val localDir = File(localPath)
-            if (localDir.isDirectory) {
-                val trackFiles = localDir.listFiles()
-                    ?.filter { it.isFile && it.length() > 0 }
-                    ?.sortedBy { it.name }
-                    ?: emptyList()
-                if (trackFiles.isNotEmpty()) {
-                    Timber.d("Audiobook: playing %d local track files from %s", trackFiles.size, localDir.name)
-                    return trackFiles.map { file ->
-                        MediaItem.Builder()
-                            .setUri(Uri.fromFile(file))
-                            .setMediaMetadata(
-                                MediaMetadata.Builder()
-                                    .setTitle(file.nameWithoutExtension)
-                                    .setArtist(book.author)
-                                    .setAlbumTitle(book.title)
-                                    .setArtworkUri(artworkUri)
-                                    .build()
-                            )
-                            .build()
-                    }
-                }
-            }
-            // Single downloaded file
-            Timber.d("Audiobook: playing single local file %s", localPath)
-            return listOf(
-                MediaItem.Builder()
-                    .setUri(Uri.fromFile(localDir))
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(book.title)
-                            .setArtist(book.author)
-                            .setArtworkUri(artworkUri)
-                            .build()
-                    )
-                    .build()
-            )
-        }
-
-        // Folder-based streaming: build per-track URLs
-        val tracks = info?.tracks
-        if (info?.folderBased == true && !tracks.isNullOrEmpty() && server != null) {
-            Timber.d("Audiobook: building %d track stream URLs", tracks.size)
-            return tracks.map { track ->
-                val trackUrl = grimmoryClient.audiobookStreamUrl(
-                    server.url, server.id, book.grimmoryBookId!!, track.index
-                )
-                Timber.d("Audiobook: track %d url=%s", track.index, trackUrl?.take(80))
-                MediaItem.Builder()
-                    .setUri(trackUrl ?: "")
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(track.title ?: track.fileName)
-                            .setArtist(book.author)
-                            .setArtworkUri(artworkUri)
-                            .build()
-                    )
-                    .build()
-            }
-        }
-
-        // Single-file streaming
-        val grimmoryBookId = book.grimmoryBookId ?: return emptyList()
-        if (server == null || !server.isGrimmory) return emptyList()
-        val token = grimmoryTokenManager.getAccessToken(server.id) ?: return emptyList()
-        val origin = com.ember.reader.core.network.serverOrigin(server.url)
-        val streamUrl = "$origin/api/v1/audiobooks/$grimmoryBookId/stream?token=$token"
-        Timber.d("Audiobook: single-stream URL (not folder-based)")
-        return listOf(
-            MediaItem.Builder()
-                .setUri(streamUrl)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(book.title)
-                        .setArtist(book.author)
-                        .setArtworkUri(artworkUri)
-                        .build()
-                )
-                .build()
-        )
-    }
-
-    private suspend fun restorePosition(ctrl: MediaController) {
-        val progress = readingProgressRepository.getByBookId(bookId) ?: return
-        // Try to restore from locatorJson which stores audio position
-        val locator = progress.locatorJson
-        if (locator != null && locator.contains("positionMs")) {
-            runCatching {
-                val json = org.json.JSONObject(locator)
-                val positionMs = json.optLong("positionMs", 0)
-                val trackIndex = json.optInt("trackIndex", 0)
-                if (ctrl.mediaItemCount > 1) {
-                    ctrl.seekTo(trackIndex, positionMs)
-                } else {
-                    ctrl.seekTo(positionMs)
-                }
-            }
-        } else if (progress.percentage > 0f) {
-            // Fall back to percentage
-            val duration = ctrl.duration
-            if (duration > 0) {
-                ctrl.seekTo((duration * progress.percentage).toLong())
-            }
-        }
-    }
-
     private fun startPositionUpdates() {
         viewModelScope.launch {
-            var saveCounter = 0
             while (isActive) {
                 val ctrl = controller
                 if (ctrl != null && ctrl.isConnected) {
@@ -479,12 +282,6 @@ class AudiobookViewModel @Inject constructor(
                     _durationMs.value = ctrl.duration.coerceAtLeast(0)
                 }
                 updateSleepTimeLeft()
-                // Save progress every 30 seconds
-                saveCounter++
-                if (saveCounter >= 30) {
-                    saveCounter = 0
-                    saveProgress()
-                }
                 delay(1000)
             }
         }
@@ -666,51 +463,8 @@ class AudiobookViewModel @Inject constructor(
 
     /** Sets the speed, and keeps it for the next audiobook too. */
     fun setSpeed(speed: Float) {
-        _playbackSpeed.value = speed
         controller?.setPlaybackSpeed(speed)
         viewModelScope.launch { appPreferencesRepository.updateAudiobookSpeed(speed) }
-    }
-
-    private suspend fun saveProgress() {
-        val ctrl = controller ?: return
-        val duration = ctrl.duration
-        if (duration <= 0) return
-        val position = ctrl.currentPosition
-        val trackIndex = ctrl.currentMediaItemIndex
-        val trackCount = ctrl.mediaItemCount
-
-        // Calculate overall percentage across all tracks
-        val percentage = if (trackCount > 1) {
-            val info = audiobookInfo
-            val infoTracks = info?.tracks
-            if (info != null && !infoTracks.isNullOrEmpty()) {
-                val totalDurationMs = infoTracks.sumOf { it.durationMs }
-                if (totalDurationMs > 0) {
-                    val cumulativeMs = infoTracks.take(trackIndex).sumOf { it.durationMs } + position
-                    (cumulativeMs.toFloat() / totalDurationMs).coerceIn(0f, 1f)
-                } else {
-                    // Fall back to track-count-based estimate
-                    ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
-                }
-            } else {
-                ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
-            }
-        } else {
-            (position.toFloat() / duration).coerceIn(0f, 1f)
-        }
-
-        val locatorJson = org.json.JSONObject().apply {
-            put("type", "audiobook")
-            put("positionMs", position)
-            put("trackIndex", trackIndex)
-        }.toString()
-
-        readingProgressRepository.updateProgress(
-            bookId = bookId,
-            serverId = book?.serverId,
-            percentage = percentage,
-            locatorJson = locatorJson
-        )
     }
 
     private companion object {
@@ -719,68 +473,12 @@ class AudiobookViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Read position from MediaController on main thread (required by API),
-        // then save to DB asynchronously — never block the main thread
-        val ctrl = controller
-        if (ctrl != null) {
-            val position = ctrl.currentPosition
-            val trackIndex = ctrl.currentMediaItemIndex
-            val duration = ctrl.duration
-            val trackCount = ctrl.mediaItemCount
-            val playing = ctrl.isPlaying
-
-            // Fire-and-forget on the application scope so the save outlives the
-            // ViewModel without leaking via GlobalScope (mirrors ReaderViewModel
-            // after commit 5a22820).
-            applicationScope.launch {
-                saveProgressSnapshot(position, trackIndex, duration, trackCount)
-            }
-
-            if (!playing) {
-                ctrl.stop()
-            }
+        // The service saves the position itself, on pause and as it plays.
+        controller?.let { ctrl ->
+            if (!ctrl.isPlaying) ctrl.stop()
             ctrl.release()
         }
         controller = null
         Timber.d("AudiobookViewModel: onCleared")
-    }
-
-    private suspend fun saveProgressSnapshot(
-        position: Long,
-        trackIndex: Int,
-        duration: Long,
-        trackCount: Int
-    ) {
-        if (duration <= 0) return
-
-        val percentage = if (trackCount > 1) {
-            val infoTracks = audiobookInfo?.tracks
-            if (!infoTracks.isNullOrEmpty()) {
-                val totalDurationMs = infoTracks.sumOf { it.durationMs }
-                if (totalDurationMs > 0) {
-                    val cumulativeMs = infoTracks.take(trackIndex).sumOf { it.durationMs } + position
-                    (cumulativeMs.toFloat() / totalDurationMs).coerceIn(0f, 1f)
-                } else {
-                    ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
-                }
-            } else {
-                ((trackIndex.toFloat() + position.toFloat() / duration) / trackCount).coerceIn(0f, 1f)
-            }
-        } else {
-            (position.toFloat() / duration).coerceIn(0f, 1f)
-        }
-
-        val locatorJson = org.json.JSONObject().apply {
-            put("type", "audiobook")
-            put("positionMs", position)
-            put("trackIndex", trackIndex)
-        }.toString()
-
-        readingProgressRepository.updateProgress(
-            bookId = bookId,
-            serverId = book?.serverId,
-            percentage = percentage,
-            locatorJson = locatorJson
-        )
     }
 }
