@@ -19,10 +19,14 @@ import timber.log.Timber
 class BookmarkSyncManager @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     private val grimmoryClient: GrimmoryClient,
-    private val syncStatusRepository: SyncStatusRepository
+    private val syncStatusRepository: SyncStatusRepository,
+    private val bookSyncLocks: BookSyncLocks,
 ) {
 
-    suspend fun syncBookmarksForBook(server: Server, bookId: String, grimmoryBookId: Long) {
+    suspend fun syncBookmarksForBook(server: Server, bookId: String, grimmoryBookId: Long) =
+        bookSyncLocks.withBookmarksLock(bookId) { sync(server, bookId, grimmoryBookId) }
+
+    private suspend fun sync(server: Server, bookId: String, grimmoryBookId: Long) {
         Timber.d("BookmarkSync: syncing book=%s grimmoryId=%d", bookId, grimmoryBookId)
 
         val serverBookmarks = grimmoryClient.getBookmarks(server.url, server.id, grimmoryBookId)
@@ -42,10 +46,16 @@ class BookmarkSyncManager @Inject constructor(
 
             if (local != null) {
                 if (local.deletedAt != null) {
-                    // Local tombstoned → delete on server
+                    // Local tombstoned → delete on server. The tombstone goes only once the
+                    // server's copy has, or the next sync would bring the bookmark back.
                     grimmoryClient.deleteBookmark(server.url, server.id, serverBookmark.id)
-                        .onSuccess { Timber.d("BookmarkSync: deleted remote bookmark %d", serverBookmark.id) }
-                        .onFailure { Timber.w(it, "BookmarkSync: failed to delete remote bookmark %d", serverBookmark.id) }
+                        .onSuccess {
+                            bookmarkDao.deleteById(local.id)
+                            Timber.d("BookmarkSync: deleted remote bookmark %d", serverBookmark.id)
+                        }
+                        .onFailure {
+                            Timber.w(it, "BookmarkSync: failed to delete remote bookmark %d, retrying next sync", serverBookmark.id)
+                        }
                 } else {
                     // Keep a real CFI the server has for a bookmark stored before Ember kept
                     // them. One that arrived with a fake CFI has not been placed in the book;
@@ -171,8 +181,6 @@ class BookmarkSyncManager @Inject constructor(
             }
         }
 
-        // Clean up remaining tombstones
-        bookmarkDao.cleanupTombstones(bookId)
         syncStatusRepository.reportSuccess(server.id)
         Timber.d("BookmarkSync: completed for book=%s", bookId)
     }

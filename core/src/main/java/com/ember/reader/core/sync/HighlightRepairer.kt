@@ -26,6 +26,7 @@ import timber.log.Timber
 class HighlightRepairer @Inject constructor(
     private val highlightDao: HighlightDao,
     private val grimmoryClient: GrimmoryClient,
+    private val bookSyncLocks: BookSyncLocks,
 ) {
 
     /**
@@ -35,6 +36,13 @@ class HighlightRepairer @Inject constructor(
      * by highlight id. A highlight it cannot place is left out.
      */
     suspend fun repair(
+        server: Server?,
+        bookId: String,
+        grimmoryBookId: Long?,
+        computeCfis: suspend (List<Highlight>) -> Map<Long, String>,
+    ): Result<RepairSummary> = bookSyncLocks.withHighlightsLock(bookId) { repairUnlocked(server, bookId, grimmoryBookId, computeCfis) }
+
+    private suspend fun repairUnlocked(
         server: Server?,
         bookId: String,
         grimmoryBookId: Long?,

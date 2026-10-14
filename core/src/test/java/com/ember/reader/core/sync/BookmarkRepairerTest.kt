@@ -30,7 +30,7 @@ class BookmarkRepairerTest {
     @BeforeEach
     fun setUp() {
         dao = FakeBookmarkDao()
-        repairer = BookmarkRepairer(dao, grimmoryClient)
+        repairer = BookmarkRepairer(dao, grimmoryClient, BookSyncLocks())
         coEvery { grimmoryClient.updateBookmark(any(), any(), any(), any()) } returns
             Result.success(grimmoryBookmark())
     }

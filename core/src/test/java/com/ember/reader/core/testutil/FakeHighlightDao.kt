@@ -68,11 +68,6 @@ class FakeHighlightDao : HighlightDao {
         emitUpdate()
     }
 
-    override suspend fun cleanupTombstones(bookId: String) {
-        highlights.removeAll { it.bookId == bookId && it.deletedAt != null }
-        emitUpdate()
-    }
-
     private suspend fun emitUpdate() {
         flow.value = highlights.toList()
     }

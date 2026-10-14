@@ -17,10 +17,14 @@ import timber.log.Timber
 class HighlightSyncManager @Inject constructor(
     private val highlightDao: HighlightDao,
     private val grimmoryClient: GrimmoryClient,
-    private val syncStatusRepository: SyncStatusRepository
+    private val syncStatusRepository: SyncStatusRepository,
+    private val bookSyncLocks: BookSyncLocks,
 ) {
 
-    suspend fun syncHighlightsForBook(server: Server, bookId: String, grimmoryBookId: Long) {
+    suspend fun syncHighlightsForBook(server: Server, bookId: String, grimmoryBookId: Long) =
+        bookSyncLocks.withHighlightsLock(bookId) { sync(server, bookId, grimmoryBookId) }
+
+    private suspend fun sync(server: Server, bookId: String, grimmoryBookId: Long) {
         Timber.d("HighlightSync: syncing book=%s grimmoryId=%d", bookId, grimmoryBookId)
 
         val serverAnnotations = grimmoryClient.getAnnotations(server.url, server.id, grimmoryBookId)
@@ -41,11 +45,15 @@ class HighlightSyncManager @Inject constructor(
 
             if (local != null) {
                 if (local.deletedAt != null) {
-                    // Local tombstoned → delete on server
+                    // Local tombstoned → delete on server. The tombstone goes only once the
+                    // server's copy has, or the next sync would bring the highlight back.
                     grimmoryClient.deleteAnnotation(server.url, server.id, serverAnnotation.id)
-                        .onSuccess { Timber.d("HighlightSync: deleted remote annotation %d", serverAnnotation.id) }
+                        .onSuccess {
+                            highlightDao.deleteById(local.id)
+                            Timber.d("HighlightSync: deleted remote annotation %d", serverAnnotation.id)
+                        }
                         .onFailure {
-                            Timber.w(it, "HighlightSync: failed to delete remote annotation %d", serverAnnotation.id)
+                            Timber.w(it, "HighlightSync: failed to delete remote annotation %d, retrying next sync", serverAnnotation.id)
                         }
                 } else {
                     // Always refresh color and locator from server data
@@ -96,7 +104,13 @@ class HighlightSyncManager @Inject constructor(
                     }
                 }
             } else {
-                // Not matched locally → new from server, create locally
+                // Not matched locally. It may still be one made here at the same place and
+                // not yet linked (a lost create response, a 409); that one is linked below,
+                // so it is not made a second time.
+                if (localHighlights.any { it.remoteId == null && it.deletedAt == null && it.cfi == serverAnnotation.cfi }) {
+                    continue
+                }
+                // New from server
                 val cfi = serverAnnotation.cfi ?: continue
                 val locatorJson = CfiLocatorConverter.buildLocatorJson(
                     cfi = cfi,
@@ -183,8 +197,6 @@ class HighlightSyncManager @Inject constructor(
             }
         }
 
-        // Clean up remaining tombstones
-        highlightDao.cleanupTombstones(bookId)
         syncStatusRepository.reportSuccess(server.id)
         Timber.d("HighlightSync: completed for book=%s", bookId)
     }

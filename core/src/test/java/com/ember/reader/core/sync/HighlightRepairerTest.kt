@@ -33,7 +33,7 @@ class HighlightRepairerTest {
     @BeforeEach
     fun setUp() {
         dao = FakeHighlightDao()
-        repairer = HighlightRepairer(dao, grimmoryClient)
+        repairer = HighlightRepairer(dao, grimmoryClient, BookSyncLocks())
         coEvery { grimmoryClient.deleteAnnotation(any(), any(), any()) } returns Result.success(Unit)
     }
 

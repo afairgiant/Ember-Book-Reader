@@ -38,7 +38,4 @@ interface HighlightDao {
 
     @Query("DELETE FROM highlights WHERE id = :id")
     suspend fun deleteById(id: Long)
-
-    @Query("DELETE FROM highlights WHERE deletedAt IS NOT NULL AND bookId = :bookId")
-    suspend fun cleanupTombstones(bookId: String)
 }

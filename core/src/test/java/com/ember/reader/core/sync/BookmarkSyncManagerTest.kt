@@ -44,7 +44,7 @@ class BookmarkSyncManagerTest {
     @BeforeEach
     fun setUp() {
         dao = FakeBookmarkDao()
-        syncManager = BookmarkSyncManager(dao, grimmoryClient, syncStatusRepository)
+        syncManager = BookmarkSyncManager(dao, grimmoryClient, syncStatusRepository, BookSyncLocks())
     }
 
     @Nested
@@ -243,7 +243,7 @@ class BookmarkSyncManagerTest {
         }
 
         @Test
-        fun `cleanupTombstones removes remaining tombstones after sync`() = runTest {
+        fun `a tombstone goes once its server copy is deleted`() = runTest {
             // Tombstoned bookmark that was matched and server-deleted in the server loop
             dao.insert(
                 bookmarkEntity(
@@ -261,8 +261,32 @@ class BookmarkSyncManagerTest {
 
             syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
 
-            // After cleanupTombstones, no tombstoned items should remain
             assertTrue(dao.all.none { it.deletedAt != null })
+        }
+
+        @Test
+        fun `a tombstone stays when the server delete fails, so the bookmark is not brought back`() = runTest {
+            dao.insert(
+                bookmarkEntity(
+                    bookId = bookId,
+                    remoteId = 10,
+                    deletedAt = Instant.parse("2026-01-02T00:00:00Z")
+                )
+            )
+            coEvery {
+                grimmoryClient.getBookmarks(any(), any(), any())
+            } returns Result.success(listOf(grimmoryBookmark(id = 10)))
+            coEvery {
+                grimmoryClient.deleteBookmark(any(), any(), any())
+            } returns Result.failure(java.io.IOException("offline"))
+
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+            // The next sync finds the tombstone still there, not a "new" server bookmark.
+            syncManager.syncBookmarksForBook(testServer, bookId, grimmoryBookId)
+
+            assertEquals(1, dao.all.size)
+            assertTrue(dao.all.single().deletedAt != null)
+            coVerify(exactly = 2) { grimmoryClient.deleteBookmark(any(), any(), eq(10L)) }
         }
     }
 
