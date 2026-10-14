@@ -12,11 +12,11 @@ import javax.inject.Singleton
 import timber.log.Timber
 
 /** How far into a book the reader has to be before the next in its series is fetched. */
-const val NEXT_IN_SERIES_MIN_PROGRESS = 0.5f
+const val NEXT_IN_SERIES_MIN_PROGRESS = 0.8f
 
 /**
  * The books whose series should be looked at for a next one: of the [downloaded] books that
- * belong to a series and are at least half read, the furthest along in each series. Ebooks
+ * belong to a series and are nearly finished, the furthest along in each series. Ebooks
  * and audiobooks of one series are followed separately, as each is read on its own.
  */
 fun seriesFrontiers(downloaded: List<Book>, progressOf: (bookId: String) -> Float?): List<Book> = downloaded
@@ -34,7 +34,7 @@ fun nextInSeries(after: Float, seriesBooks: List<GrimmoryAppBook>): List<Grimmor
     .sortedBy { it.seriesNumber }
 
 /**
- * Downloads the next book of a series the reader is well into, so that it is on the device
+ * Downloads the next book of a series when the reader is near the end of one, so that it is on the device
  * by the time the current one is finished.
  */
 @Singleton
