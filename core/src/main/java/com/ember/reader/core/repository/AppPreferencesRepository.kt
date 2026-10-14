@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -56,6 +57,10 @@ class AppPreferencesRepository @Inject constructor(
         val NOTES_INCLUDE_GRIMMORY = booleanPreferencesKey("notes_include_grimmory")
         val AUTO_CLEANUP = booleanPreferencesKey("auto_cleanup")
         val AUTO_DOWNLOAD_READING = booleanPreferencesKey("auto_download_reading")
+        val AUTO_DOWNLOAD_NEXT_IN_SERIES = booleanPreferencesKey("auto_download_next_in_series")
+
+        /** The server ids of books already fetched as the next in a series, so none is fetched twice. */
+        fun seriesAutoDownloaded(serverId: Long) = stringSetPreferencesKey("series_auto_downloaded_$serverId")
         val HAS_SEEN_TAP_ZONE_HINT = booleanPreferencesKey("has_seen_tap_zone_hint")
         val SYNC_NOTIFICATIONS = booleanPreferencesKey("sync_notifications")
         val NEW_BOOK_NOTIFICATIONS = booleanPreferencesKey("new_book_notifications")
@@ -116,6 +121,28 @@ class AppPreferencesRepository @Inject constructor(
     suspend fun getAutoDownloadReading(): Boolean =
         context.appPreferencesDataStore.data.map { it[Keys.AUTO_DOWNLOAD_READING] ?: false }
             .first()
+
+    /** Whether a sync fetches the next book of a series the reader is well into. */
+    val autoDownloadNextInSeriesFlow: Flow<Boolean> = context.appPreferencesDataStore.data
+        .map { prefs -> prefs[Keys.AUTO_DOWNLOAD_NEXT_IN_SERIES] ?: false }
+
+    suspend fun getAutoDownloadNextInSeries(): Boolean = autoDownloadNextInSeriesFlow.first()
+
+    suspend fun updateAutoDownloadNextInSeries(enabled: Boolean) {
+        context.appPreferencesDataStore.edit { prefs ->
+            prefs[Keys.AUTO_DOWNLOAD_NEXT_IN_SERIES] = enabled
+        }
+    }
+
+    suspend fun getSeriesAutoDownloaded(serverId: Long): Set<String> =
+        context.appPreferencesDataStore.data.map { it[Keys.seriesAutoDownloaded(serverId)].orEmpty() }.first()
+
+    suspend fun addSeriesAutoDownloaded(serverId: Long, grimmoryBookId: String) {
+        context.appPreferencesDataStore.edit { prefs ->
+            val key = Keys.seriesAutoDownloaded(serverId)
+            prefs[key] = prefs[key].orEmpty() + grimmoryBookId
+        }
+    }
 
     suspend fun updateThemeMode(mode: ThemeMode) {
         context.appPreferencesDataStore.edit { prefs ->

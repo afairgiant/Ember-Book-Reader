@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FormatColorFill
+import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sync
@@ -63,6 +64,7 @@ fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel 
     val syncBookmarks by viewModel.syncBookmarks.collectAsStateWithLifecycle()
     val autoDownloadReading by viewModel.autoDownloadReading.collectAsStateWithLifecycle()
     val autoDownloadReadingEnabled by viewModel.autoDownloadReadingEnabled.collectAsStateWithLifecycle()
+    val autoDownloadNextInSeries by viewModel.autoDownloadNextInSeries.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
     // The app's outer scaffold has already made room for the system bars.
@@ -151,6 +153,18 @@ fun SyncSettingsScreen(onNavigateBack: () -> Unit, viewModel: SettingsViewModel 
                     },
                     checked = autoDownloadReading && autoDownloadReadingEnabled,
                     onCheckedChange = { viewModel.updateAutoDownloadReading(it) },
+                    enabled = autoDownloadReadingEnabled
+                )
+
+                SettingsDivider()
+
+                // Needs the same permission as the row above, so it is offered on the same terms.
+                SettingsToggleRow(
+                    icon = Icons.Default.LibraryAdd,
+                    title = stringResource(R.string.auto_download_next_in_series),
+                    subtitle = stringResource(R.string.auto_download_next_in_series_hint),
+                    checked = autoDownloadNextInSeries && autoDownloadReadingEnabled,
+                    onCheckedChange = { viewModel.updateAutoDownloadNextInSeries(it) },
                     enabled = autoDownloadReadingEnabled
                 )
             }

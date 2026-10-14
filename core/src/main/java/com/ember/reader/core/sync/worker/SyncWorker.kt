@@ -25,6 +25,7 @@ import com.ember.reader.core.repository.toBookFormat
 import com.ember.reader.core.sync.BookmarkSyncManager
 import com.ember.reader.core.sync.HighlightSyncManager
 import com.ember.reader.core.sync.NewBooksChecker
+import com.ember.reader.core.sync.NextInSeriesDownloader
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.SyncStatusRepository
 import com.ember.reader.core.sync.newBooksTitle
@@ -45,6 +46,7 @@ class SyncWorker @AssistedInject constructor(
     private val progressSyncManager: ProgressSyncManager,
     private val highlightSyncManager: HighlightSyncManager,
     private val bookmarkSyncManager: BookmarkSyncManager,
+    private val nextInSeriesDownloader: NextInSeriesDownloader,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val bookDao: com.ember.reader.core.database.dao.BookDao,
@@ -101,6 +103,12 @@ class SyncWorker @AssistedInject constructor(
                     // Grimmory would reject with 403 and we'd just spam failures.
                     if (appPreferencesRepository.getAutoDownloadReading() && server.canDownload != false) {
                         autoDownloadReadingBooks(server)
+                    }
+                    // And the next book of a series that is well under way.
+                    if (appPreferencesRepository.getAutoDownloadNextInSeries() && server.canDownload != false) {
+                        runCatching { nextInSeriesDownloader.run(server) }
+                            .onSuccess { titles -> if (titles.isNotEmpty()) showAutoDownloadNotification(titles) }
+                            .onFailure { Timber.w(it, "SyncWorker: next-in-series download failed") }
                     }
 
                     // Highlight & bookmark sync — sync all books from this server

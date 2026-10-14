@@ -57,6 +57,13 @@ class SettingsViewModel @Inject constructor(
     val autoDownloadReading: StateFlow<Boolean> = appPreferencesRepository.autoDownloadReadingFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val autoDownloadNextInSeries: StateFlow<Boolean> = appPreferencesRepository.autoDownloadNextInSeriesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun updateAutoDownloadNextInSeries(enabled: Boolean) {
+        viewModelScope.launch { appPreferencesRepository.updateAutoDownloadNextInSeries(enabled) }
+    }
+
     /**
      * False when every connected Grimmory server has explicit `canDownload == false`
      * — in that state the toggle is meaningless because [SyncWorker.autoDownloadReadingBooks]
