@@ -16,9 +16,9 @@ class NextInSeriesTest {
         GrimmoryAppBook(id = id, title = "Server $id", seriesNumber = number)
 
     @Test
-    fun `a book at least half read is followed, one barely begun is not`() {
+    fun `a book near its end is followed, one only half read is not`() {
         val books = listOf(book("a", "Saga", 1f), book("b", "Other", 1f))
-        val progress = mapOf("a" to 0.5f, "b" to 0.49f)
+        val progress = mapOf("a" to 0.8f, "b" to 0.5f)
 
         assertEquals(listOf("a"), seriesFrontiers(books, progress::get).map { it.id })
     }
@@ -27,7 +27,7 @@ class NextInSeriesTest {
     fun `the furthest book under way stands for its series`() {
         val books = listOf(book("one", "Saga", 1f), book("two", "Saga", 2f), book("three", "Saga", 3f))
         // Three is on the device but not yet begun.
-        val progress = mapOf("one" to 1f, "two" to 0.7f, "three" to 0f)
+        val progress = mapOf("one" to 1f, "two" to 0.85f, "three" to 0f)
 
         assertEquals(listOf("two"), seriesFrontiers(books, progress::get).map { it.id })
     }
@@ -43,7 +43,7 @@ class NextInSeriesTest {
     fun `the ebooks and audiobooks of a series are followed separately`() {
         val books = listOf(book("e", "Saga", 2f), book("a", "Saga", 1f, BookFormat.AUDIOBOOK))
 
-        assertEquals(setOf("e", "a"), seriesFrontiers(books) { 0.8f }.map { it.id }.toSet())
+        assertEquals(setOf("e", "a"), seriesFrontiers(books) { 0.9f }.map { it.id }.toSet())
     }
 
     @Test
