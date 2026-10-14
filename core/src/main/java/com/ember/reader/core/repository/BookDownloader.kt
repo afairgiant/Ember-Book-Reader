@@ -68,7 +68,8 @@ class BookDownloader @Inject constructor(
                     { bytesRead, totalBytes ->
                         callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                     }
-                }
+                },
+                validate = ::validateDownloadedFile,
             ).getOrThrow()
         } else {
             opdsClient.downloadBookToFile(
@@ -81,11 +82,10 @@ class BookDownloader @Inject constructor(
                     { bytesRead, totalBytes ->
                         callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                     }
-                }
+                },
+                validate = ::validateDownloadedFile,
             ).getOrThrow()
         }
-
-        validateDownloadedFile(file)
 
         val fileHash = PartialMd5.compute(file)
         bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
@@ -148,7 +148,11 @@ class BookDownloader @Inject constructor(
         for (track in tracks) {
             val trackFile =
                 File(audiobookDir, "%03d_%s".format(track.index, track.fileName ?: "track${track.index}.m4a"))
-            if (trackFile.exists() && trackFile.length() > 0) {
+            // A track is only ever written whole (see streamTo). One a version before that
+            // left cut short is told by its size, when the server gives it.
+            if (trackFile.exists() && trackFile.length() > 0 &&
+                (track.fileSizeBytes <= 0 || trackFile.length() == track.fileSizeBytes)
+            ) {
                 Timber.d("Track ${track.index} already downloaded, skipping")
                 completedBytes += trackFile.length()
                 continue
@@ -157,7 +161,7 @@ class BookDownloader @Inject constructor(
                 ?: error("Cannot build stream URL for track ${track.index}")
             Timber.d("Downloading track ${track.index}: ${track.title ?: track.fileName}")
             val trackCompletedBytes = completedBytes
-            grimmoryClient.downloadFromUrl(streamUrl, trackFile) { bytesRead, trackTotalBytes ->
+            grimmoryClient.downloadFromUrl(streamUrl, trackFile, onProgress = { bytesRead, trackTotalBytes ->
                 onProgress?.invoke(
                     DownloadProgress(
                         bytesDownloaded = trackCompletedBytes + bytesRead,
@@ -168,7 +172,7 @@ class BookDownloader @Inject constructor(
                         trackTotalBytes = trackTotalBytes
                     )
                 )
-            }.getOrThrow()
+            }).getOrThrow()
             completedBytes += trackFile.length()
         }
 
@@ -192,11 +196,11 @@ class BookDownloader @Inject constructor(
                 { bytesRead, totalBytes ->
                     callback(DownloadProgress(bytesDownloaded = bytesRead, totalBytes = totalBytes))
                 }
-            }
+            },
+            validate = ::validateDownloadedFile,
         ).getOrThrow()
 
         Timber.d("Download complete: file=${file.name} size=${file.length()}")
-        validateDownloadedFile(file)
 
         val fileHash = PartialMd5.compute(file)
         bookDao.updateLocalPath(book.id, file.absolutePath, Instant.now())
@@ -209,14 +213,16 @@ class BookDownloader @Inject constructor(
         )
     }
 
+    /**
+     * Rejects a download that is an error page rather than a book. It runs on the finished
+     * download before it replaces anything, so a rejected one leaves the copy already there.
+     */
     private fun validateDownloadedFile(file: File) {
         if (file.length() < 100) {
-            file.delete()
             error("Downloaded file is too small — server may have returned an error")
         }
         val header = ByteArray(5).also { buf -> file.inputStream().use { it.read(buf) } }
         if (header.decodeToString().startsWith("<!") || header.decodeToString().startsWith("<html")) {
-            file.delete()
             error("Downloaded file is HTML, not a book — check server URL and credentials")
         }
     }

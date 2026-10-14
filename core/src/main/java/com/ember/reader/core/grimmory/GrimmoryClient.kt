@@ -1,9 +1,11 @@
 package com.ember.reader.core.grimmory
 
+import com.ember.reader.core.coroutine.runCatchingCancellable
+import com.ember.reader.core.network.fileTransferTimeouts
 import com.ember.reader.core.network.serverOrigin
+import com.ember.reader.core.network.streamTo
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.plugins.timeout
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -12,17 +14,12 @@ import io.ktor.client.request.post
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
-import io.ktor.http.contentLength
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import io.ktor.utils.io.readAvailable
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Singleton
 class GrimmoryClient @Inject constructor(
@@ -148,34 +145,17 @@ class GrimmoryClient @Inject constructor(
         serverId: Long,
         grimmoryBookId: Long,
         destination: File,
-        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
+        validate: (File) -> Unit = {},
     ): Result<Unit> = tokenManager.withAuth(baseUrl, serverId) { token ->
         httpClient.prepareGet("${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/download") {
             header("Authorization", "Bearer $token")
-            timeout {
-                requestTimeoutMillis = 600_000
-                socketTimeoutMillis = 120_000
-            }
+            fileTransferTimeouts()
         }.execute { response ->
             if (!response.status.isSuccess()) {
                 throw GrimmoryHttpException(response.status.value, "Download failed: ${response.status}")
             }
-            val totalBytes = response.contentLength()
-            val channel = response.bodyAsChannel()
-            withContext(Dispatchers.IO) {
-                destination.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var downloaded = 0L
-                    while (!channel.isClosedForRead) {
-                        val bytes = channel.readAvailable(buffer)
-                        if (bytes > 0) {
-                            output.write(buffer, 0, bytes)
-                            downloaded += bytes
-                            onProgress?.invoke(downloaded, totalBytes)
-                        }
-                    }
-                }
-            }
+            response.streamTo(destination, onProgress, validate)
         }
     }
 
@@ -447,33 +427,16 @@ class GrimmoryClient @Inject constructor(
     suspend fun downloadFromUrl(
         url: String,
         destination: File,
-        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null
-    ): Result<Unit> = runCatching {
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
+        validate: (File) -> Unit = {},
+    ): Result<Unit> = runCatchingCancellable {
         httpClient.prepareGet(url) {
-            timeout {
-                requestTimeoutMillis = 600_000
-                socketTimeoutMillis = 120_000
-            }
+            fileTransferTimeouts()
         }.execute { response ->
             if (!response.status.isSuccess()) {
                 throw GrimmoryHttpException(response.status.value, "Download failed: ${response.status}")
             }
-            val totalBytes = response.contentLength()
-            val channel = response.bodyAsChannel()
-            withContext(Dispatchers.IO) {
-                destination.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var downloaded = 0L
-                    while (!channel.isClosedForRead) {
-                        val bytes = channel.readAvailable(buffer)
-                        if (bytes > 0) {
-                            output.write(buffer, 0, bytes)
-                            downloaded += bytes
-                            onProgress?.invoke(downloaded, totalBytes)
-                        }
-                    }
-                }
-            }
+            response.streamTo(destination, onProgress, validate)
         }
     }
 

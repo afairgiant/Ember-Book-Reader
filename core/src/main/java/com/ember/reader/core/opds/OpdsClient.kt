@@ -1,27 +1,25 @@
 package com.ember.reader.core.opds
 
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.network.basicAuthHeader
+import com.ember.reader.core.network.fileTransferTimeouts
 import com.ember.reader.core.network.normalizeUrl
 import com.ember.reader.core.network.resolveUrl
 import com.ember.reader.core.network.serverOrigin
+import com.ember.reader.core.network.streamTo
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
-import io.ktor.http.contentLength
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import io.ktor.utils.io.readAvailable
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 @Singleton
@@ -121,31 +119,18 @@ class OpdsClient @Inject constructor(
         password: String,
         downloadPath: String,
         destination: File,
-        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null
-    ): Result<Unit> = runCatching {
+        onProgress: ((bytesRead: Long, totalBytes: Long?) -> Unit)? = null,
+        validate: (File) -> Unit = {},
+    ): Result<Unit> = runCatchingCancellable {
         val url = resolveUrl(baseUrl, downloadPath)
         httpClient.prepareGet(url) {
             header("Authorization", basicAuth(username, password))
+            fileTransferTimeouts()
         }.execute { response ->
             if (!response.status.isSuccess()) {
                 error("Download failed: ${response.status}")
             }
-            val totalBytes = response.contentLength()
-            val channel = response.bodyAsChannel()
-            withContext(Dispatchers.IO) {
-                destination.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var downloaded = 0L
-                    while (!channel.isClosedForRead) {
-                        val bytes = channel.readAvailable(buffer)
-                        if (bytes > 0) {
-                            output.write(buffer, 0, bytes)
-                            downloaded += bytes
-                            onProgress?.invoke(downloaded, totalBytes)
-                        }
-                    }
-                }
-            }
+            response.streamTo(destination, onProgress, validate)
         }
     }
 
