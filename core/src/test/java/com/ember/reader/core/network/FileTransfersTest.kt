@@ -9,6 +9,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -79,6 +80,19 @@ class FileTransfersTest {
         val destination = File(dir, "track.m4a")
 
         runCatching { download(client(ByteArray(500), contentLength = 1000), destination) }
+
+        assertFalse(destination.exists())
+        assertFalse(partFileFor(destination).exists())
+    }
+
+    @Test
+    fun `a download cancelled partway leaves neither a part file nor a destination`() = runTest {
+        val destination = File(dir, "track.m4a")
+
+        // Cancelled once some of it is written, as the Cancel button does mid-transfer.
+        assertThrows<CancellationException> {
+            download(client(ByteArray(1_000_000)), destination, onProgress = { _, _ -> throw CancellationException("cancelled") })
+        }
 
         assertFalse(destination.exists())
         assertFalse(partFileFor(destination).exists())
