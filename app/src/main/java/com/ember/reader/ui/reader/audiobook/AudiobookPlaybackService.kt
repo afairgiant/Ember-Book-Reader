@@ -125,6 +125,8 @@ class AudiobookPlaybackService : MediaSessionService() {
                 .setAvailableSessionCommands(
                     MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .add(SleepTimer.SET_COMMAND)
+                        .add(SkipCommands.BACK)
+                        .add(SkipCommands.FORWARD)
                         .build()
                 )
                 .setSessionExtras(sleepTimer.toBundle())
@@ -173,10 +175,12 @@ class AudiobookPlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle
         ): ListenableFuture<SessionResult> {
-            if (customCommand.customAction != SleepTimer.SET_COMMAND.customAction) {
-                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+            when (customCommand.customAction) {
+                SleepTimer.SET_COMMAND.customAction -> setSleepTimer(SleepTimer.fromBundle(args))
+                SkipCommands.BACK.customAction -> session.player.seekBack()
+                SkipCommands.FORWARD.customAction -> session.player.seekForward()
+                else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
             }
-            setSleepTimer(SleepTimer.fromBundle(args))
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
     }

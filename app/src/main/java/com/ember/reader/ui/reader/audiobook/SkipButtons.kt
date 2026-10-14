@@ -2,10 +2,12 @@ package com.ember.reader.ui.reader.audiobook
 
 import android.content.Context
 import androidx.annotation.OptIn
+import android.os.Bundle
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
+import androidx.media3.session.SessionCommand
 import com.ember.reader.R
 import com.ember.reader.core.repository.DEFAULT_AUDIOBOOK_SKIP_SECONDS
 
@@ -49,16 +51,26 @@ internal class SkipPlayer(player: Player) : ForwardingPlayer(player) {
     override fun seekToNext() = seekForward()
 }
 
-/** The skip back and forward buttons for the lock screen and notification, in place of previous and next. */
+/** The session commands behind the lock screen's skip buttons. */
+internal object SkipCommands {
+    val BACK = SessionCommand("com.ember.reader.SKIP_BACK", Bundle.EMPTY)
+    val FORWARD = SessionCommand("com.ember.reader.SKIP_FORWARD", Bundle.EMPTY)
+}
+
+/**
+ * The skip back and forward buttons for the lock screen and notification, in place of
+ * previous and next. They are custom session commands: the system's media controls show
+ * only those, leaving out buttons for Media3's own seek commands.
+ */
 @OptIn(UnstableApi::class)
 internal fun skipButtons(context: Context, lengths: SkipLengths): List<CommandButton> = listOf(
     CommandButton.Builder(skipBackIcon(lengths.backSeconds))
-        .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+        .setSessionCommand(SkipCommands.BACK)
         .setDisplayName(context.getString(R.string.audiobook_skip_back_cd, lengths.backSeconds))
         .setSlots(CommandButton.SLOT_BACK)
         .build(),
     CommandButton.Builder(skipForwardIcon(lengths.forwardSeconds))
-        .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+        .setSessionCommand(SkipCommands.FORWARD)
         .setDisplayName(context.getString(R.string.audiobook_skip_forward_cd, lengths.forwardSeconds))
         .setSlots(CommandButton.SLOT_FORWARD)
         .build(),
