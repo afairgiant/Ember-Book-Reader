@@ -2,6 +2,7 @@ package com.ember.reader.ui.hardcover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ember.reader.core.hardcover.HardcoverAuthException
 import com.ember.reader.core.hardcover.HardcoverBook
 import com.ember.reader.core.hardcover.HardcoverBookDetail
 import com.ember.reader.core.hardcover.HardcoverClient
@@ -9,6 +10,7 @@ import com.ember.reader.core.hardcover.HardcoverStatus
 import com.ember.reader.core.hardcover.HardcoverTokenManager
 import com.ember.reader.core.hardcover.HardcoverUser
 import com.ember.reader.core.repository.ServerRepository
+import com.ember.reader.ui.common.friendlyErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +69,9 @@ class HardcoverViewModel @Inject constructor(
         return serverRepository.getAll().firstOrNull { it.isGrimmory }?.id
     }
 
+    /** Tries loading the profile again after a failure that was not the token's. */
+    fun retry() = loadProfile()
+
     fun disconnect() {
         tokenManager.disconnect()
         _uiState.value = HardcoverUiState.NotConnected
@@ -90,9 +95,15 @@ class HardcoverViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     Timber.w(error, "Hardcover: failed to fetch profile")
-                    tokenManager.disconnect()
-                    _uiState.value = HardcoverUiState.NotConnected
-                    _message.value = "Invalid or expired token"
+                    // Only Hardcover refusing the token means it is bad. Offline, a timeout
+                    // or a server error must not throw away a token the user pasted in.
+                    if (error is HardcoverAuthException) {
+                        tokenManager.disconnect()
+                        _uiState.value = HardcoverUiState.NotConnected
+                        _message.value = "Invalid or expired token"
+                    } else {
+                        _uiState.value = HardcoverUiState.Error(friendlyErrorMessage(error))
+                    }
                 }
         }
     }
@@ -124,6 +135,8 @@ class HardcoverViewModel @Inject constructor(
 sealed interface HardcoverUiState {
     data object Loading : HardcoverUiState
     data object NotConnected : HardcoverUiState
+    /** The profile could not be loaded for a reason other than the token; it is kept. */
+    data class Error(val message: String) : HardcoverUiState
     data class Connected(
         val user: HardcoverUser,
         val tabs: List<Int>,

@@ -64,6 +64,7 @@ import com.ember.reader.R
 import com.ember.reader.core.hardcover.HardcoverBook
 import com.ember.reader.core.hardcover.HardcoverBookDetail
 import com.ember.reader.core.hardcover.HardcoverStatus
+import com.ember.reader.ui.common.ErrorScreen
 import com.ember.reader.ui.settings.components.SettingsCard
 import com.ember.reader.ui.settings.components.SettingsChoiceChips
 import com.ember.reader.ui.settings.components.SettingsLabel
@@ -118,6 +119,14 @@ fun HardcoverScreen(
                 ) {
                     CircularProgressIndicator()
                 }
+            }
+
+            is HardcoverUiState.Error -> {
+                ErrorScreen(
+                    message = state.message,
+                    modifier = Modifier.padding(padding),
+                    onRetry = viewModel::retry
+                )
             }
 
             HardcoverUiState.NotConnected -> {
