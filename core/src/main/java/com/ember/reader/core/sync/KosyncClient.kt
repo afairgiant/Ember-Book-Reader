@@ -9,6 +9,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
@@ -17,7 +18,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import timber.log.Timber
 
 @Singleton
 class KosyncClient @Inject constructor(
@@ -32,7 +32,7 @@ class KosyncClient @Inject constructor(
                 headers[HttpHeaders.Accept] = ACCEPT_HEADER
             }
             if (!response.status.isSuccess()) {
-                error("Authentication failed: ${response.status}")
+                throw KosyncHttpException(response.status.value, "Authentication failed: ${response.status}")
             }
         }
 
@@ -69,22 +69,23 @@ class KosyncClient @Inject constructor(
         }
         when {
             response.status.isSuccess() -> response.body<KosyncProgressResponse>()
-            // 404 on pull means "book hash not on server" — almost always stale local
-            // hash after a metadata edit rewrote the file. Surface it typed so the
-            // caller can refresh the local file and retry instead of silently
-            // treating it as "no remote progress" (which would then pre-empt a
-            // real pull once the hash is corrected).
+            // Grimmory answers 404 both for a book with no progress yet ("No progress
+            // found for user and book") and for a hash it does not know ("Book not
+            // found for hash ..."). Only the second is an error.
+            response.status.value == 404 && response.bodyAsText().contains(NO_PROGRESS_MESSAGE, ignoreCase = true) ->
+                null
+            // A hash the server does not know is almost always a stale local hash
+            // after a metadata edit rewrote the file. Surface it typed so the caller
+            // can refresh the local file and retry.
             response.status.value == 404 ->
                 throw KosyncHttpException(404, "Pull progress returned 404 for hash=$documentHash")
-            else -> {
-                Timber.w("Pull progress returned ${response.status}")
-                null
-            }
+            else -> throw KosyncHttpException(response.status.value, "Pull progress failed: ${response.status}")
         }
     }
 
     companion object {
         private const val ACCEPT_HEADER = "application/vnd.koreader.v1+json"
+        private const val NO_PROGRESS_MESSAGE = "No progress found"
     }
 }
 

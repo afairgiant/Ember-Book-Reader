@@ -6,6 +6,7 @@ import com.ember.reader.core.model.ReadingProgress
 import com.ember.reader.core.model.Server
 import com.ember.reader.core.sync.DeviceIdentity
 import com.ember.reader.core.sync.KosyncClient
+import com.ember.reader.core.sync.KosyncHttpException
 import com.ember.reader.core.sync.KosyncProgressRequest
 import com.ember.reader.core.sync.KosyncProgressResponse
 import io.mockk.coEvery
@@ -137,6 +138,17 @@ class ReadingProgressRepositoryTest {
 
         assertTrue(result.isSuccess)
         coVerify { readingProgressDao.markSynced("book-1", any()) }
+    }
+
+    @Test
+    fun `pullKosyncProgress passes the client's failure on`() = runTest {
+        coEvery {
+            kosyncClient.pullProgress(any(), any(), any(), any())
+        } returns Result.failure(KosyncHttpException(401, "unauthorized"))
+
+        val result = repository.pullKosyncProgress(testServer, "book-1", "doc-hash")
+
+        assertEquals(401, (result.exceptionOrNull() as KosyncHttpException).statusCode)
     }
 
     @Test

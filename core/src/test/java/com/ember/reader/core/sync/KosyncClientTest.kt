@@ -170,9 +170,13 @@ class KosyncClientTest {
         }
 
     @Test
-    fun `pullProgress returns null on other non-success statuses`() = runTest {
+    fun `pullProgress returns null for Grimmory's no-progress 404`() = runTest {
         val engine = MockEngine {
-            respond(content = ByteReadChannel(""), status = HttpStatusCode.InternalServerError)
+            respond(
+                content = ByteReadChannel("""{"message":"No progress found for user and book","status":404}"""),
+                status = HttpStatusCode.NotFound,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
         }
 
         val client = createClient(engine)
@@ -180,5 +184,35 @@ class KosyncClientTest {
 
         assertTrue(result.isSuccess)
         assertNull(result.getOrNull())
+    }
+
+    @Test
+    fun `pullProgress surfaces Grimmory's unknown-hash 404 as KosyncHttpException`() = runTest {
+        val engine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"message":"Book not found for hash abc123hash","status":404}"""),
+                status = HttpStatusCode.NotFound,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val client = createClient(engine)
+        val err = client.pullProgress(baseUrl, username, password, "abc123hash").exceptionOrNull()
+
+        assertEquals(404, (err as KosyncHttpException).statusCode)
+    }
+
+    @Test
+    fun `pullProgress fails with the status on other non-success statuses`() = runTest {
+        for (status in listOf(HttpStatusCode.Unauthorized, HttpStatusCode.InternalServerError)) {
+            val engine = MockEngine {
+                respond(content = ByteReadChannel(""), status = status)
+            }
+
+            val client = createClient(engine)
+            val err = client.pullProgress(baseUrl, username, password, "abc123hash").exceptionOrNull()
+
+            assertEquals(status.value, (err as KosyncHttpException).statusCode)
+        }
     }
 }
