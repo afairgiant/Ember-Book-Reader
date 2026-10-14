@@ -217,23 +217,12 @@ class BookRepository @Inject constructor(
         val resolvedIds = mutableListOf<String>()
         result.onSuccess { bookPage ->
             for (book in bookPage.books) {
-                val existing = book.opdsEntryId?.let {
-                    bookDao.getByOpdsEntryId(it, server.id)
-                }
-                if (existing != null) {
-                    bookDao.update(
-                        existing.copy(
-                            title = book.title,
-                            author = book.author,
-                            description = book.description,
-                            coverUrl = book.coverUrl,
-                            downloadUrl = book.downloadUrl
-                        )
-                    )
-                    resolvedIds.add(existing.id)
-                } else {
+                val opdsEntryId = book.opdsEntryId
+                if (opdsEntryId == null) {
                     bookDao.insert(book.toEntity())
                     resolvedIds.add(book.id)
+                } else {
+                    resolvedIds.add(upsertOpdsBook(server.id, opdsEntryId, book))
                 }
             }
         }
@@ -424,20 +413,7 @@ class BookRepository @Inject constructor(
             for (book in bookPage.books) {
                 val opdsEntryId = book.opdsEntryId ?: continue
                 seenOpdsIds.add(opdsEntryId)
-                val existing = bookDao.getByOpdsEntryId(opdsEntryId, server.id)
-                if (existing != null) {
-                    bookDao.update(
-                        existing.copy(
-                            title = book.title,
-                            author = book.author,
-                            description = book.description,
-                            coverUrl = book.coverUrl,
-                            downloadUrl = book.downloadUrl
-                        )
-                    )
-                } else {
-                    bookDao.insert(book.toEntity())
-                }
+                upsertOpdsBook(server.id, opdsEntryId, book)
             }
 
             if (bookPage.nextPagePath == null) break
@@ -454,7 +430,6 @@ class BookRepository @Inject constructor(
         opdsEntryId: String,
         appBook: GrimmoryAppBook
     ): String {
-        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
         val format = appBook.toBookFormat()
         val coverUrl = resolvedCoverUrl(origin, appBook, format)
         val downloadUrl = grimmoryDownloadUrl(appBook.id)
@@ -462,8 +437,30 @@ class BookRepository @Inject constructor(
         // now() only when the server omits it (older API builds).
         val serverAddedAt = parseServerTimestampOrNull(appBook.addedOn)
 
-        if (existing != null) {
-            bookDao.update(
+        return bookDao.upsertServerBook(
+            serverId = serverId,
+            opdsEntryId = opdsEntryId,
+            onNew = {
+                Book(
+                    id = java.util.UUID.randomUUID().toString(),
+                    serverId = serverId,
+                    opdsEntryId = opdsEntryId,
+                    title = appBook.title,
+                    author = appBook.authors.firstOrNull(),
+                    coverUrl = coverUrl,
+                    downloadUrl = downloadUrl,
+                    format = format,
+                    series = appBook.seriesName,
+                    seriesIndex = appBook.seriesNumber,
+                    addedAt = serverAddedAt ?: Instant.now(),
+                    pageCount = appBook.pageCount,
+                    publishedDate = appBook.publishedDate,
+                    fileSizeKb = appBook.fileSizeKb,
+                    ageRating = appBook.ageRating,
+                    contentRating = appBook.contentRating
+                ).toEntity()
+            },
+            onExisting = { existing ->
                 existing.copy(
                     title = appBook.title,
                     author = appBook.authors.firstOrNull(),
@@ -480,30 +477,36 @@ class BookRepository @Inject constructor(
                     ageRating = appBook.ageRating ?: existing.ageRating,
                     contentRating = appBook.contentRating ?: existing.contentRating
                 )
-            )
-            return existing.id
-        } else {
-            val book = Book(
-                id = java.util.UUID.randomUUID().toString(),
-                serverId = serverId,
-                opdsEntryId = opdsEntryId,
-                title = appBook.title,
-                author = appBook.authors.firstOrNull(),
-                coverUrl = coverUrl,
-                downloadUrl = downloadUrl,
-                format = format,
-                series = appBook.seriesName,
-                seriesIndex = appBook.seriesNumber,
-                addedAt = serverAddedAt ?: Instant.now(),
-                pageCount = appBook.pageCount,
-                publishedDate = appBook.publishedDate,
-                fileSizeKb = appBook.fileSizeKb,
-                ageRating = appBook.ageRating,
-                contentRating = appBook.contentRating
-            )
-            bookDao.insert(book.toEntity())
-            return book.id
-        }
+            },
+        )
+    }
+
+    /** Upserts a book from an OPDS feed into the local DB. Returns the local book ID. */
+    private suspend fun upsertOpdsBook(serverId: Long, opdsEntryId: String, book: Book): String =
+        bookDao.upsertServerBook(
+            serverId = serverId,
+            opdsEntryId = opdsEntryId,
+            onNew = { book.toEntity() },
+            onExisting = { existing ->
+                existing.copy(
+                    title = book.title,
+                    author = book.author,
+                    description = book.description,
+                    coverUrl = book.coverUrl,
+                    downloadUrl = book.downloadUrl
+                )
+            },
+        )
+
+    /**
+     * The local book for a server book, creating [book] as its row when there is none yet.
+     * The check and the insert are one transaction, so two callers cannot both create it.
+     */
+    suspend fun getOrCreateServerBook(book: Book): Book {
+        val serverId = requireNotNull(book.serverId) { "getOrCreateServerBook: ${book.id} has no server" }
+        val opdsEntryId = requireNotNull(book.opdsEntryId) { "getOrCreateServerBook: ${book.id} has no entry id" }
+        val id = bookDao.upsertServerBook(serverId, opdsEntryId, onNew = { book.toEntity() }, onExisting = { it })
+        return if (id == book.id) book else checkNotNull(getById(id))
     }
 
     /**
@@ -517,7 +520,6 @@ class BookRepository @Inject constructor(
         opdsEntryId: String,
         summary: GrimmoryBookSummary
     ): String {
-        val existing = bookDao.getByOpdsEntryId(opdsEntryId, serverId)
         val format = summary.toBookFormat()
         val coverUrl = if (format == BookFormat.AUDIOBOOK) {
             grimmoryAppClient.audiobookCoverUrl(origin, summary.id, summary.coverUpdatedOn)
@@ -527,8 +529,23 @@ class BookRepository @Inject constructor(
         val downloadUrl = grimmoryDownloadUrl(summary.id)
         val serverAddedAt = parseServerTimestampOrNull(summary.addedOn)
 
-        if (existing != null) {
-            bookDao.update(
+        return bookDao.upsertServerBook(
+            serverId = serverId,
+            opdsEntryId = opdsEntryId,
+            onNew = {
+                Book(
+                    id = java.util.UUID.randomUUID().toString(),
+                    serverId = serverId,
+                    opdsEntryId = opdsEntryId,
+                    title = summary.title,
+                    author = summary.authors.firstOrNull(),
+                    coverUrl = coverUrl,
+                    downloadUrl = downloadUrl,
+                    format = format,
+                    addedAt = serverAddedAt ?: Instant.now()
+                ).toEntity()
+            },
+            onExisting = { existing ->
                 existing.copy(
                     title = summary.title,
                     author = summary.authors.firstOrNull() ?: existing.author,
@@ -536,23 +553,8 @@ class BookRepository @Inject constructor(
                     downloadUrl = downloadUrl,
                     addedAt = serverAddedAt ?: existing.addedAt
                 )
-            )
-            return existing.id
-        } else {
-            val book = Book(
-                id = java.util.UUID.randomUUID().toString(),
-                serverId = serverId,
-                opdsEntryId = opdsEntryId,
-                title = summary.title,
-                author = summary.authors.firstOrNull(),
-                coverUrl = coverUrl,
-                downloadUrl = downloadUrl,
-                format = format,
-                addedAt = serverAddedAt ?: Instant.now()
-            )
-            bookDao.insert(book.toEntity())
-            return book.id
-        }
+            },
+        )
     }
 
     /**

@@ -76,6 +76,8 @@ class BookRepositoryTest {
     @BeforeEach
     fun setUp() {
         every { context.filesDir } returns tempDir
+        // The DAO's own find-or-insert, so tests stub getByOpdsEntryId, insert and update.
+        coEvery { bookDao.upsertServerBook(any(), any(), any(), any()) } answers { callOriginal() }
         repository = BookRepository(context, bookDao, opdsClient, serverRepository, grimmoryAppClient, grimmoryTokenManager, bookDownloader, metadataExtractor)
     }
 

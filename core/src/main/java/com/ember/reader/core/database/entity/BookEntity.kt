@@ -20,6 +20,9 @@ import java.time.Instant
     indices = [
         Index("serverId"),
         Index("opdsEntryId"),
+        // One row per server book. Rows without a server or entry id (local books) are
+        // not constrained, since SQLite treats NULLs as distinct.
+        Index(value = ["serverId", "opdsEntryId"], unique = true),
         Index(value = ["serverId", "title"]),
         Index(value = ["serverId", "addedAt"]),
         Index(value = ["serverId", "author"]),

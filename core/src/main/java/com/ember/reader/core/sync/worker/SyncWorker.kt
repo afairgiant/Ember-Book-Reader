@@ -293,8 +293,7 @@ class SyncWorker @AssistedInject constructor(
                         format = format,
                         coverUrl = coverUrl
                     )
-                    bookRepository.addLocalBook(newBook)
-                    newBook
+                    bookRepository.getOrCreateServerBook(newBook)
                 }
 
                 bookRepository.downloadBook(book, server).onSuccess { downloadedBook ->
