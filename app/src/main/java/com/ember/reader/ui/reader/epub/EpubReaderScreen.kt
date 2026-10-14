@@ -123,8 +123,6 @@ fun EpubReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hi
                         viewModel.saveCurrentProgress()
                     }
                     viewModel.stopAutoScroll()
-                    // Nothing keeps the speech going once the reader is off the screen.
-                    viewModel.readAloud.pause()
                     viewModel.onSessionPause()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {

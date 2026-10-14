@@ -66,13 +66,22 @@ internal object ReadAloudSpeed {
  * Reads a book aloud with the device's text-to-speech engine, sentence by sentence, through
  * Readium's TTS navigator.
  *
- * It speaks only while the reader is open: there is no playback service behind it, so the
- * reader pauses it when the app leaves the screen.
+ * It lasts as long as the reader that started it. [ReadAloudService] holds its player in a
+ * media session meanwhile, so that it carries on with the screen off or the app in the
+ * background, and can be paused from the lock screen.
+ *
+ * @param loadSpeed the speed last chosen, read when reading starts.
+ * @param saveSpeed keeps a newly chosen speed for next time.
  */
 @OptIn(ExperimentalReadiumApi::class)
-internal class ReadAloud(private val scope: CoroutineScope) {
+internal class ReadAloud(
+    private val scope: CoroutineScope,
+    private val loadSpeed: suspend () -> Double = { ReadAloudSpeed.DEFAULT },
+    private val saveSpeed: suspend (Double) -> Unit = {}
+) {
 
     private var navigator: AndroidTtsNavigator? = null
+    private var application: Application? = null
     private var watching: Job? = null
 
     private val _state = MutableStateFlow<ReadAloudState>(ReadAloudState.Off)
@@ -91,6 +100,7 @@ internal class ReadAloud(private val scope: CoroutineScope) {
         if (_state.value is ReadAloudState.Starting || _state.value is ReadAloudState.Reading) return
         _state.value = ReadAloudState.Starting
         scope.launch {
+            _speed.value = loadSpeed()
             val factory = TtsNavigatorFactory(application, publication)
                 ?: return@launch fail(ReadAloudFailure.NO_TEXT)
             val listener = object : TtsNavigator.Listener {
@@ -111,6 +121,11 @@ internal class ReadAloud(private val scope: CoroutineScope) {
                 return@launch
             }
             navigator = created
+            this@ReadAloud.application = application
+            ReadAloudPlayback.player = created.asMedia3Player()
+            ReadAloudPlayback.stop = ::stop
+            runCatching { ReadAloudPlayback.startService(application) }
+                .onFailure { Timber.w(it, "Read aloud: no playback service; it will stop with the screen") }
             watching = scope.launch {
                 launch { created.location.collect { _spoken.value = it.utteranceLocator } }
                 created.playback.collect { playback ->
@@ -134,11 +149,6 @@ internal class ReadAloud(private val scope: CoroutineScope) {
         if (reading.playing) navigator?.pause() else navigator?.play()
     }
 
-    /** Pauses if it is speaking; for when the reader leaves the screen. */
-    fun pause() {
-        if ((_state.value as? ReadAloudState.Reading)?.playing == true) navigator?.pause()
-    }
-
     fun previousSentence() {
         navigator?.skipToPreviousUtterance()
     }
@@ -152,12 +162,17 @@ internal class ReadAloud(private val scope: CoroutineScope) {
         val speed = ReadAloudSpeed.step(_speed.value, faster)
         _speed.value = speed
         navigator?.submitPreferences(AndroidTtsPreferences(speed = speed))
+        scope.launch { saveSpeed(speed) }
     }
 
     /** Stops reading and lets go of the speech engine. Also clears a failure. */
     fun stop() {
         watching?.cancel()
         watching = null
+        ReadAloudPlayback.player = null
+        ReadAloudPlayback.stop = null
+        application?.let { runCatching { ReadAloudPlayback.stopService(it) } }
+        application = null
         navigator?.close()
         navigator = null
         _spoken.value = null
