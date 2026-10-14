@@ -6,6 +6,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import javax.inject.Inject
@@ -220,6 +221,11 @@ class HardcoverClient @Inject constructor(
             header("authorization", token)
             setBody(GraphqlRequest(query = graphql))
         }
+        // Hardcover's gateway answers 400 for a token in the wrong form ("Use 'Bearer <token>'")
+        // and 401 for one it does not know; GraphQL errors come back as 200.
+        if (response.status in TOKEN_REFUSED) {
+            throw HardcoverAuthException("Hardcover rejected the token: ${response.status}")
+        }
         if (!response.status.isSuccess()) {
             error("Hardcover API error: ${response.status}")
         }
@@ -234,8 +240,15 @@ class HardcoverClient @Inject constructor(
 
     companion object {
         private const val API_URL = "https://api.hardcover.app/v1/graphql"
+        private val TOKEN_REFUSED = setOf(HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden)
     }
 }
+
+/**
+ * Hardcover refused the token (400, 401 or 403): it is malformed, wrong, expired or revoked. Any other
+ * failure, such as being offline, says nothing about the token.
+ */
+class HardcoverAuthException(message: String) : RuntimeException(message)
 
 @Serializable
 private data class GraphqlRequest(

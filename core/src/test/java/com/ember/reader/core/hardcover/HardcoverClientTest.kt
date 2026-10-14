@@ -54,6 +54,46 @@ class HardcoverClientTest {
         )
 
     @Test
+    fun `fetchMe fails with HardcoverAuthException when the token is refused`() = runTest {
+        val engine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"error":"invalid_token","error_description":"Token is not associated with a user"}"""),
+                status = HttpStatusCode.Unauthorized,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val error = createClient(engine).fetchMe().exceptionOrNull()
+
+        assertTrue(error is HardcoverAuthException, "expected HardcoverAuthException, got $error")
+    }
+
+    @Test
+    fun `a token in the wrong form is refused too`() = runTest {
+        val engine = MockEngine {
+            respond(
+                content = ByteReadChannel("""{"error":"invalid_request","error_description":"Invalid Authorization format. Use 'Bearer <token>'"}"""),
+                status = HttpStatusCode.BadRequest,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val error = createClient(engine).fetchMe().exceptionOrNull()
+
+        assertTrue(error is HardcoverAuthException, "expected HardcoverAuthException, got $error")
+    }
+
+    @Test
+    fun `fetchMe failing for any other reason is not a token failure`() = runTest {
+        val engine = MockEngine { respond(content = ByteReadChannel(""), status = HttpStatusCode.ServiceUnavailable) }
+
+        val error = createClient(engine).fetchMe().exceptionOrNull()
+
+        assertNotNull(error)
+        assertTrue(error !is HardcoverAuthException, "a 503 must not read as a bad token")
+    }
+
+    @Test
     fun `fetchMe sends GraphQL query with authorization header`() = runTest {
         var capturedAuth: String? = null
         var capturedBody: String? = null
