@@ -19,9 +19,6 @@ interface ReadingProgressDao {
     @Query("SELECT * FROM reading_progress")
     fun observeAll(): Flow<List<ReadingProgressEntity>>
 
-    @Query("SELECT * FROM reading_progress WHERE needsSync = 1 AND serverId = :serverId")
-    suspend fun getUnsyncedProgress(serverId: Long): List<ReadingProgressEntity>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(progress: ReadingProgressEntity)
 

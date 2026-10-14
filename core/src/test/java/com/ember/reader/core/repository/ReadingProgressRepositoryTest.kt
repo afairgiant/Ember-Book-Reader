@@ -201,30 +201,4 @@ class ReadingProgressRepositoryTest {
 
         coVerify { readingProgressDao.upsert(any()) }
     }
-
-    @Test
-    fun `pushUnsyncedKosyncProgress filters by serverId`() = runTest {
-        val unsyncedEntity = ReadingProgressEntity(
-            bookId = "book-1",
-            serverId = 1L,
-            percentage = 0.5f,
-            locatorJson = "{}",
-            kosyncProgress = "{}",
-            lastReadAt = java.time.Instant.now(),
-            needsSync = true
-        )
-        coEvery { readingProgressDao.getUnsyncedProgress(1L) } returns listOf(unsyncedEntity)
-        coEvery { readingProgressDao.getByBookId("book-1") } returns unsyncedEntity
-        every { deviceIdentity.deviceName } returns "Ember"
-        every { deviceIdentity.deviceId } returns "device-id"
-        coEvery { kosyncClient.pushProgress(any(), any(), any(), any()) } returns Result.success(Unit)
-        coEvery { readingProgressDao.markSynced(any(), any()) } returns Unit
-
-        repository.pushUnsyncedKosyncProgress(testServer) { bookId ->
-            if (bookId == "book-1") "hash-1" else null
-        }
-
-        coVerify { readingProgressDao.getUnsyncedProgress(testServer.id) }
-        coVerify { kosyncClient.pushProgress(any(), any(), any(), any()) }
-    }
 }

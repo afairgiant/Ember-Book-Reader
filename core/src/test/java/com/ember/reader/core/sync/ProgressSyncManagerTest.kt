@@ -789,6 +789,70 @@ class ProgressSyncManagerTest {
     }
 
     @Nested
+    inner class SyncInBackground {
+
+        private fun remoteAt(percentage: Float) {
+            coEvery { readingProgressRepository.pullKosyncProgress(any(), any(), any()) } returns
+                Result.success(KosyncProgressResult(readingProgress(percentage = percentage), "KOReader"))
+            coEvery { grimmoryClient.getAppBookProgress(any(), any(), any()) } returns
+                Result.success(grimmoryAppBookProgress(readProgress = null))
+        }
+
+        @Test
+        fun `a further-ahead remote is taken and old local progress is not pushed over it`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(testBook.id) } returns
+                readingProgress(percentage = 0.3f).copy(needsSync = true)
+            remoteAt(0.6f)
+
+            val result = syncManager.syncInBackground(testServer, testBook)
+
+            assertEquals(BackgroundSyncResult(pulled = true, pushed = false, pushFailed = false), result)
+            coVerify { readingProgressRepository.applyRemoteProgress(match { it.percentage == 0.6f }) }
+            coVerify(exactly = 0) { readingProgressRepository.pushKosyncProgress(any(), any(), any()) }
+        }
+
+        @Test
+        fun `local progress ahead of the server is pushed after the pull`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(testBook.id) } returns readingProgress(percentage = 0.7f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            remoteAt(0.4f)
+
+            val result = syncManager.syncInBackground(testServer, testBook)
+
+            assertTrue(result.pushed)
+            assertFalse(result.pulled)
+            coVerifyOrder {
+                readingProgressRepository.pullKosyncProgress(any(), any(), any())
+                readingProgressRepository.pushKosyncProgress(any(), any(), any())
+            }
+            coVerify(exactly = 0) { readingProgressRepository.applyRemoteProgress(any()) }
+        }
+
+        @Test
+        fun `the same position on both sides is neither pulled nor pushed`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(testBook.id) } returns readingProgress(percentage = 0.5f)
+            remoteAt(0.505f)
+
+            val result = syncManager.syncInBackground(testServer, testBook)
+
+            assertEquals(BackgroundSyncResult(pulled = false, pushed = false, pushFailed = false), result)
+            coVerify(exactly = 0) { readingProgressRepository.pushKosyncProgress(any(), any(), any()) }
+        }
+
+        @Test
+        fun `kosync is asked once a book, not twice`() = runTest {
+            coEvery { readingProgressRepository.getByBookId(testBook.id) } returns readingProgress(percentage = 0.7f)
+            coEvery { readingProgressRepository.pushKosyncProgress(any(), any(), any()) } returns Result.success(Unit)
+            remoteAt(0.4f)
+
+            syncManager.syncInBackground(testServer, testBook)
+
+            coVerify(exactly = 1) { readingProgressRepository.pullKosyncProgress(any(), any(), any()) }
+            coVerify(exactly = 1) { readingProgressRepository.pushKosyncProgress(any(), any(), any()) }
+        }
+    }
+
+    @Nested
     inner class DisabledChannels {
 
         @Test

@@ -63,6 +63,17 @@ sealed interface SourceOutcome<out T> {
  * Result of a combined kosync + Grimmory progress push. Both channels run
  * concurrently and either succeed, skip (not applicable), or fail.
  */
+/**
+ * What [ProgressSyncManager.syncInBackground] did for one book. [pushFailed] counts a
+ * push that failed on one channel even when the other took it, so the sync notification
+ * shows it; hiding kosync failures behind Grimmory's success left users trusting a stale server.
+ */
+data class BackgroundSyncResult(
+    val pulled: Boolean,
+    val pushed: Boolean,
+    val pushFailed: Boolean,
+)
+
 data class PushResult(
     val kosync: SourceOutcome<Unit>,
     val grimmory: SourceOutcome<Unit>
@@ -168,6 +179,39 @@ class ProgressSyncManager @Inject constructor(
         reportStatus(server.id, listOf(kosync, grimmory))
 
         return PushResult(kosync = kosync, grimmory = grimmory)
+    }
+
+    /**
+     * The background sync of one book: pulls the furthest remote position and takes it when
+     * it is ahead of this device's, then pushes this device's when it is ahead of the
+     * server's. Pulling first means a device with old, unpushed progress cannot overwrite a
+     * record another device has moved further on.
+     */
+    suspend fun syncInBackground(server: Server, book: Book): BackgroundSyncResult {
+        val localPct = readingProgressRepository.getByBookId(book.id)?.percentage ?: 0f
+        val remote = pullBestProgress(server, book)
+        val pulled = remote != null && remote.progress.percentage > localPct + AHEAD_MARGIN
+        if (pulled) {
+            readingProgressRepository.applyRemoteProgress(remote!!.progress)
+            Timber.d("Background sync: pulled ${remote.progress.percentage} for '${book.title}' from ${remote.source} (local was $localPct)")
+        }
+
+        val serverPct = remote?.progress?.percentage ?: 0f
+        if (localPct <= 0f || localPct <= serverPct + AHEAD_MARGIN) {
+            return BackgroundSyncResult(pulled = pulled, pushed = false, pushFailed = false)
+        }
+        val push = pushProgress(server, book)
+        if (push.anySucceeded) {
+            Timber.d("Background sync: pushed $localPct for '${book.title}' (server was $serverPct)")
+        }
+        if (push.anyFailed) {
+            Timber.w(
+                push.firstActionableError(),
+                "Background sync: push had failures for '${book.title}' " +
+                    "(kosync=${push.kosync::class.simpleName} grimmory=${push.grimmory::class.simpleName})"
+            )
+        }
+        return BackgroundSyncResult(pulled = pulled, pushed = push.anySucceeded, pushFailed = push.anyFailed)
     }
 
     /**
@@ -543,6 +587,9 @@ class ProgressSyncManager @Inject constructor(
     private fun isSamePosition(a: Float, b: Float): Boolean = abs(a - b) <= SAME_POSITION_TOLERANCE
 
     companion object {
+        /** How far (0-1) one position must be past another for the background sync to move it. */
+        private const val AHEAD_MARGIN = 0.01f
+
         /**
          * How far apart two percentages (0-1) may be and still describe one position.
          * Grimmory keeps one decimal of a percent, so the same position read back from

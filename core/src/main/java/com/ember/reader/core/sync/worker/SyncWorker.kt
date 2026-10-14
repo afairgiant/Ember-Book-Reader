@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.database.dao.BookmarkDao
 import com.ember.reader.core.database.dao.HighlightDao
 import com.ember.reader.core.grimmory.GrimmoryClient
@@ -69,26 +70,13 @@ class SyncWorker @AssistedInject constructor(
 
         for (server in servers) {
             runCatching {
-                // Kosync push/pull
-                if (server.kosyncActive) {
-                    readingProgressRepository.pushUnsyncedKosyncProgress(server) { bookId ->
-                        bookRepository.getById(bookId)?.fileHash
-                    }
-
-                    val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
-                    if (downloadedBooks.isNotEmpty()) {
-                        val bookHashPairs = downloadedBooks.mapNotNull { book ->
-                            val hash = book.fileHash ?: return@mapNotNull null
-                            book.id to hash
-                        }
-                        readingProgressRepository.pullKosyncProgressForAllBooks(server, bookHashPairs)
-                        Timber.d("SyncWorker: kosync synced for ${bookHashPairs.size} books on ${server.name}")
-                    }
+                // Progress, kosync and Grimmory's own, through the one path the reader uses.
+                val grimmoryActive = server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)
+                if (server.kosyncActive || grimmoryActive) {
+                    syncProgress(server)
                 }
 
-                // Grimmory native push/pull
-                if (server.isGrimmory && grimmoryTokenManager.isLoggedIn(server.id)) {
-                    syncGrimmoryProgress(server)
+                if (grimmoryActive) {
 
                     // Say so when books have been added since the newest were last seen.
                     // Checked even with the notification off, so that turning it on later
@@ -207,53 +195,16 @@ class SyncWorker @AssistedInject constructor(
         NotificationManagerCompat.from(context).notify("new_books_${server.id}".hashCode(), builder.build())
     }
 
-    /**
-     * Syncs Grimmory progress for all downloaded books using ProgressSyncManager.
-     * For each book: pulls best remote progress (checking epubProgress first),
-     * and pushes local progress if ahead of server.
-     */
-    private suspend fun syncGrimmoryProgress(server: Server) {
-        val downloadedBooks = bookRepository.getDownloadedBooksForServer(server.id)
-
-        for (book in downloadedBooks) {
-            if (book.grimmoryBookId == null) continue
-
-            runCatching {
-                val localProgress = readingProgressRepository.getByBookId(book.id)
-                val localPct = localProgress?.percentage ?: 0f
-
-                // Pull — uses getBookDetail which reads epubProgress.percentage correctly
-                val remote = progressSyncManager.pullBestProgress(server, book)
-                if (remote != null && remote.progress.percentage > localPct + 0.01f) {
-                    readingProgressRepository.applyRemoteProgress(remote.progress)
-                    syncPulled++
-                    Timber.d("SyncWorker: pulled progress for ${book.title}: ${(remote.progress.percentage * 100).toInt()}% from ${remote.source} (local was ${(localPct * 100).toInt()}%)")
+    /** Syncs the progress of every downloaded book on [server], each pulled before it is pushed. */
+    private suspend fun syncProgress(server: Server) {
+        for (book in bookRepository.getDownloadedBooksForServer(server.id)) {
+            runCatchingCancellable { progressSyncManager.syncInBackground(server, book) }
+                .onSuccess { result ->
+                    if (result.pulled) syncPulled++
+                    if (result.pushed) syncPushed++
+                    if (result.pushFailed) syncErrors++
                 }
-
-                // Push — only if local is meaningfully ahead
-                if (localPct > 0f) {
-                    val serverPct = remote?.progress?.percentage ?: 0f
-                    if (localPct > serverPct + 0.01f) {
-                        val pushResult = progressSyncManager.pushProgress(server, book)
-                        if (pushResult.anySucceeded) {
-                            syncPushed++
-                            Timber.d("SyncWorker: pushed progress for ${book.title}: ${(localPct * 100).toInt()}% (server was ${(serverPct * 100).toInt()}%)")
-                        }
-                        // Count a partial/complete failure so the notification reflects it even
-                        // when one channel succeeded — hiding kosync 401s behind Grimmory's
-                        // success is how users ended up trusting a stale server.
-                        if (pushResult.anyFailed) {
-                            syncErrors++
-                            Timber.w(
-                                pushResult.firstActionableError(),
-                                "SyncWorker: push had failures for ${book.title} (kosync=${pushResult.kosync::class.simpleName} grimmory=${pushResult.grimmory::class.simpleName})"
-                            )
-                        }
-                    }
-                }
-            }.onFailure {
-                Timber.w(it, "SyncWorker: sync failed for ${book.title}")
-            }
+                .onFailure { Timber.w(it, "SyncWorker: sync failed for ${book.title}") }
         }
     }
 
