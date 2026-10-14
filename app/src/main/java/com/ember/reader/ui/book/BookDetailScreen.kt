@@ -75,6 +75,7 @@ fun BookDetailScreen(
     viewModel: BookDetailViewModel = hiltViewModel(),
 ) {
     val book by viewModel.book.collectAsStateWithLifecycle()
+    val inUpNext by viewModel.inUpNext.collectAsStateWithLifecycle()
     val server by viewModel.server.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val readStatus by viewModel.readStatus.collectAsStateWithLifecycle()
@@ -124,6 +125,8 @@ fun BookDetailScreen(
                     canOrganize = false,
                     onNavigateBack = onNavigateBack,
                     onEditMetadata = onEditMetadata,
+                    inUpNext = inUpNext,
+                    onToggleUpNext = viewModel::toggleUpNext,
                     onOrganize = {},
                 )
                 Box(
@@ -151,6 +154,8 @@ fun BookDetailScreen(
                                     canOrganize = server?.canMoveOrganizeFiles == true && grimmoryDetail != null,
                                     onNavigateBack = onNavigateBack,
                                     onEditMetadata = onEditMetadata,
+                    inUpNext = inUpNext,
+                    onToggleUpNext = viewModel::toggleUpNext,
                                     onOrganize = { showOrganizeSheet = true },
                                 )
                                 BookDetailHero(
@@ -316,6 +321,8 @@ private fun BookDetailTopRow(
     onNavigateBack: () -> Unit,
     onEditMetadata: (bookId: String) -> Unit,
     onOrganize: () -> Unit,
+    inUpNext: Boolean = false,
+    onToggleUpNext: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier
@@ -344,6 +351,21 @@ private fun BookDetailTopRow(
                             onEditMetadata(book.id)
                         },
                     )
+                    if (book.format == BookFormat.AUDIOBOOK) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (inUpNext) R.string.up_next_remove_from else R.string.up_next_add_to
+                                    )
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onToggleUpNext()
+                            },
+                        )
+                    }
                     if (canOrganize) {
                         DropdownMenuItem(
                             text = { Text("Organize file…") },

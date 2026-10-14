@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmark
@@ -91,6 +92,10 @@ fun AudiobookPlayerScreen(
     val sleepTimer by viewModel.sleepTimer.collectAsStateWithLifecycle()
     val sleepTimeLeftMs by viewModel.sleepTimeLeftMs.collectAsStateWithLifecycle()
     val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val upNext by viewModel.upNext.collectAsStateWithLifecycle()
+    val nextAudiobook by viewModel.nextAudiobook.collectAsStateWithLifecycle()
+
+    var showUpNext by remember { mutableStateOf(false) }
 
     var showBookmarks by remember { mutableStateOf(false) }
 
@@ -147,6 +152,8 @@ fun AudiobookPlayerScreen(
                             text = "Now Playing",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                         // A running timer says how long it has left beside its button.
@@ -169,6 +176,13 @@ fun AudiobookPlayerScreen(
                                 } else {
                                     LocalContentColor.current
                                 }
+                            )
+                        }
+                        IconButton(onClick = { showUpNext = true }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.PlaylistPlay,
+                                contentDescription = stringResource(R.string.up_next_title),
+                                tint = if (upNext.isNotEmpty()) MaterialTheme.colorScheme.primary else LocalContentColor.current
                             )
                         }
                         IconButton(onClick = { showBookmarks = true }) {
@@ -415,6 +429,20 @@ fun AudiobookPlayerScreen(
                     onSetEndOfChapter = viewModel::setSleepTimerEndOfChapter,
                     onTurnOff = viewModel::cancelSleepTimer,
                     onDismiss = { showSleepTimer = false }
+                )
+            }
+
+            if (showUpNext) {
+                UpNextSheet(
+                    queue = upNext,
+                    next = nextAudiobook,
+                    onPlayNow = { book ->
+                        viewModel.playNow(book)
+                        showUpNext = false
+                    },
+                    onMoveUp = viewModel::moveUpInUpNext,
+                    onRemove = viewModel::removeFromUpNext,
+                    onDismiss = { showUpNext = false }
                 )
             }
 
