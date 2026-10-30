@@ -123,12 +123,21 @@ jobs:
           name: ember-apk
           path: dist/*.apk
 
+      - name: Upload AAB artifact
+        if: env.HAS_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ember-aab
+          path: dist/*.aab
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.changelog.outputs.body }}
-          files: dist/*.apk
+          files: |
+            dist/*.apk
+            dist/*.aab
 
       - name: Publish to Play Store (internal, draft)
         if: startsWith(github.ref, 'refs/tags/') && env.HAS_SIGNING == 'true' && env.HAS_PLAY_PUBLISH == 'true'
