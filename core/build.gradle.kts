@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.ember.reader.core"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 28

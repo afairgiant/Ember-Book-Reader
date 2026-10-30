@@ -37,12 +37,12 @@ aboutLibraries {
 
 android {
     namespace = "com.ember.reader"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.ember.reader"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = gitVersionCode()
         versionName = gitVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
