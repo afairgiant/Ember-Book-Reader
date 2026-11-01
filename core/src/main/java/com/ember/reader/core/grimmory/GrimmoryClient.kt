@@ -15,6 +15,8 @@ import io.ktor.client.request.prepareGet
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import java.io.File
@@ -139,6 +141,30 @@ class GrimmoryClient @Inject constructor(
      */
     fun bookContentUrl(baseUrl: String, grimmoryBookId: Long): String =
         "${serverOrigin(baseUrl)}/api/v1/books/$grimmoryBookId/content"
+
+    /**
+     * Reads up to [size] bytes of a book's file from [offset], by a range request on the URL
+     * the reader streams from. Null when [offset] is at or past the end of the file. Fails,
+     * without reading the body, when the server answers with something other than the range.
+     */
+    suspend fun readContentRange(
+        baseUrl: String,
+        serverId: Long,
+        grimmoryBookId: Long,
+        offset: Long,
+        size: Int,
+    ): Result<ByteArray?> = tokenManager.withAuth(baseUrl, serverId) { token ->
+        httpClient.prepareGet(bookContentUrl(baseUrl, grimmoryBookId)) {
+            header("Authorization", "Bearer $token")
+            header(HttpHeaders.Range, "bytes=$offset-${offset + size - 1}")
+        }.execute { response ->
+            when (response.status) {
+                HttpStatusCode.PartialContent -> response.body<ByteArray>()
+                HttpStatusCode.RequestedRangeNotSatisfiable -> null
+                else -> throw GrimmoryHttpException(response.status.value, "Range read failed: ${response.status}")
+            }
+        }
+    }
 
     suspend fun downloadBook(
         baseUrl: String,

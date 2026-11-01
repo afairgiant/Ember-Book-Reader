@@ -63,7 +63,7 @@ fun BookDetailActionButtons(
     val onGrimmory = grimmoryServer != null
     val hasProgress = progress?.percentage?.let { it > 0f } == true
     val available = book.downloadUrl != null || isAudiobook
-    val canStream = onGrimmory && (book.format == BookFormat.EPUB || book.format == BookFormat.PDF)
+    val canStream = book.canStreamFrom(server)
     val showDownload = !book.isDownloaded && book.downloadUrl != null
 
     Column(

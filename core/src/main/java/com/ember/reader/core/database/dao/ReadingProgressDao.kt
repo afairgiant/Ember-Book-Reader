@@ -31,6 +31,19 @@ interface ReadingProgressDao {
     )
     suspend fun markSynced(bookId: String, syncedAt: java.time.Instant)
 
+    /**
+     * Marks the progress saved at [lastReadAt] as synced. Does nothing when the reader has
+     * saved a newer position since, which still has to be pushed.
+     */
+    @Query(
+        """
+        UPDATE reading_progress
+        SET syncedAt = :syncedAt, needsSync = 0
+        WHERE bookId = :bookId AND lastReadAt = :lastReadAt
+        """
+    )
+    suspend fun markSyncedIfUnchanged(bookId: String, lastReadAt: java.time.Instant, syncedAt: java.time.Instant)
+
     @Query("DELETE FROM reading_progress WHERE bookId = :bookId")
     suspend fun deleteByBookId(bookId: String)
 }

@@ -80,6 +80,11 @@ class ReadingProgressRepository @Inject constructor(
         readingProgressDao.markSynced(bookId, Instant.now())
     }
 
+    /** Marks [progress] as synced, unless a newer position has been saved since it was read. */
+    suspend fun markSyncedIfUnchanged(progress: ReadingProgress) {
+        readingProgressDao.markSyncedIfUnchanged(progress.bookId, progress.lastReadAt, Instant.now())
+    }
+
     data class KosyncProgressResult(
         val progress: ReadingProgress,
         val deviceName: String?

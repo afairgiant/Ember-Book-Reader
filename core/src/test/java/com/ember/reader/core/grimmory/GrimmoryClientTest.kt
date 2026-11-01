@@ -477,4 +477,69 @@ class GrimmoryClientTest {
             assertTrue(url!!.contains("/api/v1/audiobooks/42/track/3/stream"))
         }
     }
+
+    @Nested
+    inner class ReadContentRange {
+
+        private val file = ByteArray(3000) { (it % 251).toByte() }
+
+        /** Serves [file] the way a server that honours ranges does. */
+        private fun rangedEngine(requests: MutableList<String?> = mutableListOf()) = MockEngine { request ->
+            val range = request.headers[HttpHeaders.Range]
+            requests += range
+            val (start, end) = range!!.removePrefix("bytes=").split("-").map(String::toLong)
+            if (start >= file.size) {
+                respond(ByteReadChannel(""), HttpStatusCode.RequestedRangeNotSatisfiable)
+            } else {
+                respond(
+                    ByteReadChannel(file.copyOfRange(start.toInt(), minOf(file.size, end.toInt() + 1))),
+                    HttpStatusCode.PartialContent,
+                )
+            }
+        }
+
+        @Test
+        fun `asks for the range with the token and gives its bytes`() = runTest {
+            val requests = mutableListOf<String?>()
+            val client = createClient(rangedEngine(requests))
+
+            val bytes = client.readContentRange(baseUrl, serverId, 7L, offset = 1024, size = 1024).getOrThrow()
+
+            assertEquals(listOf("bytes=1024-2047"), requests)
+            assertTrue(file.copyOfRange(1024, 2048).contentEquals(bytes))
+        }
+
+        @Test
+        fun `gives null past the end of the file`() = runTest {
+            val client = createClient(rangedEngine())
+
+            val bytes = client.readContentRange(baseUrl, serverId, 7L, offset = 4096, size = 1024).getOrThrow()
+
+            assertEquals(null, bytes)
+        }
+
+        @Test
+        fun `fails when the server sends the whole file`() = runTest {
+            val client = createClient(MockEngine { respond(ByteReadChannel(file), HttpStatusCode.OK) })
+
+            val result = client.readContentRange(baseUrl, serverId, 7L, offset = 0, size = 1024)
+
+            assertTrue(result.isFailure)
+        }
+
+        @Test
+        fun `gives the partial MD5 of the file`() = runTest {
+            val client = createClient(rangedEngine())
+            val local = java.io.File.createTempFile("ranged", ".bin").apply {
+                writeBytes(file)
+                deleteOnExit()
+            }
+
+            val hash = com.ember.reader.core.sync.PartialMd5.compute { offset, size ->
+                client.readContentRange(baseUrl, serverId, 7L, offset, size).getOrThrow()
+            }
+
+            assertEquals(com.ember.reader.core.sync.PartialMd5.compute(local), hash)
+        }
+    }
 }

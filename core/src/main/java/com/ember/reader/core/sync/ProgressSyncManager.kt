@@ -178,7 +178,13 @@ class ProgressSyncManager @Inject constructor(
 
         reportStatus(server.id, listOf(kosync, grimmory))
 
-        return PushResult(kosync = kosync, grimmory = grimmory)
+        val result = PushResult(kosync = kosync, grimmory = grimmory)
+        // Every channel in play took it, so it no longer needs syncing. A kosync push marks
+        // this already; a Grimmory-only push (a streamed book has no kosync hash at first) did not.
+        if (result.anySucceeded && !result.anyFailed) {
+            readingProgressRepository.markSyncedIfUnchanged(progress)
+        }
+        return result
     }
 
     /**
@@ -188,7 +194,8 @@ class ProgressSyncManager @Inject constructor(
      * record another device has moved further on.
      */
     suspend fun syncInBackground(server: Server, book: Book): BackgroundSyncResult {
-        val localPct = readingProgressRepository.getByBookId(book.id)?.percentage ?: 0f
+        val local = readingProgressRepository.getByBookId(book.id)
+        val localPct = local?.percentage ?: 0f
         val remote = pullBestProgress(server, book)
         val pulled = remote != null && remote.progress.percentage > localPct + AHEAD_MARGIN
         if (pulled) {
@@ -198,6 +205,10 @@ class ProgressSyncManager @Inject constructor(
 
         val serverPct = remote?.progress?.percentage ?: 0f
         if (localPct <= 0f || localPct <= serverPct + AHEAD_MARGIN) {
+            // The server has this position already, or there is none to give it.
+            if (!pulled && local != null && (remote != null || localPct <= 0f)) {
+                readingProgressRepository.markSyncedIfUnchanged(local)
+            }
             return BackgroundSyncResult(pulled = pulled, pushed = false, pushFailed = false)
         }
         val push = pushProgress(server, book)

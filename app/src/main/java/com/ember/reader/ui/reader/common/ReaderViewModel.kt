@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ember.reader.core.coroutine.ApplicationScope
+import com.ember.reader.core.coroutine.runCatchingCancellable
 import com.ember.reader.core.epub.EpubSpine
 import com.ember.reader.core.fonts.CustomFont
 import com.ember.reader.core.fonts.CustomFontRepository
@@ -37,6 +38,7 @@ import com.ember.reader.core.repository.SyncPreferencesRepository
 import com.ember.reader.core.sync.BookmarkRepairer
 import com.ember.reader.core.sync.CfiLocatorConverter
 import com.ember.reader.core.sync.HighlightRepairer
+import com.ember.reader.core.sync.PartialMd5
 import com.ember.reader.core.sync.ProgressSyncManager
 import com.ember.reader.core.sync.RepairSummary
 import com.ember.reader.core.sync.SourceOutcome
@@ -97,8 +99,9 @@ class ReaderViewModel @Inject constructor(
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
     /**
      * Whether the book is read over the network rather than from a downloaded file. Asked for
-     * by the route, and also taken up when a Grimmory book that is not downloaded is opened
-     * some other way, from Continue Reading say, since streaming is how it was being read.
+     * by the route, and also taken up when a book that is not downloaded is opened some other
+     * way, from Continue Reading say, if it can be streamed from a Grimmory server this device
+     * is signed in to. Otherwise such a book still fails as not downloaded.
      */
     private var streaming: Boolean = savedStateHandle.get<String>("mode") == "stream"
     val isStreaming: Boolean get() = streaming
@@ -230,7 +233,7 @@ class ReaderViewModel @Inject constructor(
             return
         }
         book = loadedBook
-        if (loadedBook.localPath == null && loadedBook.isStreamable) streaming = true
+        if (!streaming && loadedBook.localPath == null) streaming = canStreamInstead(loadedBook)
 
         val pub = if (streaming) {
             openStreamingPublication(loadedBook) ?: return
@@ -304,7 +307,8 @@ class ReaderViewModel @Inject constructor(
         }
         savedStateHandle[KEY_TARGET_OPENED] = true
 
-        pullRemoteProgressOnOpen(loadedBook, localProgress)
+        if (streaming && loadedBook.fileHash == null) computeStreamedFileHash(loadedBook)
+        pullRemoteProgressOnOpen(book ?: loadedBook, localProgress)
 
         // Show tap zone hint on first open of each book in Ember
         // locatorJson is null when progress came from server sync only (never opened locally)
@@ -352,9 +356,42 @@ class ReaderViewModel @Inject constructor(
         }
         Timber.d("Streaming: opening %s from server %d", loadedBook.title, serverId)
         return bookOpener.openStreaming(server, grimmoryBookId).getOrElse { error ->
-            _uiState.value = ReaderUiState.Error("Streaming failed: ${error.message}")
+            Timber.w(error, "Streaming: failed to open %s", loadedBook.title)
+            _uiState.value = ReaderUiState.Error(
+                "Couldn't stream this book from Grimmory (${error.message}). " +
+                    "Check your connection, or download the book to read it offline."
+            )
             null
         }
+    }
+
+    /** Whether a book that is not downloaded can be streamed instead, and this device may. */
+    private suspend fun canStreamInstead(loadedBook: Book): Boolean {
+        val server = loadedBook.serverId?.let { serverRepository.getById(it) } ?: return false
+        return loadedBook.canStreamFrom(server) && grimmoryTokenManager.isLoggedIn(server.id)
+    }
+
+    /**
+     * Works out the partial MD5 kosync knows a streamed book by, from a dozen small range
+     * requests on the server's copy, so its progress syncs with KOReader as a downloaded
+     * book's does. Only when the server syncs through kosync; a failure leaves it for the
+     * next time the book is opened.
+     */
+    private suspend fun computeStreamedFileHash(loadedBook: Book) {
+        val server = loadedBook.serverId?.let { serverRepository.getById(it) } ?: return
+        if (!server.kosyncActive) return
+        val grimmoryBookId = loadedBook.grimmoryBookId ?: return
+        val hash = runCatchingCancellable {
+            PartialMd5.compute { offset, size ->
+                grimmoryClient.readContentRange(server.url, server.id, grimmoryBookId, offset, size).getOrThrow()
+            }
+        }.getOrElse { error ->
+            Timber.w(error, "Streaming: could not hash %s for kosync", loadedBook.title)
+            return
+        }
+        bookRepository.updateFileHash(loadedBook.id, hash)
+        book = book?.copy(fileHash = hash)
+        Timber.d("Streaming: kosync hash for %s is %s", loadedBook.title, hash)
     }
 
     private suspend fun getSyncServer(): com.ember.reader.core.model.Server? {

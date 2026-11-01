@@ -73,6 +73,20 @@ class PartialMd5Test {
         assertEquals(32, hash.length)
     }
 
+    @Test
+    fun `compute from samples matches compute from the file`() {
+        for (size in listOf(1, 100, 1024, 1025, 4096, 70_000, 1024 * 1024 + 7)) {
+            val data = ByteArray(size) { (it * 31 % 251).toByte() }
+            val file = File(tempDir, "ranged_$size.bin").apply { writeBytes(data) }
+            val ranged = kotlinx.coroutines.runBlocking {
+                PartialMd5.compute { offset, length ->
+                    if (offset >= size) null else data.copyOfRange(offset.toInt(), minOf(size, offset.toInt() + length))
+                }
+            }
+            assertEquals(PartialMd5.compute(file), ranged, "size $size")
+        }
+    }
+
     private var fileCounter = 0
 
     private fun createTempFile(size: Int, fill: Byte = 0x42): File {

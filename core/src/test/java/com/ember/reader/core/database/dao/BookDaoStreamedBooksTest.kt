@@ -36,7 +36,17 @@ class BookDaoStreamedBooksTest {
         dao = db.bookDao()
         runBlocking {
             db.serverDao().insert(
-                ServerEntity(id = 1L, name = "test", url = "http://localhost", opdsUsername = "u", kosyncUsername = "u"),
+                ServerEntity(
+                    id = GRIMMORY,
+                    name = "grimmory",
+                    url = "http://localhost",
+                    opdsUsername = "u",
+                    kosyncUsername = "u",
+                    isGrimmory = true,
+                ),
+            )
+            db.serverDao().insert(
+                ServerEntity(id = PLAIN_OPDS, name = "opds", url = "http://opds", opdsUsername = "u", kosyncUsername = "u"),
             )
         }
     }
@@ -46,18 +56,22 @@ class BookDaoStreamedBooksTest {
         db.close()
     }
 
+    private var nextGrimmoryId = 1
+
     private suspend fun addBook(
         id: String,
         localPath: String? = null,
-        opdsEntryId: String? = "urn:booklore:book:${id.hashCode()}",
+        opdsEntryId: String? = "urn:booklore:book:${nextGrimmoryId++}",
         format: BookFormat = BookFormat.EPUB,
+        serverId: Long = GRIMMORY,
         percentage: Float? = 0.4f,
         lastReadAt: Long = 1,
+        needsSync: Boolean = true,
     ) {
         dao.insert(
             BookEntity(
                 id = id,
-                serverId = 1L,
+                serverId = serverId,
                 opdsEntryId = opdsEntryId,
                 title = id,
                 format = format,
@@ -69,9 +83,10 @@ class BookDaoStreamedBooksTest {
             db.readingProgressDao().upsert(
                 ReadingProgressEntity(
                     bookId = id,
-                    serverId = 1L,
+                    serverId = serverId,
                     percentage = percentage,
                     lastReadAt = Instant.ofEpochSecond(lastReadAt),
+                    needsSync = needsSync,
                 ),
             )
         }
@@ -91,6 +106,9 @@ class BookDaoStreamedBooksTest {
     @Test
     fun `continue reading leaves out books that cannot be streamed or are not in progress`() = runBlocking {
         addBook("plainOpds", opdsEntryId = "urn:uuid:123")
+        addBook("notANumber", opdsEntryId = "urn:booklore:book:abc")
+        addBook("bareNumber", opdsEntryId = "123")
+        addBook("notGrimmoryServer", serverId = PLAIN_OPDS)
         addBook("audiobook", format = BookFormat.AUDIOBOOK)
         addBook("unread", percentage = null)
         addBook("finished", percentage = 0.99f)
@@ -99,11 +117,29 @@ class BookDaoStreamedBooksTest {
     }
 
     @Test
-    fun `streamed books for sync are the undownloaded ones with progress`() = runBlocking {
+    fun `streamed books for sync are the undownloaded ones with progress not pushed yet`() = runBlocking {
         addBook("downloaded", localPath = "/books/d.epub")
         addBook("streamed")
+        addBook("alreadyPushed", needsSync = false)
         addBook("neverOpened", percentage = null)
 
-        assertEquals(listOf("streamed"), dao.getStreamedBooksForServer(1L).map { it.id })
+        assertEquals(listOf("streamed"), dao.getStreamedBooksForServer(GRIMMORY).map { it.id })
+    }
+
+    @Test
+    fun `marking synced leaves progress saved since then still to push`() = runBlocking {
+        addBook("streamed", lastReadAt = 5)
+        val progressDao = db.readingProgressDao()
+
+        progressDao.markSyncedIfUnchanged("streamed", Instant.ofEpochSecond(4), Instant.ofEpochSecond(9))
+        assertEquals(true, progressDao.getByBookId("streamed")?.needsSync)
+
+        progressDao.markSyncedIfUnchanged("streamed", Instant.ofEpochSecond(5), Instant.ofEpochSecond(9))
+        assertEquals(false, progressDao.getByBookId("streamed")?.needsSync)
+    }
+
+    private companion object {
+        const val GRIMMORY = 1L
+        const val PLAIN_OPDS = 2L
     }
 }

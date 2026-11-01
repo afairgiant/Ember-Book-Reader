@@ -87,12 +87,25 @@ class BookRepository @Inject constructor(
     suspend fun getDownloadedBooksForServer(serverId: Long): List<Book> =
         bookDao.getDownloadedBooksForServer(serverId).map { it.toDomain() }
 
-    /** Books on [serverId] read by streaming them, without a download. */
+    /**
+     * Books in progress, most recently read first: downloaded ones, and ones streamed from a
+     * Grimmory server this device is signed in to, so that every book listed can be opened.
+     */
+    fun observeRecentlyReading(): Flow<List<Book>> =
+        bookDao.observeRecentlyReading().map { entities ->
+            entities.map { it.toDomain() }.filter { book ->
+                book.isDownloaded || book.serverId?.let(grimmoryTokenManager::isLoggedIn) == true
+            }
+        }
+
+    /** Books on [serverId] read by streaming them whose progress has not been pushed yet. */
     suspend fun getStreamedBooksForServer(serverId: Long): List<Book> =
         bookDao.getStreamedBooksForServer(serverId).map { it.toDomain() }
 
-    fun observeRecentlyReading(): Flow<List<Book>> =
-        bookDao.observeRecentlyReading().map { entities -> entities.map { it.toDomain() } }
+    /** Records the partial-MD5 [hash] of a book's file, as kosync knows it. */
+    suspend fun updateFileHash(bookId: String, hash: String) {
+        bookDao.updateFileHash(bookId, hash)
+    }
 
     fun observeById(id: String): Flow<Book?> = bookDao.observeById(id).map { it?.toDomain() }
 
