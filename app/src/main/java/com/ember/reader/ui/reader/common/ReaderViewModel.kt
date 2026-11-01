@@ -95,7 +95,12 @@ class ReaderViewModel @Inject constructor(
     val customFonts: StateFlow<List<CustomFont>> = customFontRepository.fonts
 
     private val bookId: String = savedStateHandle.get<String>("bookId") ?: ""
-    private val streaming: Boolean = savedStateHandle.get<String>("mode") == "stream"
+    /**
+     * Whether the book is read over the network rather than from a downloaded file. Asked for
+     * by the route, and also taken up when a Grimmory book that is not downloaded is opened
+     * some other way, from Continue Reading say, since streaming is how it was being read.
+     */
+    private var streaming: Boolean = savedStateHandle.get<String>("mode") == "stream"
     val isStreaming: Boolean get() = streaming
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
@@ -225,6 +230,7 @@ class ReaderViewModel @Inject constructor(
             return
         }
         book = loadedBook
+        if (loadedBook.localPath == null && loadedBook.isStreamable) streaming = true
 
         val pub = if (streaming) {
             openStreamingPublication(loadedBook) ?: return

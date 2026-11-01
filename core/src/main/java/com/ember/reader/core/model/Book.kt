@@ -35,4 +35,9 @@ data class Book(
         get() = opdsEntryId
             ?.removePrefix("urn:booklore:book:")
             ?.toLongOrNull()
+
+    /** An EPUB or PDF on a Grimmory server, which the reader can stream without a download. */
+    val isStreamable: Boolean
+        get() = serverId != null && grimmoryBookId != null &&
+            (format == BookFormat.EPUB || format == BookFormat.PDF)
 }

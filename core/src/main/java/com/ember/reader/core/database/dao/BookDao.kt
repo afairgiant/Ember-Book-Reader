@@ -47,12 +47,26 @@ interface BookDao {
         """
         SELECT b.* FROM books b
         INNER JOIN reading_progress rp ON b.id = rp.bookId
-        WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 0.95
+        WHERE (b.localPath IS NOT NULL OR ($STREAMABLE))
+        AND rp.percentage > 0 AND rp.percentage < 0.95
         ORDER BY rp.lastReadAt DESC
         LIMIT 10
         """
     )
     fun observeRecentlyReading(): Flow<List<BookEntity>>
+
+    /**
+     * Books on [serverId] that are not downloaded but have been read by streaming them from
+     * Grimmory. Their progress is synced like a downloaded book's.
+     */
+    @Query(
+        """
+        SELECT b.* FROM books b
+        INNER JOIN reading_progress rp ON b.id = rp.bookId
+        WHERE b.serverId = :serverId AND b.localPath IS NULL AND ($STREAMABLE)
+        """
+    )
+    suspend fun getStreamedBooksForServer(serverId: Long): List<BookEntity>
 
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getById(id: String): BookEntity?
@@ -191,3 +205,10 @@ interface BookDao {
     )
     fun search(serverId: Long?, query: String): Flow<List<BookEntity>>
 }
+
+/**
+ * A book row that can be read without downloading it: an EPUB or PDF from a Grimmory server,
+ * which the reader streams. Expects the books table aliased as `b`.
+ */
+private const val STREAMABLE =
+    "b.serverId IS NOT NULL AND b.opdsEntryId LIKE 'urn:booklore:book:%' AND b.format IN ('EPUB', 'PDF')"

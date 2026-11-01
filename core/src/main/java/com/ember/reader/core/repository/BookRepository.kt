@@ -87,6 +87,10 @@ class BookRepository @Inject constructor(
     suspend fun getDownloadedBooksForServer(serverId: Long): List<Book> =
         bookDao.getDownloadedBooksForServer(serverId).map { it.toDomain() }
 
+    /** Books on [serverId] read by streaming them, without a download. */
+    suspend fun getStreamedBooksForServer(serverId: Long): List<Book> =
+        bookDao.getStreamedBooksForServer(serverId).map { it.toDomain() }
+
     fun observeRecentlyReading(): Flow<List<Book>> =
         bookDao.observeRecentlyReading().map { entities -> entities.map { it.toDomain() } }
 
