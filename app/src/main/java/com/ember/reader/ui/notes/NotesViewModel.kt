@@ -147,15 +147,18 @@ class NotesViewModel @Inject constructor(
         _query.value = query
     }
 
-    /** Opens [mark] in the reader, asking first when [book] has to be downloaded for it. */
+    /**
+     * Opens [mark] in the reader, asking first when [book] has to be downloaded for it: when it
+     * is not on the device and cannot be streamed from Grimmory either.
+     */
     fun open(book: Book, mark: BookMarkItem) {
         if (openingJob?.isActive == true) return
         openingJob = viewModelScope.launch {
             // The listed book can be out of date about having been downloaded since.
             val current = bookRepository.getById(book.id) ?: return@launch
             // An audiobook plays from the server, so it needs no download to be opened.
-            if (current.isDownloaded || current.format == BookFormat.AUDIOBOOK) {
-                openDownloaded(current, mark)
+            if (current.isDownloaded || current.format == BookFormat.AUDIOBOOK || entryOpener.canStream(current)) {
+                openInReader(current, mark)
             } else if (current.serverId != null) {
                 _opening.value = NotesOpening.ConfirmDownload(current, mark)
             }
@@ -171,7 +174,7 @@ class NotesViewModel @Inject constructor(
             if (downloaded == null) {
                 _opening.value = NotesOpening.DownloadFailed
             } else {
-                openDownloaded(downloaded, asked.mark)
+                openInReader(downloaded, asked.mark)
             }
         }
     }
@@ -185,7 +188,7 @@ class NotesViewModel @Inject constructor(
         _opening.value = null
     }
 
-    private suspend fun openDownloaded(book: Book, mark: BookMarkItem) {
+    private suspend fun openInReader(book: Book, mark: BookMarkItem) {
         if (mark.remote != null) _opening.value = NotesOpening.Locating
         val target = entryOpener.targetFor(book, mark)
         _opening.value = NotesOpening.Ready(

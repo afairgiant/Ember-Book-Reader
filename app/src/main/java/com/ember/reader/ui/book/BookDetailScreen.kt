@@ -218,8 +218,13 @@ fun BookDetailScreen(
 
                         BookMarksSection(
                             marks = marks,
-                            // An audiobook plays from the server; the others need the file.
-                            onOpen = if (currentBook.isDownloaded || currentBook.format == BookFormat.AUDIOBOOK) {
+                            // An audiobook plays from the server, and a Grimmory EPUB or PDF
+                            // can be streamed from it, as the Read button does; others need the file.
+                            onOpen = if (
+                                currentBook.isDownloaded ||
+                                currentBook.format == BookFormat.AUDIOBOOK ||
+                                currentBook.canStreamFrom(server)
+                            ) {
                                 { mark -> mark.target?.let { onOpenReaderAt(currentBook.id, currentBook.format, it) } }
                             } else {
                                 null

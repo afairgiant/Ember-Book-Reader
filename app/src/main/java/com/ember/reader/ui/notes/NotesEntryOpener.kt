@@ -3,6 +3,7 @@ package com.ember.reader.ui.notes
 import android.content.Context
 import com.ember.reader.core.epub.EpubCfi
 import com.ember.reader.core.grimmory.GrimmoryClient
+import com.ember.reader.core.grimmory.GrimmoryTokenManager
 import com.ember.reader.core.model.Book
 import com.ember.reader.core.repository.AppPreferencesRepository
 import com.ember.reader.core.repository.BookRepository
@@ -24,6 +25,7 @@ class NotesEntryOpener @Inject constructor(
     private val bookRepository: BookRepository,
     private val serverRepository: ServerRepository,
     private val grimmoryClient: GrimmoryClient,
+    private val grimmoryTokenManager: GrimmoryTokenManager,
     private val highlightSyncManager: HighlightSyncManager,
     private val bookmarkSyncManager: BookmarkSyncManager,
     private val appPreferencesRepository: AppPreferencesRepository
@@ -60,6 +62,15 @@ class NotesEntryOpener @Inject constructor(
             RemoteMark.Kind.BOOK_NOTE -> null
         }
         return cfi?.takeIf { EpubCfi.isRealCfi(it) }?.let(ReaderTarget::Cfi)
+    }
+
+    /**
+     * Whether [book], not downloaded, can be read by streaming it from its Grimmory server,
+     * which this device is signed in to. The reader then streams it by itself.
+     */
+    suspend fun canStream(book: Book): Boolean {
+        val server = book.serverId?.let { serverRepository.getById(it) } ?: return false
+        return book.canStreamFrom(server) && grimmoryTokenManager.isLoggedIn(server.id)
     }
 
     /**
