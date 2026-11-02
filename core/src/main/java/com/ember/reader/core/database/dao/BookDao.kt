@@ -47,12 +47,28 @@ interface BookDao {
         """
         SELECT b.* FROM books b
         INNER JOIN reading_progress rp ON b.id = rp.bookId
-        WHERE b.localPath IS NOT NULL AND rp.percentage > 0 AND rp.percentage < 0.95
+        WHERE (b.localPath IS NOT NULL OR ($STREAMABLE))
+        AND rp.percentage > 0 AND rp.percentage < 0.95
         ORDER BY rp.lastReadAt DESC
         LIMIT 10
         """
     )
     fun observeRecentlyReading(): Flow<List<BookEntity>>
+
+    /**
+     * Books on [serverId] that are not downloaded, can be streamed, and have progress this
+     * device has not pushed yet: read by streaming them, or read before their download was
+     * removed. Once pushed they drop out, so the list does not grow with every book read.
+     */
+    @Query(
+        """
+        SELECT b.* FROM books b
+        INNER JOIN reading_progress rp ON b.id = rp.bookId
+        WHERE b.serverId = :serverId AND b.localPath IS NULL AND ($STREAMABLE)
+        AND rp.needsSync = 1
+        """
+    )
+    suspend fun getStreamedBooksForServer(serverId: Long): List<BookEntity>
 
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getById(id: String): BookEntity?
@@ -191,3 +207,14 @@ interface BookDao {
     )
     fun search(serverId: Long?, query: String): Flow<List<BookEntity>>
 }
+
+/**
+ * A book row the reader can stream without a download: an EPUB or PDF whose entry is a
+ * Grimmory book (`urn:booklore:book:` and digits), on a server set up as Grimmory. Expects the
+ * books table aliased as `b`. The same rule as `Book.canStreamFrom`; the two are kept alike.
+ */
+private const val STREAMABLE =
+    "b.format IN ('EPUB', 'PDF')" +
+        " AND b.opdsEntryId GLOB 'urn:booklore:book:[0-9]*'" +
+        " AND substr(b.opdsEntryId, 19) NOT GLOB '*[^0-9]*'" +
+        " AND b.serverId IN (SELECT id FROM servers WHERE isGrimmory = 1)"

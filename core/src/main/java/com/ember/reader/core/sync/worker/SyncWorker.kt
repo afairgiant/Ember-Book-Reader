@@ -195,9 +195,17 @@ class SyncWorker @AssistedInject constructor(
         NotificationManagerCompat.from(context).notify("new_books_${server.id}".hashCode(), builder.build())
     }
 
-    /** Syncs the progress of every downloaded book on [server], each pulled before it is pushed. */
+    /**
+     * Syncs the progress of every downloaded book on [server], and of every streamed book with
+     * progress not pushed yet, each pulled before it is pushed. A book whose download finished
+     * between the two reads is synced once; one missed by both is taken up next time.
+     */
     private suspend fun syncProgress(server: Server) {
-        for (book in bookRepository.getDownloadedBooksForServer(server.id)) {
+        val books = (
+            bookRepository.getDownloadedBooksForServer(server.id) +
+                bookRepository.getStreamedBooksForServer(server.id)
+            ).distinctBy { it.id }
+        for (book in books) {
             runCatchingCancellable { progressSyncManager.syncInBackground(server, book) }
                 .onSuccess { result ->
                     if (result.pulled) syncPulled++

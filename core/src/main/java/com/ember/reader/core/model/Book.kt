@@ -35,4 +35,20 @@ data class Book(
         get() = opdsEntryId
             ?.removePrefix("urn:booklore:book:")
             ?.toLongOrNull()
+
+    /**
+     * Whether the reader can stream this book from [server] without a download: an EPUB or
+     * PDF whose entry is a Grimmory book on that server, which has to be a Grimmory one.
+     * Signing in is still needed to open it.
+     *
+     * The same rule is written in SQL as `STREAMABLE` in `BookDao`; the two are kept alike.
+     */
+    fun canStreamFrom(server: Server?): Boolean =
+        server != null && server.isGrimmory && server.id == serverId &&
+            (format == BookFormat.EPUB || format == BookFormat.PDF) &&
+            opdsEntryId?.let(GRIMMORY_BOOK_ENTRY::matches) == true
+
+    private companion object {
+        val GRIMMORY_BOOK_ENTRY = Regex("urn:booklore:book:[0-9]+")
+    }
 }

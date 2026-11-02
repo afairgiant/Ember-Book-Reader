@@ -76,13 +76,19 @@ fun ServerListScreen(
     onOpenLibrary: () -> Unit = {},
     viewModel: ServerListViewModel = hiltViewModel()
 ) {
-    val recentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
+    val allRecentlyReading by viewModel.recentlyReading.collectAsStateWithLifecycle()
     val empty by viewModel.empty.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
     val hasGrimmoryServer by viewModel.hasGrimmoryServer.collectAsStateWithLifecycle()
     val recentlyAddedLoading by viewModel.recentlyAddedLoading.collectAsStateWithLifecycle()
     val quickStats by viewModel.quickStats.collectAsStateWithLifecycle()
     val networkAvailable by com.ember.reader.ui.common.rememberNetworkAvailable()
+    // A streamed book cannot be opened offline, so only downloaded ones are offered then.
+    val recentlyReading = if (networkAvailable) {
+        allRecentlyReading
+    } else {
+        allRecentlyReading.filter { it.book.isDownloaded }
+    }
 
     // The nav host already pads for the system bars.
     Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
