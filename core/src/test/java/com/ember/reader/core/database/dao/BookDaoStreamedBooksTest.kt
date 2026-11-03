@@ -4,6 +4,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.ember.reader.core.database.EmberDatabase
 import com.ember.reader.core.database.entity.BookEntity
+import com.ember.reader.core.database.entity.BookmarkEntity
+import com.ember.reader.core.database.entity.HighlightEntity
 import com.ember.reader.core.database.entity.ReadingProgressEntity
 import com.ember.reader.core.database.entity.ServerEntity
 import com.ember.reader.core.model.BookFormat
@@ -67,6 +69,7 @@ class BookDaoStreamedBooksTest {
         percentage: Float? = 0.4f,
         lastReadAt: Long = 1,
         needsSync: Boolean = true,
+        locatorJson: String? = null,
     ) {
         dao.insert(
             BookEntity(
@@ -87,6 +90,7 @@ class BookDaoStreamedBooksTest {
                     percentage = percentage,
                     lastReadAt = Instant.ofEpochSecond(lastReadAt),
                     needsSync = needsSync,
+                    locatorJson = locatorJson,
                 ),
             )
         }
@@ -124,6 +128,23 @@ class BookDaoStreamedBooksTest {
         addBook("neverOpened", percentage = null)
 
         assertEquals(listOf("streamed"), dao.getStreamedBooksForServer(GRIMMORY).map { it.id })
+    }
+
+    @Test
+    fun `streamed books for highlight sync are the undownloaded ones opened on this device`() = runBlocking {
+        addBook("downloaded", localPath = "/books/d.epub", locatorJson = "{}")
+        addBook("read", locatorJson = "{}", needsSync = false)
+        addBook("highlighted", percentage = null)
+        db.highlightDao().insert(HighlightEntity(bookId = "highlighted", locatorJson = "{}", createdAt = Instant.EPOCH))
+        addBook("bookmarked", percentage = null)
+        db.bookmarkDao().insert(BookmarkEntity(bookId = "bookmarked", locatorJson = "{}", createdAt = Instant.EPOCH))
+        addBook("progressFromServerOnly")
+        addBook("plainOpds", opdsEntryId = "urn:uuid:123", locatorJson = "{}")
+
+        assertEquals(
+            setOf("read", "highlighted", "bookmarked"),
+            dao.getOpenedStreamedBooksForServer(GRIMMORY).map { it.id }.toSet(),
+        )
     }
 
     @Test

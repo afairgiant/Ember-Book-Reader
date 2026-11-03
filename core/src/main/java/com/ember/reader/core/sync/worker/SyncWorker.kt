@@ -99,12 +99,16 @@ class SyncWorker @AssistedInject constructor(
                             .onFailure { Timber.w(it, "SyncWorker: next-in-series download failed") }
                     }
 
-                    // Highlight & bookmark sync — sync all books from this server
+                    // Highlight & bookmark sync — downloaded books from this server, and
+                    // the ones read here by streaming them, which the reader never syncs itself.
                     val syncHighlights = appPreferencesRepository.getSyncHighlights()
                     val syncBookmarks = appPreferencesRepository.getSyncBookmarks()
                     if (syncHighlights || syncBookmarks) {
-                        val serverBooks = bookDao.getDownloadedBooksForServer(server.id)
-                        Timber.d("SyncWorker: highlight/bookmark sync for %d downloaded books on server %s", serverBooks.size, server.name)
+                        val serverBooks = (
+                            bookDao.getDownloadedBooksForServer(server.id) +
+                                bookDao.getOpenedStreamedBooksForServer(server.id)
+                            ).distinctBy { it.id }
+                        Timber.d("SyncWorker: highlight/bookmark sync for %d books on server %s", serverBooks.size, server.name)
                         for (bookEntity in serverBooks) {
                             val gid = bookEntity.opdsEntryId
                                 ?.substringAfterLast(":")

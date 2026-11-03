@@ -70,6 +70,24 @@ interface BookDao {
     )
     suspend fun getStreamedBooksForServer(serverId: Long): List<BookEntity>
 
+    /**
+     * Books on [serverId] that are not downloaded, can be streamed, and have been opened on
+     * this device, which shows in a saved reader position or a highlight or bookmark of its
+     * own. Their highlights and bookmarks sync with Grimmory as a downloaded book's do.
+     */
+    @Query(
+        """
+        SELECT b.* FROM books b
+        WHERE b.serverId = :serverId AND b.localPath IS NULL AND ($STREAMABLE)
+        AND (
+            EXISTS (SELECT 1 FROM reading_progress rp WHERE rp.bookId = b.id AND rp.locatorJson IS NOT NULL)
+            OR EXISTS (SELECT 1 FROM highlights h WHERE h.bookId = b.id)
+            OR EXISTS (SELECT 1 FROM bookmarks bm WHERE bm.bookId = b.id)
+        )
+        """
+    )
+    suspend fun getOpenedStreamedBooksForServer(serverId: Long): List<BookEntity>
+
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getById(id: String): BookEntity?
 
