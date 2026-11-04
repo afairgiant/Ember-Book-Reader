@@ -92,7 +92,7 @@ class CatalogViewModelShelfPreviewTest {
         coEvery { grimmoryAppClient.getFullLibraries(url, 7L) } returns Result.success(emptyList())
         coEvery { grimmoryAppClient.getShelves(url, 7L) } returns Result.success(emptyList())
         coEvery { grimmoryAppClient.getMagicShelves(url, 7L) } returns Result.success(emptyList())
-        every { grimmoryAppClient.coverUrl(any(), any(), any()) } answers { "cover/${secondArg<Long>()}" }
+        every { grimmoryAppClient.coverUrlOf(any(), any<GrimmoryBookSummary>()) } answers { "cover/${secondArg<GrimmoryBookSummary>().id}" }
         every { catalogPreferencesRepository.observePreferences(7L) } returns emptyFlow()
         every { catalogLayoutPreferencesRepository.seriesViewModeFlow } returns
             flowOf(CatalogSeriesViewMode.GRID)

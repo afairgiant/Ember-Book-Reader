@@ -467,5 +467,5 @@ class GrimmoryClient @Inject constructor(
     }
 
     fun audiobookCoverUrl(baseUrl: String, grimmoryBookId: Long): String =
-        "${serverOrigin(baseUrl)}/api/v1/audiobooks/$grimmoryBookId/cover"
+        grimmoryAudiobookCoverUrl(baseUrl, grimmoryBookId)
 }

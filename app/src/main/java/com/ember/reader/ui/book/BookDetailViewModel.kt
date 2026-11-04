@@ -192,7 +192,7 @@ class BookDetailViewModel @Inject constructor(
                         grimmoryBookId = appBook.id,
                         title = appBook.title,
                         author = appBook.authors.firstOrNull(),
-                        coverUrl = grimmoryAppClient.coverUrl(server.url, appBook.id, appBook.coverUpdatedOn),
+                        coverUrl = grimmoryAppClient.coverUrlOf(server.url, appBook),
                         localBookId = localId
                     )
                 }

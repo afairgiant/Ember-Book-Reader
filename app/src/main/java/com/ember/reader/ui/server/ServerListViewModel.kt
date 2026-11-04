@@ -140,7 +140,7 @@ class ServerListViewModel @Inject constructor(
                 val result = books.zip(localIds) { summary, localId ->
                     RecentlyAddedBook(
                         summary = summary,
-                        coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn),
+                        coverUrl = grimmoryAppClient.coverUrlOf(server.url, summary),
                         serverId = server.id,
                         localBookId = localId
                     )

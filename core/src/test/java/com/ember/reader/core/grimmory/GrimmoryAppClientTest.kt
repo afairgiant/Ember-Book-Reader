@@ -180,7 +180,38 @@ class GrimmoryAppClientTest {
 
             val url = client.audiobookCoverUrl(baseUrl, 42L)
 
-            assertEquals("http://grimmory.test/api/v1/audiobooks/42/cover", url)
+            assertEquals("http://grimmory.test/api/v1/media/book/42/audiobook-cover", url)
+        }
+
+        @Test
+        fun `coverUrlOf takes an audiobook's cover from where audiobook covers are stored`() {
+            val client = createClient(MockEngine { error("unused") })
+
+            val audiobook = client.coverUrlOf(baseUrl, GrimmoryBookSummary(id = 42, title = "A", primaryFileType = "AUDIOBOOK"))
+            val epub = client.coverUrlOf(baseUrl, GrimmoryBookSummary(id = 43, title = "B", primaryFileType = "EPUB"))
+            val unknown = client.coverUrlOf(baseUrl, GrimmoryBookSummary(id = 44, title = "C"))
+
+            assertEquals("http://grimmory.test/api/v1/media/book/42/audiobook-cover", audiobook)
+            assertEquals("http://grimmory.test/api/v1/media/book/43/cover", epub)
+            assertEquals("http://grimmory.test/api/v1/media/book/44/cover", unknown)
+        }
+
+        @Test
+        fun `coverUrlOf versions an audiobook's cover by when that cover changed`() {
+            val client = createClient(MockEngine { error("unused") })
+
+            val url = client.coverUrlOf(
+                baseUrl,
+                GrimmoryAppBook(
+                    id = 42,
+                    title = "A",
+                    primaryFileType = "AUDIOBOOK",
+                    coverUpdatedOn = "book",
+                    audiobookCoverUpdatedOn = "audio",
+                ),
+            )
+
+            assertEquals("http://grimmory.test/api/v1/media/book/42/audiobook-cover?v=audio", url)
         }
     }
 
