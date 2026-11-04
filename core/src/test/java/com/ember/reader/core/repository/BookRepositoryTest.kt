@@ -225,7 +225,7 @@ class BookRepositoryTest {
         val inserted = slot<BookEntity>()
         coEvery { bookDao.getByOpdsEntryId("urn:booklore:book:7", 1L) } returns null
         coEvery { bookDao.insert(capture(inserted)) } returns Unit
-        every { grimmoryAppClient.audiobookCoverUrl(any(), 7L, any()) } returns "audio-cover"
+        every { grimmoryAppClient.coverUrlOf(any(), any<GrimmoryBookSummary>()) } returns "audio-cover"
 
         val ids = repository.upsertGrimmorySummaries(
             testServer,
@@ -252,7 +252,7 @@ class BookRepositoryTest {
         val updated = slot<BookEntity>()
         coEvery { bookDao.getByOpdsEntryId("urn:booklore:book:7", 1L) } returns existing
         coEvery { bookDao.update(capture(updated)) } returns Unit
-        every { grimmoryAppClient.coverUrl(any(), 7L, any()) } returns "cover"
+        every { grimmoryAppClient.coverUrlOf(any(), any<GrimmoryBookSummary>()) } returns "cover"
 
         val ids = repository.upsertGrimmorySummaries(
             testServer,
@@ -270,7 +270,7 @@ class BookRepositoryTest {
         val inserted = mutableListOf<BookEntity>()
         coEvery { bookDao.getByOpdsEntryId(any(), 1L) } returns null
         coEvery { bookDao.insert(capture(inserted)) } returns Unit
-        every { grimmoryAppClient.coverUrl(any(), any(), any()) } returns "cover"
+        every { grimmoryAppClient.coverUrlOf(any(), any<GrimmoryAppBook>()) } returns "cover"
 
         val ids = repository.upsertGrimmoryBooks(
             testServer,

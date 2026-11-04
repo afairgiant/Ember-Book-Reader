@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.ember.reader.core.grimmory.SeriesCoverBook
-import com.ember.reader.core.grimmory.grimmoryCoverUrl
+import com.ember.reader.core.grimmory.grimmoryCoverUrlFor
 
 /**
  * A fanned stack of book covers, matching Grimmory web's "Browse All Series" tile.
@@ -85,8 +85,8 @@ private fun FanCover(
     modifier: Modifier = Modifier,
 ) {
     val bookId = book.bookId ?: return
-    val url = remember(baseUrl, bookId, book.coverUpdatedOn) {
-        grimmoryCoverUrl(baseUrl, bookId, book.coverUpdatedOn)
+    val url = remember(baseUrl, bookId, book.coverUpdatedOn, book.primaryFileType) {
+        grimmoryCoverUrlFor(baseUrl, bookId, book.primaryFileType, book.coverUpdatedOn)
     }
 
     Card(

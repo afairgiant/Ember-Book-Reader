@@ -448,7 +448,7 @@ class BookRepository @Inject constructor(
         appBook: GrimmoryAppBook
     ): String {
         val format = appBook.toBookFormat()
-        val coverUrl = resolvedCoverUrl(origin, appBook, format)
+        val coverUrl = grimmoryAppClient.coverUrlOf(origin, appBook)
         val downloadUrl = grimmoryDownloadUrl(appBook.id)
         // Prefer the server's addedOn so RECENT sort mirrors Grimmory's ordering; fall back to
         // now() only when the server omits it (older API builds).
@@ -538,11 +538,7 @@ class BookRepository @Inject constructor(
         summary: GrimmoryBookSummary
     ): String {
         val format = summary.toBookFormat()
-        val coverUrl = if (format == BookFormat.AUDIOBOOK) {
-            grimmoryAppClient.audiobookCoverUrl(origin, summary.id, summary.coverUpdatedOn)
-        } else {
-            grimmoryAppClient.coverUrl(origin, summary.id, summary.coverUpdatedOn)
-        }
+        val coverUrl = grimmoryAppClient.coverUrlOf(origin, summary)
         val downloadUrl = grimmoryDownloadUrl(summary.id)
         val serverAddedAt = parseServerTimestampOrNull(summary.addedOn)
 
@@ -970,16 +966,6 @@ class BookRepository @Inject constructor(
 
     private fun grimmoryDownloadUrl(grimmoryBookId: Long): String =
         "/api/v1/opds/$grimmoryBookId/download"
-
-    private fun resolvedCoverUrl(
-        baseUrl: String,
-        appBook: GrimmoryAppBook,
-        format: BookFormat
-    ): String = if (format == BookFormat.AUDIOBOOK) {
-        grimmoryAppClient.audiobookCoverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
-    } else {
-        grimmoryAppClient.coverUrl(baseUrl, appBook.id, appBook.coverUpdatedOn)
-    }
 }
 
 private fun GrimmoryAppBook.toBookFormat(): BookFormat = when (primaryFileType?.uppercase()) {

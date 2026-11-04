@@ -383,7 +383,7 @@ class CatalogViewModel @Inject constructor(
                     localBookId = localId,
                     title = summary.title,
                     author = summary.authors.firstOrNull(),
-                    coverUrl = grimmoryAppClient.coverUrl(server.url, summary.id, summary.coverUpdatedOn)
+                    coverUrl = grimmoryAppClient.coverUrlOf(server.url, summary)
                 )
             }
         } catch (e: kotlinx.coroutines.CancellationException) {

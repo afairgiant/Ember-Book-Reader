@@ -361,4 +361,12 @@ class GrimmoryAppClient @Inject constructor(
 
     fun audiobookCoverUrl(baseUrl: String, grimmoryBookId: Long, coverUpdatedOn: String? = null): String =
         grimmoryAudiobookCoverUrl(baseUrl, grimmoryBookId, coverUpdatedOn)
+
+    /** [summary]'s cover, an audiobook's from where audiobook covers are stored. */
+    fun coverUrlOf(baseUrl: String, summary: GrimmoryBookSummary): String =
+        grimmoryCoverUrlFor(baseUrl, summary.id, summary.primaryFileType, summary.coverUpdatedOn)
+
+    /** [book]'s cover, an audiobook's from where audiobook covers are stored. */
+    fun coverUrlOf(baseUrl: String, book: GrimmoryAppBook): String =
+        grimmoryCoverUrlFor(baseUrl, book.id, book.primaryFileType, book.coverUpdatedOn, book.audiobookCoverUpdatedOn)
 }

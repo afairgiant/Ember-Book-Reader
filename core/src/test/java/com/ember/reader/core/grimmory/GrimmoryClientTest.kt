@@ -451,7 +451,7 @@ class GrimmoryClientTest {
             val client = createClient(engine)
 
             val url = client.audiobookCoverUrl(baseUrl, 42L)
-            assertEquals("http://grimmory.test/api/v1/audiobooks/42/cover", url)
+            assertEquals("http://grimmory.test/api/v1/media/book/42/audiobook-cover", url)
         }
 
         @Test

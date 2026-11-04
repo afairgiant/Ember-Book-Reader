@@ -241,11 +241,12 @@ class SyncWorker @AssistedInject constructor(
                     val format = summary.toBookFormat()
                     // Audiobook covers live at a different endpoint on Grimmory — using the
                     // book endpoint for them 404s, leaving the cover blank in Continue Reading.
-                    val coverUrl = if (format == com.ember.reader.core.model.BookFormat.AUDIOBOOK) {
-                        com.ember.reader.core.grimmory.grimmoryAudiobookCoverUrl(server.url, summary.id, summary.coverUpdatedOn)
-                    } else {
-                        com.ember.reader.core.grimmory.grimmoryCoverUrl(server.url, summary.id, summary.coverUpdatedOn)
-                    }
+                    val coverUrl = com.ember.reader.core.grimmory.grimmoryCoverUrlFor(
+                        server.url,
+                        summary.id,
+                        summary.primaryFileType,
+                        summary.coverUpdatedOn,
+                    )
                     val newBook = com.ember.reader.core.model.Book(
                         id = java.util.UUID.randomUUID().toString(),
                         serverId = server.id,
