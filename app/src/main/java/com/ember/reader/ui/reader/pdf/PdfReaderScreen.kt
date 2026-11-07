@@ -74,6 +74,8 @@ fun PdfReaderScreen(onNavigateBack: () -> Unit, viewModel: ReaderViewModel = hil
                     }
                     viewModel.onSessionPause()
                 }
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> viewModel.onReaderStopped()
+                androidx.lifecycle.Lifecycle.Event.ON_START -> viewModel.onReaderRestarted()
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     viewModel.onSessionResume()
                 }

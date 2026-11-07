@@ -273,6 +273,72 @@ class ReaderViewModelTest {
         }
     }
 
+    /**
+     * A book of server 7 whose file fails to open: the view model still holds the book,
+     * which is all the sync on stop and restart needs, without a real publication.
+     */
+    private fun stubSyncedBook(): com.ember.reader.core.model.Server {
+        val book = com.ember.reader.core.model.Book(
+            id = "book-123",
+            serverId = 7L,
+            title = "Dracula",
+            localPath = "/missing/dracula.epub",
+            format = com.ember.reader.core.model.BookFormat.EPUB,
+        )
+        val server = mockk<com.ember.reader.core.model.Server>(relaxed = true)
+        coEvery { bookRepository.getById("book-123") } returns book
+        coEvery { bookOpener.open(any()) } returns Result.failure(IllegalStateException("no file"))
+        every { syncPreferencesRepository.syncFrequencyFlow } returns
+            flowOf(com.ember.reader.core.model.SyncFrequency.ON_OPEN_CLOSE)
+        coEvery { serverRepository.getById(7L) } returns server
+        return server
+    }
+
+    @Test
+    fun `leaving the reader without closing it pushes the position`() = runTest {
+        val server = stubSyncedBook()
+        val viewModel = createViewModel(bookId = "book-123")
+        advanceUntilIdle()
+
+        viewModel.onReaderStopped()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { progressSyncManager.pushProgress(server, match { it.id == "book-123" }) }
+    }
+
+    @Test
+    fun `coming back to the reader asks the server again and offers a position read further on`() = runTest {
+        val server = stubSyncedBook()
+        coEvery { readingProgressRepository.getByBookId("book-123") } returns
+            com.ember.reader.core.model.ReadingProgress.fromRemote("book-123", 7L, 0.20f)
+        val viewModel = createViewModel(bookId = "book-123")
+        advanceUntilIdle()
+        coEvery { progressSyncManager.pullBestProgress(server, any()) } returns
+            com.ember.reader.core.sync.RemoteSyncResult(
+                progress = com.ember.reader.core.model.ReadingProgress.fromRemote("book-123", 7L, 0.45f),
+                source = "Tablet",
+            )
+
+        viewModel.onReaderStopped()
+        viewModel.onReaderRestarted()
+        advanceUntilIdle()
+
+        assertEquals(0.45f, viewModel.syncConflict.value?.remotePercentage)
+        assertEquals(0.20f, viewModel.syncConflict.value?.localPercentage)
+    }
+
+    @Test
+    fun `the first start of the reader does not ask the server a second time`() = runTest {
+        stubSyncedBook()
+        val viewModel = createViewModel(bookId = "book-123")
+        advanceUntilIdle()
+
+        viewModel.onReaderRestarted()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { progressSyncManager.pullBestProgress(any(), any()) }
+    }
+
     @Test
     fun `sessionLocation is the page number for a PDF and the CFI for an EPUB`() {
         val locator = mockk<Locator>(relaxed = true)
