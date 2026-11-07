@@ -204,6 +204,10 @@ class ReaderViewModel @Inject constructor(
     private var publication: Publication? = null
     private var book: Book? = null
     private var progressSaveJob: Job? = null
+
+    /** The save started on ON_PAUSE, which the push on ON_STOP waits for. */
+    private var pauseSaveJob: Job? = null
+    private var readerStopped = false
     private var sessionPauseJob: Job? = null
     private var sessionStartTime: java.time.Instant? = null
     private var sessionStartProgress: Float = 0f
@@ -651,7 +655,7 @@ class ReaderViewModel @Inject constructor(
     /** Save current progress immediately. Called on Activity pause (screen lock, app background). */
     fun saveCurrentProgress() {
         val locator = _currentLocator.value ?: return
-        viewModelScope.launch { saveProgress(locator) }
+        pauseSaveJob = viewModelScope.launch { saveProgress(locator) }
     }
 
     /**
@@ -663,7 +667,35 @@ class ReaderViewModel @Inject constructor(
     fun saveProgressLatest(locator: Locator) {
         progressSaveJob?.cancel()
         _currentLocator.value = locator
-        applicationScope.launch { saveProgress(locator) }
+        pauseSaveJob = applicationScope.launch { saveProgress(locator) }
+    }
+
+    /**
+     * The reader has left the screen without being closed: the app went to the background,
+     * the screen was locked, or another screen opened over it. The position is pushed now,
+     * as it is on close, since the app may be killed in the background and never closed.
+     * Called on ON_STOP, after ON_PAUSE has started saving the position.
+     */
+    fun onReaderStopped() {
+        readerStopped = true
+        val save = pauseSaveJob
+        applicationScope.launch {
+            save?.join()
+            pushProgressOnClose()
+        }
+    }
+
+    /**
+     * The reader is back on screen after [onReaderStopped]. Another device may have read on
+     * in the meantime, so the server is asked again, as on open. Called on ON_START.
+     */
+    fun onReaderRestarted() {
+        if (!readerStopped) return
+        readerStopped = false
+        val loadedBook = book ?: return
+        viewModelScope.launch {
+            pullRemoteProgressOnOpen(loadedBook, readingProgressRepository.getByBookId(bookId))
+        }
     }
 
     /**
@@ -794,6 +826,7 @@ class ReaderViewModel @Inject constructor(
         readAloud.stop()
         // Cancel any pending grace timer — we'll record immediately below
         sessionPauseJob?.cancel()
+        val stoppedBeforeClose = readerStopped
 
         _currentLocator.value?.let { locator ->
             // Determine if there's an unrecorded session segment
@@ -808,7 +841,8 @@ class ReaderViewModel @Inject constructor(
             // ViewModel without blocking the main thread or leaking via GlobalScope.
             applicationScope.launch {
                 saveProgress(locator)
-                pushProgressOnClose()
+                // Leaving the reader stops it first, and that pushed the same position.
+                if (!stoppedBeforeClose) pushProgressOnClose()
                 if (startTime != null && endTime != null) {
                     recordReadingSessionSegment(startTime, endTime)
                 }
